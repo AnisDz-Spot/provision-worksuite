@@ -821,7 +821,7 @@ export type ProjectTemplate = {
   };
   tasks: Array<{
     title: string;
-    status: "todo" | "in-progress" | "done";
+    status: "todo" | "in-progress" | "review" | "done";
     priority: "low" | "medium" | "high";
     estimateHours?: number;
     daysFromStart?: number;
@@ -883,7 +883,7 @@ export function saveAsTemplate(
   }));
 
   const milestones = getMilestonesByProject(projectId).map((m) => ({
-    name: m.name,
+    name: m.title,
     description: m.description || "",
     daysFromStart: 0,
   }));
@@ -967,12 +967,13 @@ export function createProjectFromTemplate(
       const dueDate = new Date(
         start.getTime() + m.daysFromStart * 24 * 60 * 60 * 1000
       );
-      addMilestone(
+      upsertMilestone({
+        id: `milestone_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         projectId,
-        m.name,
-        dueDate.toISOString().split("T")[0],
-        m.description
-      );
+        title: m.name,
+        target: dueDate.toISOString().split("T")[0],
+        description: m.description,
+      });
     });
   }
 

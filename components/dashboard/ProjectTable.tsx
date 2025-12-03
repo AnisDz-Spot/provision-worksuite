@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   flexRender,
   ColumnDef,
+  TableMeta,
 } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +20,13 @@ import {
   getTaskCompletionForProject,
   getProjectTimeRollup,
 } from "@/lib/utils";
+
+// Extend TableMeta to include custom methods
+declare module '@tanstack/react-table' {
+  interface TableMeta<TData> {
+    toggleStar?: (id: string) => void;
+  }
+}
 
 type Project = {
   id: string;
@@ -85,7 +93,7 @@ const columns: ColumnDef<Project>[] = [
   {
     accessorKey: "name",
     header: () => "Project",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const p = row.original;
       return (
         <div className="flex items-center gap-2">
@@ -94,8 +102,7 @@ const columns: ColumnDef<Project>[] = [
             title={p.starred ? "Unstar" : "Star"}
             onClick={(e) => {
               e.stopPropagation();
-              // @ts-ignore - table meta types
-              row.table.options.meta?.toggleStar(p.id);
+              table.options.meta?.toggleStar?.(p.id);
             }}
           >
             <Star
@@ -567,7 +574,7 @@ export function ProjectTable() {
                     title={p.starred ? "Unstar" : "Star"}
                     onClick={(e) => {
                       e.stopPropagation();
-                      table.options.meta?.toggleStar(p.id);
+                      table.options.meta?.toggleStar?.(p.id);
                     }}
                   >
                     <Star
