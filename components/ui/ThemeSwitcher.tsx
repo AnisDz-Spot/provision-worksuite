@@ -9,8 +9,8 @@ export function ThemeSwitcher() {
 
   useEffect(() => setMounted(true), []);
 
-  // Use resolvedTheme to get the actual theme (including system preference)
-  const isDark = mounted && (theme === "dark" || (theme === "system" && resolvedTheme === "dark"));
+  // Use resolvedTheme to get the actual theme being used (considers system preference)
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <div className="inline-flex items-center gap-3 p-1 rounded-full bg-accent/40 border border-border">
