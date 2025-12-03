@@ -48,10 +48,10 @@ export default function TeamPage() {
       const project = projects.find((p) => p.id === task.projectId);
       sampleActivities.push({
         id: `activity_${task.id}`,
-        type: task.status === "Done" ? "task_completed" : "task_created",
+        type: task.status === "done" ? "task_completed" : "task_created",
         user: task.assignee || "Unknown",
         userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee}`,
-        action: task.status === "Done" ? "completed" : "created",
+        action: task.status === "done" ? "completed" : "created",
         target: task.title,
         projectName: project?.name,
         timestamp: Date.now() - idx * 3600000, // Spread over hours
