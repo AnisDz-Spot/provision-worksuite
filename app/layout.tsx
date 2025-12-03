@@ -16,6 +16,7 @@ import { TimeTrackerProvider } from "@/components/timetracking/TimeTrackingWidge
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { TeamChat } from "@/components/team/TeamChat";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
+import { AppLoader } from "@/components/ui/AppLoader";
 import { cn } from "@/lib/utils";
 
 export default function RootLayout({
@@ -73,16 +74,12 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
   // Show loading while checking auth status
   if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <AppLoader />;
   }
 
   // Don't render main app until authenticated
   if (!isAuthenticated) {
-    return null;
+    return <AppLoader />;
   }
 
   return (
