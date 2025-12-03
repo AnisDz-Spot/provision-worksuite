@@ -1,0 +1,22 @@
+[
+  {
+    "id": "wiki-1",
+    "title": "Getting Started Guide",
+    "content": "<h2>Welcome to Provision Worksuite</h2><p>This is your central hub for project documentation and knowledge management.</p><h3>Key Features</h3><ul><li>Rich text documentation</li><li>Meeting notes with action items</li><li>Decision tracking</li><li>Retrospectives</li></ul>",
+    "createdBy": "user-1",
+    "createdAt": "2024-11-15T10:00:00Z",
+    "updatedAt": "2024-11-28T14:30:00Z",
+    "tags": ["onboarding", "guide"],
+    "projectId": null
+  },
+  {
+    "id": "wiki-2",
+    "title": "API Documentation",
+    "content": "<h2>API Integration Guide</h2><p>Learn how to integrate with our REST API.</p><h3>Authentication</h3><p>All API requests require an API key in the Authorization header.</p><pre>Authorization: Bearer YOUR_API_KEY</pre>",
+    "createdBy": "user-2",
+    "createdAt": "2024-11-20T09:15:00Z",
+    "updatedAt": "2024-11-20T09:15:00Z",
+    "tags": ["api", "technical"],
+    "projectId": "proj-1"
+  }
+]

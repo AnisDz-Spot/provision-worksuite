@@ -1,0 +1,23 @@
+[
+  {
+    "id": "tl-1",
+    "projectId": "p1",
+    "date": "2025-11-28",
+    "hours": 16,
+    "description": "Dashboard redesign frontend work"
+  },
+  {
+    "id": "tl-2",
+    "projectId": "p1",
+    "date": "2025-11-29",
+    "hours": 8,
+    "description": "API integration"
+  },
+  {
+    "id": "tl-3",
+    "projectId": "p2",
+    "date": "2025-11-30",
+    "hours": 6,
+    "description": "CI/CD pipeline setup"
+  }
+]

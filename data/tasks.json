@@ -1,0 +1,8 @@
+[
+  { "id": "t1", "title": "Setup Firebase Auth", "status": "todo", "assignee": "Alice", "projectId": "p1", "due": "2025-12-07" },
+  { "id": "t2", "title": "Design Project Modal", "status": "todo", "assignee": "Bob", "projectId": "p2", "due": "2025-12-10" },
+  { "id": "t3", "title": "Dashboard UI", "status": "in-progress", "assignee": "Carol", "projectId": "p1", "due": "2025-12-02" },
+  { "id": "t4", "title": "TypeScript Types", "status": "review", "assignee": "David", "projectId": "p3", "due": "2025-12-04" },
+  { "id": "t5", "title": "Project Planning", "status": "done", "assignee": "Eve", "projectId": "p4", "due": "2025-11-28" },
+  { "id": "t6", "title": "Mobile UI PoC", "status": "in-progress", "assignee": "Carol", "projectId": "p3", "due": "2025-12-05" }
+]

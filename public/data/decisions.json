@@ -1,0 +1,44 @@
+[
+  {
+    "id": "decision-1",
+    "title": "Adopt TypeScript for New Projects",
+    "context": "Team discussed the benefits of type safety and better IDE support. After reviewing alternatives, TypeScript was chosen as the default language for all new projects.",
+    "decision": "All new projects will use TypeScript. Existing JavaScript projects will be migrated gradually.",
+    "rationale": "TypeScript provides better type safety, improved developer experience, and catches errors at compile time.",
+    "alternatives": ["Pure JavaScript", "Flow", "ReScript"],
+    "consequences": ["Learning curve for team members new to TypeScript", "Better code quality and maintainability", "Improved refactoring capabilities"],
+    "projectId": null,
+    "decidedBy": ["user-1", "user-2"],
+    "decidedAt": "2024-11-15T16:00:00Z",
+    "status": "approved",
+    "tags": ["technical", "standards"]
+  },
+  {
+    "id": "decision-2",
+    "title": "Use Tailwind CSS for Styling",
+    "context": "Need to standardize styling approach across projects. Evaluated several CSS frameworks and methodologies.",
+    "decision": "Adopt Tailwind CSS as the primary styling solution.",
+    "rationale": "Utility-first approach speeds up development, smaller bundle sizes with purging, excellent documentation and community support.",
+    "alternatives": ["Styled Components", "CSS Modules", "Emotion"],
+    "consequences": ["Initial learning curve", "HTML can look cluttered", "Faster prototyping and consistent design"],
+    "projectId": "proj-1",
+    "decidedBy": ["user-1", "user-3"],
+    "decidedAt": "2024-11-20T14:30:00Z",
+    "status": "approved",
+    "tags": ["technical", "design"]
+  },
+  {
+    "id": "decision-3",
+    "title": "Implement Two-Week Sprint Cycles",
+    "context": "Current sprint cycles are too long, leading to delayed feedback and course corrections.",
+    "decision": "Move from three-week to two-week sprint cycles starting Q1 2025.",
+    "rationale": "Shorter cycles allow for faster feedback, more frequent releases, and better adaptability to changing requirements.",
+    "alternatives": ["Keep three-week sprints", "One-week sprints", "Kanban without sprints"],
+    "consequences": ["More frequent planning meetings", "Better velocity tracking", "Potential for increased context switching"],
+    "projectId": null,
+    "decidedBy": ["user-1", "user-2", "user-3"],
+    "decidedAt": "2024-11-28T11:00:00Z",
+    "status": "approved",
+    "tags": ["process", "agile"]
+  }
+]

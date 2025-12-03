@@ -1,0 +1,8 @@
+[
+  { "id": "u1", "name": "Alice", "role": "Project Manager", "email": "alice@provision.com", "avatarColor": "indigo" },
+  { "id": "u2", "name": "Anis Dzed", "role": "Developer", "email": "anisdzed@gmail.com", "avatarColor": "green" },
+  { "id": "u3", "name": "Bob", "role": "Developer", "email": "bob@provision.com", "avatarColor": "green" },
+  { "id": "u4", "name": "Carol", "role": "Designer", "email": "carol@provision.com", "avatarColor": "pink" },
+  { "id": "u5", "name": "David", "role": "QA Lead", "email": "david@provision.com", "avatarColor": "yellow" },
+  { "id": "u6", "name": "Eve", "role": "DevOps", "email": "eve@provision.com", "avatarColor": "blue"  }
+]

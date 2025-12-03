@@ -1,0 +1,11 @@
+{
+  "holidays": [
+    { "date": "2025-12-25", "name": "Christmas Day", "hours": 8 },
+    { "date": "2025-12-24", "name": "Christmas Eve (Half Day)", "hours": 4 }
+  ],
+  "pto": [
+    { "member": "Alice Johnson", "from": "2025-12-14", "to": "2025-12-16", "hoursPerDay": 8 },
+    { "member": "Bob Smith", "from": "2025-12-05", "to": "2025-12-05", "hoursPerDay": 8 },
+    { "member": "Carol Davis", "from": "2025-12-18", "to": "2025-12-19", "hoursPerDay": 8 }
+  ]
+}

@@ -1,0 +1,72 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidDocument() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+             request.resource.contentType.matches('text/.*');
+    }
+    
+    function isUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Avatar images
+    match /avatars/{userId}/{fileName} {
+      // Anyone can read avatars
+      allow read: if true;
+      
+      // Only the user can upload/update their avatar
+      // Must be an image under 10MB
+      allow write: if isAuthenticated() && 
+                     isOwner(userId) &&
+                     isValidImage() &&
+                     isUnder10MB();
+    }
+    
+    // Project documents
+    match /projects/{projectId}/{fileName} {
+      // Anyone authenticated can read project files
+      allow read: if isAuthenticated();
+      
+      // Anyone authenticated can upload project files
+      // Must be a valid document under 10MB
+      allow write: if isAuthenticated() &&
+                     isValidDocument() &&
+                     isUnder10MB();
+    }
+    
+    // Task attachments
+    match /tasks/{taskId}/{fileName} {
+      // Anyone authenticated can read task attachments
+      allow read: if isAuthenticated();
+      
+      // Anyone authenticated can upload task attachments
+      allow write: if isAuthenticated() &&
+                     isValidDocument() &&
+                     isUnder10MB();
+    }
+    
+    // Meeting recordings or other files
+    match /meetings/{meetingId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isUnder10MB();
+    }
+  }
+}

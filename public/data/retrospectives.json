@@ -1,0 +1,126 @@
+[
+  {
+    "id": "retro-1",
+    "title": "Sprint 23 Retrospective",
+    "projectId": "proj-1",
+    "sprintNumber": 23,
+    "date": "2024-11-29T15:00:00Z",
+    "attendees": ["user-1", "user-2", "user-3"],
+    "wentWell": [
+      {
+        "id": "ww-1",
+        "text": "Successfully delivered all planned features on time",
+        "votes": 5
+      },
+      {
+        "id": "ww-2",
+        "text": "Great team collaboration and communication",
+        "votes": 4
+      },
+      {
+        "id": "ww-3",
+        "text": "Code review process improved significantly",
+        "votes": 3
+      }
+    ],
+    "needsImprovement": [
+      {
+        "id": "ni-1",
+        "text": "Too many meetings interrupted deep work time",
+        "votes": 6
+      },
+      {
+        "id": "ni-2",
+        "text": "Testing environment was unstable",
+        "votes": 4
+      },
+      {
+        "id": "ni-3",
+        "text": "Documentation lagged behind code changes",
+        "votes": 3
+      }
+    ],
+    "actionItems": [
+      {
+        "id": "ai-1",
+        "text": "Implement 'no meeting' blocks on Tuesdays and Thursdays",
+        "assignedTo": "user-1",
+        "dueDate": "2024-12-06T23:59:59Z",
+        "completed": false
+      },
+      {
+        "id": "ai-2",
+        "text": "Upgrade testing server and fix deployment pipeline",
+        "assignedTo": "user-2",
+        "dueDate": "2024-12-10T23:59:59Z",
+        "completed": false
+      },
+      {
+        "id": "ai-3",
+        "text": "Create documentation checklist for PRs",
+        "assignedTo": "user-3",
+        "dueDate": "2024-12-05T23:59:59Z",
+        "completed": true
+      }
+    ],
+    "createdBy": "user-1",
+    "createdAt": "2024-11-29T15:00:00Z",
+    "updatedAt": "2024-11-29T16:30:00Z"
+  },
+  {
+    "id": "retro-2",
+    "title": "Q4 2024 Retrospective",
+    "projectId": null,
+    "sprintNumber": null,
+    "date": "2024-11-30T14:00:00Z",
+    "attendees": ["user-1", "user-2", "user-3", "user-4"],
+    "wentWell": [
+      {
+        "id": "ww-4",
+        "text": "Onboarded three new team members successfully",
+        "votes": 8
+      },
+      {
+        "id": "ww-5",
+        "text": "Reduced deployment time by 40%",
+        "votes": 7
+      },
+      {
+        "id": "ww-6",
+        "text": "Customer satisfaction scores increased",
+        "votes": 6
+      }
+    ],
+    "needsImprovement": [
+      {
+        "id": "ni-4",
+        "text": "Burnout concerns from extended crunch period",
+        "votes": 9
+      },
+      {
+        "id": "ni-5",
+        "text": "Cross-team communication could be better",
+        "votes": 5
+      }
+    ],
+    "actionItems": [
+      {
+        "id": "ai-4",
+        "text": "Review workload distribution and address overtime",
+        "assignedTo": "user-1",
+        "dueDate": "2024-12-15T23:59:59Z",
+        "completed": false
+      },
+      {
+        "id": "ai-5",
+        "text": "Schedule monthly all-hands meetings",
+        "assignedTo": "user-1",
+        "dueDate": "2025-01-01T23:59:59Z",
+        "completed": false
+      }
+    ],
+    "createdBy": "user-1",
+    "createdAt": "2024-11-30T14:00:00Z",
+    "updatedAt": "2024-11-30T16:00:00Z"
+  }
+]

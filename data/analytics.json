@@ -1,0 +1,14 @@
+{
+  "totalProjects": 12,
+  "completedTasks": 324,
+  "activeUsers": 22,
+  "upcomingDeadlines": 7,
+  "chartData": [
+    { "date": "2025-11-20", "active": 16, "completed": 10, "newProjects": 2 },
+    { "date": "2025-11-27", "active": 18, "completed": 12, "newProjects": 1 },
+    { "date": "2025-12-04", "active": 20, "completed": 14, "newProjects": 2 },
+    { "date": "2025-12-11", "active": 22, "completed": 16, "newProjects": 3 },
+    { "date": "2025-12-18", "active": 19, "completed": 13, "newProjects": 1 },
+    { "date": "2025-12-25", "active": 17, "completed": 11, "newProjects": 0 }
+  ]
+}

@@ -1,0 +1,49 @@
+[
+  {
+    "id": "meeting-1",
+    "title": "Sprint Planning - Week 48",
+    "date": "2024-12-02T14:00:00Z",
+    "projectId": "proj-1",
+    "attendees": ["user-1", "user-2", "user-3"],
+    "content": "<h3>Agenda</h3><ul><li>Review last sprint</li><li>Plan upcoming tasks</li><li>Discuss blockers</li></ul><h3>Discussion</h3><p>Team reviewed the progress on the dashboard redesign. All milestones met successfully.</p>",
+    "actionItems": [
+      {
+        "id": "action-1",
+        "text": "Complete authentication module",
+        "assignedTo": "user-1",
+        "dueDate": "2024-12-09T23:59:59Z",
+        "completed": false
+      },
+      {
+        "id": "action-2",
+        "text": "Review pull requests",
+        "assignedTo": "user-2",
+        "dueDate": "2024-12-05T23:59:59Z",
+        "completed": true
+      }
+    ],
+    "createdBy": "user-1",
+    "createdAt": "2024-12-02T14:00:00Z",
+    "updatedAt": "2024-12-02T15:30:00Z"
+  },
+  {
+    "id": "meeting-2",
+    "title": "Client Kickoff - Acme Corp",
+    "date": "2024-11-28T10:00:00Z",
+    "projectId": "proj-2",
+    "attendees": ["user-1", "user-4"],
+    "content": "<h3>Meeting Notes</h3><p>Introduced team members and discussed project scope with the client.</p><h3>Key Decisions</h3><ul><li>Go with React for frontend</li><li>Weekly standups on Mondays</li></ul>",
+    "actionItems": [
+      {
+        "id": "action-3",
+        "text": "Send project proposal",
+        "assignedTo": "user-1",
+        "dueDate": "2024-11-30T23:59:59Z",
+        "completed": true
+      }
+    ],
+    "createdBy": "user-1",
+    "createdAt": "2024-11-28T10:00:00Z",
+    "updatedAt": "2024-11-28T11:00:00Z"
+  }
+]
