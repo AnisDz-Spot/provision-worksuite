@@ -193,50 +193,72 @@ Proprietary - All rights reserved
 
 This section explains how purchasers can install or host the app.
 
-- Requirements: Node.js 18+, npm, a Git client.
-- Recommended hosting: Vercel (one-click), Netlify, or any Node.js host.
+**Requirements:** Node.js 18+, npm, a Git client, and a Vercel account (free tier works).
 
-### Option A: One‑Click Hosting on Vercel (Recommended)
+### Quick Start (Recommended)
 
-1. Fork or upload the code to your Git provider.
-2. Click the Deploy button:
+1. **Deploy to Vercel** (one-click hosting):
+   - Fork or upload this repository to GitHub
+   - Go to [vercel.com/new](https://vercel.com/new) and import your repository
+   - Vercel will auto-detect Next.js and deploy
 
-  [Deploy with Vercel](https://vercel.com/new)
+2. **Add Storage** (in Vercel dashboard):
+   - Go to **Storage** tab → Create **Postgres** database (Neon)
+   - Go to **Storage** tab → Create **Blob** storage
+   - Environment variables are automatically configured!
 
-3. In Vercel, add Storage → Postgres and Storage → Blob (free tiers).
-4. Go to the Postgres "Query" tab and run the SQL from `lib/db/schema.sql`.
-5. Open the site URL provided by Vercel.
+3. **Initialize Database**:
+   - In Vercel dashboard → **Storage** → Click your Postgres database
+   - Go to **Query** tab
+   - Copy entire content from `lib/db/schema.sql` in this repository
+   - Paste and click **Run**
 
-Environment variables for Postgres and Blob are automatically configured by Vercel.
+4. **First-Time Setup** (One-time only):
+   - Visit your deployed URL
+   - Login with: `anis@provision.com` / `password123578951`
+   - You'll be redirected to **Database Configuration** page
+   - Enter your Postgres URL and Blob Token (found in Vercel Storage → .env.local tabs)
+   - Click **Test Connection** → Should show green ✅
+   - Click **Save & Continue**
+   - Complete your **Admin Profile**:
+     - Username, full name
+     - Your real email address (confirm it)
+     - Your secure password (confirm it)
+     - Optional: Upload avatar
+   - Click **Complete Setup**
+   - You'll be logged out automatically
 
-### Option B: Self‑Host on Your Server
+5. **Login with Your New Account**:
+   - Login with your newly created email and password
+   - The temporary `anis@provision.com` login is now disabled
+   - Start using ProVision WorkSuite!
 
-1. Install dependencies:
+### Database Configuration
 
-  ```bash
-  npm install
-  npm run build
-  npm start
-  ```
+When you create Postgres and Blob storage in Vercel, you'll need these values (found in Storage → .env.local):
 
-2. Configure environment variables (copy to your hosting provider or `.env`):
+```env
+POSTGRES_URL=postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
+```
 
-  ```env
-  POSTGRES_URL=postgres://...
-  POSTGRES_URL_NON_POOLING=postgres://...
-  BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
-  ```
+Enter these in the **Database Configuration** page during first-time setup. The app stores them securely and connects automatically.
 
-3. Provision a Postgres database (Neon.io or your provider) and a blob/file storage (Vercel Blob or S3). Execute `lib/db/schema.sql` on the database.
+### Alternative Hosting Options
 
-### Option C: Netlify or Other Hosts
+**Self-Host:**
 
-1. Create a new site from your repository.
-2. Build command: `npm run build` — Publish directory: `.next`
-3. Add the same environment variables as above.
-4. Use Neon for Postgres and execute `lib/db/schema.sql`.
+```bash
+npm install
+npm run build
+npm start
+```
 
-### First‑Run Checklist
+Set environment variables in `.env.local` (same as above), execute `lib/db/schema.sql`, then visit `http://localhost:3000` for setup.
+
+**Netlify:** Build: `npm run build`, publish: `.next`. Add environment variables, execute schema, complete setup at your URL.
+
+### First-Run Checklist
 
 - Can reach the site URL.
 - Database tables exist after running `lib/db/schema.sql`.
