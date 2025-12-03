@@ -1,7 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+export interface InputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size"
+> {
   error?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -16,7 +19,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "block w-full rounded-md border px-3 py-2 bg-input text-foreground outline-none ring-offset-background transition focus:ring-2",
             size === "sm" && "text-sm py-1",
             size === "lg" && "text-lg py-3",
-            error ? "border-destructive ring-destructive" : "border-border focus:ring-ring",
+            error
+              ? "border-destructive ring-destructive"
+              : "border-border focus:ring-ring",
             className
           )}
           ref={ref}

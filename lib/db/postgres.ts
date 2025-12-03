@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from "@vercel/postgres";
 
 export type Project = {
   id: string;
@@ -37,9 +37,11 @@ export type Task = {
 // PROJECTS
 // ============================================================================
 
-export async function createProject(project: Omit<Project, 'id' | 'uid' | 'createdAt' | 'updatedAt'>) {
+export async function createProject(
+  project: Omit<Project, "id" | "uid" | "createdAt" | "updatedAt">
+) {
   const uid = `proj_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  
+
   const result = await sql`
     INSERT INTO projects (uid, name, description, status, owner, start_date, deadline, budget, progress, priority, user_id)
     VALUES (${uid}, ${project.name}, ${project.description || null}, ${project.status}, ${project.owner}, 
@@ -47,7 +49,7 @@ export async function createProject(project: Omit<Project, 'id' | 'uid' | 'creat
             ${project.progress}, ${project.priority || null}, ${project.userId})
     RETURNING *
   `;
-  
+
   return result.rows[0];
 }
 
@@ -65,7 +67,7 @@ export async function getAllProjects(userId?: string) {
     `;
     return result.rows;
   }
-  
+
   const result = await sql`
     SELECT * FROM projects ORDER BY updated_at DESC
   `;
@@ -96,9 +98,11 @@ export async function deleteProject(uid: string) {
 // TASKS
 // ============================================================================
 
-export async function createTask(task: Omit<Task, 'id' | 'uid' | 'createdAt' | 'updatedAt'>) {
+export async function createTask(
+  task: Omit<Task, "id" | "uid" | "createdAt" | "updatedAt">
+) {
   const uid = `task_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  
+
   const result = await sql`
     INSERT INTO tasks (uid, project_id, title, description, status, priority, assignee, due, estimate_hours, logged_hours)
     VALUES (${uid}, ${task.projectId}, ${task.title}, ${task.description || null}, ${task.status}, 
@@ -106,7 +110,7 @@ export async function createTask(task: Omit<Task, 'id' | 'uid' | 'createdAt' | '
             ${task.estimateHours || null}, ${task.loggedHours || 0})
     RETURNING *
   `;
-  
+
   return result.rows[0];
 }
 

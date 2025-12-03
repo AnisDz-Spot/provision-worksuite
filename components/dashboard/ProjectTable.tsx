@@ -22,7 +22,7 @@ import {
 } from "@/lib/utils";
 
 // Extend TableMeta to include custom methods
-declare module '@tanstack/react-table' {
+declare module "@tanstack/react-table" {
   interface TableMeta<TData> {
     toggleStar?: (id: string) => void;
   }
