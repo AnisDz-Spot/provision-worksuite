@@ -100,7 +100,7 @@ export default function TestDatabasePage() {
             <Button 
               onClick={testDatabase} 
               disabled={loading}
-              variant="default"
+              variant="primary"
             >
               {loading ? 'Testing...' : 'Test Connection & Get Projects'}
             </Button>
@@ -108,7 +108,7 @@ export default function TestDatabasePage() {
             <Button 
               onClick={createTestProject} 
               disabled={loading}
-              variant="default"
+              variant="primary"
             >
               {loading ? 'Creating...' : 'Create Test Project'}
             </Button>
@@ -155,7 +155,7 @@ export default function TestDatabasePage() {
             <Button 
               onClick={testBlobStorage} 
               disabled={loading || !file}
-              variant="default"
+              variant="primary"
             >
               {loading ? 'Uploading...' : 'Upload File'}
             </Button>
