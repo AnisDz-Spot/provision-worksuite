@@ -1,14 +1,20 @@
 /**
  * Multi-Tenant Firebase Configuration
- * 
+ *
  * Allows each client to use their own Firebase project.
  * Configuration is loaded dynamically based on tenant/subdomain.
  */
 
-import { initializeApp, getApps, getApp, FirebaseApp, FirebaseOptions } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+import {
+  initializeApp,
+  getApps,
+  getApp,
+  FirebaseApp,
+  FirebaseOptions,
+} from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 // Tenant-specific Firebase instances
 const tenantApps = new Map<string, FirebaseApp>();
@@ -24,13 +30,13 @@ const tenantStorage = new Map<string, FirebaseStorage>();
  * - localhost:3000?tenant=acme → "acme"
  */
 export function getTenantId(): string {
-  if (typeof window === 'undefined') {
-    return 'default'; // Server-side
+  if (typeof window === "undefined") {
+    return "default"; // Server-side
   }
 
   // Method 1: From subdomain (acme.yourapp.com)
   const hostname = window.location.hostname;
-  const parts = hostname.split('.');
+  const parts = hostname.split(".");
   if (parts.length > 2) {
     return parts[0]; // Returns "acme" from "acme.yourapp.com"
   }
@@ -43,26 +49,26 @@ export function getTenantId(): string {
 
   // Method 3: From query parameter (?tenant=acme)
   const params = new URLSearchParams(window.location.search);
-  const tenantParam = params.get('tenant');
+  const tenantParam = params.get("tenant");
   if (tenantParam) {
     return tenantParam;
   }
 
   // Method 4: From localStorage (persisted tenant)
-  const stored = localStorage.getItem('pv:tenantId');
+  const stored = localStorage.getItem("pv:tenantId");
   if (stored) {
     return stored;
   }
 
-  return 'default';
+  return "default";
 }
 
 /**
  * Save tenant ID to localStorage
  */
 export function setTenantId(tenantId: string) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('pv:tenantId', tenantId);
+  if (typeof window !== "undefined") {
+    localStorage.setItem("pv:tenantId", tenantId);
   }
 }
 
@@ -73,7 +79,9 @@ export function setTenantId(tenantId: string) {
  * 2. From a config file
  * 3. From environment variables
  */
-export async function getTenantConfig(tenantId: string): Promise<FirebaseOptions | null> {
+export async function getTenantConfig(
+  tenantId: string
+): Promise<FirebaseOptions | null> {
   // OPTION 1: Fetch from your backend API (RECOMMENDED for production)
   try {
     const response = await fetch(`/api/tenant/${tenantId}/config`);
@@ -81,12 +89,12 @@ export async function getTenantConfig(tenantId: string): Promise<FirebaseOptions
       return await response.json();
     }
   } catch (error) {
-    console.error('Failed to fetch tenant config from API:', error);
+    console.error("Failed to fetch tenant config from API:", error);
   }
 
   // OPTION 2: Static configuration file (for development/testing)
   const staticConfigs: Record<string, FirebaseOptions> = {
-    'default': {
+    default: {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
       authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -95,12 +103,13 @@ export async function getTenantConfig(tenantId: string): Promise<FirebaseOptions
       appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     },
     // Add more tenant configs as needed
-    'demo': {
+    demo: {
       apiKey: process.env.NEXT_PUBLIC_DEMO_FIREBASE_API_KEY,
       authDomain: process.env.NEXT_PUBLIC_DEMO_FIREBASE_AUTH_DOMAIN,
       projectId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_PROJECT_ID,
       storageBucket: process.env.NEXT_PUBLIC_DEMO_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_MESSAGING_SENDER_ID,
+      messagingSenderId:
+        process.env.NEXT_PUBLIC_DEMO_FIREBASE_MESSAGING_SENDER_ID,
       appId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_APP_ID,
     },
   };
@@ -151,7 +160,10 @@ export async function initializeTenantFirebase(tenantId: string): Promise<{
 
     return { app, auth, db, storage };
   } catch (error) {
-    console.error(`Failed to initialize Firebase for tenant ${tenantId}:`, error);
+    console.error(
+      `Failed to initialize Firebase for tenant ${tenantId}:`,
+      error
+    );
     return null;
   }
 }

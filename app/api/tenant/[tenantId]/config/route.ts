@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * API endpoint to fetch Firebase config for a specific tenant
- * 
+ *
  * Security: This should be protected and only return public Firebase config
  * (apiKey, authDomain, etc. are safe to expose - they're client-side anyway)
  */
@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Format: TENANT_{TENANTID}_FIREBASE_API_KEY
 function getConfigFromEnv(tenantId: string) {
   const prefix = `TENANT_${tenantId.toUpperCase()}_FIREBASE_`;
-  
+
   return {
     apiKey: process.env[`${prefix}API_KEY`],
     authDomain: process.env[`${prefix}AUTH_DOMAIN`],
@@ -27,7 +27,7 @@ function getConfigFromEnv(tenantId: string) {
 
 // OPTION 3: Store configs in a secure configuration file
 const TENANT_CONFIGS: Record<string, any> = {
-  'default': {
+  default: {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -36,28 +36,26 @@ const TENANT_CONFIGS: Record<string, any> = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   },
   // Add your client configs here
-  'demo': {
+  demo: {
     apiKey: process.env.NEXT_PUBLIC_DEMO_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_DEMO_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_PROJECT_ID,
     storageBucket: process.env.NEXT_PUBLIC_DEMO_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_MESSAGING_SENDER_ID,
+    messagingSenderId:
+      process.env.NEXT_PUBLIC_DEMO_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_DEMO_FIREBASE_APP_ID,
   },
 };
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantId: string } }
+  { params }: { params: Promise<{ tenantId: string }> }
 ) {
-  const tenantId = params.tenantId;
+  const { tenantId } = await params;
 
   // Validate tenant ID (prevent path traversal, etc.)
   if (!tenantId || !/^[a-z0-9-]+$/.test(tenantId)) {
-    return NextResponse.json(
-      { error: 'Invalid tenant ID' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid tenant ID" }, { status: 400 });
   }
 
   // TODO: In production, you should:
@@ -71,10 +69,7 @@ export async function GET(
   // const config = await fetchConfigFromDatabase(tenantId); // Option 1
 
   if (!config || !config.apiKey) {
-    return NextResponse.json(
-      { error: 'Tenant not found' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
   }
 
   // Return the Firebase config
@@ -95,7 +90,7 @@ export async function GET(
 //       firebaseAppId: true,
 //     },
 //   });
-//   
+//
 //   return {
 //     apiKey: tenant?.firebaseApiKey,
 //     authDomain: tenant?.firebaseAuthDomain,

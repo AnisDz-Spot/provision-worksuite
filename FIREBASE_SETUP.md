@@ -1,6 +1,7 @@
 # 🔥 Firebase Setup Guide for ProVision WorkSuite
 
 ## Prerequisites
+
 - Firebase account (free tier works great)
 - Node.js and npm installed
 
@@ -38,6 +39,7 @@
 ## Step 4: Enable Storage
 
 ### Method 1: Via Firebase Console UI
+
 1. In Firebase Console sidebar, click **"Storage"** or **"Build"** → **"Storage"**
 2. Click **"Get started"**
 3. Accept default security rules (we'll update them)
@@ -45,6 +47,7 @@
 5. Click **"Done"**
 
 ### Method 2: If Storage Option is Missing
+
 If you don't see a "Get started" button, Storage might need to be enabled differently:
 
 1. Go to Firebase Console → **Project Settings** (gear icon)
@@ -54,11 +57,13 @@ If you don't see a "Get started" button, Storage might need to be enabled differ
 5. Try clicking **"Get started"** again
 
 ### Method 3: Alternative Navigation Path
+
 1. Click **"Build"** in the left sidebar (it's a dropdown)
 2. Select **"Storage"** from the menu
 3. Click **"Get started"**
 
 ### Method 4: Create via Firebase CLI (if UI doesn't work)
+
 ```bash
 # Install Firebase CLI
 npm install -g firebase-tools
@@ -99,6 +104,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 3. **Restart your dev server** for env variables to take effect:
+
 ```bash
 npm run dev
 ```
@@ -130,7 +136,7 @@ npm run dev
 
 ```tsx
 // In app/page.tsx or any page
-import { FirebaseMigrationTool } from '@/components/firebase/MigrationTool';
+import { FirebaseMigrationTool } from "@/components/firebase/MigrationTool";
 
 export default function Page() {
   return (
@@ -189,21 +195,25 @@ firebase deploy --only storage:rules
 ## Troubleshooting
 
 ### "Permission denied" errors
+
 - Check that security rules are published
 - Make sure you're logged in with Firebase Auth
 - Verify user has correct permissions
 
 ### Data not syncing
+
 - Check browser console for errors
 - Verify `.env.local` is configured correctly
 - Make sure you restarted the dev server after adding env vars
 
 ### Can't upload files
+
 - Check Storage rules are published
 - Verify file size is under 10MB
 - Check file type is allowed in rules
 
 ### Migration errors
+
 - Check browser console for details
 - Verify Firestore is enabled
 - Try migrating smaller batches
@@ -217,6 +227,7 @@ firebase deploy --only storage:rules
 ✅ Real-time sync is working
 
 **Now you can:**
+
 1. Replace localStorage calls with Firestore functions
 2. Add file upload features
 3. Enable offline support

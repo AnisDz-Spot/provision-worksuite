@@ -1,16 +1,22 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { FirebaseApp } from 'firebase/app';
-import { Auth } from 'firebase/auth';
-import { Firestore } from 'firebase/firestore';
-import { FirebaseStorage } from 'firebase/storage';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { FirebaseApp } from "firebase/app";
+import { Auth } from "firebase/auth";
+import { Firestore } from "firebase/firestore";
+import { FirebaseStorage } from "firebase/storage";
 import {
   getTenantId,
   setTenantId,
   initializeTenantFirebase,
   switchTenant,
-} from '@/lib/firebase-multi-tenant';
+} from "@/lib/firebase-multi-tenant";
 
 interface TenantContextType {
   tenantId: string;
@@ -26,7 +32,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
-  const [tenantId, setTenantIdState] = useState<string>('default');
+  const [tenantId, setTenantIdState] = useState<string>("default");
   const [app, setApp] = useState<FirebaseApp | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [db, setDb] = useState<Firestore | null>(null);
@@ -48,7 +54,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         const firebase = await initializeTenantFirebase(currentTenantId);
 
         if (!firebase) {
-          throw new Error(`Failed to initialize Firebase for tenant: ${currentTenantId}`);
+          throw new Error(
+            `Failed to initialize Firebase for tenant: ${currentTenantId}`
+          );
         }
 
         setApp(firebase.app);
@@ -56,7 +64,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         setDb(firebase.db);
         setStorage(firebase.storage);
       } catch (err) {
-        console.error('Tenant initialization error:', err);
+        console.error("Tenant initialization error:", err);
         setError(err as Error);
       } finally {
         setLoading(false);
@@ -86,7 +94,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       // Reload the page to reset state
       window.location.reload();
     } catch (err) {
-      console.error('Tenant switch error:', err);
+      console.error("Tenant switch error:", err);
       setError(err as Error);
     } finally {
       setLoading(false);
@@ -114,7 +122,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 export function useTenant() {
   const context = useContext(TenantContext);
   if (context === undefined) {
-    throw new Error('useTenant must be used within a TenantProvider');
+    throw new Error("useTenant must be used within a TenantProvider");
   }
   return context;
 }

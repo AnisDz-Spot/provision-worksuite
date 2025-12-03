@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, doc, QueryConstraint, DocumentSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Project, Task } from '@/lib/firestore';
+import { useState, useEffect } from "react";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  doc,
+  QueryConstraint,
+  DocumentSnapshot,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { Project, Task } from "@/lib/firestore";
 
 /**
  * Custom hooks for real-time Firebase data
@@ -19,29 +28,29 @@ export function useProjects(userId?: string) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const constraints: QueryConstraint[] = [orderBy('updatedAt', 'desc')];
-    
+    const constraints: QueryConstraint[] = [orderBy("updatedAt", "desc")];
+
     if (userId) {
-      constraints.unshift(where('userId', '==', userId));
+      constraints.unshift(where("userId", "==", userId));
     }
-    
-    const q = query(collection(db, 'projects'), ...constraints);
-    
+
+    const q = query(collection(db, "projects"), ...constraints);
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const projectsData = snapshot.docs.map(doc => ({
+        const projectsData = snapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
           createdAt: doc.data().createdAt?.toDate(),
           updatedAt: doc.data().updatedAt?.toDate(),
         })) as Project[];
-        
+
         setProjects(projectsData);
         setLoading(false);
       },
       (err) => {
-        console.error('Error fetching projects:', err);
+        console.error("Error fetching projects:", err);
         setError(err as Error);
         setLoading(false);
       }
@@ -63,29 +72,29 @@ export function useTasks(projectId?: string) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-    
+    const constraints: QueryConstraint[] = [orderBy("createdAt", "desc")];
+
     if (projectId) {
-      constraints.unshift(where('projectId', '==', projectId));
+      constraints.unshift(where("projectId", "==", projectId));
     }
-    
-    const q = query(collection(db, 'tasks'), ...constraints);
-    
+
+    const q = query(collection(db, "tasks"), ...constraints);
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const tasksData = snapshot.docs.map(doc => ({
+        const tasksData = snapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
           createdAt: doc.data().createdAt?.toDate(),
           updatedAt: doc.data().updatedAt?.toDate(),
         })) as Task[];
-        
+
         setTasks(tasksData);
         setLoading(false);
       },
       (err) => {
-        console.error('Error fetching tasks:', err);
+        console.error("Error fetching tasks:", err);
         setError(err as Error);
         setLoading(false);
       }
@@ -113,7 +122,7 @@ export function useProject(projectId: string | undefined) {
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, 'projects', projectId),
+      doc(db, "projects", projectId),
       (docSnap: DocumentSnapshot) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -129,7 +138,7 @@ export function useProject(projectId: string | undefined) {
         setLoading(false);
       },
       (err: Error) => {
-        console.error('Error fetching project:', err);
+        console.error("Error fetching project:", err);
         setError(err as Error);
         setLoading(false);
       }
@@ -153,7 +162,7 @@ export function useTask(taskId: string | undefined) {
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, 'tasks', taskId),
+      doc(db, "tasks", taskId),
       (docSnap: DocumentSnapshot) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -169,7 +178,7 @@ export function useTask(taskId: string | undefined) {
         setLoading(false);
       },
       (err: Error) => {
-        console.error('Error fetching task:', err);
+        console.error("Error fetching task:", err);
         setError(err as Error);
         setLoading(false);
       }

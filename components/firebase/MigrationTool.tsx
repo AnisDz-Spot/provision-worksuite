@@ -1,84 +1,111 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { migrateFromLocalStorage, clearFirestoreData } from '@/lib/firestore';
-import { useAuth } from '@/components/auth/AuthContext';
-import { Database, Upload, Trash2, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { migrateFromLocalStorage, clearFirestoreData } from "@/lib/firestore";
+import { useAuth } from "@/components/auth/AuthContext";
+import {
+  Database,
+  Upload,
+  Trash2,
+  CheckCircle,
+  AlertCircle,
+  Loader,
+} from "lucide-react";
 
 /**
  * Firebase Migration Tool
- * 
+ *
  * This component helps you migrate your localStorage data to Firestore.
  * Use it once, then remove it from your app.
- * 
+ *
  * Add this to any page temporarily: <FirebaseMigrationTool />
  */
 export function FirebaseMigrationTool() {
   const { currentUser } = useAuth();
-  const [status, setStatus] = useState<'idle' | 'migrating' | 'success' | 'error'>('idle');
-  const [result, setResult] = useState<{ projects: number; tasks: number; errors: string[] } | null>(null);
+  const [status, setStatus] = useState<
+    "idle" | "migrating" | "success" | "error"
+  >("idle");
+  const [result, setResult] = useState<{
+    projects: number;
+    tasks: number;
+    errors: string[];
+  } | null>(null);
 
   const handleMigrate = async () => {
     if (!currentUser) {
-      alert('Please login first');
+      alert("Please login first");
       return;
     }
 
-    if (!confirm('This will migrate all localStorage data to Firestore. Continue?')) {
+    if (
+      !confirm(
+        "This will migrate all localStorage data to Firestore. Continue?"
+      )
+    ) {
       return;
     }
 
-    setStatus('migrating');
+    setStatus("migrating");
 
     try {
       const migrationResult = await migrateFromLocalStorage(currentUser.id);
       setResult(migrationResult);
-      setStatus('success');
+      setStatus("success");
     } catch (error) {
-      console.error('Migration failed:', error);
-      setStatus('error');
+      console.error("Migration failed:", error);
+      setStatus("error");
       setResult({ projects: 0, tasks: 0, errors: [String(error)] });
     }
   };
 
   const handleClear = async () => {
-    if (!confirm('⚠️ WARNING: This will DELETE ALL data from Firestore. Are you sure?')) {
+    if (
+      !confirm(
+        "⚠️ WARNING: This will DELETE ALL data from Firestore. Are you sure?"
+      )
+    ) {
       return;
     }
 
-    if (!confirm('This action cannot be undone. Type YES in the next prompt to confirm.')) {
+    if (
+      !confirm(
+        "This action cannot be undone. Type YES in the next prompt to confirm."
+      )
+    ) {
       return;
     }
 
-    const confirmation = prompt('Type YES to confirm deletion:');
-    if (confirmation !== 'YES') {
-      alert('Cancelled');
+    const confirmation = prompt("Type YES to confirm deletion:");
+    if (confirmation !== "YES") {
+      alert("Cancelled");
       return;
     }
 
-    setStatus('migrating');
+    setStatus("migrating");
 
     try {
       await clearFirestoreData();
-      setStatus('success');
-      alert('All Firestore data has been cleared');
+      setStatus("success");
+      alert("All Firestore data has been cleared");
     } catch (error) {
-      console.error('Clear failed:', error);
-      setStatus('error');
-      alert('Failed to clear data: ' + error);
+      console.error("Clear failed:", error);
+      setStatus("error");
+      alert("Failed to clear data: " + error);
     }
   };
 
   const checkLocalStorageData = () => {
-    const projects = localStorage.getItem('pv:projects');
-    const tasks = localStorage.getItem('pv:tasks');
-    
+    const projects = localStorage.getItem("pv:projects");
+    const tasks = localStorage.getItem("pv:tasks");
+
     const projectCount = projects ? JSON.parse(projects).length : 0;
     const taskCount = tasks ? JSON.parse(tasks).length : 0;
 
-    alert(`LocalStorage Data:\n\nProjects: ${projectCount}\nTasks: ${taskCount}`);
+    alert(
+      `LocalStorage Data:\n\nProjects: ${projectCount}\nTasks: ${taskCount}`
+    );
   };
 
   return (
@@ -91,8 +118,9 @@ export function FirebaseMigrationTool() {
       <div className="space-y-4">
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            <strong>⚠️ Important:</strong> This tool migrates your localStorage data to Firebase Firestore.
-            Run it once after setting up Firebase, then remove this component from your app.
+            <strong>⚠️ Important:</strong> This tool migrates your localStorage
+            data to Firebase Firestore. Run it once after setting up Firebase,
+            then remove this component from your app.
           </p>
         </div>
 
@@ -108,10 +136,10 @@ export function FirebaseMigrationTool() {
 
           <Button
             onClick={handleMigrate}
-            disabled={status === 'migrating'}
+            disabled={status === "migrating"}
             className="w-full"
           >
-            {status === 'migrating' ? (
+            {status === "migrating" ? (
               <>
                 <Loader className="w-4 h-4 mr-2 animate-spin" />
                 Migrating...
@@ -134,7 +162,7 @@ export function FirebaseMigrationTool() {
           </Button>
         </div>
 
-        {status === 'success' && result && (
+        {status === "success" && result && (
           <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -161,7 +189,7 @@ export function FirebaseMigrationTool() {
           </div>
         )}
 
-        {status === 'error' && (
+        {status === "error" && (
           <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />

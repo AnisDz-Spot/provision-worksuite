@@ -1,6 +1,6 @@
 /**
  * Firebase Storage Utilities
- * 
+ *
  * Handle file uploads for avatars, project documents, and attachments
  */
 
@@ -12,8 +12,8 @@ import {
   deleteObject,
   listAll,
   UploadTask,
-} from 'firebase/storage';
-import { storage } from './firebase';
+} from "firebase/storage";
+import { storage } from "./firebase";
 
 // ============================================================================
 // FILE UPLOAD
@@ -38,13 +38,13 @@ export async function uploadFile(
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
   const storageRef = ref(storage, path);
-  
+
   if (onProgress) {
     return new Promise((resolve, reject) => {
       const uploadTask = uploadBytesResumable(storageRef, file);
-      
+
       uploadTask.on(
-        'state_changed',
+        "state_changed",
         (snapshot) => {
           const progress = {
             bytesTransferred: snapshot.bytesTransferred,
@@ -77,7 +77,7 @@ export async function uploadAvatar(
   userId: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-  const ext = file.name.split('.').pop();
+  const ext = file.name.split(".").pop();
   const path = `avatars/${userId}.${ext}`;
   return uploadFile(file, path, onProgress);
 }
@@ -94,11 +94,11 @@ export async function uploadProjectDocument(
   onProgress?: (progress: UploadProgress) => void
 ): Promise<{ url: string; name: string; size: number; type: string }> {
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const path = `projects/${projectId}/${timestamp}_${safeName}`;
-  
+
   const url = await uploadFile(file, path, onProgress);
-  
+
   return {
     url,
     name: file.name,
@@ -119,11 +119,11 @@ export async function uploadTaskAttachment(
   onProgress?: (progress: UploadProgress) => void
 ): Promise<{ url: string; name: string; size: number; type: string }> {
   const timestamp = Date.now();
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const path = `tasks/${taskId}/${timestamp}_${safeName}`;
-  
+
   const url = await uploadFile(file, path, onProgress);
-  
+
   return {
     url,
     name: file.name,
@@ -142,14 +142,14 @@ export async function uploadTaskAttachment(
  */
 export async function deleteFile(path: string): Promise<void> {
   // If it's a URL, extract the path
-  if (path.startsWith('http')) {
+  if (path.startsWith("http")) {
     const url = new URL(path);
     const pathMatch = url.pathname.match(/\/o\/(.+)\?/);
     if (pathMatch) {
       path = decodeURIComponent(pathMatch[1]);
     }
   }
-  
+
   const fileRef = ref(storage, path);
   await deleteObject(fileRef);
 }
@@ -161,8 +161,8 @@ export async function deleteFile(path: string): Promise<void> {
 export async function deleteFolder(folderPath: string): Promise<void> {
   const folderRef = ref(storage, folderPath);
   const list = await listAll(folderRef);
-  
-  const deletePromises = list.items.map(item => deleteObject(item));
+
+  const deletePromises = list.items.map((item) => deleteObject(item));
   await Promise.all(deletePromises);
 }
 
@@ -185,17 +185,19 @@ export async function getFileUrl(path: string): Promise<string> {
  * @param folderPath - Folder path
  * @returns Array of file paths and URLs
  */
-export async function listFiles(folderPath: string): Promise<Array<{ path: string; url: string }>> {
+export async function listFiles(
+  folderPath: string
+): Promise<Array<{ path: string; url: string }>> {
   const folderRef = ref(storage, folderPath);
   const list = await listAll(folderRef);
-  
+
   const files = await Promise.all(
     list.items.map(async (item) => ({
       path: item.fullPath,
       url: await getDownloadURL(item),
     }))
   );
-  
+
   return files;
 }
 
@@ -212,21 +214,21 @@ export function validateFile(
   } = {}
 ): { valid: boolean; error?: string } {
   const { maxSize = 10 * 1024 * 1024, allowedTypes } = options;
-  
+
   if (file.size > maxSize) {
     return {
       valid: false,
       error: `File size must be less than ${(maxSize / 1024 / 1024).toFixed(0)}MB`,
     };
   }
-  
+
   if (allowedTypes && !allowedTypes.includes(file.type)) {
     return {
       valid: false,
       error: `File type ${file.type} is not allowed`,
     };
   }
-  
+
   return { valid: true };
 }
 
@@ -236,11 +238,11 @@ export function validateFile(
  * @returns Formatted string (e.g., "2.5 MB")
  */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  
+  if (bytes === 0) return "0 Bytes";
+
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }

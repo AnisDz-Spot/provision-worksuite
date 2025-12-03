@@ -5,6 +5,7 @@ Follow these steps to deploy to Vercel:
 ## ✅ Pre-Deployment (Do this first)
 
 ### 1. Complete Firebase Setup
+
 - [ ] Create Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
 - [ ] Enable Firestore Database
 - [ ] Enable Authentication (Email/Password)
@@ -12,7 +13,9 @@ Follow these steps to deploy to Vercel:
 - [ ] Copy Firebase config values
 
 ### 2. Prepare Environment Variables
+
 Copy these from Firebase Console → Project Settings:
+
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
@@ -39,6 +42,7 @@ git commit -m "Ready for deployment"
 ### Step 2: Push to GitHub
 
 **Option A: Create new repo on GitHub first, then:**
+
 ```bash
 git remote add origin https://github.com/YOUR_USERNAME/provision-worksuite.git
 git branch -M main
@@ -46,6 +50,7 @@ git push -u origin main
 ```
 
 **Option B: Use GitHub CLI:**
+
 ```bash
 # Install: https://cli.github.com/
 gh repo create provision-worksuite --public --source=. --remote=origin --push
@@ -138,15 +143,18 @@ vercel --prod
 ## ⚠️ Troubleshooting
 
 **Build fails?**
+
 - Check Vercel deployment logs
 - Make sure all dependencies are in package.json
 - Try `npm run build` locally first
 
 **"Permission denied" in Firebase?**
+
 - Deploy security rules (see step 2 above)
 - Check authorized domains in Firebase
 
 **Environment variables not working?**
+
 - Make sure they're added in Vercel dashboard
 - Redeploy after adding variables
 - Names must match exactly (case-sensitive)
@@ -162,6 +170,7 @@ vercel --prod
 ---
 
 **Your app will be live at:**
+
 ```
 https://provision-worksuite-[random].vercel.app
 ```

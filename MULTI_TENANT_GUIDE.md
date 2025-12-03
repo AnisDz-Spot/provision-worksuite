@@ -35,15 +35,13 @@ Your app is hosted once, but each client uses their own Firebase project.
 
 ```tsx
 // app/layout.tsx
-import { TenantProvider } from '@/components/tenant/TenantProvider';
+import { TenantProvider } from "@/components/tenant/TenantProvider";
 
 export default function RootLayout({ children }) {
   return (
     <html>
       <body>
-        <TenantProvider>
-          {children}
-        </TenantProvider>
+        <TenantProvider>{children}</TenantProvider>
       </body>
     </html>
   );
@@ -55,6 +53,7 @@ export default function RootLayout({ children }) {
 Choose one method:
 
 **Method A: Environment Variables** (for few clients)
+
 ```bash
 # .env.local
 # Client 1 (Acme Corp)
@@ -69,6 +68,7 @@ TENANT_BETA_FIREBASE_PROJECT_ID=beta-worksuite
 ```
 
 **Method B: Database** (for many clients - RECOMMENDED)
+
 ```sql
 CREATE TABLE tenants (
   id VARCHAR(255) PRIMARY KEY,
@@ -90,18 +90,21 @@ Edit `app/api/tenant/[tenantId]/config/route.ts` and add your clients.
 #### 3. Configure tenant identification
 
 **Option A: Subdomain** (acme.yourapp.com)
+
 ```
 acme.yourapp.com → tenantId = "acme"
 beta.yourapp.com → tenantId = "beta"
 ```
 
 **Option B: URL Path** (yourapp.com/tenant/acme)
+
 ```
 yourapp.com/tenant/acme → tenantId = "acme"
 yourapp.com/tenant/beta → tenantId = "beta"
 ```
 
 **Option C: Query Parameter** (yourapp.com?tenant=acme)
+
 ```
 yourapp.com?tenant=acme → tenantId = "acme"
 yourapp.com?tenant=beta → tenantId = "beta"
@@ -111,14 +114,14 @@ yourapp.com?tenant=beta → tenantId = "beta"
 
 ```tsx
 // Before (single tenant)
-import { db } from '@/lib/firebase';
+import { db } from "@/lib/firebase";
 
 // After (multi-tenant)
-import { useTenant } from '@/components/tenant/TenantProvider';
+import { useTenant } from "@/components/tenant/TenantProvider";
 
 function MyComponent() {
   const { db, auth, storage, tenantId } = useTenant();
-  
+
   // Use db, auth, storage as before
 }
 ```
@@ -175,6 +178,7 @@ tar -czf provision-worksuite.tar.gz \
 # ProVision WorkSuite Deployment
 
 ## Prerequisites
+
 - Node.js 18+
 - Firebase project (free tier works)
 
@@ -186,6 +190,7 @@ tar -czf provision-worksuite.tar.gz \
 4. Run: `npm run dev` (development) or `npm start` (production)
 
 ## Hosting Options
+
 - Vercel (easiest): `vercel deploy`
 - Docker: `docker build -t worksuite .`
 - Traditional server: `npm run build && npm start`
@@ -232,26 +237,28 @@ Combine both approaches for maximum flexibility.
 ### For Multi-Tenant Hosting:
 
 1. **Isolate tenant data**
+
    ```typescript
    // Always filter by tenantId
    const projects = await getAllProjects(userId, tenantId);
    ```
 
 2. **Validate tenant access**
+
    ```typescript
    // Verify user belongs to tenant
    if (user.tenantId !== tenantId) {
-     throw new Error('Unauthorized');
+     throw new Error("Unauthorized");
    }
    ```
 
 3. **Rate limiting per tenant**
    ```typescript
    // Prevent one tenant from consuming all resources
-   const rateLimit = new RateLimiter({ 
+   const rateLimit = new RateLimiter({
      windowMs: 15 * 60 * 1000,
      max: 100,
-     keyGenerator: (req) => req.tenantId 
+     keyGenerator: (req) => req.tenantId,
    });
    ```
 
@@ -274,15 +281,18 @@ Combine both approaches for maximum flexibility.
 ## 💰 Pricing Models
 
 ### Model 1: Per-Tenant Pricing
+
 - Free tier: 1 tenant
 - Pro: $49/month per tenant
 - Enterprise: Custom pricing
 
 ### Model 2: Usage-Based
+
 - Based on API calls, storage, users
 - Each tenant pays for their Firebase usage
 
 ### Model 3: License-Based
+
 - One-time fee for self-hosting license
 - Annual support/update subscription
 

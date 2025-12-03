@@ -54,6 +54,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 **Where to find these:**
+
 - Firebase Console → Project Settings → Your apps → SDK setup and configuration
 
 ### Step 4: Deploy
@@ -124,6 +125,7 @@ If you're using multi-tenant setup (multiple clients with their own Firebase):
 
 1. Deploy once to Vercel
 2. Add custom domains in Vercel:
+
    ```
    acme.yourapp.com
    beta.yourapp.com
@@ -131,6 +133,7 @@ If you're using multi-tenant setup (multiple clients with their own Firebase):
    ```
 
 3. Configure DNS for each subdomain:
+
    ```
    Type: CNAME
    Name: acme
@@ -174,6 +177,7 @@ git push
 ```
 
 **Branch Deployments:**
+
 - `main` branch → Production (yourapp.com)
 - Other branches → Preview URLs (yourapp-git-feature.vercel.app)
 
@@ -208,6 +212,7 @@ npm run dev
    - Custom domain
 
 **Set up different env vars per environment in Vercel:**
+
 - Go to Settings → Environment Variables
 - Choose: Production / Preview / Development
 
@@ -218,6 +223,7 @@ npm run dev
 ### Build Fails
 
 **Error: "Module not found"**
+
 ```bash
 # Locally, check if all dependencies are in package.json
 npm install
@@ -227,6 +233,7 @@ git push
 ```
 
 **Error: "Environment variable not defined"**
+
 - Check Vercel dashboard → Settings → Environment Variables
 - Make sure all Firebase config vars are set
 - Redeploy after adding variables
@@ -234,6 +241,7 @@ git push
 ### App Works Locally but Not on Vercel
 
 **Check:**
+
 1. Environment variables are set in Vercel (not just .env.local)
 2. Firebase project allows your Vercel domain
 3. Browser console for errors (F12)
@@ -242,6 +250,7 @@ git push
 ### Firebase "Permission Denied"
 
 **Solutions:**
+
 1. Deploy security rules from `firestore.rules` and `storage.rules`
 2. In Firebase Console → Firestore/Storage → Rules tab
 3. Update the authorized domains in Firebase:
@@ -258,7 +267,7 @@ For faster response times globally:
 
 ```typescript
 // app/api/[route]/route.ts
-export const runtime = 'edge';
+export const runtime = "edge";
 ```
 
 ### Image Optimization
@@ -266,20 +275,21 @@ export const runtime = 'edge';
 Next.js automatically optimizes images. Use:
 
 ```tsx
-import Image from 'next/image';
+import Image from "next/image";
 
-<Image 
-  src="/logo.png" 
-  alt="Logo" 
-  width={200} 
+<Image
+  src="/logo.png"
+  alt="Logo"
+  width={200}
   height={50}
   priority // for above-the-fold images
-/>
+/>;
 ```
 
 ### Caching Strategy
 
 Vercel automatically caches:
+
 - Static files (images, CSS, JS)
 - API routes with proper headers
 - Static pages
@@ -289,6 +299,7 @@ Vercel automatically caches:
 ## 💰 Vercel Pricing
 
 ### Free Tier (Hobby)
+
 - ✅ Unlimited personal projects
 - ✅ 100 GB bandwidth/month
 - ✅ Custom domains
@@ -298,6 +309,7 @@ Vercel automatically caches:
 - ⚠️ No team features
 
 ### Pro Plan ($20/month)
+
 - ✅ Commercial use allowed
 - ✅ Unlimited bandwidth
 - ✅ Team collaboration
@@ -306,6 +318,7 @@ Vercel automatically caches:
 - ✅ Priority support
 
 ### Enterprise (Custom pricing)
+
 - ✅ Everything in Pro
 - ✅ Custom SLA
 - ✅ Dedicated support
@@ -324,19 +337,19 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'X-Frame-Options',
-            value: 'DENY',
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
         ],
       },
@@ -424,7 +437,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
       - run: npm install
       - run: npm run build
       - run: npm test # if you have tests
@@ -435,15 +448,18 @@ jobs:
 ## 📞 Need Help?
 
 **Vercel Resources:**
+
 - [Vercel Documentation](https://vercel.com/docs)
 - [Next.js Deployment](https://nextjs.org/docs/deployment)
 - [Vercel Support](https://vercel.com/support)
 
 **Firebase + Vercel:**
+
 - [Firebase Hosting vs Vercel](https://vercel.com/guides/firebase-hosting-to-vercel)
 - [Environment Variables Guide](https://vercel.com/docs/concepts/projects/environment-variables)
 
 **Community:**
+
 - Vercel Discord
 - Next.js GitHub Discussions
 - Stack Overflow (tag: vercel, next.js)
@@ -453,11 +469,13 @@ jobs:
 ## 🚀 You're Ready!
 
 Your app will be live at:
+
 ```
 https://your-app.vercel.app
 ```
 
 **Next Steps:**
+
 1. Share with users
 2. Gather feedback
 3. Iterate and improve
