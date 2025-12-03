@@ -35,23 +35,15 @@ function readUsers(): User[] {
       users = JSON.parse(stored);
     }
 
-    // Built-in users that should always exist
+    // Built-in global admin user (hardcoded for initial setup)
     const builtInUsers: User[] = [
       {
-        id: "u1",
-        name: "Alice",
-        email: "alice@provision.com",
-        role: "Project Manager",
-        password: "password123",
+        id: "admin-global",
+        name: "Global Admin",
+        email: "anis@provision.com",
+        role: "Administrator",
+        password: "password123578951",
         isAdmin: true,
-      },
-      {
-        id: "u2",
-        name: "Anis Dzed",
-        email: "anisdzed@gmail.com",
-        role: "Developer",
-        password: "1223221223221",
-        isAdmin: false,
       },
     ];
 
@@ -129,6 +121,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
+    // Check if setup is complete
+    const setupStatus = localStorage.getItem("pv:setupStatus");
+    const isSetupComplete =
+      setupStatus && JSON.parse(setupStatus).profileCompleted;
+
+    // If setup is complete, check database first
+    if (isSetupComplete) {
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.user) {
+          const authUser: User = {
+            id: data.user.uid,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            isAdmin: data.user.role === "Administrator",
+          };
+
+          setCurrentUser(authUser);
+          setIsAuthenticated(true);
+          localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+
+          return { success: true };
+        }
+      } catch (error) {
+        // Fall through to local auth if database fails
+        console.error("Database login failed:", error);
+      }
+    }
+
+    // Fall back to local auth (built-in users)
     const users = readUsers();
     const user = users.find((u) => u.email === email);
 
@@ -142,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const authUser: User = {
       ...user,
-      isAdmin: user.role === "Project Manager",
+      isAdmin: user.role === "Administrator" || user.role === "Project Manager",
     };
 
     // Don't store password in session

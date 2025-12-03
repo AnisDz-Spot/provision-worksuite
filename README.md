@@ -188,3 +188,65 @@ Proprietary - All rights reserved
 ---
 
 **ProVision WorkSuite** - Enterprise Project Management Platform
+ 
+## Buyer Installation (ThemeForest)
+
+This section explains how purchasers can install or host the app.
+
+- Requirements: Node.js 18+, npm, a Git client.
+- Recommended hosting: Vercel (one-click), Netlify, or any Node.js host.
+
+### Option A: One‑Click Hosting on Vercel (Recommended)
+
+1. Fork or upload the code to your Git provider.
+2. Click the Deploy button:
+
+  [Deploy with Vercel](https://vercel.com/new)
+
+3. In Vercel, add Storage → Postgres and Storage → Blob (free tiers).
+4. Go to the Postgres "Query" tab and run the SQL from `lib/db/schema.sql`.
+5. Open the site URL provided by Vercel.
+
+Environment variables for Postgres and Blob are automatically configured by Vercel.
+
+### Option B: Self‑Host on Your Server
+
+1. Install dependencies:
+
+  ```bash
+  npm install
+  npm run build
+  npm start
+  ```
+
+2. Configure environment variables (copy to your hosting provider or `.env`):
+
+  ```env
+  POSTGRES_URL=postgres://...
+  POSTGRES_URL_NON_POOLING=postgres://...
+  BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+  ```
+
+3. Provision a Postgres database (Neon.io or your provider) and a blob/file storage (Vercel Blob or S3). Execute `lib/db/schema.sql` on the database.
+
+### Option C: Netlify or Other Hosts
+
+1. Create a new site from your repository.
+2. Build command: `npm run build` — Publish directory: `.next`
+3. Add the same environment variables as above.
+4. Use Neon for Postgres and execute `lib/db/schema.sql`.
+
+### First‑Run Checklist
+
+- Can reach the site URL.
+- Database tables exist after running `lib/db/schema.sql`.
+- File uploads work (check a test upload).
+- Create an account via Register page and login successfully.
+
+### Support for Buyers
+
+If you need help deploying, provide:
+- Your hosting platform (Vercel/Netlify/Custom)
+- Error messages or logs
+- Confirmation that `lib/db/schema.sql` was executed
+

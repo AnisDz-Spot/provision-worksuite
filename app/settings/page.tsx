@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { ThemePresets } from "@/components/settings/ThemePresets";
 import { UserSettingsForm } from "@/components/settings/UserSettingsForm";
+import { SetupProfileForm } from "@/components/settings/SetupProfileForm";
 import { WorkspaceSettingsForm } from "@/components/settings/WorkspaceSettingsForm";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -12,25 +14,32 @@ import { AlertRulesManager } from "@/components/notifications/AlertRulesManager"
 import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
 
-type TabKey = "user" | "workspace" | "appearance" | "notifications";
+type TabKey = "profile" | "user" | "workspace" | "appearance" | "notifications";
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
+  const isSetupMode = searchParams.get("setup") === "true";
 
-  // Restore last selected main tab on mount
+  // Check URL params first, then restore last selected main tab on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pv:settingsTab");
-      if (
-        saved === "user" ||
-        saved === "workspace" ||
-        saved === "appearance" ||
-        saved === "notifications"
-      ) {
-        setTab(saved as TabKey);
-      }
-    } catch {}
-  }, []);
+    const urlTab = searchParams.get("tab");
+    if (urlTab === "profile") {
+      setTab("profile");
+    } else {
+      try {
+        const saved = localStorage.getItem("pv:settingsTab");
+        if (
+          saved === "user" ||
+          saved === "workspace" ||
+          saved === "appearance" ||
+          saved === "notifications"
+        ) {
+          setTab(saved as TabKey);
+        }
+      } catch {}
+    }
+  }, [searchParams]);
 
   const handleSetTab = (next: TabKey) => {
     setTab(next);
@@ -42,47 +51,61 @@ export default function SettingsPage() {
   return (
     <section className="p-4 md:p-8 max-w-5xl flex flex-col gap-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          {isSetupMode ? "Complete Your Profile" : "Settings"}
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Manage your profile and workspace configuration.
+          {isSetupMode
+            ? "Set up your admin account to continue. All fields are required."
+            : "Manage your profile and workspace configuration."}
         </p>
       </div>
       <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
         <Button
-          variant={tab === "user" ? "primary" : "outline"}
+          variant={tab === "profile" || tab === "user" ? "primary" : "outline"}
           size="sm"
-          onClick={() => handleSetTab("user")}
-          className={cn(tab === "user" && "shadow")}
+          onClick={() => handleSetTab("profile")}
+          className={cn((tab === "profile" || tab === "user") && "shadow")}
         >
           Profile
         </Button>
-        <Button
-          variant={tab === "workspace" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("workspace")}
-          className={cn(tab === "workspace" && "shadow")}
-        >
-          Workspace / Agency
-        </Button>
-        <Button
-          variant={tab === "appearance" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("appearance")}
-          className={cn(tab === "appearance" && "shadow")}
-        >
-          Appearance
-        </Button>
-        <Button
-          variant={tab === "notifications" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("notifications")}
-          className={cn(tab === "notifications" && "shadow")}
-        >
-          Notifications
-        </Button>
+        {!isSetupMode && (
+          <>
+            <Button
+              variant={tab === "workspace" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("workspace")}
+              className={cn(tab === "workspace" && "shadow")}
+            >
+              Workspace / Agency
+            </Button>
+            <Button
+              variant={tab === "appearance" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("appearance")}
+              className={cn(tab === "appearance" && "shadow")}
+            >
+              Appearance
+            </Button>
+            <Button
+              variant={tab === "notifications" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("notifications")}
+              className={cn(tab === "notifications" && "shadow")}
+            >
+              Notifications
+            </Button>
+          </>
+        )}
       </div>
 
-      {tab === "user" && <UserSettingsForm />}
+      {(tab === "profile" || tab === "user") && (
+        isSetupMode ? (
+          <SetupProfileForm onComplete={() => {}} />
+        ) : (
+          <UserSettingsForm />
+        )
+      )}
       {tab === "workspace" && <WorkspaceSettingsForm />}
       {tab === "appearance" && (
         <div className="max-w-2xl space-y-6">

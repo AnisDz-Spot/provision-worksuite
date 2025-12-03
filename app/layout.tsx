@@ -72,6 +72,36 @@ function MainContent({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, pathname, router]);
 
+  // Check for first-time setup after authentication
+  React.useEffect(() => {
+    if (!isLoading && isAuthenticated && currentUser) {
+      // Only check setup for the global admin
+      if (currentUser.email === "anis@provision.com") {
+        const setupStatus = localStorage.getItem("pv:setupStatus");
+        const dbConfig = localStorage.getItem("pv:dbConfig");
+
+        if (!dbConfig || !setupStatus) {
+          // First login - redirect to database setup
+          if (pathname !== "/settings/database") {
+            router.push("/settings/database");
+          }
+        } else {
+          try {
+            const status = JSON.parse(setupStatus);
+            if (
+              !status.profileCompleted &&
+              !pathname.startsWith("/settings") &&
+              !pathname.includes("tab=profile")
+            ) {
+              // Database configured but profile not complete
+              router.push("/settings?tab=profile&setup=true");
+            }
+          } catch {}
+        }
+      }
+    }
+  }, [isLoading, isAuthenticated, currentUser, pathname, router]);
+
   // Show loading while checking auth status
   if (isLoading) {
     return <AppLoader />;

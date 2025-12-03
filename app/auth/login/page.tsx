@@ -1,17 +1,27 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [setupComplete, setSetupComplete] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("setup") === "complete") {
+      setSetupComplete(true);
+      // Clear the URL parameter
+      window.history.replaceState({}, "", "/auth/login");
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -34,6 +44,11 @@ export default function LoginPage() {
       <h1 className="text-2xl font-bold mb-7 text-center">
         Sign In to ProVision
       </h1>
+      {setupComplete && (
+        <div className="mb-4 p-3 rounded bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-center text-sm">
+          ✅ Setup complete! Please log in with your new credentials.
+        </div>
+      )}
       {error && (
         <div className="mb-4 p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-center text-sm">
           {error}
@@ -80,11 +95,10 @@ export default function LoginPage() {
         </Link>
       </div>
       <div className="mt-4 text-center text-sm text-muted-foreground">
-        <p>Demo credentials:</p>
+        <p>First-time setup credentials:</p>
         <p className="font-mono text-xs mt-1">
-          alice@provision.com / password123
+          anis@provision.com / password123578951
         </p>
-        <p className="font-mono text-xs">anisdzed@gmail.com / 1223221223221</p>
       </div>
     </div>
   );
