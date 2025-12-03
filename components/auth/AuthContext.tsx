@@ -47,7 +47,7 @@ function readUsers(): User[] {
       },
     ];
 
-    // Add built-in users if they don't exist
+    // Add built-in admin if it doesn't exist
     let needsUpdate = false;
     builtInUsers.forEach((builtInUser) => {
       const exists = users.find(
@@ -59,27 +59,10 @@ function readUsers(): User[] {
       }
     });
 
-    // If no users at all, also add users from JSON (excluding built-in users)
-    if (!stored) {
-      try {
-        const jsonUsers = require("@/data/users.json")
-          .filter(
-            (u: any) =>
-              !builtInUsers.some((bu) => bu.email === u.email || bu.id === u.id)
-          )
-          .map((u: any) => ({
-            ...u,
-            password: "password123",
-            isAdmin: u.role === "Project Manager",
-          }));
-        users.push(...jsonUsers);
-        needsUpdate = true;
-      } catch {
-        // users.json may not exist
-      }
-    }
-
-    if (needsUpdate) {
+    // Only keep the global admin - remove any other users from localStorage
+    users = users.filter((u) => u.email === "anis@provision.com");
+    
+    if (needsUpdate || stored) {
       localStorage.setItem("pv:users", JSON.stringify(users));
     }
 
