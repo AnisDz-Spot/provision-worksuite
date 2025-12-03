@@ -4,12 +4,13 @@ import { SunIcon, MoonIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
 
 export function ThemeSwitcher() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const isDark = mounted && theme === "dark";
+  // Use resolvedTheme to get the actual theme (including system preference)
+  const isDark = mounted && (theme === "dark" || (theme === "system" && resolvedTheme === "dark"));
 
   return (
     <div className="inline-flex items-center gap-3 p-1 rounded-full bg-accent/40 border border-border">

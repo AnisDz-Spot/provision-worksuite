@@ -101,7 +101,7 @@ export function Navbar() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-6 md:gap-8">
+        <div className="flex items-center gap-8 md:gap-10">
           <button
             onClick={() => setIsOpen(true)}
             className="flex items-center gap-3 px-4 py-2 rounded-lg border bg-background/50 hover:bg-accent transition-colors text-sm text-muted-foreground min-w-[180px] justify-between"
