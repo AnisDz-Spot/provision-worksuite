@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { ThemePresets } from "@/components/settings/ThemePresets";
@@ -16,7 +16,7 @@ import { IntegrationSettings } from "@/components/notifications/IntegrationSetti
 
 type TabKey = "profile" | "user" | "workspace" | "appearance" | "notifications";
 
-export default function SettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
   const isSetupMode = searchParams.get("setup") === "true";
@@ -224,5 +224,17 @@ function NotificationsSettingsTabs() {
       {activeTab === "watch" && <ProjectWatch />}
       {activeTab === "integrations" && <IntegrationSettings />}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <section className="p-4 md:p-8 max-w-5xl">
+        <div className="text-center">Loading settings...</div>
+      </section>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
