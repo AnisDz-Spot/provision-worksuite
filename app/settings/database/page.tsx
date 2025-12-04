@@ -18,6 +18,36 @@ export default function DatabaseSetupPage() {
   } | null>(null);
   const isTestSuccessful = !!testResult?.success;
 
+  // Admin DB Setup integration
+  const ADMIN_SETUP_URL = "http://localhost:4000/api/admin/setup-db"; // Change to your server's URL in production
+  const [adminSetupLoading, setAdminSetupLoading] = useState(false);
+  const [adminSetupResult, setAdminSetupResult] = useState<string | null>(null);
+
+  const handleAdminSetup = async () => {
+    setAdminSetupLoading(true);
+    setAdminSetupResult(null);
+    try {
+      const resp = await fetch(ADMIN_SETUP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          databaseUrl: postgresUrl,
+          secret: "changeme", // Use your real secret!
+        }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setAdminSetupResult("✅ Database setup completed!");
+      } else {
+        setAdminSetupResult(`❌ Setup failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      setAdminSetupResult("❌ Network or server error");
+    } finally {
+      setAdminSetupLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Load existing config if any
     const config = localStorage.getItem("pv:dbConfig");
@@ -219,6 +249,18 @@ export default function DatabaseSetupPage() {
               >
                 {loading ? "Saving..." : "Save & Continue to Profile Setup"}
               </Button>
+
+              {/* Admin DB Setup Button */}
+              <Button
+                onClick={handleAdminSetup}
+                disabled={!postgresUrl || adminSetupLoading}
+                variant="secondary"
+              >
+                {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
+              </Button>
+              {adminSetupResult && (
+                <div className="mt-2 text-sm">{adminSetupResult}</div>
+              )}
             </div>
           </div>
         </Card>
