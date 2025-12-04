@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
-async function ensureTable() {
-  await sql`CREATE TABLE IF NOT EXISTS messages (
-    id bigserial primary key,
-    from_user text not null,
-    to_user text not null,
-    message text not null,
-    created_at timestamptz not null default now(),
-    is_read boolean not null default false
-  )`;
-}
-
 export async function POST(request: Request) {
   try {
-    await ensureTable();
     const body = await request.json();
     const { currentUser, otherUser } = body || {};
     if (!currentUser || !otherUser) {

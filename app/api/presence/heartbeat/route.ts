@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
-async function ensureTable() {
-  await sql`CREATE TABLE IF NOT EXISTS presence (
-    uid text primary key,
-    status text not null default 'available',
-    last_seen timestamptz not null default now()
-  )`;
-}
-
 export async function POST(request: Request) {
   try {
-    await ensureTable();
     const body = await request.json();
     const { uid, status } = body || {};
     if (!uid) {
