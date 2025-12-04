@@ -1,0 +1,16 @@
+[
+  {
+    "id": "exp_1",
+    "projectId": "p1",
+    "description": "Cloud hosting",
+    "amount": 120.5,
+    "date": "2025-12-01"
+  },
+  {
+    "id": "exp_2",
+    "projectId": "p2",
+    "description": "Design assets",
+    "amount": 75.0,
+    "date": "2025-12-02"
+  }
+]

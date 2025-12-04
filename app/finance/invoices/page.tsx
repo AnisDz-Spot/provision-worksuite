@@ -1,12 +1,19 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { SectionHeader } from "@/components/finance/SectionHeader";
-import { MetricCard } from "@/components/finance/MetricCard";
+// Assuming these components are available in the project structure
+import { Modal } from "@/components/ui/Modal";
+// Assuming these are custom components or next/navigation
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { SectionHeader } from "@/components/finance/SectionHeader";
+import { MetricCard } from "@/components/finance/MetricCard";
 
-type Project = { id: string; name: string };
+// Assuming types are defined elsewhere or need to be included here for the component to work
+type Project = {
+  id: string;
+  name: string;
+};
 type Expense = {
   id: string;
   projectId: string;
@@ -31,6 +38,18 @@ type Invoice = {
 };
 
 export default function InvoicesPage() {
+  // State for the "Add Invoice" modal
+  const [addOpen, setAddOpen] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [newInvoice, setNewInvoice] = useState({
+    projectId: "",
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+    status: "draft",
+  });
+
+  // Main state for the page data
   const [projects, setProjects] = useState<Project[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [logs, setLogs] = useState<TimeLog[]>([]);
@@ -42,10 +61,63 @@ export default function InvoicesPage() {
     from: string;
     to: string;
   }>({ projectId: "", status: "", q: "", from: "", to: "" });
+
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Fix: handleAddInvoice function must be inside the component
+  const handleAddInvoice = async () => {
+    setAddError(null);
+    if (!newInvoice.projectId || !newInvoice.amount) {
+      setAddError("Project and amount are required.");
+      return;
+    }
+    setAddLoading(true);
+    const invoiceObj: Invoice = {
+      // Explicitly set the type to Invoice
+      id: `inv_${Date.now()}`,
+      projectId: newInvoice.projectId, // Added missing property
+      date: newInvoice.date, // Added missing property
+      amount: parseFloat(newInvoice.amount), // Added missing property
+      status: newInvoice.status as Invoice["status"], // Added missing property
+    };
+    try {
+      // Try API first
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(invoiceObj),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setInvoices((prev) => [data.data, ...prev]);
+        setAddOpen(false);
+        setNewInvoice({
+          projectId: "",
+          amount: "",
+          date: new Date().toISOString().slice(0, 10),
+          status: "draft",
+        });
+        setAddLoading(false);
+        return;
+      }
+      throw new Error("DB not configured");
+    } catch {
+      // Fallback to local state
+      setInvoices((prev) => [invoiceObj, ...prev]);
+      setAddOpen(false);
+      setNewInvoice({
+        projectId: "",
+        amount: "",
+        date: new Date().toISOString().slice(0, 10),
+        status: "draft",
+      });
+      setAddLoading(false);
+    }
+  };
+
+  // Data Loading Effect
   useEffect(() => {
     const load = async () => {
       const pData = await fetch(`/data/projects.json`).then((r) => r.json());
@@ -265,16 +337,117 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* The floating button has been removed from here.
+        
+        <Button
+          className="fixed bottom-8 right-8 z-30 shadow-lg"
+          size="lg"
+          onClick={() => setAddOpen(true)}
+        >
+          + Add Invoice
+        </Button> 
+      */}
+      {/* Add Invoice Modal */}
+      <Modal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        size="sm"
+        className="md:min-w-[40vw]"
+      >
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Add Invoice</h2>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Project</label>
+            <select
+              className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+              value={newInvoice.projectId}
+              onChange={(e) =>
+                setNewInvoice((v) => ({ ...v, projectId: e.target.value }))
+              }
+            >
+              <option value="">Select project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Amount</label>
+            <Input
+              type="number"
+              min="0"
+              value={newInvoice.amount}
+              onChange={(e) =>
+                setNewInvoice((v) => ({ ...v, amount: e.target.value }))
+              }
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Date</label>
+            <Input
+              type="date"
+              value={newInvoice.date}
+              onChange={(e) =>
+                setNewInvoice((v) => ({ ...v, date: e.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Status</label>
+            <select
+              className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+              value={newInvoice.status}
+              onChange={(e) =>
+                setNewInvoice((v) => ({
+                  ...v,
+                  status: e.target.value as Invoice["status"],
+                }))
+              }
+            >
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+          {addError && (
+            <div className="text-destructive text-sm">{addError}</div>
+          )}
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={handleAddInvoice}
+              loading={addLoading}
+              className="flex-1"
+            >
+              Add
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAddOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      {/* SectionHeader updated to include the "Add Invoice" button */}
       <SectionHeader
         title="Invoices"
         right={
-          <Button size="sm" onClick={downloadCSV}>
-            CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              + Add Invoice
+            </Button>
+            <Button size="sm" onClick={downloadCSV}>
+              CSV
+            </Button>
+          </div>
         }
       />
-
       <div className="grid gap-4 md:grid-cols-4">
         <MetricCard title="Count" value={totals.count} />
         <MetricCard title="Total" value={`$${totals.total.toLocaleString()}`} />
@@ -284,7 +457,6 @@ export default function InvoicesPage() {
           value={`$${totals.outstanding.toLocaleString()}`}
         />
       </div>
-
       <div className="rounded-lg border p-4">
         <div className="text-sm text-muted-foreground mb-3">
           Create invoice from totals
@@ -301,7 +473,6 @@ export default function InvoicesPage() {
           ))}
         </div>
       </div>
-
       {/* Filters */}
       <div className="rounded-lg border p-4">
         <div className="grid md:grid-cols-6 gap-3">
@@ -361,7 +532,6 @@ export default function InvoicesPage() {
           </Button>
         </div>
       </div>
-
       <div className="rounded-lg border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/70 text-muted-foreground">

@@ -111,6 +111,8 @@ export function SprintPlanning() {
   const [sprint, setSprint] = useState<Sprint>(defaultSprint);
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [editTask, setEditTask] = useState<SprintTask | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("You");
   const memberList = users as Array<{
@@ -344,12 +346,16 @@ export function SprintPlanning() {
             </div>
 
             <div className="space-y-2 flex-1">
-              {tasksByColumn[column.id]?.map((task) => (
+              {tasksByColumn[column.id]?.map((task, idx) => (
                 <div
                   key={task.id}
                   draggable
                   onDragStart={() => handleDragStart(task.id)}
-                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-move hover:shadow-md transition-all group ${draggedTask === task.id ? "opacity-50" : ""}`}
+                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-move hover:shadow-md transition-all group relative ${draggedTask === task.id ? "opacity-50" : ""}`}
+                  onClick={() => {
+                    setEditTaskId(task.id);
+                    setEditTask(task);
+                  }}
                 >
                   <div className="flex items-start gap-2">
                     <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
@@ -383,6 +389,34 @@ export function SprintPlanning() {
                       </div>
                     </div>
                   </div>
+                  <button
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+                    title="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm("Delete this task?")) {
+                        setSprint((prev) => ({
+                          ...prev,
+                          tasks: prev.tasks.filter((t) => t.id !== task.id),
+                        }));
+                      }
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
                 </div>
               ))}
 
@@ -407,17 +441,23 @@ export function SprintPlanning() {
         </div>
       </div>
 
-      {/* Add Task Modal */}
-      {showAddTask && (
+      {/* Add/Edit Task Modal */}
+      {(showAddTask || editTaskId) && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowAddTask(false)}
+          onClick={() => {
+            setShowAddTask(false);
+            setEditTaskId(null);
+            setEditTask(null);
+          }}
         >
           <div
             className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {editTaskId ? "Edit Task" : "Add New Task"}
+            </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -426,8 +466,14 @@ export function SprintPlanning() {
                 <input
                   type="text"
                   className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  value={editTaskId ? (editTask?.title ?? "") : newTaskTitle}
+                  onChange={(e) => {
+                    if (editTaskId)
+                      setEditTask((t) =>
+                        t ? { ...t, title: e.target.value } : t
+                      );
+                    else setNewTaskTitle(e.target.value);
+                  }}
                   placeholder="Enter task title"
                   autoFocus
                 />
@@ -443,18 +489,19 @@ export function SprintPlanning() {
                       className="w-full justify-start gap-2"
                     >
                       {(() => {
-                        const m = memberList.find(
-                          (u) => u.name === newTaskAssignee
-                        );
+                        const name = editTaskId
+                          ? (editTask?.assignee ?? "")
+                          : newTaskAssignee;
+                        const m = memberList.find((u) => u.name === name);
                         const cls = getAvatarColorClass(m?.avatarColor);
                         return (
                           <>
                             <div
                               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
                             >
-                              {newTaskAssignee.charAt(0)}
+                              {name.charAt(0)}
                             </div>
-                            <span className="text-sm">{newTaskAssignee}</span>
+                            <span className="text-sm">{name}</span>
                           </>
                         );
                       })()}
@@ -469,7 +516,13 @@ export function SprintPlanning() {
                         {m.name.charAt(0)}
                       </div>
                     ),
-                    onClick: () => setNewTaskAssignee(m.name),
+                    onClick: () => {
+                      if (editTaskId)
+                        setEditTask((t) =>
+                          t ? { ...t, assignee: m.name } : t
+                        );
+                      else setNewTaskAssignee(m.name);
+                    },
                   }))}
                   align="start"
                   searchable
@@ -483,12 +536,29 @@ export function SprintPlanning() {
                   </label>
                   <select
                     className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
-                    value={newTaskPriority}
-                    onChange={(e) =>
-                      setNewTaskPriority(
-                        e.target.value as "low" | "medium" | "high"
-                      )
+                    value={
+                      editTaskId
+                        ? (editTask?.priority ?? "medium")
+                        : newTaskPriority
                     }
+                    onChange={(e) => {
+                      if (editTaskId)
+                        setEditTask((t) =>
+                          t
+                            ? {
+                                ...t,
+                                priority: e.target.value as
+                                  | "low"
+                                  | "medium"
+                                  | "high",
+                              }
+                            : t
+                        );
+                      else
+                        setNewTaskPriority(
+                          e.target.value as "low" | "medium" | "high"
+                        );
+                    }}
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -504,20 +574,50 @@ export function SprintPlanning() {
                     min="1"
                     max="13"
                     className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
-                    value={newTaskPoints}
-                    onChange={(e) =>
-                      setNewTaskPoints(parseInt(e.target.value) || 1)
+                    value={
+                      editTaskId ? (editTask?.storyPoints ?? 1) : newTaskPoints
                     }
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 1;
+                      if (editTaskId)
+                        setEditTask((t) =>
+                          t ? { ...t, storyPoints: val } : t
+                        );
+                      else setNewTaskPoints(val);
+                    }}
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
-                <Button onClick={handleAddTask} className="flex-1">
-                  Add Task
-                </Button>
+                {editTaskId ? (
+                  <Button
+                    onClick={() => {
+                      if (!editTask) return;
+                      setSprint((prev) => ({
+                        ...prev,
+                        tasks: prev.tasks.map((t) =>
+                          t.id === editTaskId ? { ...t, ...editTask } : t
+                        ),
+                      }));
+                      setEditTaskId(null);
+                      setEditTask(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Save
+                  </Button>
+                ) : (
+                  <Button onClick={handleAddTask} className="flex-1">
+                    Add Task
+                  </Button>
+                )}
                 <Button
                   variant="outline"
-                  onClick={() => setShowAddTask(false)}
+                  onClick={() => {
+                    setShowAddTask(false);
+                    setEditTaskId(null);
+                    setEditTask(null);
+                  }}
                   className="flex-1"
                 >
                   Cancel

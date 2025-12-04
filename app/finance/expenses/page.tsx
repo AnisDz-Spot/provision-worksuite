@@ -1,11 +1,19 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  ChangeEvent,
+} from "react";
+import { Modal } from "@/components/ui/Modal";
 import { SectionHeader } from "@/components/finance/SectionHeader";
 import { MetricCard } from "@/components/finance/MetricCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+// Types
 type Project = { id: string; name: string };
 type Expense = {
   id: string;
@@ -15,19 +23,98 @@ type Expense = {
   date: string;
 };
 
+// Helper for currency formatting
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
 export default function ExpensesPage() {
+  // State Definitions
   const [projects, setProjects] = useState<Project[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  // State for the "Add Expense" modal
+  const [addOpen, setAddOpen] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [newExpense, setNewExpense] = useState({
+    projectId: "",
+    description: "",
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+  });
+
   const [filters, setFilters] = useState<{
     projectId: string;
     q: string;
     from: string;
     to: string;
   }>({ projectId: "", q: "", from: "", to: "" });
+
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Handler Functions
+  const handleAddExpense = useCallback(async () => {
+    setAddError(null);
+    if (
+      !newExpense.projectId ||
+      !newExpense.description ||
+      !newExpense.amount
+    ) {
+      setAddError("All fields are required.");
+      return;
+    }
+    setAddLoading(true);
+
+    const expenseObj: Expense = {
+      id: `exp_${Date.now()}`,
+      projectId: newExpense.projectId,
+      description: newExpense.description,
+      amount: parseFloat(newExpense.amount),
+      date: newExpense.date,
+    };
+
+    const resetState = () => {
+      setAddOpen(false);
+      setNewExpense({
+        projectId: "",
+        description: "",
+        amount: "",
+        date: new Date().toISOString().slice(0, 10),
+      });
+      setAddLoading(false);
+    };
+
+    try {
+      // Try API first
+      const res = await fetch("/api/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(expenseObj),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        setExpenses((prev) => [data.data, ...prev]);
+        resetState();
+        return;
+      }
+      throw new Error("API not configured, falling back.");
+    } catch (e) {
+      console.warn("API POST failed, falling back to local state:", e);
+      // Fallback to local state
+      setExpenses((prev) => [expenseObj, ...prev]);
+      resetState();
+    }
+  }, [newExpense]);
+
+  // Data Loading Effect
   useEffect(() => {
     const load = async () => {
       const pData = await fetch(`/data/projects.json`).then((r) => r.json());
@@ -79,23 +166,32 @@ export default function ExpensesPage() {
       const raw = localStorage.getItem("pv:expensesFilters");
       if (raw) setFilters(JSON.parse(raw));
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
-  // Persist filters to localStorage and URL
+  // Persist filters to localStorage and URL (Fix for re-render loop remains)
   useEffect(() => {
     try {
       localStorage.setItem("pv:expensesFilters", JSON.stringify(filters));
     } catch {}
+
     const params = new URLSearchParams();
     if (filters.projectId) params.set("project", filters.projectId);
     if (filters.q) params.set("q", filters.q);
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : `${pathname}`, { scroll: false });
-  }, [filters, pathname, router]);
 
+    const newQs = params.toString();
+    const currentQs = searchParams.toString();
+
+    // Only update the router if the query string has actually changed
+    if (newQs !== currentQs) {
+      router.replace(newQs ? `${pathname}?${newQs}` : `${pathname}`, {
+        scroll: false,
+      });
+    }
+  }, [filters, pathname, router, searchParams]);
+
+  // Data Memoization
   const byProject = useMemo(() => {
     const map: Record<string, number> = {};
     for (const e of expenses) {
@@ -109,9 +205,8 @@ export default function ExpensesPage() {
       if (filters.projectId && e.projectId !== filters.projectId) return false;
       if (filters.q) {
         const q = filters.q.toLowerCase();
-        const inDesc = (e as any).description?.toLowerCase().includes(q);
-        const inNote = (e as any).note?.toLowerCase().includes(q);
-        if (!inDesc && !inNote) return false;
+        const inDesc = e.description?.toLowerCase().includes(q);
+        if (!inDesc) return false;
       }
       if (filters.from && e.date < filters.from) return false;
       if (filters.to && e.date > filters.to) return false;
@@ -127,6 +222,7 @@ export default function ExpensesPage() {
     return map;
   }, [filteredExpenses]);
 
+  // Download Handlers
   const download = () => {
     const blob = new Blob([JSON.stringify(expenses, null, 2)], {
       type: "application/json",
@@ -144,9 +240,10 @@ export default function ExpensesPage() {
     const rows = filteredExpenses.map((e) => [
       e.date,
       projects.find((p) => p.id === e.projectId)?.name || e.projectId,
-      (e as any).description || "",
+      e.description || "",
       String(e.amount),
     ]);
+
     const csv = [header, ...rows]
       .map((r) =>
         r
@@ -158,6 +255,7 @@ export default function ExpensesPage() {
           .join(",")
       )
       .join("\n");
+
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -167,7 +265,8 @@ export default function ExpensesPage() {
     URL.revokeObjectURL(url);
   };
 
-  const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Import Handler
+  const onImport = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -175,22 +274,111 @@ export default function ExpensesPage() {
       try {
         const data = JSON.parse(String(reader.result || "[]"));
         setExpenses(Array.isArray(data) ? data : []);
-      } catch {}
+      } catch (error) {
+        console.error("Error importing file:", error);
+      }
     };
     reader.readAsText(file);
   };
 
+  // Component Render
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* 🛑 The floating Add Expense Button has been removed from here. */}
+
+      {/* Add Expense Modal */}
+      <Modal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        size="sm"
+        className="md:min-w-[40vw]"
+      >
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Add Expense</h2>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Project</label>
+            <select
+              className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+              value={newExpense.projectId}
+              onChange={(e) =>
+                setNewExpense((v) => ({ ...v, projectId: e.target.value }))
+              }
+            >
+              <option value="">Select project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Description</label>
+            <Input
+              value={newExpense.description}
+              onChange={(e) =>
+                setNewExpense((v) => ({ ...v, description: e.target.value }))
+              }
+              placeholder="Expense description"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Amount</label>
+            <Input
+              type="number"
+              min="0"
+              value={newExpense.amount}
+              onChange={(e) =>
+                setNewExpense((v) => ({ ...v, amount: e.target.value }))
+              }
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Date</label>
+            <Input
+              type="date"
+              value={newExpense.date}
+              onChange={(e) =>
+                setNewExpense((v) => ({ ...v, date: e.target.value }))
+              }
+            />
+          </div>
+          {addError && (
+            <div className="text-destructive text-sm">{addError}</div>
+          )}
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={handleAddExpense}
+              loading={addLoading}
+              className="flex-1"
+            >
+              Add
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAddOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <SectionHeader
         title="Expenses"
         right={
-          <>
+          // 🟢 Added the "Add Expense" button here
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              + Add Expense
+            </Button>
             <Button size="sm" onClick={download}>
-              Export
+              Export (JSON)
             </Button>
             <Button size="sm" variant="outline" onClick={downloadCSV}>
-              CSV
+              Export (CSV)
             </Button>
             <label className="px-3 py-2 rounded bg-muted text-sm cursor-pointer">
               Import
@@ -201,7 +389,7 @@ export default function ExpensesPage() {
                 className="hidden"
               />
             </label>
-          </>
+          </div>
         }
       />
 
@@ -210,7 +398,9 @@ export default function ExpensesPage() {
           <MetricCard
             key={p.id}
             title={p.name}
-            value={`$${Number(byProjectFiltered[p.id] ?? byProject[p.id] ?? 0).toLocaleString()}`}
+            value={formatCurrency(
+              Number(byProjectFiltered[p.id] ?? byProject[p.id] ?? 0)
+            )}
           />
         ))}
       </div>
@@ -282,9 +472,9 @@ export default function ExpensesPage() {
                   {projects.find((p) => p.id === e.projectId)?.name ||
                     e.projectId}
                 </td>
-                <td className="p-3 align-top">{(e as any).description}</td>
+                <td className="p-3 align-top">{e.description}</td>
                 <td className="p-3 align-top text-right">
-                  ${e.amount.toLocaleString()}
+                  {formatCurrency(e.amount)}
                 </td>
               </tr>
             ))}

@@ -78,7 +78,11 @@ export default function RolesSettings() {
   const save = async () => {
     // Client-side validation: required fields and unique IDs
     const missing = roles.find(
-      (r) => !r.id || !r.name || typeof r.id !== "string" || typeof r.name !== "string"
+      (r) =>
+        !r.id ||
+        !r.name ||
+        typeof r.id !== "string" ||
+        typeof r.name !== "string"
     );
     if (missing) {
       show("error", "Each role must have a string 'ID' and 'Name'.");

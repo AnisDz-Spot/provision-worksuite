@@ -83,7 +83,9 @@ export async function loadRoles(): Promise<RoleConfig[]> {
   }
 }
 
-export async function saveRoles(roles: RoleConfig[]): Promise<RoleConfig[] | void> {
+export async function saveRoles(
+  roles: RoleConfig[]
+): Promise<RoleConfig[] | void> {
   try {
     if (typeof window !== "undefined") {
       const { shouldUseDatabaseData } = await import("./dataSource");

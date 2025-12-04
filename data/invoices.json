@@ -1,0 +1,16 @@
+[
+  {
+    "id": "inv_1",
+    "projectId": "p1",
+    "date": "2025-12-01",
+    "amount": 500.0,
+    "status": "draft"
+  },
+  {
+    "id": "inv_2",
+    "projectId": "p2",
+    "date": "2025-12-02",
+    "amount": 1200.0,
+    "status": "sent"
+  }
+]

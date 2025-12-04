@@ -836,5 +836,3 @@ export function ProjectTable() {
     </div>
   );
 }
-
-

@@ -1413,5 +1413,3 @@ export function KanbanBoard({
     </>
   );
 }
-
-

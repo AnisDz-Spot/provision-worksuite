@@ -15,7 +15,8 @@ export async function GET() {
     const roles = await getAllRoles();
     const ordered = Array.isArray(roles)
       ? [...roles].sort((a, b) => {
-          if ((a.order ?? 0) !== (b.order ?? 0)) return (a.order ?? 0) - (b.order ?? 0);
+          if ((a.order ?? 0) !== (b.order ?? 0))
+            return (a.order ?? 0) - (b.order ?? 0);
           return a.name.localeCompare(b.name);
         })
       : roles;
@@ -54,7 +55,8 @@ export async function POST(request: Request) {
     const roles = await getAllRoles();
     const ordered = Array.isArray(roles)
       ? [...roles].sort((a, b) => {
-          if ((a.order ?? 0) !== (b.order ?? 0)) return (a.order ?? 0) - (b.order ?? 0);
+          if ((a.order ?? 0) !== (b.order ?? 0))
+            return (a.order ?? 0) - (b.order ?? 0);
           return a.name.localeCompare(b.name);
         })
       : roles;
@@ -96,7 +98,10 @@ export async function PUT(request: Request) {
       const name = r.name;
       if (!id || typeof id !== "string" || !name || typeof name !== "string") {
         return NextResponse.json(
-          { success: false, error: "Each role must include string 'id' and 'name'" },
+          {
+            success: false,
+            error: "Each role must include string 'id' and 'name'",
+          },
           { status: 400 }
         );
       }

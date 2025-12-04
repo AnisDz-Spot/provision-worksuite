@@ -1,3 +1,34 @@
+-- Expenses table
+CREATE TABLE IF NOT EXISTS expenses (
+  id SERIAL PRIMARY KEY,
+  uid VARCHAR(255) UNIQUE NOT NULL,
+  project_id VARCHAR(255) NOT NULL,
+  date DATE NOT NULL,
+  vendor VARCHAR(255),
+  amount DECIMAL(10, 2) NOT NULL,
+  note TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_project_id ON expenses(project_id);
+
+-- Invoices table
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  uid VARCHAR(255) UNIQUE NOT NULL,
+  project_id VARCHAR(255) NOT NULL,
+  client_name VARCHAR(255) NOT NULL,
+  issue_date DATE NOT NULL,
+  due_date DATE NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  items JSONB NOT NULL,
+  total DECIMAL(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_project_id ON invoices(project_id);
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,

@@ -38,10 +38,14 @@ export function ToasterProvider({ children }: { children: React.ReactNode }) {
             key={toast.id}
             className={cn(
               "px-4 py-2 rounded shadow-lg flex items-center gap-2 border text-sm animate-fadeIn",
-              toast.type === "success" && "bg-green-100 text-green-900 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700",
-              toast.type === "error" && "bg-destructive text-white border-destructive dark:bg-red-900 dark:border-red-700",
-              toast.type === "info" && "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700",
-              toast.type === "warning" && "bg-yellow-100 text-yellow-900 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-100 dark:border-yellow-700"
+              toast.type === "success" &&
+                "bg-green-100 text-green-900 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700",
+              toast.type === "error" &&
+                "bg-destructive text-white border-destructive dark:bg-red-900 dark:border-red-700",
+              toast.type === "info" &&
+                "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950 dark:text-blue-100 dark:border-blue-700",
+              toast.type === "warning" &&
+                "bg-yellow-100 text-yellow-900 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-100 dark:border-yellow-700"
             )}
           >
             {toast.message}
@@ -55,5 +59,3 @@ export function ToasterProvider({ children }: { children: React.ReactNode }) {
 export function useToaster() {
   return useContext(ToastContext);
 }
-
-

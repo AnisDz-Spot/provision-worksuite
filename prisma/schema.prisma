@@ -1,0 +1,65 @@
+// Prisma schema for provision-worksuite
+// Add tables for users, projects, tasks, expenses, invoices, etc.
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model User {
+    id            Int      @id @default(autoincrement())
+    uid           String   @unique
+    email         String   @unique
+    name          String
+    avatar_url    String?
+    role          String   @default("member")
+    password_hash String?
+    created_at    DateTime @default(now())
+    updated_at    DateTime @updatedAt
+}
+
+model Project {
+    id          Int       @id @default(autoincrement())
+    uid         String    @unique
+    name        String
+    description String?
+    status      String    @default("active")
+    owner       String
+    start_date  DateTime?
+    deadline    DateTime?
+    budget      Float?
+    progress    Int       @default(0)
+    priority    String?
+    user_id     String
+    created_at  DateTime  @default(now())
+    updated_at  DateTime  @updatedAt
+}
+
+model Expense {
+    id         Int      @id @default(autoincrement())
+    uid        String   @unique
+    project_id String
+    date       DateTime
+    vendor     String?
+    amount     Float
+    note       String?
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+}
+
+model Invoice {
+    id          Int      @id @default(autoincrement())
+    uid         String   @unique
+    project_id  String
+    client_name String
+    issue_date  DateTime
+    due_date    DateTime
+    status      String   @default("draft")
+    items       Json
+    total       Float
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+}

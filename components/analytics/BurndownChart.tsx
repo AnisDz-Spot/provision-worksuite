@@ -34,7 +34,8 @@ export function BurndownChart({
   }
 
   // Calculate chart dimensions
-  const maxValue = Math.max(...data.map((d) => Math.max(d.ideal, d.actual)));
+  let maxValue = Math.max(...data.map((d) => Math.max(d.ideal, d.actual)));
+  if (!isFinite(maxValue) || maxValue <= 0) maxValue = 1;
   const chartHeight = 300;
   const chartWidth = 600;
   const padding = { top: 20, right: 40, bottom: 40, left: 50 };
@@ -43,8 +44,10 @@ export function BurndownChart({
 
   // Scale functions
   const xScale = (index: number) => (index / (data.length - 1)) * innerWidth;
-  const yScale = (value: number) =>
-    innerHeight - (value / maxValue) * innerHeight;
+  const yScale = (value: number) => {
+    const scaled = innerHeight - (value / maxValue) * innerHeight;
+    return isFinite(scaled) ? scaled : 0;
+  };
 
   // Generate path data
   const idealPath = data
