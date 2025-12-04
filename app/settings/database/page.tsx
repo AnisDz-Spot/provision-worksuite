@@ -96,6 +96,15 @@ export default function DatabaseSetupPage() {
       };
       localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
 
+      // Call API to auto-create tables (prisma db push)
+      const resp = await fetch("/api/setup-db", { method: "POST" });
+      const result = await resp.json();
+      if (!result.success) {
+        alert("Database credentials saved, but failed to create tables: " + (result.error || "Unknown error"));
+        setLoading(false);
+        return;
+      }
+
       // Redirect to profile setup
       router.push("/settings?tab=profile&setup=true");
     } catch (error) {
@@ -106,7 +115,7 @@ export default function DatabaseSetupPage() {
   };
 
   return (
-    <div className="container mx-auto p-8 max-w-3xl">
+    <div className="container mx-auto p-8 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
         <p className="text-muted-foreground">
@@ -115,118 +124,121 @@ export default function DatabaseSetupPage() {
         </p>
       </div>
 
-      <Card className="p-6">
-        <div className="space-y-6">
-          {/* Postgres URL */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              PostgreSQL Connection URL
-            </label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Get this from your Vercel Storage → Postgres → .env.local tab.
-              Copy the{" "}
-              <code className="bg-accent px-1 py-0.5 rounded">
-                POSTGRES_URL
-              </code>{" "}
-              value.
-            </p>
-            <Input
-              type="text"
-              placeholder="postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb"
-              value={postgresUrl}
-              onChange={(e) => setPostgresUrl(e.target.value)}
-              className="font-mono text-sm"
-            />
-          </div>
-
-          {/* Blob Token */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">
-              Blob Storage Token
-            </label>
-            <p className="text-sm text-muted-foreground mb-3">
-              Get this from your Vercel Storage → Blob → .env.local tab. Copy
-              the{" "}
-              <code className="bg-accent px-1 py-0.5 rounded">
-                BLOB_READ_WRITE_TOKEN
-              </code>{" "}
-              value.
-            </p>
-            <Input
-              type="password"
-              placeholder="vercel_blob_rw_xxxxx"
-              value={blobToken}
-              onChange={(e) => setBlobToken(e.target.value)}
-              className="font-mono text-sm"
-            />
-          </div>
-
-          {/* Test Result */}
-          {testResult && (
-            <div
-              className={`p-4 rounded-lg ${
-                testResult.success
-                  ? "bg-green-500/10 border border-green-500"
-                  : "bg-red-500/10 border border-red-500"
-              }`}
-            >
-              <p className="text-sm">{testResult.message}</p>
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        {/* Config Form */}
+        <Card className="p-6 flex-1 min-w-0">
+          <div className="space-y-6">
+            {/* Postgres URL */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">
+                PostgreSQL Connection URL
+              </label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Get this from your Vercel Storage → Postgres → .env.local tab.
+                Copy the{" "}
+                <code className="bg-accent px-1 py-0.5 rounded">
+                  POSTGRES_URL
+                </code>{" "}
+                value.
+              </p>
+              <Input
+                type="text"
+                placeholder="postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb"
+                value={postgresUrl}
+                onChange={(e) => setPostgresUrl(e.target.value)}
+                className="font-mono text-sm"
+              />
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex gap-4 pt-4">
-            <Button
-              onClick={testConnection}
-              disabled={!postgresUrl || !blobToken || testing}
-              variant="outline"
-            >
-              {testing ? "Testing..." : "Test Connection"}
-            </Button>
+            {/* Blob Token */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">
+                Blob Storage Token
+              </label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Get this from your Vercel Storage → Blob → .env.local tab. Copy
+                the{" "}
+                <code className="bg-accent px-1 py-0.5 rounded">
+                  BLOB_READ_WRITE_TOKEN
+                </code>{" "}
+                value.
+              </p>
+              <Input
+                type="password"
+                placeholder="vercel_blob_rw_xxxxx"
+                value={blobToken}
+                onChange={(e) => setBlobToken(e.target.value)}
+                className="font-mono text-sm"
+              />
+            </div>
 
-            <Button
-              onClick={handleSave}
-              disabled={
-                !postgresUrl || !blobToken || loading || !isTestSuccessful
-              }
-              variant="primary"
-              title={
-                !isTestSuccessful
-                  ? "Please test connection successfully first"
-                  : undefined
-              }
-            >
-              {loading ? "Saving..." : "Save & Continue to Profile Setup"}
-            </Button>
+            {/* Test Result */}
+            {testResult && (
+              <div
+                className={`p-4 rounded-lg ${
+                  testResult.success
+                    ? "bg-green-500/10 border border-green-500"
+                    : "bg-red-500/10 border border-red-500"
+                }`}
+              >
+                <p className="text-sm">{testResult.message}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-4 pt-4">
+              <Button
+                onClick={testConnection}
+                disabled={!postgresUrl || !blobToken || testing}
+                variant="outline"
+              >
+                {testing ? "Testing..." : "Test Connection"}
+              </Button>
+
+              <Button
+                onClick={handleSave}
+                disabled={
+                  !postgresUrl || !blobToken || loading || !isTestSuccessful
+                }
+                variant="primary"
+                title={
+                  !isTestSuccessful
+                    ? "Please test connection successfully first"
+                    : undefined
+                }
+              >
+                {loading ? "Saving..." : "Save & Continue to Profile Setup"}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Instructions Card */}
-      <Card className="mt-6 p-6 bg-accent/20">
-        <h3 className="text-lg font-semibold mb-3">📋 Setup Instructions</h3>
-        <ol className="list-decimal list-inside space-y-2 text-sm">
-          <li>
-            Go to your Vercel project dashboard → <strong>Storage</strong> tab
-          </li>
-          <li>
-            Create a <strong>Postgres</strong> database if you haven't already
-          </li>
-          <li>
-            Create a <strong>Blob</strong> storage if you haven't already
-          </li>
-          <li>
-            Click on each storage → <strong>.env.local</strong> tab
-          </li>
-          <li>Copy the connection strings and paste them above</li>
-          <li>
-            Click <strong>Test Connection</strong> to verify
-          </li>
-          <li>
-            Click <strong>Save & Continue</strong> to proceed to profile setup
-          </li>
-        </ol>
-      </Card>
+        {/* Instructions Card */}
+        <Card className="p-6 flex-1 min-w-0 bg-accent/20">
+          <h3 className="text-lg font-semibold mb-3">📋 Setup Instructions</h3>
+          <ol className="list-decimal list-inside space-y-2 text-sm">
+            <li>
+              Go to your Vercel project dashboard → <strong>Storage</strong> tab
+            </li>
+            <li>
+              Create a <strong>Postgres</strong> database if you haven't already
+            </li>
+            <li>
+              Create a <strong>Blob</strong> storage if you haven't already
+            </li>
+            <li>
+              Click on each storage → <strong>.env.local</strong> tab
+            </li>
+            <li>Copy the connection strings and paste them above</li>
+            <li>
+              Click <strong>Test Connection</strong> to verify
+            </li>
+            <li>
+              Click <strong>Save & Continue</strong> to proceed to profile setup
+            </li>
+          </ol>
+        </Card>
+      </div>
     </div>
   );
 }
