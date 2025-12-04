@@ -5,3 +5,5 @@
   { "id": "e4", "title": "Sprint Planning", "date": "2025-12-12", "description": "Next sprint kickoff.", "relatedProjectId": null },
   { "id": "e5", "title": "Client Check-in", "date": "2025-12-19", "description": "Demo for external partners.", "relatedProjectId": "p2" }
 ]
+
+

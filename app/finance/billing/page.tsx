@@ -5,14 +5,16 @@ import { MetricCard } from "@/components/finance/MetricCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { loadProjects, type Project } from "@/lib/data";
+import { readTasks } from "@/lib/utils";
 
-type Project = { id: string; name: string; hourlyRate?: number };
 type TimeLog = {
-  id: string;
+  id?: string | number;
   projectId: string;
-  userId: string;
+  userId?: string;
   hours: number;
-  rate: number;
+  rate?: number;
   date: string;
 };
 
@@ -31,13 +33,42 @@ export default function BillingPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [p, t] = await Promise.all([
-        fetch(`/data/projects.json`).then((r) => r.json()),
-        fetch(`/data/timelogs.json`)
-          .then((r) => r.json())
-          .catch(() => []),
-      ]);
-      setProjects(p);
+      const useDb = shouldUseDatabaseData();
+      const p = await loadProjects();
+      let t: TimeLog[] = [];
+      if (useDb) {
+        try {
+          const res = await fetch("/api/time-logs");
+          const data = await res.json();
+          if (data?.success) {
+            t = (data.data || []).map((row: any) => ({
+              id: row.id,
+              projectId: row.project_id,
+              userId: row.logged_by,
+              hours: Number(row.hours) || 0,
+              rate: undefined,
+              date: new Date(row.logged_at).toISOString().slice(0, 10),
+            }));
+          }
+        } catch {}
+      } else {
+        // Fallback to local time logs (aggregate by tasks)
+        try {
+          const tasks = readTasks();
+          const today = new Date().toISOString().slice(0, 10);
+          t = tasks
+            .filter((tk: any) => tk.loggedHours && tk.loggedHours > 0)
+            .map((tk: any) => ({
+              projectId: tk.projectId,
+              userId: tk.assignee || "Unknown",
+              hours: tk.loggedHours,
+              date: today,
+            }));
+        } catch {
+          t = [];
+        }
+      }
+      setProjects(p as any);
       setLogs(t);
     };
     load();
@@ -98,7 +129,9 @@ export default function BillingPage() {
     for (const l of filteredLogs) {
       if (!map[l.projectId]) map[l.projectId] = { hours: 0, billable: 0 };
       map[l.projectId].hours += l.hours || 0;
-      map[l.projectId].billable += (l.hours || 0) * (l.rate || 0);
+      const rate =
+        projects.find((p) => p.id === l.projectId)?.hourlyRate || l.rate || 0;
+      map[l.projectId].billable += (l.hours || 0) * rate;
     }
     return map;
   }, [projects, filteredLogs]);

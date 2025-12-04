@@ -105,13 +105,23 @@ export function NotificationCenter({
     }
   };
 
-  const checkForNewNotifications = () => {
+  const checkForNewNotifications = async () => {
     if (typeof window === "undefined") return;
 
     // Check alert rules and generate notifications
     const rules = JSON.parse(localStorage.getItem("pv:alertRules") || "[]");
-    const projects = JSON.parse(localStorage.getItem("pv:projects") || "[]");
-    const tasks = JSON.parse(localStorage.getItem("pv:tasks") || "[]");
+
+    // Load projects and tasks using the new data loader
+    let projects: any[] = [];
+    let tasks: any[] = [];
+    try {
+      const { loadProjects, loadTasks } = await import("@/lib/data");
+      projects = await loadProjects();
+      tasks = await loadTasks();
+    } catch (error) {
+      console.error("Failed to load data for notifications:", error);
+      return;
+    }
 
     const newNotifications: Notification[] = [];
 

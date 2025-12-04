@@ -206,8 +206,7 @@ export function MilestoneGantt({
         <div className="space-y-6">
           {/* Timeline header */}
           <div className="flex items-center gap-4">
-            <div className="w-64 flex-shrink-0" />{" "}
-            {/* Spacer for milestone names */}
+            <div className="w-64 shrink-0" /> {/* Spacer for milestone names */}
             <div className="flex-1 relative">
               <div className="flex justify-between text-xs text-muted-foreground mb-2">
                 <span>
@@ -264,7 +263,7 @@ export function MilestoneGantt({
                     className="flex items-center gap-4 group"
                   >
                     {/* Milestone info */}
-                    <div className="w-64 flex-shrink-0 px-2">
+                    <div className="w-64 shrink-0 px-2">
                       <div className="flex items-center gap-2 mb-1">
                         {getStatusIcon(milestone.status)}
                         <span className="text-sm font-medium truncate">
@@ -312,7 +311,7 @@ export function MilestoneGantt({
                         {/* Progress bar leading to milestone */}
                         {milestone.progress > 0 && (
                           <div
-                            className="absolute right-full top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-transparent to-current transition-all"
+                            className="absolute right-full top-1/2 -translate-y-1/2 h-1 bg-linear-to-r from-transparent to-current transition-all"
                             style={{
                               width: "60px",
                               color:

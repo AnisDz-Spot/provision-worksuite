@@ -229,17 +229,26 @@ const columns: ColumnDef<Project>[] = [
 
 export function ProjectTable() {
   const router = useRouter();
-  const [data, setData] = React.useState<Project[]>(PROJECTS);
+  const [data, setData] = React.useState<Project[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [selectMode, setSelectMode] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+
   React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem("pv:projects");
-      if (raw) {
-        const parsed = JSON.parse(raw) as Project[];
-        if (Array.isArray(parsed)) setData(parsed);
+    async function fetchProjects() {
+      setLoading(true);
+      try {
+        const { loadProjects } = await import("@/lib/data");
+        const projects = await loadProjects();
+        setData(projects);
+      } catch (error) {
+        console.error("Failed to load projects:", error);
+        setData(PROJECTS); // Fallback to mock data
+      } finally {
+        setLoading(false);
       }
-    } catch {}
+    }
+    fetchProjects();
   }, []);
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -275,7 +284,7 @@ export function ProjectTable() {
       );
     },
     meta: {
-      toggleStar: (id: string) => {
+      toggleStar: async (id: string) => {
         setData((prev) => {
           const next = prev.map((p) => {
             if (p.id === id) {
@@ -287,21 +296,37 @@ export function ProjectTable() {
             }
             return p;
           });
-          try {
-            localStorage.setItem("pv:projects", JSON.stringify(next));
-          } catch {}
+
+          // Save to appropriate storage
+          (async () => {
+            try {
+              const { saveProjects } = await import("@/lib/data");
+              await saveProjects(next);
+            } catch (error) {
+              console.error("Failed to save projects:", error);
+            }
+          })();
+
           return next;
         });
       },
     },
   });
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     setData((prev) => {
       const next = prev.filter((p) => p.id !== id);
-      try {
-        localStorage.setItem("pv:projects", JSON.stringify(next));
-      } catch {}
+
+      // Save to appropriate storage
+      (async () => {
+        try {
+          const { saveProjects } = await import("@/lib/data");
+          await saveProjects(next);
+        } catch (error) {
+          console.error("Failed to save projects:", error);
+        }
+      })();
+
       return next;
     });
     setDeleteConfirm(null);
@@ -523,230 +548,246 @@ export function ProjectTable() {
         </div>
       </div>
 
-      <table className="min-w-full text-sm">
-        <thead className="bg-accent/20">
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id}>
-              {selectMode && <th className="p-4"></th>}
-              {hg.headers.map((h) => (
-                <th
-                  className="p-4 font-medium text-left text-muted-foreground"
-                  key={h.id}
-                >
-                  {flexRender(h.column.columnDef.header, h.getContext())}
-                </th>
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full mr-3"></div>
+          Loading projects...
+        </div>
+      ) : pageRows.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p className="text-lg mb-2">No projects found</p>
+          <p className="text-sm">Start by creating your first project</p>
+        </div>
+      ) : (
+        <>
+          <table className="min-w-full text-sm">
+            <thead className="bg-accent/20">
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {selectMode && <th className="p-4"></th>}
+                  {hg.headers.map((h) => (
+                    <th
+                      className="p-4 font-medium text-left text-muted-foreground"
+                      key={h.id}
+                    >
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                    </th>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {pageRows.map((p) => (
-            <tr
-              key={p.id}
-              className={`border-t [&:last-child>td]:border-b-0 transition-colors`}
-            >
-              {selectMode && (
-                <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(p.id)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.add(p.id);
-                          else next.delete(p.id);
-                          return next;
-                        });
-                      }}
-                    />
-                  </div>
-                </td>
-              )}
-              <td className="p-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    className={`p-1 rounded hover:bg-accent/20 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
-                    title={p.starred ? "Unstar" : "Star"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      table.options.meta?.toggleStar?.(p.id);
-                    }}
-                  >
-                    <Star
-                      className="w-4 h-4"
-                      fill={p.starred ? "currentColor" : "none"}
-                    />
-                  </button>
-                  <button
-                    className="text-foreground hover:underline"
-                    title="Open project"
-                    onClick={() => openProject(p.id)}
-                  >
-                    {p.name}
-                  </button>
-                </div>
-              </td>
-              <td className="p-4">{p.owner}</td>
-              <td className="p-4">
-                <Badge
-                  variant={
-                    p.status === "Active"
-                      ? "info"
-                      : p.status === "Completed"
-                        ? "success"
-                        : "warning"
-                  }
-                  pill
+            </thead>
+            <tbody>
+              {pageRows.map((p) => (
+                <tr
+                  key={p.id}
+                  className={`border-t [&:last-child>td]:border-b-0 transition-colors`}
                 >
-                  {p.status}
-                </Badge>
-              </td>
-              <td className="p-4">{p.deadline}</td>
-              {/* Time rollup */}
-              <td className="p-4">
-                {(() => {
-                  const r = getProjectTimeRollup(p.id);
-                  return (
-                    <div className="flex items-center gap-2 text-[10px]">
-                      <Badge variant="secondary" pill>
-                        Est {r.estimate}h
-                      </Badge>
-                      <Badge variant="info" pill>
-                        Log {r.logged}h
-                      </Badge>
-                      <Badge variant="warning" pill>
-                        Rem {r.remaining}h
-                      </Badge>
-                    </div>
-                  );
-                })()}
-              </td>
-              {/* Progress */}
-              <td className="p-4">
-                {(() => {
-                  const t = getTaskCompletionForProject(p.id);
-                  const fallback =
-                    p.status === "Completed"
-                      ? 100
-                      : p.status === "Active"
-                        ? 65
-                        : p.status === "In Progress"
-                          ? 40
-                          : 20;
-                  const percent = t.total > 0 ? t.percent : fallback;
-                  return (
-                    <div className="min-w-40">
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>
-                          {t.total > 0 ? `${t.done}/${t.total}` : "—"}
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {percent}%
-                        </span>
-                      </div>
-                      <div className="h-2 bg-accent rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-linear-to-r from-primary to-primary/60"
-                          style={{ width: `${percent}%` }}
+                  {selectMode && (
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(p.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(p.id);
+                              else next.delete(p.id);
+                              return next;
+                            });
+                          }}
                         />
                       </div>
-                    </div>
-                  );
-                })()}
-              </td>
-              {/* Members */}
-              <td className="p-4">
-                <div className="flex items-center">
-                  {(p.members || []).slice(0, 5).map((m, idx) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={idx}
-                      src={
-                        m.avatarUrl ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                      }
-                      alt={m.name}
-                      className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
-                    />
-                  ))}
-                  {p.members && p.members.length > 5 && (
-                    <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
-                      +{p.members.length - 5}
-                    </div>
+                    </td>
                   )}
-                </div>
-              </td>
-              <td className="p-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openProject(p.id)}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive border-destructive/40"
-                    onClick={() => setDeleteConfirm({ id: p.id, name: p.name })}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        className={`p-1 rounded hover:bg-accent/20 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
+                        title={p.starred ? "Unstar" : "Star"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          table.options.meta?.toggleStar?.(p.id);
+                        }}
+                      >
+                        <Star
+                          className="w-4 h-4"
+                          fill={p.starred ? "currentColor" : "none"}
+                        />
+                      </button>
+                      <button
+                        className="text-foreground hover:underline"
+                        title="Open project"
+                        onClick={() => openProject(p.id)}
+                      >
+                        {p.name}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-4">{p.owner}</td>
+                  <td className="p-4">
+                    <Badge
+                      variant={
+                        p.status === "Active"
+                          ? "info"
+                          : p.status === "Completed"
+                            ? "success"
+                            : "warning"
+                      }
+                      pill
+                    >
+                      {p.status}
+                    </Badge>
+                  </td>
+                  <td className="p-4">{p.deadline}</td>
+                  {/* Time rollup */}
+                  <td className="p-4">
+                    {(() => {
+                      const r = getProjectTimeRollup(p.id);
+                      return (
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <Badge variant="secondary" pill>
+                            Est {r.estimate}h
+                          </Badge>
+                          <Badge variant="info" pill>
+                            Log {r.logged}h
+                          </Badge>
+                          <Badge variant="warning" pill>
+                            Rem {r.remaining}h
+                          </Badge>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  {/* Progress */}
+                  <td className="p-4">
+                    {(() => {
+                      const t = getTaskCompletionForProject(p.id);
+                      const fallback =
+                        p.status === "Completed"
+                          ? 100
+                          : p.status === "Active"
+                            ? 65
+                            : p.status === "In Progress"
+                              ? 40
+                              : 20;
+                      const percent = t.total > 0 ? t.percent : fallback;
+                      return (
+                        <div className="min-w-40">
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>
+                              {t.total > 0 ? `${t.done}/${t.total}` : "—"}
+                            </span>
+                            <span className="font-medium text-foreground">
+                              {percent}%
+                            </span>
+                          </div>
+                          <div className="h-2 bg-accent rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-linear-to-r from-primary to-primary/60"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  {/* Members */}
+                  <td className="p-4">
+                    <div className="flex items-center">
+                      {(p.members || []).slice(0, 5).map((m, idx) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={idx}
+                          src={
+                            m.avatarUrl ||
+                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
+                          }
+                          alt={m.name}
+                          className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
+                        />
+                      ))}
+                      {p.members && p.members.length > 5 && (
+                        <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
+                          +{p.members.length - 5}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openProject(p.id)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive/40"
+                        onClick={() =>
+                          setDeleteConfirm({ id: p.id, name: p.name })
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between p-3 border-t text-sm">
-        <div>
-          Page {pageIndex + 1} of {totalPages}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex(0)}
-            disabled={pageIndex === 0}
-          >
-            First
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
-            disabled={pageIndex === 0}
-          >
-            Prev
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPageIndex(Math.min(totalPages - 1, pageIndex + 1))
-            }
-            disabled={pageIndex >= totalPages - 1}
-          >
-            Next
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPageIndex(totalPages - 1)}
-            disabled={pageIndex >= totalPages - 1}
-          >
-            Last
-          </Button>
-        </div>
-      </div>
+          {/* Pagination */}
+          <div className="flex items-center justify-between p-3 border-t text-sm">
+            <div>
+              Page {pageIndex + 1} of {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(0)}
+                disabled={pageIndex === 0}
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
+                disabled={pageIndex === 0}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPageIndex(Math.min(totalPages - 1, pageIndex + 1))
+                }
+                disabled={pageIndex >= totalPages - 1}
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(totalPages - 1)}
+                disabled={pageIndex >= totalPages - 1}
+              >
+                Last
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
@@ -795,3 +836,5 @@ export function ProjectTable() {
     </div>
   );
 }
+
+

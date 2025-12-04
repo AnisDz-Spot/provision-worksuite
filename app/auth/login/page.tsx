@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 function LoginForm() {
   const router = useRouter();
@@ -44,6 +45,22 @@ function LoginForm() {
       <h1 className="text-2xl font-bold mb-7 text-center">
         Sign In to ProVision
       </h1>
+      {shouldUseMockData() && (
+        <div className="mb-4 p-3 rounded bg-yellow-100 border border-yellow-300 text-yellow-800 text-center text-xs">
+          Demo Mode is enabled.
+          <button
+            className="ml-2 underline hover:no-underline"
+            onClick={() =>
+              navigator.clipboard
+                .writeText("admin@provision.com / password1234567890")
+                .catch(() => {})
+            }
+            title="Click to copy demo credentials"
+          >
+            Copy admin@provision.com / password1234567890
+          </button>
+        </div>
+      )}
       {setupComplete && (
         <div className="mb-4 p-3 rounded bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-center text-sm">
           ✅ Setup complete! Please log in with your new credentials.
@@ -94,24 +111,30 @@ function LoginForm() {
           Forgot password?
         </Link>
       </div>
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <p>First-time setup credentials:</p>
-        <p className="font-mono text-xs mt-1">
-          anis@provision.com / password123578951
-        </p>
-      </div>
+      {!shouldUseMockData() && (
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+          <p>First-time setup credentials:</p>
+          <p className="font-mono text-xs mt-1">
+            anis@provision.com / password123578951
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="w-full max-w-md p-10 bg-card border rounded-xl shadow">
-        <div className="text-center">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="w-full max-w-md p-10 bg-card border rounded-xl shadow">
+          <div className="text-center">Loading...</div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
 }
+
+

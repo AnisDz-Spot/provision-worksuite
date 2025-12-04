@@ -112,34 +112,39 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const initialMembers: TeamMember[] = useMemo(() => {
     // Load users from auth system
     if (typeof window === "undefined") return [];
-    const stored = localStorage.getItem("pv:users");
-    if (!stored) return [];
-    const authUsers = JSON.parse(stored);
 
-    // Deduplicate by ID (in case there are duplicates)
-    const uniqueUsers = authUsers.reduce((acc: any[], u: any) => {
-      if (!acc.find((existing) => existing.id === u.id)) {
-        acc.push(u);
-      }
-      return acc;
-    }, []);
-
-    return uniqueUsers.map((u: any) => ({
-      id: u.id,
-      name: u.name,
-      role: u.role,
-      email: u.email,
-      phone: ENRICH[u.id]?.phone || "+1 (555) 000-0000",
-      address: ENRICH[u.id]?.address || "-",
-      socials: ENRICH[u.id]?.socials || {},
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
-    }));
+    // This will be loaded asynchronously below
+    return [];
   }, []);
 
   // Initialize membersData once
   React.useEffect(() => {
-    setMembersData(initialMembers);
-  }, [initialMembers]);
+    async function fetchUsers() {
+      try {
+        const { loadUsers } = await import("@/lib/data");
+        const users = await loadUsers();
+
+        const teamMembers = users.map((u: any) => ({
+          id: u.uid || u.id,
+          name: u.name,
+          role: u.role,
+          email: u.email,
+          phone: ENRICH[u.uid || u.id]?.phone || "+1 (555) 000-0000",
+          address: ENRICH[u.uid || u.id]?.address || "-",
+          socials: ENRICH[u.uid || u.id]?.socials || {},
+          avatar:
+            u.avatar_url ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+        }));
+
+        setMembersData(teamMembers);
+      } catch (error) {
+        console.error("Failed to load team members:", error);
+        setMembersData([]);
+      }
+    }
+    fetchUsers();
+  }, []);
 
   // Load member activities
   React.useEffect(() => {

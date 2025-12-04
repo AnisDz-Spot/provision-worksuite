@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { Dropdown } from "@/components/ui/Dropdown";
+import users from "@/data/users.json";
 import { useTimeTracker } from "@/components/timetracking/TimeTrackingWidget";
 import { useToaster } from "@/components/ui/Toaster";
 import {
@@ -138,6 +140,29 @@ export function KanbanBoard({
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [newTaskPriority, setNewTaskPriority] = useState("medium");
+  const memberList: Array<{ id: string; name: string; avatarColor?: string }> =
+    (
+      projectMembers && projectMembers.length > 0
+        ? projectMembers.map((m, i) => ({ id: `pm-${i}`, name: m.name }))
+        : (users as any)
+    ) as Array<{ id: string; name: string; avatarColor?: string }>;
+
+  const getAvatarColorClass = (color?: string) => {
+    switch (color) {
+      case "indigo":
+        return "bg-indigo-500/10 text-indigo-600";
+      case "green":
+        return "bg-green-500/10 text-green-600";
+      case "pink":
+        return "bg-pink-500/10 text-pink-600";
+      case "yellow":
+        return "bg-yellow-500/10 text-yellow-600";
+      case "blue":
+        return "bg-blue-500/10 text-blue-600";
+      default:
+        return "bg-primary/10 text-primary";
+    }
+  };
   const [newTaskEstimate, setNewTaskEstimate] = useState<string>("");
   const [newTaskType, setNewTaskType] = useState<string>("feature");
   const [targetColumn, setTargetColumn] = useState<string | null>(null);
@@ -857,7 +882,8 @@ export function KanbanBoard({
             setTargetColumn(null);
           }
         }}
-        size="lg"
+        size="xl"
+        className="md:min-w-[42vw]"
       >
         <div className="space-y-8">
           <h3 className="text-xl font-semibold">Create Task</h3>
@@ -872,17 +898,45 @@ export function KanbanBoard({
             </div>
             <div className="space-y-3">
               <label className="text-sm font-medium">Assignee</label>
-              <select
-                value={newTaskAssignee}
-                onChange={(e) => setNewTaskAssignee(e.target.value)}
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm cursor-pointer"
-              >
-                {assignees.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                align="start"
+                trigger={
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                  >
+                    {(() => {
+                      const m = memberList.find(
+                        (u) => u.name === newTaskAssignee
+                      );
+                      const cls = getAvatarColorClass((m as any)?.avatarColor);
+                      return (
+                        <>
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
+                          >
+                            {newTaskAssignee.charAt(0)}
+                          </div>
+                          <span className="text-sm">{newTaskAssignee}</span>
+                        </>
+                      );
+                    })()}
+                  </Button>
+                }
+                items={memberList.map((m) => ({
+                  label: m.name,
+                  icon: (
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass((m as any).avatarColor)}`}
+                    >
+                      {m.name.charAt(0)}
+                    </div>
+                  ),
+                  onClick: () => setNewTaskAssignee(m.name),
+                }))}
+                searchable
+                searchPlaceholder="Search members..."
+              />
             </div>
             {projectId && (
               <div className="space-y-3">
@@ -975,7 +1029,8 @@ export function KanbanBoard({
           }
           setDetailOpen(open);
         }}
-        size="md"
+        size="lg"
+        className="md:min-w-[40vw]"
       >
         {detailTask && (
           <div className="space-y-6">
@@ -1020,17 +1075,49 @@ export function KanbanBoard({
                   Assigned to
                 </div>
                 {editMode ? (
-                  <select
-                    value={editAssignee}
-                    onChange={(e) => setEditAssignee(e.target.value)}
-                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                  >
-                    {assignees.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
+                  <Dropdown
+                    align="start"
+                    trigger={
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                      >
+                        {(() => {
+                          const m = memberList.find(
+                            (u) => u.name === editAssignee
+                          );
+                          const cls = getAvatarColorClass(
+                            (m as any)?.avatarColor
+                          );
+                          return (
+                            <>
+                              <div
+                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
+                              >
+                                {editAssignee ? editAssignee.charAt(0) : "?"}
+                              </div>
+                              <span className="text-sm">
+                                {editAssignee || "Unassigned"}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </Button>
+                    }
+                    items={memberList.map((m) => ({
+                      label: m.name,
+                      icon: (
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass((m as any).avatarColor)}`}
+                        >
+                          {m.name.charAt(0)}
+                        </div>
+                      ),
+                      onClick: () => setEditAssignee(m.name),
+                    }))}
+                    searchable
+                    searchPlaceholder="Search members..."
+                  />
                 ) : (
                   <div className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1326,3 +1413,5 @@ export function KanbanBoard({
     </>
   );
 }
+
+

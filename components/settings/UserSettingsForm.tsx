@@ -14,13 +14,15 @@ import { useSettings } from "@/components/settings/SettingsProvider";
 import { useAuth } from "@/components/auth/AuthContext";
 import { updateUserCredentials } from "@/components/auth/AuthContext";
 import type { UserSettingsData } from "@/lib/settings";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export function UserSettingsForm() {
   const { user, updateUser } = useSettings();
-  const { currentUser } = useAuth();
+  const { currentUser, updateCurrentUser } = useAuth();
   const [form, setForm] = useState<UserSettingsData>(user);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   // Credentials form
   const [newEmail, setNewEmail] = useState("");
@@ -56,14 +58,68 @@ export function UserSettingsForm() {
     reader.readAsDataURL(file);
   }
 
-  function handleSave() {
+  async function handleSave() {
+    setProfileError("");
     setSaving(true);
-    updateUser(form); // Persists + toast via provider
-    // mimic async UX slight delay
-    setTimeout(() => {
-      setSaving(false);
+
+    try {
+      // If database is configured and a user is logged in, persist to DB
+      if (shouldUseDatabaseData() && currentUser) {
+        let avatarUrlToSet: string | undefined = undefined;
+
+        if (form.avatarDataUrl && form.avatarDataUrl.startsWith("data:")) {
+          try {
+            // Convert data URL to Blob and upload to blob storage via existing endpoint
+            const res = await fetch(form.avatarDataUrl);
+            const blob = await res.blob();
+            const fd = new FormData();
+            fd.append(
+              "file",
+              new File([blob], "avatar.png", { type: blob.type || "image/png" })
+            );
+            const upload = await fetch("/api/test-blob", {
+              method: "POST",
+              body: fd,
+            });
+            const upData = await upload.json();
+            if (upData?.success && upData?.url) {
+              avatarUrlToSet = upData.url as string;
+            }
+          } catch (e) {
+            // Non-fatal; keep going without avatar update
+          }
+        }
+
+        const payload: any = {
+          name: form.fullName,
+          email: form.email,
+        };
+        if (avatarUrlToSet) payload.avatar_url = avatarUrlToSet;
+
+        const resp = await fetch(`/api/users/${currentUser.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data?.success) {
+          throw new Error(
+            data?.error || "Failed to update profile in database"
+          );
+        }
+
+        // Update auth session locally for instant reflection
+        updateCurrentUser({ name: form.fullName, email: form.email });
+      }
+
+      // Always persist UI settings locally for additional fields (phone/title/bio, avatar data URL)
+      updateUser(form); // Persists + toast via provider
       setDirty(false);
-    }, 150);
+    } catch (e: any) {
+      setProfileError(e?.message || "Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleUpdateCredentials(e: React.FormEvent) {
@@ -204,6 +260,11 @@ export function UserSettingsForm() {
           </div>
         </CardContent>
         <CardFooter>
+          {profileError && (
+            <div className="mr-3 p-2 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs">
+              {profileError}
+            </div>
+          )}
           <Button
             variant="primary"
             size="sm"

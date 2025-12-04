@@ -374,7 +374,7 @@ export function ResourceAllocation({
       {teamStats.overallocated > 0 && (
         <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
                 Resource Rebalancing Needed

@@ -39,6 +39,7 @@ type Project = {
 
 export function ProjectGrid() {
   const [projects, setProjects] = React.useState<Project[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const router = useRouter();
   const { showToast } = useToast();
   const [query, setQuery] = React.useState("");
@@ -61,6 +62,9 @@ export function ProjectGrid() {
   const [addForProject, setAddForProject] = React.useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = React.useState("");
   const [newTaskAssignee, setNewTaskAssignee] = React.useState("You");
+  const [teamMembers, setTeamMembers] = React.useState<
+    Array<{ id?: string; uid?: string; name: string; avatarUrl?: string }>
+  >([]);
   const [newTaskDue, setNewTaskDue] = React.useState(
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
@@ -74,13 +78,14 @@ export function ProjectGrid() {
     setSavedViews(getSavedViews());
   }, []);
 
-  const loadProjects = React.useCallback(() => {
+  const loadProjects = React.useCallback(async () => {
+    setLoading(true);
     try {
-      const raw = localStorage.getItem("pv:projects");
-      const base = raw ? JSON.parse(raw) : [];
+      const { loadProjects: fetchProjects } = await import("@/lib/data");
+      const data = await fetchProjects();
       const seed: Project[] =
-        Array.isArray(base) && base.length > 0
-          ? base
+        Array.isArray(data) && data.length > 0
+          ? (data as Project[])
           : [
               {
                 id: "p1",
@@ -126,11 +131,36 @@ export function ProjectGrid() {
               },
             ];
       setProjects(seed);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load projects:", err);
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
     loadProjects();
+    // Load team members for task assignment
+    async function loadTeam() {
+      try {
+        const { loadUsers } = await import("@/lib/data");
+        const users = await loadUsers();
+        setTeamMembers(
+          Array.isArray(users)
+            ? users.map((u) => ({
+                id: u.uid,
+                uid: u.uid,
+                name: u.name,
+                avatarUrl: u.avatar_url,
+              }))
+            : []
+        );
+      } catch {
+        setTeamMembers([]);
+      }
+    }
+    loadTeam();
   }, [loadProjects]);
 
   // Refresh data when the page becomes visible (e.g., returning from project detail page)
@@ -154,7 +184,7 @@ export function ProjectGrid() {
     };
   }, [loadProjects]);
 
-  const toggleStar = (id: string) => {
+  const toggleStar = async (id: string) => {
     setProjects((prev) => {
       const next = prev.map((p) => {
         if (p.id === id) {
@@ -167,20 +197,36 @@ export function ProjectGrid() {
         }
         return p;
       });
-      try {
-        localStorage.setItem("pv:projects", JSON.stringify(next));
-      } catch {}
+
+      // Save to appropriate storage
+      (async () => {
+        try {
+          const { saveProjects } = await import("@/lib/data");
+          await saveProjects(next);
+        } catch (error) {
+          console.error("Failed to save projects:", error);
+        }
+      })();
+
       return next;
     });
   };
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     const projectName = projects.find((p) => p.id === id)?.name || "Project";
     setProjects((prev) => {
       const next = prev.filter((p) => p.id !== id);
-      try {
-        localStorage.setItem("pv:projects", JSON.stringify(next));
-      } catch {}
+
+      // Save to appropriate storage
+      (async () => {
+        try {
+          const { saveProjects } = await import("@/lib/data");
+          await saveProjects(next);
+        } catch (error) {
+          console.error("Failed to save projects:", error);
+        }
+      })();
+
       return next;
     });
     setDeleteConfirm(null);
@@ -479,387 +525,435 @@ export function ProjectGrid() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((p) => {
-          const totalMembers = (p.members || []).length;
-          const fallbackProgress =
-            p.status === "Completed"
-              ? 100
-              : p.status === "Active"
-                ? 65
-                : p.status === "In Progress"
-                  ? 40
-                  : 20;
-          const daysLeft = p.deadline
-            ? Math.max(
-                0,
-                Math.ceil(
-                  (new Date(p.deadline).getTime() - Date.now()) /
-                    (1000 * 60 * 60 * 24)
+      {filtered.length === 0 ? (
+        <div className="col-span-full text-center py-12">
+          <p className="text-muted-foreground text-lg">
+            No projects found matching your filters.
+          </p>
+          <p className="text-muted-foreground text-sm mt-2">
+            Try adjusting your search or filter criteria.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((p) => {
+            const totalMembers = (p.members || []).length;
+            const fallbackProgress =
+              p.status === "Completed"
+                ? 100
+                : p.status === "Active"
+                  ? 65
+                  : p.status === "In Progress"
+                    ? 40
+                    : 20;
+            const daysLeft = p.deadline
+              ? Math.max(
+                  0,
+                  Math.ceil(
+                    (new Date(p.deadline).getTime() - Date.now()) /
+                      (1000 * 60 * 60 * 24)
+                  )
                 )
-              )
-            : null;
-          const health = calculateProjectHealth({
-            id: p.id,
-            deadline: p.deadline,
-            status: p.status,
-          });
-          // Snapshot health (once per day per project)
-          try {
-            snapshotHealth(p.id, health.score);
-          } catch {}
-          const filesCount = getProjectFiles(p.id).length;
-          const taskStats = getTaskCompletionForProject(p.id);
-          const hasTasks = taskStats.total > 0;
-          const progress = hasTasks ? taskStats.percent : fallbackProgress;
+              : null;
+            const health = calculateProjectHealth({
+              id: p.id,
+              deadline: p.deadline,
+              status: p.status,
+            });
+            // Snapshot health (once per day per project)
+            try {
+              snapshotHealth(p.id, health.score);
+            } catch {}
+            const filesCount = getProjectFiles(p.id).length;
+            const taskStats = getTaskCompletionForProject(p.id);
+            const hasTasks = taskStats.total > 0;
+            const progress = hasTasks ? taskStats.percent : fallbackProgress;
 
-          return (
-            <Card
-              key={p.id}
-              className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
-              onClick={() => router.push(`/projects/${p.id}`)}
-            >
-              {selectMode && (
-                <div className="absolute top-2 left-2 z-20">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(p.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(p.id);
-                        else next.delete(p.id);
-                        return next;
-                      });
-                    }}
-                  />
-                </div>
-              )}
-              {/* Gradient overlay (visual only, ignore pointer events) */}
-              <div className="absolute inset-0 pointer-events-none bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-              {/* Cover with overlay gradient */}
-              <div className="relative h-36 bg-linear-to-br from-primary/20 to-accent/30 overflow-hidden">
-                {p.cover ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={p.cover}
-                      alt={p.name}
-                      className="w-full h-full object-cover"
+            return (
+              <Card
+                key={p.id}
+                className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
+                onClick={() => router.push(`/projects/${p.id}`)}
+              >
+                {selectMode && (
+                  <div className="absolute top-2 left-2 z-20">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(p.id);
+                          else next.delete(p.id);
+                          return next;
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
-                    <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
-                  </>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-6xl font-bold text-primary/10">
-                      {p.name.charAt(0).toUpperCase()}
-                    </div>
                   </div>
                 )}
+                {/* Gradient overlay (visual only, ignore pointer events) */}
+                <div className="absolute inset-0 pointer-events-none bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                {/* Floating action buttons */}
-                <div className="absolute top-2 right-2 flex items-center gap-1">
-                  <button
-                    className={`p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
-                    title={p.starred ? "Unstar" : "Star"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleStar(p.id);
-                    }}
-                  >
-                    <Star
-                      className="w-4 h-4"
-                      fill={p.starred ? "currentColor" : "none"}
-                    />
-                  </button>
-                  <div className="relative">
+                {/* Cover with overlay gradient */}
+                <div className="relative h-36 bg-linear-to-br from-primary/20 to-accent/30 overflow-hidden">
+                  {p.cover ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.cover}
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-6xl font-bold text-primary/10">
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Floating action buttons */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
                     <button
-                      className="p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 text-muted-foreground"
+                      className={`p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
+                      title={p.starred ? "Unstar" : "Star"}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setMenuOpen(menuOpen === p.id ? null : p.id);
+                        toggleStar(p.id);
                       }}
                     >
-                      <MoreVertical className="w-4 h-4" />
+                      <Star
+                        className="w-4 h-4"
+                        fill={p.starred ? "currentColor" : "none"}
+                      />
                     </button>
-                    {menuOpen === p.id && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10 cursor-pointer"
-                          onClick={() => setMenuOpen(null)}
-                        />
-                        <div className="absolute right-0 top-10 z-20 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px]">
-                          <button
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-                            onClick={() => {
+                    <div className="relative">
+                      <button
+                        className="p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 text-muted-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpen(menuOpen === p.id ? null : p.id);
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {menuOpen === p.id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setMenuOpen(null);
-                              router.push(`/projects/${p.id}`);
                             }}
-                          >
-                            Open
-                          </button>
-                          <button
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors cursor-pointer"
-                            onClick={() => {
-                              setMenuOpen(null);
-                              setDeleteConfirm({ id: p.id, name: p.name });
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Status badge overlay */}
-                <div className="absolute bottom-2 left-2">
-                  <Badge
-                    variant={
-                      p.status === "Active"
-                        ? "info"
-                        : p.status === "Completed"
-                          ? "success"
-                          : "warning"
-                    }
-                    pill
-                    className="backdrop-blur-sm bg-white/90 shadow-md"
-                  >
-                    {p.status}
-                  </Badge>
-                </div>
-
-                {/* Health score badge with hover breakdown + sparkline */}
-                <div className="absolute bottom-2 right-2">
-                  <div
-                    className={`group relative backdrop-blur-sm bg-white/90 shadow-md px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                      health.status === "excellent"
-                        ? "text-green-600"
-                        : health.status === "good"
-                          ? "text-blue-600"
-                          : health.status === "warning"
-                            ? "text-amber-600"
-                            : "text-red-600"
-                    }`}
-                    title={`Health Score: ${health.score}/100`}
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        health.status === "excellent"
-                          ? "bg-green-600"
-                          : health.status === "good"
-                            ? "bg-blue-600"
-                            : health.status === "warning"
-                              ? "bg-amber-600"
-                              : "bg-red-600"
-                      }`}
-                    />
-                    {health.score}
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-5 space-y-4">
-                {/* Header */}
-                <div className="space-y-1">
-                  <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
-                    {p.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Owner: {p.owner}
-                  </p>
-                </div>
-
-                {/* Progress bar with percentage (uses tasks when available) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-muted-foreground">
-                      Progress
-                      {hasTasks
-                        ? ` • ${taskStats.done}/${taskStats.total}`
-                        : ""}
-                    </span>
-                    <span className="font-bold text-primary">{progress}%</span>
-                  </div>
-                  <div className="h-2 bg-accent rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-linear-to-r from-primary to-primary/60 transition-all duration-500 rounded-full"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Stats grid */}
-                <div className="grid grid-cols-3 gap-3 py-3 border-t border-b border-border">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-primary">
-                      {totalMembers}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Members</div>
-                  </div>
-                  <div className="text-center border-l border-r border-border">
-                    <div className="text-lg font-bold text-primary">
-                      {filesCount}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Files</div>
-                  </div>
-                  <div className="text-center">
-                    <div
-                      className={`text-lg font-bold ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-primary"}`}
-                    >
-                      {daysLeft !== null ? daysLeft : "—"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Days left
-                    </div>
-                  </div>
-                </div>
-
-                {/* Members avatars */}
-                {totalMembers > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {(p.members || []).slice(0, 4).map((m, idx) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          key={idx}
-                          src={
-                            m.avatarUrl ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                          }
-                          alt={m.name}
-                          className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border"
-                          title={m.name}
-                        />
-                      ))}
-                      {totalMembers > 4 && (
-                        <div className="w-8 h-8 rounded-full border-2 border-card bg-accent text-foreground text-xs flex items-center justify-center font-medium ring-1 ring-border">
-                          +{totalMembers - 4}
-                        </div>
+                          />
+                          <div className="absolute right-0 top-10 z-20 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px]">
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpen(null);
+                                router.push(`/projects/${p.id}`);
+                              }}
+                            >
+                              Open
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpen(null);
+                                setDeleteConfirm({ id: p.id, name: p.name });
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
                       )}
                     </div>
-                    {p.priority && (
-                      <Badge
-                        variant={
-                          p.priority === "high"
-                            ? "warning"
-                            : p.priority === "medium"
-                              ? "info"
-                              : "secondary"
-                        }
-                        pill
-                        className="ml-auto"
+                  </div>
+
+                  {/* Status badge overlay */}
+                  <div className="absolute bottom-2 left-2">
+                    <Badge
+                      variant={
+                        p.status === "Active"
+                          ? "info"
+                          : p.status === "Completed"
+                            ? "success"
+                            : "warning"
+                      }
+                      pill
+                      className="backdrop-blur-sm bg-white/90 shadow-md"
+                    >
+                      {p.status}
+                    </Badge>
+                  </div>
+
+                  {/* Health score badge with hover breakdown + sparkline */}
+                  <div className="absolute bottom-2 right-2">
+                    <div
+                      className={`group relative backdrop-blur-sm bg-white/90 shadow-md px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                        health.status === "excellent"
+                          ? "text-green-600"
+                          : health.status === "good"
+                            ? "text-blue-600"
+                            : health.status === "warning"
+                              ? "text-amber-600"
+                              : "text-red-600"
+                      }`}
+                      title={`Health Score: ${health.score}/100`}
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          health.status === "excellent"
+                            ? "bg-green-600"
+                            : health.status === "good"
+                              ? "bg-blue-600"
+                              : health.status === "warning"
+                                ? "bg-amber-600"
+                                : "bg-red-600"
+                        }`}
+                      />
+                      {health.score}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4">
+                  {/* Header */}
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
+                      {p.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Owner: {p.owner}
+                    </p>
+                  </div>
+
+                  {/* Progress bar with percentage (uses tasks when available) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-muted-foreground">
+                        Progress
+                        {hasTasks
+                          ? ` • ${taskStats.done}/${taskStats.total}`
+                          : ""}
+                      </span>
+                      <span className="font-bold text-primary">
+                        {progress}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-accent rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-linear-to-r from-primary to-primary/60 transition-all duration-500 rounded-full"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-3 gap-3 py-3 border-t border-b border-border">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-primary">
+                        {totalMembers}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Members
+                      </div>
+                    </div>
+                    <div className="text-center border-l border-r border-border">
+                      <div className="text-lg font-bold text-primary">
+                        {filesCount}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Files</div>
+                    </div>
+                    <div className="text-center">
+                      <div
+                        className={`text-lg font-bold ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-primary"}`}
                       >
-                        {p.priority}
-                      </Badge>
-                    )}
+                        {daysLeft !== null ? daysLeft : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Days left
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                {/* Custom Fields Chips */}
-                {((p as any).client || (p as any).budget || (p as any).sla) && (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                    {(p as any).client && (
-                      <Badge variant="secondary" pill>
-                        Client: {(p as any).client}
-                      </Badge>
-                    )}
-                    {(p as any).budget && (
-                      <Badge variant="info" pill>
-                        Budget: ${(p as any).budget}
-                      </Badge>
-                    )}
-                    {(p as any).sla && (
-                      <Badge variant="info" pill>
-                        <abbr
-                          className="border-b border-dashed border-current no-underline cursor-help"
-                          title="Service Level Agreement"
+                  {/* Members avatars */}
+                  {totalMembers > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {(p.members || []).slice(0, 4).map((m, idx) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={idx}
+                            src={
+                              m.avatarUrl ||
+                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
+                            }
+                            alt={m.name}
+                            className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border cursor-pointer hover:scale-110 transition-transform"
+                            title={m.name}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Find member uid from team members list or use name as fallback
+                              const member = teamMembers.find(
+                                (tm) => tm.name === m.name
+                              );
+                              const memberId =
+                                member?.id ||
+                                member?.uid ||
+                                encodeURIComponent(m.name);
+                              router.push(`/team/${memberId}`);
+                            }}
+                          />
+                        ))}
+                        {totalMembers > 4 && (
+                          <div className="w-8 h-8 rounded-full border-2 border-card bg-accent text-foreground text-xs flex items-center justify-center font-medium ring-1 ring-border">
+                            +{totalMembers - 4}
+                          </div>
+                        )}
+                      </div>
+                      {p.priority && (
+                        <Badge
+                          variant={
+                            p.priority === "high"
+                              ? "warning"
+                              : p.priority === "medium"
+                                ? "info"
+                                : "secondary"
+                          }
+                          pill
+                          className="ml-auto"
                         >
-                          SLA
-                        </abbr>
-                        : {(p as any).sla}d
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                          {p.priority}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
 
-                {/* Quick actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAddForProject(p.id);
-                      setNewTaskTitle("");
-                      setNewTaskAssignee("You");
-                      setNewTaskDue(
-                        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                          .toISOString()
-                          .slice(0, 10)
-                      );
-                      setNewTaskPriority("medium");
-                      setNewTaskMilestone("");
-                      setAddOpen(true);
-                    }}
-                  >
-                    + Task
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Mark Complete
-                      setProjects((prev) => {
-                        const next = prev.map((pr) =>
-                          pr.id === p.id
-                            ? { ...pr, status: "Completed" as const }
-                            : pr
+                  {/* Custom Fields Chips */}
+                  {((p as any).client ||
+                    (p as any).budget ||
+                    (p as any).sla) && (
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+                      {(p as any).client && (
+                        <Badge variant="secondary" pill>
+                          Client: {(p as any).client}
+                        </Badge>
+                      )}
+                      {(p as any).budget && (
+                        <Badge variant="info" pill>
+                          Budget: ${(p as any).budget}
+                        </Badge>
+                      )}
+                      {(p as any).sla && (
+                        <Badge variant="info" pill>
+                          <abbr
+                            className="border-b border-dashed border-current no-underline cursor-help"
+                            title="Service Level Agreement"
+                          >
+                            SLA
+                          </abbr>
+                          : {(p as any).sla}d
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick actions */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAddForProject(p.id);
+                        setNewTaskTitle("");
+                        setNewTaskAssignee("You");
+                        setNewTaskDue(
+                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                            .toISOString()
+                            .slice(0, 10)
                         );
-                        try {
-                          localStorage.setItem(
-                            "pv:projects",
-                            JSON.stringify(next)
+                        setNewTaskPriority("medium");
+                        setNewTaskMilestone("");
+                        setAddOpen(true);
+                      }}
+                    >
+                      + Task
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Toggle Complete/Undo
+                        setProjects((prev) => {
+                          const next = prev.map((pr) =>
+                            pr.id === p.id
+                              ? {
+                                  ...pr,
+                                  status:
+                                    pr.status === "Completed"
+                                      ? ("Active" as const)
+                                      : ("Completed" as const),
+                                }
+                              : pr
                           );
-                          logProjectEvent(p.id, "edit", {
-                            status: "Completed",
-                          });
-                        } catch {}
-                        return next;
-                      });
-                      setCompletedFlash(p.id);
-                      setTimeout(() => setCompletedFlash(null), 1200);
-                    }}
-                  >
-                    Mark Complete
-                  </Button>
-                </div>
-
-                {/* Deadline */}
-                <div className="flex items-center justify-between text-xs pt-2">
-                  <span className="text-muted-foreground">Due:</span>
-                  <span
-                    className={`font-medium ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
-                  >
-                    {p.deadline || "No deadline"}
-                  </span>
-                </div>
-                {/* Completed flash overlay */}
-                {completedFlash === p.id && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-600/10">
-                    <div className="text-green-600 text-4xl font-black">✓</div>
+                          try {
+                            localStorage.setItem(
+                              "pv:projects",
+                              JSON.stringify(next)
+                            );
+                            logProjectEvent(p.id, "edit", {
+                              status:
+                                p.status === "Completed"
+                                  ? "Active"
+                                  : "Completed",
+                            });
+                          } catch {}
+                          return next;
+                        });
+                        if (p.status !== "Completed") {
+                          setCompletedFlash(p.id);
+                          setTimeout(() => setCompletedFlash(null), 1200);
+                        }
+                      }}
+                    >
+                      {p.status === "Completed" ? "Undo" : "Mark Complete"}
+                    </Button>
                   </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+
+                  {/* Deadline */}
+                  <div className="flex items-center gap-1 text-xs pt-2">
+                    <span className="text-muted-foreground">Due:</span>
+                    <span
+                      className={`font-medium ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
+                    >
+                      {p.deadline || "No deadline"}
+                    </span>
+                  </div>
+                  {/* Completed flash overlay */}
+                  {completedFlash === p.id && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-600/10">
+                      <div className="text-green-600 text-4xl font-black">
+                        ✓
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
@@ -922,12 +1016,18 @@ export function ProjectGrid() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Assignee</label>
-              <input
+              <select
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 value={newTaskAssignee}
                 onChange={(e) => setNewTaskAssignee(e.target.value)}
-                placeholder="You"
-              />
+              >
+                <option value="You">You</option>
+                {teamMembers.map((member) => (
+                  <option key={member.id} value={member.name}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Due Date</label>

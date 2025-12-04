@@ -117,6 +117,9 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   const [memberActivities, setMemberActivities] = useState<Map<string, any>>(
     new Map()
   );
+  const [presenceMap, setPresenceMap] = useState<
+    Record<string, { status: string; last_seen: string }>
+  >({});
   const [addOpen, setAddOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftRole, setDraftRole] = useState("");
@@ -127,36 +130,65 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   const initialMembers: TeamMember[] = useMemo(() => {
     // Load users from auth system
     if (typeof window === "undefined") return [];
-    const stored = localStorage.getItem("pv:users");
-    if (!stored) return [];
-    const authUsers = JSON.parse(stored);
 
-    // Deduplicate by ID (in case there are duplicates)
-    const uniqueUsers = authUsers.reduce((acc: any[], u: any) => {
-      if (!acc.find((existing) => existing.id === u.id)) {
-        acc.push(u);
-      }
-      return acc;
-    }, []);
-
-    return uniqueUsers.map((u: any) => ({
-      id: u.id,
-      name: u.name,
-      role: u.role,
-      email: u.email,
-      phone: ENRICH[u.id]?.phone || "+1 (555) 000-0000",
-      address: ENRICH[u.id]?.address || "-",
-      socials: ENRICH[u.id]?.socials || {},
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
-      status: ENRICH[u.id]?.status || "available",
-      tasksCount: ENRICH[u.id]?.tasksCount || 0,
-    }));
+    // This will be loaded asynchronously below
+    return [];
   }, []);
 
   // Initialize membersData once
   React.useEffect(() => {
-    setMembersData(initialMembers);
-  }, [initialMembers]);
+    async function fetchUsers() {
+      try {
+        const { loadUsers } = await import("@/lib/data");
+        const users = await loadUsers();
+
+        const teamMembers = users.map((u: any) => ({
+          id: u.uid || u.id,
+          name: u.name,
+          role: u.role,
+          email: u.email,
+          phone: ENRICH[u.uid || u.id]?.phone || "+1 (555) 000-0000",
+          address: ENRICH[u.uid || u.id]?.address || "-",
+          socials: ENRICH[u.uid || u.id]?.socials || {},
+          avatar:
+            u.avatar_url ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+          status: ENRICH[u.uid || u.id]?.status || "available",
+          tasksCount: ENRICH[u.uid || u.id]?.tasksCount || 0,
+        }));
+
+        setMembersData(teamMembers);
+      } catch (error) {
+        console.error("Failed to load team members:", error);
+        setMembersData([]);
+      }
+    }
+    fetchUsers();
+  }, []);
+
+  // Poll presence from server and build a map by uid
+  React.useEffect(() => {
+    let mounted = true;
+    const loadPresence = async () => {
+      try {
+        const res = await fetch("/api/presence");
+        const data = await res.json();
+        if (mounted && data?.success && Array.isArray(data.data)) {
+          const map: Record<string, { status: string; last_seen: string }> = {};
+          for (const row of data.data) {
+            map[row.uid] = { status: row.status, last_seen: row.last_seen };
+          }
+          setPresenceMap(map);
+        }
+      } catch {}
+    };
+    loadPresence();
+    const interval = setInterval(loadPresence, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Load member activities
   React.useEffect(() => {
@@ -349,7 +381,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             className="p-5 hover:shadow-lg transition-all duration-300 group border hover:border-primary/50 relative overflow-hidden"
           >
             {/* Status indicator */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
 
             {/* Header with menu */}
             <div className="flex items-start justify-between mb-4">
@@ -361,26 +393,45 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     alt={m.name}
                     className="w-14 h-14 rounded-full bg-accent ring-2 ring-accent/30 group-hover:ring-primary/30 transition-all"
                   />
-                  <div
-                    className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${
-                      memberActivities.get(m.name)
-                        ? getActivityStatusColor(
-                            memberActivities.get(m.name)?.currentStatus
-                          )
-                        : getStatusColor(m.status)
-                    }`}
-                  />
+                  {(() => {
+                    const p = presenceMap[m.id];
+                    let dotClass = getStatusColor(m.status);
+                    if (p) {
+                      const last = new Date(p.last_seen).getTime();
+                      const offline = Date.now() - last > 2 * 60 * 1000; // >2 minutes
+                      if (offline) dotClass = getStatusColor("offline");
+                      else dotClass = getStatusColor(p.status);
+                    } else if (memberActivities.get(m.name)) {
+                      dotClass = getActivityStatusColor(
+                        memberActivities.get(m.name)?.currentStatus
+                      );
+                    }
+                    return (
+                      <div
+                        className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${dotClass}`}
+                      />
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
                     {m.name}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {memberActivities.get(m.name)?.currentStatus === "online"
-                      ? "Active now"
-                      : memberActivities.get(m.name)?.currentStatus === "away"
-                        ? "Away"
-                        : getStatusLabel(m.status)}
+                    {(() => {
+                      const p = presenceMap[m.id];
+                      if (p) {
+                        const last = new Date(p.last_seen).getTime();
+                        const offline = Date.now() - last > 2 * 60 * 1000;
+                        if (offline) return "Offline";
+                        if (p.status === "available") return "Available";
+                        if (p.status === "busy") return "Busy";
+                      }
+                      const a = memberActivities.get(m.name)?.currentStatus;
+                      if (a === "online") return "Active now";
+                      if (a === "away") return "Away";
+                      return getStatusLabel(m.status);
+                    })()}
                   </p>
                 </div>
               </div>

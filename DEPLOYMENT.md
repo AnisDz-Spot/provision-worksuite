@@ -22,6 +22,7 @@ cd client-name-worksuite
 ### 2. Deploy to Vercel
 
 **Option A: Using Vercel CLI** (Recommended)
+
 ```bash
 npm i -g vercel
 vercel
@@ -32,6 +33,7 @@ vercel
 ```
 
 **Option B: Using Vercel Dashboard**
+
 1. Go to [vercel.com/new](https://vercel.com/new)
 2. Import the GitHub repository
 3. Project name: `client-name-worksuite`
@@ -73,6 +75,7 @@ If both pass, your deployment is ready!
 ### 6. Provide to Client
 
 Send client:
+
 - **App URL**: `https://client-name-worksuite.vercel.app`
 - **Instructions**: "Visit the URL, click Register, and create your account"
 - **Support**: Your contact information
@@ -108,12 +111,14 @@ To use client's custom domain:
 ## Multi-Client Management
 
 **Recommended Structure**:
+
 - 1 GitHub repository (template)
 - 1 Vercel project per client
 - Each project has its own database
 - Each database is isolated (no shared data)
 
 **Scaling**:
+
 - Vercel Free: Up to 3 projects
 - Vercel Pro ($20/mo): Unlimited projects
 - Neon Postgres: 10GB free per database
@@ -138,6 +143,7 @@ To use client's custom domain:
 **Backups**: Neon Postgres has automatic daily backups (7 days retention on free tier)
 
 **Monitoring**: Vercel dashboard shows:
+
 - Deployment status
 - Error logs
 - Analytics
@@ -148,11 +154,13 @@ To use client's custom domain:
 ## Cost Per Client
 
 **Vercel Pro** ($20/month for your account):
+
 - Unlimited client deployments
 - Custom domains
 - Analytics
 
 **Per Client** (Free Tier):
+
 - Vercel hosting: Free
 - Postgres (Neon): Free (up to 10GB)
 - Blob storage: Free (up to 1GB)
@@ -160,6 +168,7 @@ To use client's custom domain:
 - **Total: $0** per client on free tier
 
 **Paid Scaling** (if client exceeds free tier):
+
 - Neon Pro: $19/mo (more storage/compute)
 - Blob overage: $0.15/GB
 - Only charge client if they exceed limits
@@ -179,6 +188,7 @@ A: Implement role-based access in the app (already designed for multi-tenant). F
 
 **Q: What if a client wants their own hosting?**
 A: Deploy to their Vercel account instead of yours. They'll need to:
+
 1. Create Vercel account
 2. Add payment method
 3. You deploy to their account (they pay the bills)
@@ -205,12 +215,14 @@ A: Demo data is in `data/*.json`. For production, clients start fresh or you imp
 ## Support
 
 For deployment issues:
+
 - Check Vercel deployment logs
 - Test at `/test-database` endpoint
 - Check environment variables are set
 - Verify database schema was executed
 
 For client support:
+
 - Login issues → Check Firebase Auth setup
 - App bugs → Check browser console
 - Slow performance → Check Vercel analytics

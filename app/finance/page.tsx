@@ -131,18 +131,81 @@ export default function FinancePage() {
         );
       })
       .catch(console.error);
-    fetch("/data/expenses.json")
+
+    // Expenses
+    fetch("/api/expenses")
       .then((r) => r.json())
-      .then(setExpenses)
-      .catch(() => setExpenses([]));
-    fetch("/data/timelogs.json")
+      .then((res) => {
+        if (res?.success && res.data) {
+          const dbExpenses = res.data.map((e: any) => ({
+            id: String(e.id),
+            projectId: e.project_id || "",
+            date: e.date,
+            vendor: e.vendor,
+            amount: parseFloat(e.amount),
+            note: e.note,
+          }));
+          setExpenses(dbExpenses);
+        } else {
+          throw new Error("DB not configured");
+        }
+      })
+      .catch(() => {
+        fetch("/data/expenses.json")
+          .then((r) => r.json())
+          .then(setExpenses)
+          .catch(() => setExpenses([]));
+      });
+
+    // Time logs
+    fetch("/api/time-logs")
       .then((r) => r.json())
-      .then(setTimeLogs)
-      .catch(() => setTimeLogs([]));
-    fetch("/data/invoices.json")
+      .then((res) => {
+        if (res?.success && res.data) {
+          const dbLogs = res.data.map((log: any) => ({
+            id: String(log.id),
+            projectId: log.project_id || "",
+            date: log.date,
+            hours: parseFloat(log.hours),
+          }));
+          setTimeLogs(dbLogs);
+        } else {
+          throw new Error("DB not configured");
+        }
+      })
+      .catch(() => {
+        fetch("/data/timelogs.json")
+          .then((r) => r.json())
+          .then(setTimeLogs)
+          .catch(() => setTimeLogs([]));
+      });
+
+    // Invoices
+    fetch("/api/invoices")
       .then((r) => r.json())
-      .then(setInvoices)
-      .catch(() => setInvoices([]));
+      .then((res) => {
+        if (res?.success && res.data) {
+          const dbInvoices = res.data.map((inv: any) => ({
+            id: String(inv.id),
+            projectId: inv.project_id || "",
+            clientName: inv.client_name || "Unknown",
+            issueDate: inv.date,
+            dueDate: inv.due_date || "",
+            status: inv.status || "Draft",
+            items: [],
+            total: parseFloat(inv.amount),
+          }));
+          setInvoices(dbInvoices);
+        } else {
+          throw new Error("DB not configured");
+        }
+      })
+      .catch(() => {
+        fetch("/data/invoices.json")
+          .then((r) => r.json())
+          .then(setInvoices)
+          .catch(() => setInvoices([]));
+      });
   }, []);
 
   // Initialize expense filters from URL or localStorage

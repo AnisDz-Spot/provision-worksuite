@@ -17,9 +17,23 @@ import {
   Calendar,
   TrendingUp,
   XCircle,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
+import {
+  CATEGORY_OPTIONS,
+  getCategoryConfig,
+  BlockerCategory,
+  loadCategoryConfigs,
+  CategoryConfig,
+} from "@/lib/blockers";
+import {
+  DEFAULT_RISK_LEVELS,
+  loadRiskLevels,
+  RiskLevelConfig,
+} from "@/lib/risks";
 
-type RiskLevel = "critical" | "high" | "medium" | "low";
+type RiskLevel = "critical" | "high" | "medium" | "low" | string;
 type BlockerStatus = "open" | "in-progress" | "resolved" | "deferred";
 
 type Blocker = {
@@ -149,6 +163,50 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
     level: "medium" as RiskLevel,
     category: "technical" as Blocker["category"],
   });
+  const [runtimeCategories, setRuntimeCategories] =
+    useState<CategoryConfig[]>(CATEGORY_OPTIONS);
+  const [riskLevels, setRiskLevels] =
+    useState<RiskLevelConfig[]>(DEFAULT_RISK_LEVELS);
+  const [graphExpanded, setGraphExpanded] = useState(false);
+
+  React.useEffect(() => {
+    loadCategoryConfigs().then(setRuntimeCategories);
+    loadRiskLevels().then(setRiskLevels);
+    loadBlockersFromDB();
+  }, []);
+
+  const loadBlockersFromDB = async () => {
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (!shouldUseDatabaseData()) return;
+
+      const res = await fetch(
+        `/api/blockers${projectId ? `?projectId=${projectId}` : ""}`
+      );
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        const dbBlockers: Blocker[] = json.data.map((b: any) => ({
+          id: b.id,
+          title: b.title,
+          description: b.description,
+          level: b.level as RiskLevel,
+          status: b.status as BlockerStatus,
+          impactedTasks: Array.isArray(b.impacted_tasks)
+            ? b.impacted_tasks
+            : JSON.parse(b.impacted_tasks || "[]"),
+          assignedTo: b.assigned_to,
+          reportedBy: b.reported_by,
+          reportedDate: b.reported_date,
+          resolvedDate: b.resolved_date,
+          resolution: b.resolution,
+          category: b.category,
+        }));
+        setBlockers(dbBlockers.length > 0 ? dbBlockers : BLOCKERS);
+      }
+    } catch (e) {
+      console.error("Failed to load blockers from DB:", e);
+    }
+  };
 
   const filteredBlockers = useMemo(() => {
     return blockers.filter((b) => {
@@ -174,16 +232,8 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   }, [blockers]);
 
   const getLevelColor = (level: RiskLevel) => {
-    switch (level) {
-      case "critical":
-        return "text-red-600 bg-red-500/10 border-red-500/20";
-      case "high":
-        return "text-orange-600 bg-orange-500/10 border-orange-500/20";
-      case "medium":
-        return "text-amber-600 bg-amber-500/10 border-amber-500/20";
-      case "low":
-        return "text-blue-600 bg-blue-500/10 border-blue-500/20";
-    }
+    const found = riskLevels.find((l) => l.id === level) || riskLevels[0];
+    return found.colorClasses;
   };
 
   const getStatusColor = (status: BlockerStatus) => {
@@ -199,58 +249,131 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
     }
   };
 
-  const getCategoryIcon = (category: Blocker["category"]) => {
-    switch (category) {
-      case "technical":
-        return "🔧";
-      case "resource":
-        return "👥";
-      case "dependency":
-        return "🔗";
-      case "external":
-        return "🌐";
-      case "decision":
-        return "💭";
-    }
+  const getCategoryEmoji = (category: Blocker["category"]) => {
+    const found =
+      runtimeCategories.find((c) => c.id === category) ||
+      getCategoryConfig(category as BlockerCategory);
+    return found.iconName || "⚠️";
   };
 
-  const handleAddBlocker = () => {
+  const handleAddBlocker = async () => {
     if (!newBlocker.title || !newBlocker.description) return;
 
-    const blocker: Blocker = {
-      id: `b${Date.now()}`,
-      ...newBlocker,
-      status: "open",
-      impactedTasks: [],
-      reportedBy: "Current User",
-      reportedDate: new Date().toISOString().slice(0, 10),
-    };
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        if (selectedBlocker) {
+          // Update existing blocker
+          await fetch(`/api/blockers/${selectedBlocker.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: newBlocker.title,
+              description: newBlocker.description,
+              level: newBlocker.level,
+              category: newBlocker.category,
+            }),
+          });
+        } else {
+          // Create new blocker
+          await fetch("/api/blockers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: newBlocker.title,
+              description: newBlocker.description,
+              level: newBlocker.level,
+              status: "open",
+              impacted_tasks: [],
+              reported_by: "Current User",
+              reported_date: new Date().toISOString().slice(0, 10),
+              category: newBlocker.category,
+              project_id: projectId,
+            }),
+          });
+        }
+        await loadBlockersFromDB();
+      } else {
+        if (selectedBlocker) {
+          // Update existing blocker in local state
+          setBlockers(
+            blockers.map((b) =>
+              b.id === selectedBlocker.id
+                ? {
+                    ...b,
+                    title: newBlocker.title,
+                    description: newBlocker.description,
+                    level: newBlocker.level,
+                    category: newBlocker.category,
+                  }
+                : b
+            )
+          );
+        } else {
+          // Create new blocker in local state
+          const blocker: Blocker = {
+            id: `b${Date.now()}`,
+            ...newBlocker,
+            status: "open",
+            impactedTasks: [],
+            reportedBy: "Current User",
+            reportedDate: new Date().toISOString().slice(0, 10),
+          };
+          setBlockers([blocker, ...blockers]);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to save blocker:", e);
+    }
 
-    setBlockers([blocker, ...blockers]);
     setNewBlocker({
       title: "",
       description: "",
       level: "medium",
       category: "technical",
     });
+    setSelectedBlocker(null);
     setModalOpen(false);
   };
 
-  const handleStatusChange = (blockerId: string, newStatus: BlockerStatus) => {
-    setBlockers(
-      blockers.map((b) =>
-        b.id === blockerId
-          ? {
-              ...b,
-              status: newStatus,
-              resolvedDate:
-                newStatus === "resolved"
-                  ? new Date().toISOString().slice(0, 10)
-                  : b.resolvedDate,
-            }
-          : b
-      )
-    );
+  const handleStatusChange = async (
+    blockerId: string,
+    newStatus: BlockerStatus
+  ) => {
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        await fetch(`/api/blockers/${blockerId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: newStatus,
+            resolved_date:
+              newStatus === "resolved"
+                ? new Date().toISOString().slice(0, 10)
+                : undefined,
+          }),
+        });
+        await loadBlockersFromDB();
+      } else {
+        setBlockers(
+          blockers.map((b) =>
+            b.id === blockerId
+              ? {
+                  ...b,
+                  status: newStatus,
+                  resolvedDate:
+                    newStatus === "resolved"
+                      ? new Date().toISOString().slice(0, 10)
+                      : b.resolvedDate,
+                }
+              : b
+          )
+        );
+      }
+    } catch (e) {
+      console.error("Failed to update blocker:", e);
+    }
   };
 
   return (
@@ -331,16 +454,20 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
         >
           All Levels
         </Button>
-        {(["critical", "high", "medium", "low"] as RiskLevel[]).map((level) => (
-          <Button
-            key={level}
-            variant={filter.level === level ? "primary" : "outline"}
-            size="sm"
-            onClick={() => setFilter({ ...filter, level })}
-          >
-            {level.charAt(0).toUpperCase() + level.slice(1)}
-          </Button>
-        ))}
+        {riskLevels
+          .sort((a, b) => a.order - b.order)
+          .map((rl) => (
+            <Button
+              key={rl.id}
+              variant={filter.level === rl.id ? "primary" : "outline"}
+              size="sm"
+              onClick={() =>
+                setFilter({ ...filter, level: rl.id as RiskLevel })
+              }
+            >
+              {rl.label}
+            </Button>
+          ))}
         <div className="w-px h-6 bg-border my-auto mx-1" />
         {(
           ["open", "in-progress", "resolved", "deferred"] as BlockerStatus[]
@@ -360,9 +487,9 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       </div>
 
       {/* Blockers List */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredBlockers.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="col-span-full text-center py-12 text-muted-foreground">
             <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No blockers match the selected filters</p>
           </div>
@@ -371,21 +498,32 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
             <div
               key={blocker.id}
               className="border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
-              onClick={() => setSelectedBlocker(blocker)}
+              onClick={() => {
+                setSelectedBlocker(blocker);
+                setNewBlocker({
+                  title: blocker.title,
+                  description: blocker.description,
+                  level: blocker.level,
+                  category: blocker.category,
+                });
+                setModalOpen(true);
+              }}
             >
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex items-start gap-3 flex-1">
                   <span className="text-2xl">
-                    {getCategoryIcon(blocker.category)}
+                    {getCategoryEmoji(blocker.category)}
                   </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-semibold">{blocker.title}</h4>
-                      <div
-                        className={`px-2 py-0.5 rounded text-xs font-medium border ${getLevelColor(blocker.level)}`}
-                      >
-                        {blocker.level.toUpperCase()}
-                      </div>
+                      {blocker.status !== "resolved" && (
+                        <div
+                          className={`px-2 py-0.5 rounded text-xs font-medium border ${getLevelColor(blocker.level)}`}
+                        >
+                          {blocker.level.toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {blocker.description}
@@ -474,74 +612,131 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       {/* Dependency Graph Visualization */}
       {filteredBlockers.length > 0 && (
         <div className="mt-8">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <h4 className="font-semibold text-sm">Dependency Graph</h4>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h4 className="font-semibold text-sm">Dependency Graph</h4>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setGraphExpanded(!graphExpanded)}
+            >
+              {graphExpanded ? (
+                <>
+                  <Minimize2 className="w-4 h-4 mr-1" />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4 mr-1" />
+                  Expand
+                </>
+              )}
+            </Button>
           </div>
-          <div className="border rounded-lg p-4 overflow-x-auto">
-            <svg width="100%" height="220">
+          <div
+            className={`border rounded-lg p-4 ${
+              graphExpanded
+                ? "max-h-[600px] overflow-y-auto overflow-x-auto"
+                : "overflow-x-auto max-h-[220px]"
+            }`}
+          >
+            <svg
+              width="100%"
+              height={
+                graphExpanded
+                  ? filteredBlockers.reduce((total, b, i) => {
+                      const taskCount = Math.min(b.impactedTasks.length, 3);
+                      const lastTaskY = 20 + (i * 3 + taskCount - 1) * 30 + 28;
+                      return Math.max(total, lastTaskY);
+                    }, 220) + 40
+                  : 220
+              }
+              className="min-h-[220px]"
+            >
               {/* simple horizontal flow layout: blockers on left, tasks on right */}
-              {filteredBlockers.slice(0, 5).map((b, i) => {
-                const y = 20 + i * 40;
-                return (
-                  <g key={b.id}>
-                    {/* blocker node */}
-                    <rect
-                      x={10}
-                      y={y}
-                      width={160}
-                      height={28}
-                      rx={6}
-                      className="fill-red-500/10 stroke-red-500/30"
-                    />
-                    <text x={20} y={y + 18} className="text-xs fill-red-700">
-                      {b.title.slice(0, 22)}
-                      {b.title.length > 22 ? "…" : ""}
-                    </text>
-                    {/* edges to tasks */}
-                    {b.impactedTasks.slice(0, 3).map((t, ti) => {
-                      const ty = 20 + (i * 3 + ti) * 30;
-                      const tx = 340;
-                      return (
-                        <g key={`${b.id}-t-${ti}`}>
-                          <line
-                            x1={170}
-                            y1={y + 14}
-                            x2={tx}
-                            y2={ty + 14}
-                            className="stroke-muted-foreground"
-                            strokeOpacity={0.3}
-                          />
-                          <rect
-                            x={tx}
-                            y={ty}
-                            width={200}
-                            height={28}
-                            rx={6}
-                            className="fill-secondary stroke-border"
-                          />
-                          <text
-                            x={tx + 10}
-                            y={ty + 18}
-                            className="text-xs fill-muted-foreground"
-                          >
-                            {t.slice(0, 26)}
-                            {t.length > 26 ? "…" : ""}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </g>
-                );
-              })}
+              {filteredBlockers
+                .slice(0, graphExpanded ? filteredBlockers.length : 5)
+                .map((b, i) => {
+                  const y = 20 + i * 40;
+                  return (
+                    <g key={b.id}>
+                      {/* blocker node */}
+                      <rect
+                        x={10}
+                        y={y}
+                        width={160}
+                        height={28}
+                        rx={6}
+                        className="fill-red-500/10 stroke-red-500/30"
+                      />
+                      <text x={20} y={y + 18} className="text-xs fill-red-700">
+                        {b.title.slice(0, 22)}
+                        {b.title.length > 22 ? "…" : ""}
+                      </text>
+                      {/* edges to tasks */}
+                      {b.impactedTasks.slice(0, 3).map((t, ti) => {
+                        const ty = 20 + (i * 3 + ti) * 30;
+                        const tx = 340;
+                        return (
+                          <g key={`${b.id}-t-${ti}`}>
+                            <line
+                              x1={170}
+                              y1={y + 14}
+                              x2={tx}
+                              y2={ty + 14}
+                              className="stroke-muted-foreground"
+                              strokeOpacity={0.3}
+                            />
+                            <rect
+                              x={tx}
+                              y={ty}
+                              width={200}
+                              height={28}
+                              rx={6}
+                              className="fill-secondary stroke-border"
+                            />
+                            <text
+                              x={tx + 10}
+                              y={ty + 18}
+                              className="text-xs fill-muted-foreground"
+                            >
+                              {t.slice(0, 26)}
+                              {t.length > 26 ? "…" : ""}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })}
             </svg>
           </div>
         </div>
       )}
 
       {/* Add Blocker Modal */}
-      <Modal open={modalOpen} onOpenChange={setModalOpen}>
-        <h3 className="text-lg font-semibold mb-4">Report New Blocker</h3>
+      <Modal
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) {
+            setSelectedBlocker(null);
+            setNewBlocker({
+              title: "",
+              description: "",
+              level: "medium" as RiskLevel,
+              category: "technical" as Blocker["category"],
+            });
+          }
+        }}
+        size="xl"
+        className="md:min-w-[40vw]"
+      >
+        <h3 className="text-lg font-semibold mb-4">
+          {selectedBlocker ? "Edit Blocker" : "Report New Blocker"}
+        </h3>
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">Title</label>
@@ -599,18 +794,28 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
                   })
                 }
               >
-                <option value="technical">Technical</option>
-                <option value="resource">Resource</option>
-                <option value="dependency">Dependency</option>
-                <option value="external">External</option>
-                <option value="decision">Decision</option>
+                {runtimeCategories.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.iconName} {opt.label}
+                  </option>
+                ))}
               </select>
+              <div className="text-xs text-muted-foreground mt-1">
+                {(() => {
+                  const cfg =
+                    runtimeCategories.find(
+                      (c) => c.id === (newBlocker.category as BlockerCategory)
+                    ) ||
+                    getCategoryConfig(newBlocker.category as BlockerCategory);
+                  return `Target SLA: ${cfg.slaDays} days • Owner: ${cfg.defaultOwnerGroup}`;
+                })()}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 pt-4">
             <Button onClick={handleAddBlocker} className="flex-1">
               <Plus className="w-4 h-4 mr-1" />
-              Create Blocker
+              {selectedBlocker ? "Update Blocker" : "Create Blocker"}
             </Button>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
               Cancel

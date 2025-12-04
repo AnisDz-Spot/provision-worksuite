@@ -67,12 +67,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Apply theme color when workspace changes
     const root = document.documentElement;
+    const fgColor = computeForeground(workspace.primaryColor);
+
     root.style.setProperty("--primary", workspace.primaryColor);
     root.style.setProperty("--sidebar-primary", workspace.primaryColor);
-    root.style.setProperty(
-      "--primary-foreground",
-      computeForeground(workspace.primaryColor)
-    );
+    root.style.setProperty("--primary-foreground", fgColor);
+    root.style.setProperty("--sidebar-primary-foreground", fgColor);
+
+    // Debug: Log to verify values are being set
+    console.log("Theme updated:", {
+      primary: workspace.primaryColor,
+      foreground: fgColor,
+    });
   }, [workspace.primaryColor]);
 
   function updateUser(data: UserSettingsData) {

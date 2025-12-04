@@ -30,14 +30,34 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [p, e] = await Promise.all([
-        fetch(`/data/projects.json`).then((r) => r.json()),
-        fetch(`/data/expenses.json`)
+      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
+      setProjects(pData);
+
+      try {
+        const res = await fetch("/api/expenses").then((r) => r.json());
+        if (res?.success && res.data) {
+          const dbExpenses = res.data.map((e: any) => ({
+            id: String(e.id),
+            projectId: e.project_id || "",
+            description: e.note || e.vendor || "",
+            amount: parseFloat(e.amount),
+            date: e.date,
+          }));
+          setExpenses(dbExpenses);
+        } else {
+          throw new Error("DB not configured");
+        }
+      } catch {
+        const e = await fetch(`/data/expenses.json`)
           .then((r) => r.json())
-          .catch(() => []),
-      ]);
-      setProjects(p);
-      setExpenses(e);
+          .catch(() => []);
+        setExpenses(
+          e.map((exp: any) => ({
+            ...exp,
+            description: exp.note || exp.vendor || "",
+          }))
+        );
+      }
     };
     load();
   }, []);

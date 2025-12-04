@@ -23,3 +23,5 @@ export function Badge({ variant = "default", pill = false, className, ...props }
     />
   );
 }
+
+

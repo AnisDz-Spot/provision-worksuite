@@ -27,18 +27,64 @@ export default function ProfitabilityPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [p, e, t] = await Promise.all([
-        fetch(`/data/projects.json`).then((r) => r.json()),
-        fetch(`/data/expenses.json`)
+      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
+      setProjects(pData);
+
+      // Expenses
+      try {
+        const res = await fetch("/api/expenses").then((r) => r.json());
+        if (res?.success && res.data) {
+          const dbExpenses = res.data.map((e: any) => ({
+            id: String(e.id),
+            projectId: e.project_id || "",
+            description: e.note || e.vendor || "",
+            amount: parseFloat(e.amount),
+            date: e.date,
+          }));
+          setExpenses(dbExpenses);
+        } else {
+          throw new Error("DB not configured");
+        }
+      } catch {
+        const e = await fetch(`/data/expenses.json`)
           .then((r) => r.json())
-          .catch(() => []),
-        fetch(`/data/timelogs.json`)
+          .catch(() => []);
+        setExpenses(
+          e.map((exp: any) => ({
+            ...exp,
+            description: exp.note || exp.vendor || "",
+          }))
+        );
+      }
+
+      // Time logs
+      try {
+        const res = await fetch("/api/time-logs").then((r) => r.json());
+        if (res?.success && res.data) {
+          const dbLogs = res.data.map((log: any) => ({
+            id: String(log.id),
+            projectId: log.project_id || "",
+            userId: log.user_id || "",
+            hours: parseFloat(log.hours),
+            rate: parseFloat(log.rate || 0),
+            date: log.date,
+          }));
+          setLogs(dbLogs);
+        } else {
+          throw new Error("DB not configured");
+        }
+      } catch {
+        const t = await fetch(`/data/timelogs.json`)
           .then((r) => r.json())
-          .catch(() => []),
-      ]);
-      setProjects(p);
-      setExpenses(e);
-      setLogs(t);
+          .catch(() => []);
+        setLogs(
+          t.map((log: any) => ({
+            ...log,
+            userId: log.userId || "",
+            rate: log.rate || 0,
+          }))
+        );
+      }
     };
     load();
   }, []);

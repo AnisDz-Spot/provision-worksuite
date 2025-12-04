@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -20,36 +20,94 @@ import {
 import { Card } from "@/components/ui/Card";
 import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
+import { loadProjects, type Project } from "@/lib/data";
 
-const projectsTimelineData = [
-  { week: "Week 1", active: 5, completed: 2, planning: 3 },
-  { week: "Week 2", active: 7, completed: 4, planning: 2 },
-  { week: "Week 3", active: 9, completed: 6, planning: 1 },
-  { week: "Week 4", active: 12, completed: 8, planning: 2 },
-  { week: "Week 5", active: 10, completed: 7, planning: 3 },
-  { week: "Week 6", active: 11, completed: 9, planning: 1 },
-];
-
-const projectStatusData = [
-  { name: "Active", value: 11, color: "#3b82f6" },
-  { name: "Completed", value: 9, color: "#10b981" },
-  { name: "Paused", value: 3, color: "#f59e0b" },
-  { name: "Planning", value: 1, color: "#8b5cf6" },
-];
-
-const projectHealthData = [
-  { name: "Project Alpha", health: 85, progress: 70 },
-  { name: "Project Beta", health: 100, progress: 100 },
-  { name: "Project Gamma", health: 65, progress: 45 },
-  { name: "Project Delta", health: 78, progress: 55 },
-  { name: "Project Epsilon", health: 92, progress: 80 },
-  { name: "Project Zeta", health: 88, progress: 75 },
-];
+type TimelinePoint = {
+  week: string;
+  active: number;
+  completed: number;
+  planning: number;
+};
+type StatusPoint = { name: string; value: number; color: string };
+type HealthPoint = { name: string; health: number; progress: number };
 
 export function ProjectsCharts() {
   const [timelineChartType, setTimelineChartType] = useState<ChartType>("line");
   const [statusChartType, setStatusChartType] = useState<ChartType>("pie");
   const [healthChartType, setHealthChartType] = useState<ChartType>("bar");
+  const [projects, setProjects] = useState<Project[] | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadProjects().then((p) => {
+      if (mounted) setProjects(p);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const projectStatusData: StatusPoint[] = useMemo(() => {
+    const p = projects || [];
+    const counts: Record<string, number> = {
+      Active: 0,
+      Completed: 0,
+      Paused: 0,
+      "In Progress": 0,
+    };
+    for (const pr of p) {
+      const s = pr.status as string;
+      if (s in counts) counts[s] += 1;
+      else counts["In Progress"] += 1;
+    }
+    return [
+      { name: "Active", value: counts["Active"], color: "#3b82f6" },
+      { name: "Completed", value: counts["Completed"], color: "#10b981" },
+      { name: "Paused", value: counts["Paused"], color: "#f59e0b" },
+      { name: "In Progress", value: counts["In Progress"], color: "#8b5cf6" },
+    ];
+  }, [projects]);
+
+  const projectsTimelineData: TimelinePoint[] = useMemo(() => {
+    // Build last 6 weeks labels
+    const labels: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i * 7);
+      const week = `${d.getMonth() + 1}/${d.getDate()}`;
+      labels.push(week);
+    }
+    // Simple approach: reflect overall status counts across weeks (flat trend but DB-driven)
+    const base = projectStatusData.reduce(
+      (acc, cur) => {
+        if (cur.name === "Active") acc.active = cur.value;
+        if (cur.name === "Completed") acc.completed = cur.value;
+        if (cur.name === "In Progress") acc.planning = cur.value;
+        return acc;
+      },
+      { active: 0, completed: 0, planning: 0 }
+    );
+    return labels.map((week) => ({ week, ...base }));
+  }, [projectStatusData]);
+
+  const projectHealthData: HealthPoint[] = useMemo(() => {
+    const p = projects || [];
+    // Map each project to a health/progress tuple
+    return p.slice(0, 12).map((pr) => {
+      const progress =
+        typeof pr.progress === "number"
+          ? Math.max(0, Math.min(100, pr.progress))
+          : 0;
+      // Basic health heuristic: progress with slight deadline pressure penalty if overdue
+      let health = progress;
+      const deadline = pr.deadline ? new Date(pr.deadline) : null;
+      if (deadline && deadline.getTime() < Date.now() && progress < 100) {
+        health = Math.max(0, progress - 20);
+      }
+      return { name: pr.name, health, progress };
+    });
+  }, [projects]);
 
   const renderTimelineChart = () => {
     const commonProps = {

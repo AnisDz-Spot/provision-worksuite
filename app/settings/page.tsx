@@ -6,19 +6,35 @@ import { ThemePresets } from "@/components/settings/ThemePresets";
 import { UserSettingsForm } from "@/components/settings/UserSettingsForm";
 import { SetupProfileForm } from "@/components/settings/SetupProfileForm";
 import { WorkspaceSettingsForm } from "@/components/settings/WorkspaceSettingsForm";
+import { BlockerCategorySettings } from "@/components/settings/BlockerCategorySettings";
+import RiskLevelSettings from "@/components/settings/RiskLevelSettings";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { Bell } from "lucide-react";
+import { Bell, Shield } from "lucide-react";
+import RolesSettings from "@/components/settings/RolesSettings";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AlertRulesManager } from "@/components/notifications/AlertRulesManager";
 import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
+import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 
-type TabKey = "profile" | "user" | "workspace" | "appearance" | "notifications";
+type TabKey =
+  | "profile"
+  | "user"
+  | "workspace"
+  | "appearance"
+  | "roles"
+  | "notifications"
+  | "blockers";
 
 function SettingsContent() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
+  const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
+    if (typeof window === "undefined") return "real";
+    const val = localStorage.getItem("pv:dataMode");
+    return val === "mock" ? "mock" : "real";
+  });
   const isSetupMode = searchParams.get("setup") === "true";
 
   // Check URL params first, then restore last selected main tab on mount
@@ -45,6 +61,13 @@ function SettingsContent() {
     setTab(next);
     try {
       localStorage.setItem("pv:settingsTab", next);
+    } catch {}
+  };
+
+  const handleDataModeChange = (mode: "real" | "mock") => {
+    setDataMode(mode);
+    try {
+      setDataModePreference(mode);
     } catch {}
   };
 
@@ -88,6 +111,22 @@ function SettingsContent() {
               Appearance
             </Button>
             <Button
+              variant={tab === "roles" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("roles")}
+              className={cn(tab === "roles" && "shadow")}
+            >
+              Roles
+            </Button>
+            <Button
+              variant={tab === "blockers" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("blockers")}
+              className={cn(tab === "blockers" && "shadow")}
+            >
+              Blockers
+            </Button>
+            <Button
               variant={tab === "notifications" ? "primary" : "outline"}
               size="sm"
               onClick={() => handleSetTab("notifications")}
@@ -98,17 +137,58 @@ function SettingsContent() {
           </>
         )}
       </div>
+      {tab === "roles" && (
+        <div className="max-w-3xl space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Team Roles</h2>
+            <p className="text-sm text-muted-foreground">
+              Add, remove, or modify roles available to your teams. Only admins
+              can make changes.
+            </p>
+          </div>
+          <RolesSettings />
+        </div>
+      )}
 
-      {(tab === "profile" || tab === "user") && (
-        isSetupMode ? (
+      {(tab === "profile" || tab === "user") &&
+        (isSetupMode ? (
           <SetupProfileForm onComplete={() => {}} />
         ) : (
           <UserSettingsForm />
-        )
-      )}
+        ))}
       {tab === "workspace" && <WorkspaceSettingsForm />}
       {tab === "appearance" && (
         <div className="max-w-2xl space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
+            <p className="text-sm text-muted-foreground mb-3">
+              Choose between using real database data or dummy demo data. When
+              dummy data is enabled, a fake admin login is available.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={dataMode === "real" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => handleDataModeChange("real")}
+              >
+                Use Real Data
+              </Button>
+              <Button
+                variant={dataMode === "mock" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => handleDataModeChange("mock")}
+              >
+                Use Dummy Data
+              </Button>
+            </div>
+            {dataMode === "mock" && (
+              <div className="mt-3 text-xs text-muted-foreground">
+                Fake Admin:{" "}
+                <span className="font-mono">admin@provision.com</span> /{" "}
+                <span className="font-mono">password1234567890</span>
+              </div>
+            )}
+          </div>
           <div>
             <h2 className="text-lg font-semibold mb-2">Theme Mode</h2>
             <p className="text-sm text-muted-foreground mb-3">
@@ -123,6 +203,29 @@ function SettingsContent() {
             </p>
             <ThemePresets />
           </div>
+        </div>
+      )}
+      {tab === "blockers" && (
+        <div className="max-w-3xl space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Blocker Categories</h2>
+            <p className="text-sm text-muted-foreground">
+              Define the categories used when reporting blockers. Categories
+              help route issues to the right owner group and set expectations
+              with target SLA days. You can edit labels, owners, SLAs, icons, or
+              add new categories. Changes are stored locally and work in
+              production without a backend.
+            </p>
+          </div>
+          <BlockerCategorySettings />
+          <div className="space-y-2 pt-4">
+            <h2 className="text-xl font-bold">Risk Levels</h2>
+            <p className="text-sm text-muted-foreground">
+              Configure the risk levels used in filters and badges. You can add,
+              rename, recolor, and reorder levels.
+            </p>
+          </div>
+          <RiskLevelSettings />
         </div>
       )}
       {tab === "notifications" && <NotificationsSettingsTabs />}
@@ -229,12 +332,16 @@ function NotificationsSettingsTabs() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <section className="p-4 md:p-8 max-w-5xl">
-        <div className="text-center">Loading settings...</div>
-      </section>
-    }>
+    <Suspense
+      fallback={
+        <section className="p-4 md:p-8 max-w-5xl">
+          <div className="text-center">Loading settings...</div>
+        </section>
+      }
+    >
       <SettingsContent />
     </Suspense>
   );
 }
+
+

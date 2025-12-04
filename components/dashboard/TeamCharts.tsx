@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ComposedChart,
   BarChart,
@@ -16,18 +16,51 @@ import {
 import { Card } from "@/components/ui/Card";
 import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
+import { loadTasks, loadUsers, type Task, type User } from "@/lib/data";
 
-const teamMetricsData = [
-  { month: "Jan", active: 15, inactive: 3, utilization: 83 },
-  { month: "Feb", active: 17, inactive: 2, utilization: 89 },
-  { month: "Mar", active: 19, inactive: 1, utilization: 94 },
-  { month: "Apr", active: 20, inactive: 2, utilization: 91 },
-  { month: "May", active: 22, inactive: 1, utilization: 95 },
-  { month: "Jun", active: 21, inactive: 3, utilization: 87 },
-];
+type TeamPoint = {
+  month: string;
+  active: number;
+  inactive: number;
+  utilization: number;
+};
 
 export function TeamCharts() {
   const [chartType, setChartType] = useState<ChartType>("bar");
+  const [users, setUsers] = useState<User[] | null>(null);
+  const [tasks, setTasks] = useState<Task[] | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadUsers().then((u) => mounted && setUsers(u));
+    loadTasks().then((t) => mounted && setTasks(t));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const teamMetricsData: TeamPoint[] = useMemo(() => {
+    const uCount = (users || []).length;
+    const tAll = tasks || [];
+    const completed = tAll.filter((t) =>
+      ["done", "completed", "complete"].includes((t.status || "").toLowerCase())
+    ).length;
+    const utilization =
+      tAll.length > 0 ? Math.round((completed / tAll.length) * 100) : 0;
+    // Build last 6 months labels
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleString(undefined, { month: "short" }));
+    }
+    return months.map((m) => ({
+      month: m,
+      active: uCount,
+      inactive: 0,
+      utilization,
+    }));
+  }, [users, tasks]);
 
   const renderChart = () => {
     switch (chartType) {

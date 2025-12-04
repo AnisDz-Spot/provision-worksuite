@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -17,32 +17,16 @@ import {
 import { Card } from "@/components/ui/Card";
 import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
+import { loadTasks, type Task } from "@/lib/data";
 
-const taskCompletionData = [
-  { date: "Mon", completed: 12, pending: 8, overdue: 2 },
-  { date: "Tue", completed: 15, pending: 6, overdue: 1 },
-  { date: "Wed", completed: 18, pending: 5, overdue: 0 },
-  { date: "Thu", completed: 14, pending: 7, overdue: 2 },
-  { date: "Fri", completed: 20, pending: 4, overdue: 1 },
-  { date: "Sat", completed: 8, pending: 12, overdue: 3 },
-  { date: "Sun", completed: 5, pending: 15, overdue: 4 },
-];
-
-const tasksByPriorityData = [
-  { priority: "Critical", count: 8 },
-  { priority: "High", count: 15 },
-  { priority: "Medium", count: 22 },
-  { priority: "Low", count: 18 },
-];
-
-const teamProductivityData = [
-  { week: "Week 1", Alice: 28, Bob: 25, Carol: 22, David: 20 },
-  { week: "Week 2", Alice: 32, Bob: 28, Carol: 26, David: 24 },
-  { week: "Week 3", Alice: 35, Bob: 30, Carol: 28, David: 27 },
-  { week: "Week 4", Alice: 38, Bob: 35, Carol: 32, David: 30 },
-  { week: "Week 5", Alice: 40, Bob: 36, Carol: 34, David: 32 },
-  { week: "Week 6", Alice: 42, Bob: 38, Carol: 35, David: 33 },
-];
+type CompletionPoint = {
+  date: string;
+  completed: number;
+  pending: number;
+  overdue: number;
+};
+type PriorityPoint = { priority: string; count: number };
+type ProductivityPoint = { week: string; [assignee: string]: string | number };
 
 export function TasksCharts() {
   const [completionChartType, setCompletionChartType] =
@@ -50,6 +34,115 @@ export function TasksCharts() {
   const [priorityChartType, setPriorityChartType] = useState<ChartType>("bar");
   const [productivityChartType, setProductivityChartType] =
     useState<ChartType>("bar");
+  const [tasks, setTasks] = useState<Task[] | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    loadTasks().then((t) => {
+      if (mounted) setTasks(t);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const taskCompletionData: CompletionPoint[] = useMemo(() => {
+    const now = new Date();
+    // last 7 days labels ending today
+    const days: { key: string; start: Date; end: Date }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+      const key = start.toLocaleDateString(undefined, { weekday: "short" });
+      days.push({ key, start, end });
+    }
+
+    const data = days.map((d) => ({
+      date: d.key,
+      completed: 0,
+      pending: 0,
+      overdue: 0,
+    }));
+    const t = tasks || [];
+    for (const task of t) {
+      const dueRaw = (task as any).due || task.dueDate;
+      const due = dueRaw ? new Date(dueRaw) : null;
+      const status = (task.status || "").toLowerCase();
+      const idx = due
+        ? days.findIndex((d) => due >= d.start && due < d.end)
+        : -1;
+      const isDone = ["done", "completed", "complete"].includes(status);
+      if (idx >= 0) {
+        if (isDone) data[idx].completed += 1;
+        else data[idx].pending += 1;
+      } else {
+        // If no due date in range, count overdue if past due and not done
+        if (due && due < now && !isDone) {
+          data[data.length - 1].overdue += 1;
+        }
+      }
+    }
+    return data;
+  }, [tasks]);
+
+  const tasksByPriorityData: PriorityPoint[] = useMemo(() => {
+    const counts: Record<string, number> = {
+      Critical: 0,
+      High: 0,
+      Medium: 0,
+      Low: 0,
+    };
+    for (const t of tasks || []) {
+      const p = (t.priority || "Medium").toString().toLowerCase();
+      const mapped = p.startsWith("crit")
+        ? "Critical"
+        : p.startsWith("high")
+          ? "High"
+          : p.startsWith("low")
+            ? "Low"
+            : "Medium";
+      counts[mapped] += 1;
+    }
+    return [
+      { priority: "Critical", count: counts.Critical },
+      { priority: "High", count: counts.High },
+      { priority: "Medium", count: counts.Medium },
+      { priority: "Low", count: counts.Low },
+    ];
+  }, [tasks]);
+
+  const teamProductivityData: ProductivityPoint[] = useMemo(() => {
+    // Build last 6 weeks labels
+    const now = new Date();
+    const weeks: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i * 7);
+      weeks.push(`Wk ${d.getMonth() + 1}/${d.getDate()}`);
+    }
+    // Count tasks per assignee across the whole period (approximate)
+    const assignees = new Map<string, number>();
+    for (const t of tasks || []) {
+      if (t.assignee)
+        assignees.set(t.assignee, (assignees.get(t.assignee) || 0) + 1);
+    }
+    const top = Array.from(assignees.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name]) => name);
+    return weeks.map((w) => {
+      const row: ProductivityPoint = { week: w };
+      for (const name of top) {
+        // Distribute roughly evenly across weeks
+        const total = assignees.get(name) || 0;
+        row[name] = Math.max(0, Math.round(total / weeks.length));
+      }
+      return row;
+    });
+  }, [tasks]);
 
   const renderCompletionChart = () => {
     const commonProps = {

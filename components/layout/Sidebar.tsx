@@ -96,7 +96,7 @@ export function Sidebar() {
     <aside
       className={cn(
         // Main sidebar with dark mode dark-blue color
-        "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-30",
+        "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-40",
         collapsed ? "w-16" : "w-60"
       )}
     >
@@ -135,22 +135,26 @@ export function Sidebar() {
         {!collapsed && (
           <span className="truncate select-none">{WORKSPACE_NAME}</span>
         )}
-        {/* Tooltip on logo hover when collapsed */}
-        {collapsed && (
-          <span className="absolute left-14 top-1/2 -translate-y-1/2 bg-muted text-foreground py-1 px-3 rounded shadow text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition">
-            {WORKSPACE_NAME}
-          </span>
-        )}
       </Link>
       {/* Scrollable nav area */}
-      <div className="flex-1 overflow-y-auto">
-        <nav className="flex flex-col gap-1 px-2 mt-2 pb-2">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto scrollbar-hide",
+          collapsed ? "" : "overflow-x-hidden"
+        )}
+      >
+        <nav
+          className={cn(
+            "flex flex-col mt-4 pb-2",
+            collapsed ? "gap-5 px-3" : "gap-1 px-2"
+          )}
+        >
           {navItems.map((item) => {
             if (isNavGroup(item)) {
               const isExpanded = expandedGroups.includes(item.label);
               const hasActive = isActiveInGroup(item.items);
               return (
-                <div key={item.label}>
+                <div key={item.label} className="relative group">
                   <button
                     onClick={() => toggleGroup(item.label)}
                     className={cn(
@@ -165,7 +169,7 @@ export function Sidebar() {
                       <item.icon
                         className={cn(
                           "transition-all",
-                          collapsed ? "w-6 h-6" : "w-4 h-4"
+                          collapsed ? "w-5 h-5" : "w-4 h-4"
                         )}
                       />
                       {!collapsed && (
@@ -222,18 +226,13 @@ export function Sidebar() {
                     <item.icon
                       className={cn(
                         "transition-all",
-                        collapsed ? "w-6 h-6" : "w-4 h-4"
+                        collapsed ? "w-5 h-5" : "w-4 h-4"
                       )}
                     />
                     {!collapsed && (
                       <span className="truncate">{item.label}</span>
                     )}
                   </Link>
-                  {collapsed && (
-                    <span className="absolute left-14 top-1/2 -translate-y-1/2 bg-muted text-foreground py-1 px-3 rounded shadow-lg text-xs opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap z-10">
-                      {item.label}
-                    </span>
-                  )}
                 </div>
               );
             }

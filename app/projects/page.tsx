@@ -38,11 +38,17 @@ export default function ProjectsPage() {
       setView(saved);
     }
     // Load projects for Gantt chart
-    try {
-      const raw = localStorage.getItem("pv:projects");
-      const arr = raw ? JSON.parse(raw) : [];
-      setProjects(Array.isArray(arr) ? arr : []);
-    } catch {}
+    async function fetchProjects() {
+      try {
+        const { loadProjects } = await import("@/lib/data");
+        const data = await loadProjects();
+        setProjects(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Failed to load projects:", error);
+        setProjects([]);
+      }
+    }
+    fetchProjects();
   }, []);
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState({
@@ -328,3 +334,5 @@ export default function ProjectsPage() {
     </section>
   );
 }
+
+

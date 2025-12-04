@@ -16,6 +16,7 @@ export default function DatabaseSetupPage() {
     success: boolean;
     message: string;
   } | null>(null);
+  const isTestSuccessful = !!testResult?.success;
 
   useEffect(() => {
     // Load existing config if any
@@ -123,7 +124,11 @@ export default function DatabaseSetupPage() {
             </label>
             <p className="text-sm text-muted-foreground mb-3">
               Get this from your Vercel Storage → Postgres → .env.local tab.
-              Copy the <code className="bg-accent px-1 py-0.5 rounded">POSTGRES_URL</code> value.
+              Copy the{" "}
+              <code className="bg-accent px-1 py-0.5 rounded">
+                POSTGRES_URL
+              </code>{" "}
+              value.
             </p>
             <Input
               type="text"
@@ -140,8 +145,12 @@ export default function DatabaseSetupPage() {
               Blob Storage Token
             </label>
             <p className="text-sm text-muted-foreground mb-3">
-              Get this from your Vercel Storage → Blob → .env.local tab.
-              Copy the <code className="bg-accent px-1 py-0.5 rounded">BLOB_READ_WRITE_TOKEN</code> value.
+              Get this from your Vercel Storage → Blob → .env.local tab. Copy
+              the{" "}
+              <code className="bg-accent px-1 py-0.5 rounded">
+                BLOB_READ_WRITE_TOKEN
+              </code>{" "}
+              value.
             </p>
             <Input
               type="password"
@@ -177,8 +186,15 @@ export default function DatabaseSetupPage() {
 
             <Button
               onClick={handleSave}
-              disabled={!postgresUrl || !blobToken || loading}
+              disabled={
+                !postgresUrl || !blobToken || loading || !isTestSuccessful
+              }
               variant="primary"
+              title={
+                !isTestSuccessful
+                  ? "Please test connection successfully first"
+                  : undefined
+              }
             >
               {loading ? "Saving..." : "Save & Continue to Profile Setup"}
             </Button>
@@ -191,8 +207,7 @@ export default function DatabaseSetupPage() {
         <h3 className="text-lg font-semibold mb-3">📋 Setup Instructions</h3>
         <ol className="list-decimal list-inside space-y-2 text-sm">
           <li>
-            Go to your Vercel project dashboard →{" "}
-            <strong>Storage</strong> tab
+            Go to your Vercel project dashboard → <strong>Storage</strong> tab
           </li>
           <li>
             Create a <strong>Postgres</strong> database if you haven't already

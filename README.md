@@ -188,7 +188,7 @@ Proprietary - All rights reserved
 ---
 
 **ProVision WorkSuite** - Enterprise Project Management Platform
- 
+
 ## Buyer Installation (ThemeForest)
 
 This section explains how purchasers can install or host the app.
@@ -268,7 +268,7 @@ Set environment variables in `.env.local` (same as above), execute `lib/db/schem
 ### Support for Buyers
 
 If you need help deploying, provide:
+
 - Your hosting platform (Vercel/Netlify/Custom)
 - Error messages or logs
 - Confirmation that `lib/db/schema.sql` was executed
-

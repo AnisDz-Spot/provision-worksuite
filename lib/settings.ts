@@ -109,9 +109,8 @@ export function computeForeground(hex: string): string {
   const B = srgbToLin(b);
   const L = 0.2126 * R + 0.7152 * G + 0.0722 * B; // relative luminance
 
-  const contrastWithWhite = 1.05 / (L + 0.05);
-  const contrastWithBlack = (L + 0.05) / 0.05;
-
-  // Pick the color with higher contrast ratio
-  return contrastWithWhite >= contrastWithBlack ? "#fff" : "#000";
+  // For dark/saturated colors (low luminance), white text has better contrast
+  // For light/bright colors (high luminance), black text has better contrast
+  // Use a threshold approach: if luminance < 0.5, use white, else black
+  return L < 0.5 ? "#ffffff" : "#000000";
 }

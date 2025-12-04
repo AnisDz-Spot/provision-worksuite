@@ -1,5 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { isSetupComplete } from "@/lib/setup";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 type User = {
   id: string;
@@ -20,11 +22,47 @@ type AuthContextType = {
   isAdmin: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
+  updateCurrentUser: (patch: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Helper functions for user management
+async function readUsersFromStorage(): Promise<User[]> {
+  if (typeof window === "undefined") return [];
+  try {
+    // Try loading from database first
+    try {
+      const { loadUsers } = await import("@/lib/data");
+      const dbUsers = await loadUsers();
+
+      // Convert database users to User format
+      const users = dbUsers.map((u: any) => ({
+        id: u.uid || u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role || "Member",
+        password: "", // Don't expose passwords
+        isAdmin: u.role === "Administrator",
+      }));
+
+      return users;
+    } catch (error) {
+      console.error("Failed to load users from database:", error);
+    }
+
+    // Fallback to localStorage
+    const stored = localStorage.getItem("pv:users");
+    if (stored) {
+      return JSON.parse(stored);
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 function readUsers(): User[] {
   if (typeof window === "undefined") return [];
   try {
@@ -61,7 +99,7 @@ function readUsers(): User[] {
 
     // Only keep the global admin - remove any other users from localStorage
     users = users.filter((u) => u.email === "anis@provision.com");
-    
+
     if (needsUpdate || stored) {
       localStorage.setItem("pv:users", JSON.stringify(users));
     }
@@ -84,14 +122,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  function setSessionExpiry(days = 30) {
+    try {
+      const expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+      localStorage.setItem("pv:session", JSON.stringify({ expiresAt }));
+    } catch {}
+  }
+
+  function getSessionValid(): boolean {
+    try {
+      const raw = localStorage.getItem("pv:session");
+      if (!raw) return false;
+      const { expiresAt } = JSON.parse(raw);
+      return typeof expiresAt === "number" && Date.now() < expiresAt;
+    } catch {
+      return false;
+    }
+  }
+
   useEffect(() => {
     // Check for stored user session
     const storedUser = localStorage.getItem("pv:currentUser");
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
-        setCurrentUser(user);
-        setIsAuthenticated(true);
+        if (getSessionValid()) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        } else {
+          // Expired session
+          localStorage.removeItem("pv:currentUser");
+          localStorage.removeItem("pv:session");
+        }
       } catch {
         // Invalid stored data
         localStorage.removeItem("pv:currentUser");
@@ -100,17 +162,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Auto-refresh session on user activity while authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const refresh = () => setSessionExpiry(30);
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((ev) => window.addEventListener(ev, refresh));
+    const interval = setInterval(refresh, 5 * 60 * 1000);
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, refresh));
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
   const login = async (
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // Check if setup is complete
-    const setupStatus = localStorage.getItem("pv:setupStatus");
-    const isSetupComplete =
-      setupStatus && JSON.parse(setupStatus).profileCompleted;
+    // If admin selected dummy data mode, allow fake admin login
+    if (shouldUseMockData()) {
+      if (
+        email === "admin@provision.com" &&
+        password === "password1234567890"
+      ) {
+        const authUser: User = {
+          id: "demo-admin",
+          name: "Demo Admin",
+          email,
+          role: "Administrator",
+          isAdmin: true,
+        };
+        setCurrentUser(authUser);
+        setIsAuthenticated(true);
+        localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+        setSessionExpiry(30);
+        return { success: true };
+      }
+      // In dummy mode, reject other credentials
+      return {
+        success: false,
+        error: "Use fake admin credentials in dummy data mode.",
+      };
+    }
 
-    // If setup is complete, check database first
-    if (isSetupComplete) {
+    // Check if setup is complete - if yes, ONLY allow database login
+    const setupComplete = isSetupComplete();
+
+    if (setupComplete) {
+      // Setup is complete - only allow database authentication
       try {
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -132,16 +231,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(authUser);
           setIsAuthenticated(true);
           localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+          setSessionExpiry(30);
 
           return { success: true };
+        } else {
+          return {
+            success: false,
+            error: data.error || "Invalid email or password",
+          };
         }
       } catch (error) {
-        // Fall through to local auth if database fails
-        console.error("Database login failed:", error);
+        return {
+          success: false,
+          error:
+            "Unable to connect to database. Please check your configuration.",
+        };
       }
     }
 
-    // Fall back to local auth (built-in users)
+    // Setup NOT complete - allow global admin login ONLY
     const users = readUsers();
     const user = users.find((u) => u.email === email);
 
@@ -163,6 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(userWithoutPassword as User);
     setIsAuthenticated(true);
     localStorage.setItem("pv:currentUser", JSON.stringify(userWithoutPassword));
+    setSessionExpiry(30);
 
     return { success: true };
   };
@@ -171,6 +280,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem("pv:currentUser");
+    localStorage.removeItem("pv:session");
+  };
+
+  const updateCurrentUser = (patch: Partial<User>) => {
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem("pv:currentUser", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   return (
@@ -182,6 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdmin: currentUser?.isAdmin || false,
         isAuthenticated,
         isLoading,
+        updateCurrentUser,
       }}
     >
       {children}

@@ -11,6 +11,7 @@ import {
   Minimize2,
   Maximize2,
 } from "lucide-react";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 import {
   getChatConversations,
   getChatMessages,
@@ -20,6 +21,59 @@ import {
   type ChatConversation,
   type ChatMessage,
 } from "@/lib/utils";
+
+// DB-backed helpers
+async function dbFetchThread(user1: string, user2: string) {
+  const res = await fetch(
+    `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`
+  );
+  const data = await res.json();
+  if (!res.ok || !data?.success) return [] as ChatMessage[];
+  return (data.data || []).map((row: any) => ({
+    id: String(row.id),
+    fromUser: row.from_user,
+    toUser: row.to_user,
+    message: row.message,
+    timestamp: new Date(row.created_at).getTime(),
+    read: !!row.is_read,
+  }));
+}
+
+async function dbSendMessage(
+  fromUser: string,
+  toUser: string,
+  message: string
+) {
+  const res = await fetch("/api/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fromUser, toUser, message }),
+  });
+  return res.ok;
+}
+
+async function dbMarkRead(currentUser: string, otherUser: string) {
+  await fetch("/api/messages/mark-read", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentUser, otherUser }),
+  });
+}
+
+async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
+  const res = await fetch(
+    `/api/messages/conversations?user=${encodeURIComponent(user)}`
+  );
+  const data = await res.json();
+  if (!res.ok || !data?.success) return [];
+  return (data.data || []).map((row: any) => ({
+    withUser: row.withUser,
+    lastMessage: row.lastMessage,
+    lastTimestamp: new Date(row.lastTimestamp).getTime(),
+    unreadCount: row.unreadCount || 0,
+    isOnline: false,
+  }));
+}
 
 type ChatWindowProps = {
   currentUser: string;
@@ -43,7 +97,11 @@ function ChatWindow({
 
   useEffect(() => {
     loadMessages();
-    markMessagesAsRead(currentUser, targetUser);
+    if (shouldUseDatabaseData()) {
+      dbMarkRead(currentUser, targetUser);
+    } else {
+      markMessagesAsRead(currentUser, targetUser);
+    }
 
     const interval = setInterval(() => {
       loadMessages();
@@ -57,16 +115,33 @@ function ChatWindow({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const loadMessages = () => {
-    const msgs = getChatMessages(currentUser, targetUser);
-    setMessages(msgs);
+  const loadMessages = async () => {
+    if (shouldUseDatabaseData()) {
+      const msgs = await dbFetchThread(currentUser, targetUser);
+      setMessages(msgs);
+    } else {
+      const msgs = getChatMessages(currentUser, targetUser);
+      setMessages(msgs);
+    }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!newMessage.trim()) return;
-    sendChatMessage(currentUser, targetUser, newMessage.trim());
-    setNewMessage("");
-    loadMessages();
+    if (shouldUseDatabaseData()) {
+      const success = await dbSendMessage(
+        currentUser,
+        targetUser,
+        newMessage.trim()
+      );
+      if (success) {
+        setNewMessage("");
+        await loadMessages();
+      }
+    } else {
+      sendChatMessage(currentUser, targetUser, newMessage.trim());
+      setNewMessage("");
+      await loadMessages();
+    }
   };
 
   const getStatusColor = (status?: string) => {
@@ -146,7 +221,7 @@ function ChatWindow({
                         : "bg-card border border-border"
                     }`}
                   >
-                    <p className="text-sm break-words">{msg.message}</p>
+                    <p className="text-sm wrap-break-word">{msg.message}</p>
                     <p
                       className={`text-xs mt-1 ${
                         msg.fromUser === currentUser
@@ -168,25 +243,24 @@ function ChatWindow({
 
           {/* Input */}
           <div className="p-3 border-t border-border bg-card">
-            {activity?.currentStatus === "online" ? (
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Type a message..."
-                  className="flex-1"
-                />
-                <Button onClick={handleSend} size="sm">
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                {targetUser} is currently offline. They'll see your message when
-                they're back.
+            {activity?.currentStatus !== "online" && (
+              <p className="text-xs text-muted-foreground text-center py-1 mb-2">
+                {targetUser} is offline. Your message will be delivered when
+                they return.
               </p>
             )}
+            <div className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Type a message..."
+                className="flex-1"
+              />
+              <Button onClick={handleSend} size="sm">
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </>
       )}
@@ -227,9 +301,14 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     };
   }, [currentUser]);
 
-  const loadConversations = () => {
-    const convs = getChatConversations(currentUser);
-    setConversations(convs);
+  const loadConversations = async () => {
+    if (shouldUseDatabaseData()) {
+      const convs = await dbFetchConversations(currentUser);
+      setConversations(convs);
+    } else {
+      const convs = getChatConversations(currentUser);
+      setConversations(convs);
+    }
   };
 
   const openChat = (user: string) => {

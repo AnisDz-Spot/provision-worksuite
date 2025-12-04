@@ -62,3 +62,48 @@ CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_time_logs_task_id ON time_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_time_logs_project_id ON time_logs(project_id);
+
+-- Roles table
+CREATE TABLE IF NOT EXISTS roles (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  color_hex VARCHAR(7),
+  "order" INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Migration content: add password_hash column safely if not present
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+
+-- Blocker categories table (for configurable categories with emoji icons)
+CREATE TABLE IF NOT EXISTS blocker_categories (
+  id VARCHAR(255) PRIMARY KEY, -- kebab-case id
+  label VARCHAR(255) NOT NULL,
+  default_owner_group VARCHAR(255) NOT NULL,
+  sla_days INTEGER NOT NULL DEFAULT 7,
+  icon_emoji VARCHAR(16) NOT NULL
+);
+
+-- Blockers table (reports tracked per project)
+CREATE TABLE IF NOT EXISTS blockers (
+  id VARCHAR(255) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  level VARCHAR(50) NOT NULL, -- e.g., low/medium/high/critical
+  status VARCHAR(50) NOT NULL, -- e.g., open/resolved
+  impacted_tasks TEXT, -- JSON array of task ids
+  assigned_to VARCHAR(255),
+  reported_by VARCHAR(255) NOT NULL,
+  reported_date DATE NOT NULL,
+  resolved_date DATE,
+  resolution TEXT,
+  category VARCHAR(255) NOT NULL REFERENCES blocker_categories(id),
+  project_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_blockers_project_id ON blockers(project_id);
+CREATE INDEX IF NOT EXISTS idx_blockers_status ON blockers(status);

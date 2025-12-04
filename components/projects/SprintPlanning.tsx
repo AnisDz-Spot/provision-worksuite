@@ -3,6 +3,8 @@ import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { Columns3, Plus, ChevronRight, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Dropdown } from "@/components/ui/Dropdown";
+import users from "@/data/users.json";
 
 type SprintTask = {
   id: string;
@@ -107,6 +109,36 @@ const columns = [
 
 export function SprintPlanning() {
   const [sprint, setSprint] = useState<Sprint>(defaultSprint);
+  const [draggedTask, setDraggedTask] = useState<string | null>(null);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("You");
+  const memberList = users as Array<{
+    id: string;
+    name: string;
+    avatarColor?: string;
+  }>;
+
+  const getAvatarColorClass = (color?: string) => {
+    switch (color) {
+      case "indigo":
+        return "bg-indigo-500/10 text-indigo-600";
+      case "green":
+        return "bg-green-500/10 text-green-600";
+      case "pink":
+        return "bg-pink-500/10 text-pink-600";
+      case "yellow":
+        return "bg-yellow-500/10 text-yellow-600";
+      case "blue":
+        return "bg-blue-500/10 text-blue-600";
+      default:
+        return "bg-primary/10 text-primary";
+    }
+  };
+  const [newTaskPriority, setNewTaskPriority] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+  const [newTaskPoints, setNewTaskPoints] = useState(3);
 
   const tasksByColumn = useMemo(() => {
     return columns.reduce(
@@ -135,6 +167,53 @@ export function SprintPlanning() {
       velocity: Math.round((completedPoints / totalPoints) * 100),
     };
   }, [sprint.tasks]);
+
+  const handleDragStart = (taskId: string) => {
+    setDraggedTask(taskId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (columnId: string) => {
+    if (!draggedTask) return;
+
+    setSprint((prev) => ({
+      ...prev,
+      tasks: prev.tasks.map((t) =>
+        t.id === draggedTask
+          ? { ...t, status: columnId as SprintTask["status"] }
+          : t
+      ),
+    }));
+    setDraggedTask(null);
+  };
+
+  const handleAddTask = () => {
+    if (!newTaskTitle.trim()) return;
+
+    const newTask: SprintTask = {
+      id: `t${Date.now()}`,
+      title: newTaskTitle,
+      assignee: newTaskAssignee,
+      priority: newTaskPriority,
+      storyPoints: newTaskPoints,
+      status: "backlog",
+    };
+
+    setSprint((prev) => ({
+      ...prev,
+      tasks: [...prev.tasks, newTask],
+    }));
+
+    // Reset form
+    setNewTaskTitle("");
+    setNewTaskAssignee("You");
+    setNewTaskPriority("medium");
+    setNewTaskPoints(3);
+    setShowAddTask(false);
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -182,7 +261,11 @@ export function SprintPlanning() {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAddTask(true)}
+        >
           <Plus className="w-4 h-4 mr-1" />
           Add Task
         </Button>
@@ -246,7 +329,12 @@ export function SprintPlanning() {
       {/* Kanban board */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {columns.map((column) => (
-          <div key={column.id} className="flex flex-col">
+          <div
+            key={column.id}
+            className="flex flex-col"
+            onDragOver={handleDragOver}
+            onDrop={() => handleDrop(column.id)}
+          >
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
               <div className={`w-2 h-2 rounded-full ${column.color}`} />
               <h3 className="font-semibold text-sm">{column.title}</h3>
@@ -259,19 +347,31 @@ export function SprintPlanning() {
               {tasksByColumn[column.id]?.map((task) => (
                 <div
                   key={task.id}
-                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-move hover:shadow-md transition-all group`}
+                  draggable
+                  onDragStart={() => handleDragStart(task.id)}
+                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-move hover:shadow-md transition-all group ${draggedTask === task.id ? "opacity-50" : ""}`}
                 >
                   <div className="flex items-start gap-2">
-                    <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                    <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium mb-2 line-clamp-2">
                         {task.title}
                       </h4>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                            {task.assignee.charAt(0)}
-                          </div>
+                          {(() => {
+                            const m = memberList.find(
+                              (u) => u.name === task.assignee
+                            );
+                            const cls = getAvatarColorClass(m?.avatarColor);
+                            return (
+                              <div
+                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
+                              >
+                                {task.assignee.charAt(0)}
+                              </div>
+                            );
+                          })()}
                           <span className="text-xs text-muted-foreground truncate">
                             {task.assignee}
                           </span>
@@ -306,6 +406,127 @@ export function SprintPlanning() {
           </span>
         </div>
       </div>
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowAddTask(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Task Title
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="Enter task title"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Assignee
+                </label>
+                <Dropdown
+                  trigger={
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                    >
+                      {(() => {
+                        const m = memberList.find(
+                          (u) => u.name === newTaskAssignee
+                        );
+                        const cls = getAvatarColorClass(m?.avatarColor);
+                        return (
+                          <>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
+                            >
+                              {newTaskAssignee.charAt(0)}
+                            </div>
+                            <span className="text-sm">{newTaskAssignee}</span>
+                          </>
+                        );
+                      })()}
+                    </Button>
+                  }
+                  items={memberList.map((m) => ({
+                    label: m.name,
+                    icon: (
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass(m.avatarColor)}`}
+                      >
+                        {m.name.charAt(0)}
+                      </div>
+                    ),
+                    onClick: () => setNewTaskAssignee(m.name),
+                  }))}
+                  align="start"
+                  searchable
+                  searchPlaceholder="Search members..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Priority
+                  </label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+                    value={newTaskPriority}
+                    onChange={(e) =>
+                      setNewTaskPriority(
+                        e.target.value as "low" | "medium" | "high"
+                      )
+                    }
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Story Points
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="13"
+                    className="w-full rounded-md border border-border bg-background text-foreground px-3 py-2 text-sm"
+                    value={newTaskPoints}
+                    onChange={(e) =>
+                      setNewTaskPoints(parseInt(e.target.value) || 1)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button onClick={handleAddTask} className="flex-1">
+                  Add Task
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddTask(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { getTasksByAssignee, getProjectTimeRollup } from "@/lib/utils";
+import { loadUsers, loadProjects as fetchProjects } from "@/lib/data";
 
 type Member = {
   id: string;
@@ -40,52 +41,38 @@ type Project = {
   members?: { name: string; avatarUrl?: string }[];
 };
 
-function loadMember(id: string): Member | null {
-  // For now, we'll use the name from localStorage or create a default member
-  // In a real app, this would fetch from an API or database
+async function loadMember(id: string): Promise<Member | null> {
   try {
-    const raw = localStorage.getItem("pv:members");
-    if (raw) {
-      const members = JSON.parse(raw) as Member[];
-      const found = members.find(
-        (m) => m.id === id || m.name.toLowerCase().replace(/\s+/g, "-") === id
-      );
-      if (found) return found;
+    const users = await loadUsers();
+    const found = users.find(
+      (u) => u.uid === id || u.name.toLowerCase().replace(/\s+/g, "-") === id
+    );
+    if (found) {
+      return {
+        id: found.uid,
+        name: found.name,
+        avatarUrl: found.avatar_url,
+        email: found.email,
+        role: found.role,
+        department: found.department,
+        status: found.status as
+          | "active"
+          | "away"
+          | "busy"
+          | "offline"
+          | undefined,
+      };
     }
-
-    // Fallback: try to match by name from projects
-    const projectsRaw = localStorage.getItem("pv:projects");
-    if (projectsRaw) {
-      const projects = JSON.parse(projectsRaw);
-      for (const project of projects) {
-        if (project.members) {
-          const member = project.members.find(
-            (m: any) => m.name.toLowerCase().replace(/\s+/g, "-") === id
-          );
-          if (member) {
-            return {
-              id: member.name.toLowerCase().replace(/\s+/g, "-"),
-              name: member.name,
-              avatarUrl: member.avatarUrl,
-              email: `${member.name.toLowerCase().replace(/\s+/g, ".")}@company.com`,
-              role: "Team Member",
-              status: "active",
-            };
-          }
-        }
-      }
-    }
-
     return null;
   } catch {
     return null;
   }
 }
 
-function loadAllProjects(): Project[] {
+async function loadAllProjects(): Promise<Project[]> {
   try {
-    const raw = localStorage.getItem("pv:projects");
-    return raw ? JSON.parse(raw) : [];
+    const projects = await fetchProjects();
+    return Array.isArray(projects) ? projects : [];
   } catch {
     return [];
   }
@@ -99,11 +86,18 @@ export default function MemberDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      setMember(loadMember(memberId));
-      setAllProjects(loadAllProjects());
-      setIsLoading(false);
+    async function loadData() {
+      if (typeof window !== "undefined") {
+        const [memberData, projectsData] = await Promise.all([
+          loadMember(memberId),
+          loadAllProjects(),
+        ]);
+        setMember(memberData);
+        setAllProjects(projectsData);
+        setIsLoading(false);
+      }
     }
+    loadData();
   }, [memberId]);
 
   if (isLoading) {

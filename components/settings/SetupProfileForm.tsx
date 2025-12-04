@@ -3,12 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/Card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 
 interface SetupProfileFormProps {
   onComplete: () => void;
@@ -70,12 +65,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
     setError("");
 
     // Validation
-    if (
-      !form.username ||
-      !form.fullName ||
-      !form.email ||
-      !form.password
-    ) {
+    if (!form.username || !form.fullName || !form.email || !form.password) {
       setError("All fields are required");
       return;
     }
@@ -328,14 +318,16 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
               disabled={!isFormValid || loading || uploadingAvatar}
               className="flex-1"
             >
-              {loading ? "Creating Account..." : "Complete Setup & Create Admin"}
+              {loading
+                ? "Creating Account..."
+                : "Complete Setup & Create Admin"}
             </Button>
           </div>
 
           <div className="text-xs text-muted-foreground bg-accent/20 p-3 rounded">
-            ⚠️ <strong>Important:</strong> After completing this step, use your new email and
-            password to log in. The temporary <code>anis@provision.com</code>{" "}
-            login will be disabled.
+            ⚠️ <strong>Important:</strong> After completing this step, use your
+            new email and password to log in. The temporary{" "}
+            <code>anis@provision.com</code> login will be disabled.
           </div>
         </form>
       </CardContent>

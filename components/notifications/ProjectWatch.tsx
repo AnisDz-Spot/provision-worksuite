@@ -40,6 +40,7 @@ export function ProjectWatch() {
     setMounted(true);
     loadSubscriptions();
     loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSubscriptions = () => {
@@ -54,15 +55,15 @@ export function ProjectWatch() {
     }
   };
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
     if (typeof window === "undefined") return;
     try {
-      const stored = localStorage.getItem("pv:projects");
-      if (stored) {
-        setProjects(JSON.parse(stored));
-      }
+      const { loadProjects: fetchProjects } = await import("@/lib/data");
+      const data = await fetchProjects();
+      setProjects(data);
     } catch (error) {
       console.error("Error loading projects:", error);
+      setProjects([]);
     }
   };
 

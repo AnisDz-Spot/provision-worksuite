@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@vercel/postgres';
+import { NextRequest, NextResponse } from "next/server";
+import { sql } from "@vercel/postgres";
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,10 +8,13 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!username || !name || !email || !password) {
-      return NextResponse.json({
-        success: false,
-        error: 'All fields are required'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "All fields are required",
+        },
+        { status: 400 }
+      );
     }
 
     // Check if user already exists
@@ -20,10 +23,13 @@ export async function POST(request: NextRequest) {
     `;
 
     if (existing.rows.length > 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'A user with this email already exists'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A user with this email already exists",
+        },
+        { status: 400 }
+      );
     }
 
     // Create unique ID
@@ -46,19 +52,25 @@ export async function POST(request: NextRequest) {
     // Return success with user data
     return NextResponse.json({
       success: true,
-      message: 'Admin account created successfully',
+      message: "Admin account created successfully",
       user: {
         uid,
         email,
         name,
-        role: 'Administrator'
-      }
+        role: "Administrator",
+      },
     });
   } catch (error) {
-    console.error('Create admin error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create admin account'
-    }, { status: 500 });
+    console.error("Create admin error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create admin account",
+      },
+      { status: 500 }
+    );
   }
 }
