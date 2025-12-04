@@ -115,7 +115,7 @@ export function BlockerCategorySettings() {
           <div key={c.id} className="border rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">{c.icon}</span>
+                <span className="text-xl">{c.iconName}</span>
                 <span className="font-medium capitalize">
                   {c.id.replace("-", " ")}
                 </span>

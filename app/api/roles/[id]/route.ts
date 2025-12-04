@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { upsertRole, deleteRole } from "@/lib/db/roles";
 
+
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(
@@ -13,8 +14,9 @@ export async function PATCH(
     );
   }
   try {
+    const { id } = await context.params;
     const body = await request.json();
-    const saved = await upsertRole({ ...body, id: params.id });
+    const saved = await upsertRole({ ...body, id });
     return NextResponse.json({ success: true, data: saved });
   } catch (e: any) {
     return NextResponse.json(
@@ -24,9 +26,10 @@ export async function PATCH(
   }
 }
 
+
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(
@@ -35,7 +38,8 @@ export async function DELETE(
     );
   }
   try {
-    await deleteRole(params.id);
+    const { id } = await context.params;
+    await deleteRole(id);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json(

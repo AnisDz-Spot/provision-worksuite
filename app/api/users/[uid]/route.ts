@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
+
 export async function PATCH(
-  request: Request,
-  { params }: { params: { uid: string } }
+  request: NextRequest,
+  context: { params: Promise<{ uid: string }> }
 ) {
-  const { uid } = params;
+  const { uid } = await context.params;
   if (!uid) {
     return NextResponse.json(
       { success: false, error: "Missing user id" },

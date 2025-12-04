@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { updateBlocker, deleteBlocker } from "@/lib/db/blockers";
 
+
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(
@@ -13,8 +14,9 @@ export async function PATCH(
     );
   }
   try {
+    const { id } = await context.params;
     const body = await request.json();
-    const blocker = await updateBlocker(params.id, body);
+    const blocker = await updateBlocker(id, body);
     return NextResponse.json({ success: true, data: blocker });
   } catch (e: any) {
     return NextResponse.json(
@@ -24,9 +26,10 @@ export async function PATCH(
   }
 }
 
+
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(
@@ -35,7 +38,8 @@ export async function DELETE(
     );
   }
   try {
-    await deleteBlocker(params.id);
+    const { id } = await context.params;
+    await deleteBlocker(id);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json(

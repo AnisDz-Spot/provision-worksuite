@@ -38,19 +38,16 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json();
-    // Wrap in a transaction for consistency
-    await sql.begin(async (tx) => {
-      await tx`
-        INSERT INTO roles (id, name, description, color_hex, "order")
-        VALUES (${body.id}, ${body.name}, ${body.description || null}, ${body.color_hex || body.colorHex || null}, ${body.order ?? 0})
-        ON CONFLICT (id) DO UPDATE SET 
-          name = EXCLUDED.name,
-          description = EXCLUDED.description,
-          color_hex = EXCLUDED.color_hex,
-          "order" = EXCLUDED."order",
-          updated_at = NOW()
-      `;
-    });
+    await sql`
+      INSERT INTO roles (id, name, description, color_hex, "order")
+      VALUES (${body.id}, ${body.name}, ${body.description || null}, ${body.color_hex || body.colorHex || null}, ${body.order ?? 0})
+      ON CONFLICT (id) DO UPDATE SET 
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        color_hex = EXCLUDED.color_hex,
+        "order" = EXCLUDED."order",
+        updated_at = NOW()
+    `;
     // Return the full ordered list for UI refresh
     const roles = await getAllRoles();
     const ordered = Array.isArray(roles)
@@ -114,29 +111,25 @@ export async function PUT(request: Request) {
       ids.add(id);
     }
 
-    // Execute batch upserts within a transaction for atomicity
-    await sql.begin(async (tx) => {
-      for (const r of body) {
-        const normalized = {
-          id: r.id,
-          name: r.name,
-          description: r.description || null,
-          color_hex: r.color_hex || r.colorHex || null,
-          order: r.order ?? 0,
-        } as any;
-        // upsertRole uses the global sql client; mirror logic inline to bind tx
-        await tx`
-          INSERT INTO roles (id, name, description, color_hex, "order")
-          VALUES (${normalized.id}, ${normalized.name}, ${normalized.description}, ${normalized.color_hex}, ${normalized.order})
-          ON CONFLICT (id) DO UPDATE SET 
-            name = EXCLUDED.name,
-            description = EXCLUDED.description,
-            color_hex = EXCLUDED.color_hex,
-            "order" = EXCLUDED."order",
-            updated_at = NOW()
-        `;
-      }
-    });
+    for (const r of body) {
+      const normalized = {
+        id: r.id,
+        name: r.name,
+        description: r.description || null,
+        color_hex: r.color_hex || r.colorHex || null,
+        order: r.order ?? 0,
+      } as any;
+      await sql`
+        INSERT INTO roles (id, name, description, color_hex, "order")
+        VALUES (${normalized.id}, ${normalized.name}, ${normalized.description}, ${normalized.color_hex}, ${normalized.order})
+        ON CONFLICT (id) DO UPDATE SET 
+          name = EXCLUDED.name,
+          description = EXCLUDED.description,
+          color_hex = EXCLUDED.color_hex,
+          "order" = EXCLUDED."order",
+          updated_at = NOW()
+      `;
+    }
 
     // Return authoritative ordered list
     const ordered = await getAllRoles();
