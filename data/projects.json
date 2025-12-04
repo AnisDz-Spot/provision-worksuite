@@ -1,8 +1,8 @@
 [
-  { "id": "p1", "name": "Project Alpha", "owner": "Alice", "status": "Active", "deadline": "2025-12-11", "description": "Main dashboard redesign & analytics overhaul.", "teamIds": ["u1", "u2"] },
-  { "id": "p2", "name": "Project Beta", "owner": "Bob", "status": "Completed", "deadline": "2025-10-22", "description": "Implement CI/CD pipelines.", "teamIds": ["u1", "u3"] },
-  { "id": "p3", "name": "Project Gamma", "owner": "Carol", "status": "Paused", "deadline": "2026-01-19", "description": "Mobile app initial spike.", "teamIds": ["u2", "u4"] },
-  { "id": "p4", "name": "Project Delta", "owner": "David", "status": "Active", "deadline": "2026-04-03", "description": "ProVision v2.0 planning.", "teamIds": ["u1", "u4"] }
+  { "id": "p1", "name": "Project Alpha", "owner": "Alice", "status": "Active", "deadline": "2025-12-11", "description": "Main dashboard redesign & analytics overhaul.", "teamIds": ["u1", "u2"], "budget": 12000 },
+  { "id": "p2", "name": "Project Beta", "owner": "Bob", "status": "Completed", "deadline": "2025-10-22", "description": "Implement CI/CD pipelines.", "teamIds": ["u1", "u3"], "budget": 8000 },
+  { "id": "p3", "name": "Project Gamma", "owner": "Carol", "status": "Paused", "deadline": "2026-01-19", "description": "Mobile app initial spike.", "teamIds": ["u2", "u4"], "budget": 15000 },
+  { "id": "p4", "name": "Project Delta", "owner": "David", "status": "Active", "deadline": "2026-04-03", "description": "ProVision v2.0 planning.", "teamIds": ["u1", "u4"], "budget": 10000 }
 ]
 
 

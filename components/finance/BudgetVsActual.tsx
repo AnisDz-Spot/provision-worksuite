@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,15 +9,39 @@ import { Download, AlertTriangle, TrendingUp } from "lucide-react";
 type Item = { id: string; name: string; budget: number; actual: number };
 
 // Mock data; in production pull from API or data store
-const ITEMS: Item[] = [
+const MOCK_ITEMS: Item[] = [
   { id: "p1", name: "Website Redesign", budget: 25000, actual: 18250 },
   { id: "p2", name: "Mobile App MVP", budget: 60000, actual: 45500 },
   { id: "p3", name: "API Integration", budget: 15000, actual: 14200 },
 ];
 
 export function BudgetVsActual() {
+  const [items, setItems] = useState<Item[]>(MOCK_ITEMS);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Primary: Attempt to fetch from API
+        const res = await fetch("/api/budgets").then((r) => r.json());
+
+        if (res?.success && Array.isArray(res.data)) {
+          // Assuming API returns data in the correct Item[] format
+          setItems(res.data);
+          return;
+        }
+        // If API is configured but returns an error/empty data, fall through to mock
+        throw new Error("DB not configured or API error");
+      } catch {
+        // Fallback: Use local mock data
+        console.warn("API fetch failed for Budgets, using mock data.");
+        setItems(MOCK_ITEMS);
+      }
+    };
+    loadData();
+  }, []); // Run once on mount
+
   const rows = useMemo(() => {
-    return ITEMS.map((i) => {
+    return items.map((i) => {
       const remaining = Math.max(0, i.budget - i.actual);
       const percentUsed =
         i.budget > 0 ? Math.round((i.actual / i.budget) * 100) : 0;
@@ -26,7 +50,7 @@ export function BudgetVsActual() {
       const burnRate = Math.round(i.actual / Math.max(1, 30)); // naive daily
       return { ...i, remaining, percentUsed, risk, burnRate };
     });
-  }, []);
+  }, [items]); // Recalculate when items change
 
   const exportCSV = () => {
     const csv = [

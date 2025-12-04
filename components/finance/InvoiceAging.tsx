@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Download, CalendarDays } from "lucide-react";
@@ -14,7 +14,7 @@ type Invoice = {
 };
 
 // Mock invoices; replace with real data source
-const INVOICES: Invoice[] = [
+const MOCK_INVOICES: Invoice[] = [
   {
     id: "inv-101",
     customer: "Acme Co.",
@@ -60,13 +60,44 @@ const INVOICES: Invoice[] = [
 ];
 
 export function InvoiceAging() {
+  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Primary: Attempt to fetch from API
+        const res = await fetch("/api/invoices").then((r) => r.json());
+
+        if (res?.success && Array.isArray(res.data)) {
+          // Assuming API returns data that maps to Invoice[] type
+          const apiInvoices: Invoice[] = res.data.map((i: any) => ({
+            id: String(i.id),
+            customer: i.customer_name || i.customer,
+            amount: parseFloat(i.amount),
+            dueDate: i.due_date,
+            status: i.status === "paid" ? "paid" : "unpaid",
+          }));
+          setInvoices(apiInvoices);
+          return;
+        }
+        throw new Error("DB not configured or API error");
+      } catch {
+        // Fallback: Use local mock data
+        console.warn("API fetch failed for Invoices, using mock data.");
+        setInvoices(MOCK_INVOICES);
+      }
+    };
+    loadData();
+  }, []); // Run once on mount
+
   const buckets = useMemo(() => {
     const now = new Date();
+    // Use the current date for calculating days overdue
     const diffDays = (d: string) =>
       Math.floor(
         (now.getTime() - new Date(d).getTime()) / (1000 * 60 * 60 * 24)
       );
-    const open = INVOICES.filter((i) => i.status === "unpaid");
+    const open = invoices.filter((i) => i.status === "unpaid");
     const b = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 } as Record<
       string,
       number
@@ -79,23 +110,30 @@ export function InvoiceAging() {
     };
     for (const i of open) {
       const d = diffDays(i.dueDate);
-      if (d <= 30) {
-        b["0-30"] += i.amount;
-        list["0-30"].push(i);
-      } else if (d <= 60) {
-        b["31-60"] += i.amount;
-        list["31-60"].push(i);
-      } else if (d <= 90) {
-        b["61-90"] += i.amount;
-        list["61-90"].push(i);
-      } else {
+      // Logic for aging buckets is based on how many days the invoice is PAST the due date (d > 0)
+      if (d > 90) {
+        // 90+ days overdue
         b["90+"] += i.amount;
         list["90+"].push(i);
+      } else if (d > 60) {
+        // 61-90 days overdue
+        b["61-90"] += i.amount;
+        list["61-90"].push(i);
+      } else if (d > 30) {
+        // 31-60 days overdue
+        b["31-60"] += i.amount;
+        list["31-60"].push(i);
+      } else if (d > 0) {
+        // 1-30 days overdue
+        b["0-30"] += i.amount;
+        list["0-30"].push(i);
       }
+      // Note: Invoices that are not yet due (d <= 0) are correctly ignored by the logic above
+      // as they are not "overdue" according to the current bucket definitions.
     }
     const total = Object.values(b).reduce((a, v) => a + v, 0);
     return { totals: b, list, total };
-  }, []);
+  }, [invoices]); // Recalculate when invoices change
 
   const exportCSV = () => {
     const rows: string[][] = [
@@ -139,7 +177,9 @@ export function InvoiceAging() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
         {(["0-30", "31-60", "61-90", "90+"] as const).map((key) => (
           <div key={key} className="p-3 rounded-lg border">
-            <div className="text-xs text-muted-foreground mb-1">{key} days</div>
+            <div className="text-xs text-muted-foreground mb-1">
+              {key} days overdue
+            </div>
             <div
               className={`text-xl font-bold ${key === "90+" ? "text-red-600" : key === "61-90" ? "text-amber-600" : "text-foreground"}`}
             >
@@ -148,7 +188,9 @@ export function InvoiceAging() {
           </div>
         ))}
         <div className="p-3 rounded-lg border">
-          <div className="text-xs text-muted-foreground mb-1">Total</div>
+          <div className="text-xs text-muted-foreground mb-1">
+            Total Overdue
+          </div>
           <div className="text-xl font-bold">
             ${buckets.total.toLocaleString()}
           </div>
