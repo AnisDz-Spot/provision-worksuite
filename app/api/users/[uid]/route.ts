@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
-
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ uid: string }> }

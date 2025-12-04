@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { upsertRole, deleteRole } from "@/lib/db/roles";
 
-
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -25,7 +24,6 @@ export async function PATCH(
     );
   }
 }
-
 
 export async function DELETE(
   request: NextRequest,
