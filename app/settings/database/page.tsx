@@ -78,7 +78,9 @@ export default function DatabaseSetupPage() {
     }
 
     if (!isTestSuccessful) {
-      alert("Please test the connection and ensure it is successful before saving.");
+      alert(
+        "Please test the connection and ensure it is successful before saving."
+      );
       return;
     }
 

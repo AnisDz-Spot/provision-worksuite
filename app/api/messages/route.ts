@@ -30,7 +30,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await ensureTable();
     const body = await request.json();
     const { fromUser, toUser, message } = body || {};
     if (!fromUser || !toUser || !message) {
