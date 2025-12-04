@@ -77,6 +77,11 @@ export default function DatabaseSetupPage() {
       return;
     }
 
+    if (!isTestSuccessful) {
+      alert("Please test the connection and ensure it is successful before saving.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -100,7 +105,10 @@ export default function DatabaseSetupPage() {
       const resp = await fetch("/api/setup-db", { method: "POST" });
       const result = await resp.json();
       if (!result.success) {
-        alert("Database credentials saved, but failed to create tables: " + (result.error || "Unknown error"));
+        alert(
+          "Database credentials saved, but failed to create tables: " +
+            (result.error || "Unknown error")
+        );
         setLoading(false);
         return;
       }

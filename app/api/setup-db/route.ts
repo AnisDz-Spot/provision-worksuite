@@ -5,7 +5,10 @@ export async function POST() {
   // In production, you should add authentication and a more robust check!
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!dbUrl) {
-    return NextResponse.json({ success: false, error: "No database URL configured." }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "No database URL configured." },
+      { status: 400 }
+    );
   }
 
   try {
@@ -15,6 +18,9 @@ export async function POST() {
     execSync("npx prisma db push", { stdio: "inherit" });
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || "Failed to push schema." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error?.message || "Failed to push schema." },
+      { status: 500 }
+    );
   }
 }

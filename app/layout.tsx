@@ -8,7 +8,10 @@ import { Navbar } from "@/components/layout/Navbar";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
-import { SidebarProvider, useSidebar } from "@/components/layout/SidebarContext";
+import {
+  SidebarProvider,
+  useSidebar,
+} from "@/components/layout/SidebarContext";
 import { TimeTrackerProvider } from "@/components/timetracking/TimeTrackingWidget";
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { TeamChat } from "@/components/team/TeamChat";

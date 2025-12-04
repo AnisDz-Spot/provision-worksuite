@@ -1,17 +1,6 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
-async function ensureTable() {
-  await sql`CREATE TABLE IF NOT EXISTS messages (
-    id bigserial primary key,
-    from_user text not null,
-    to_user text not null,
-    message text not null,
-    created_at timestamptz not null default now(),
-    is_read boolean not null default false
-  )`;
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const u1 = searchParams.get("user1");
@@ -23,7 +12,6 @@ export async function GET(request: Request) {
     );
   }
   try {
-    await ensureTable();
     const result = await sql`
       SELECT id, from_user, to_user, message, created_at, is_read
       FROM messages

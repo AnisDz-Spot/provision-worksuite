@@ -1,3 +1,18 @@
+model Message {
+    id        Int      @id @default(autoincrement())
+    fromUser  String
+    toUser    String
+    message   String
+    createdAt DateTime @default(now())
+    isRead    Boolean  @default(false)
+}
+
+model Presence {
+    uid      String   @id
+    status   String   @default("available")
+    lastSeen DateTime @default(now())
+}
+
 generator client {
     provider = "prisma-client-js"
 }
