@@ -8,16 +8,15 @@ import { Navbar } from "@/components/layout/Navbar";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SettingsProvider } from "@/components/settings/SettingsProvider";
-import {
-  SidebarProvider,
-  useSidebar,
-} from "@/components/layout/SidebarContext";
+import { SidebarProvider, useSidebar } from "@/components/layout/SidebarContext";
 import { TimeTrackerProvider } from "@/components/timetracking/TimeTrackingWidget";
 import { AuthProvider, useAuth } from "@/components/auth/AuthContext";
 import { TeamChat } from "@/components/team/TeamChat";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
 import { AppLoader } from "@/components/ui/AppLoader";
 import { cn } from "@/lib/utils";
+import { shouldUseMockData } from "@/lib/dataSource";
+import { isDatabaseConfigured } from "@/lib/setup";
 
 export default function RootLayout({
   children,
@@ -72,35 +71,16 @@ function MainContent({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, pathname, router]);
 
-  // Check for first-time setup after authentication
+  // Redirect users in dummy mode with no DB config to DB setup page
   React.useEffect(() => {
-    if (!isLoading && isAuthenticated && currentUser) {
-      // Only check setup for the global admin
-      if (currentUser.email === "anis@provision.com") {
-        const setupStatus = localStorage.getItem("pv:setupStatus");
-        const dbConfig = localStorage.getItem("pv:dbConfig");
-
-        if (!dbConfig || !setupStatus) {
-          // First login - redirect to database setup
-          if (pathname !== "/settings/database") {
-            router.push("/settings/database");
-          }
-        } else {
-          try {
-            const status = JSON.parse(setupStatus);
-            if (
-              !status.profileCompleted &&
-              !pathname.startsWith("/settings") &&
-              !pathname.includes("tab=profile")
-            ) {
-              // Database configured but profile not complete
-              router.push("/settings?tab=profile&setup=true");
-            }
-          } catch {}
+    if (!isLoading && isAuthenticated) {
+      if (shouldUseMockData() && !isDatabaseConfigured()) {
+        if (pathname !== "/settings/database") {
+          router.push("/settings/database");
         }
       }
     }
-  }, [isLoading, isAuthenticated, currentUser, pathname, router]);
+  }, [isLoading, isAuthenticated, pathname, router]);
 
   // Show loading while checking auth status
   if (isLoading) {
