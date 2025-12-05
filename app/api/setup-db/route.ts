@@ -14,11 +14,17 @@ export async function POST() {
 
     // Step 1: Push the schema to create tables
     console.log("Pushing schema to database...");
-    execSync("npx prisma db push --skip-generate", { stdio: "inherit" });
+    execSync("npx prisma db push --skip-generate", {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: dbUrl },
+    });
 
     // Step 2: Generate Prisma Client to match the new schema
     console.log("Generating Prisma Client...");
-    execSync("npx prisma generate", { stdio: "inherit" });
+    execSync("npx prisma generate", {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: dbUrl },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
