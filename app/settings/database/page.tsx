@@ -23,6 +23,35 @@ export default function DatabaseSetupPage() {
   const [adminSetupLoading, setAdminSetupLoading] = useState(false);
   const [adminSetupResult, setAdminSetupResult] = useState<string | null>(null);
 
+  // License check state
+  const [license, setLicense] = useState("");
+  const [licenseLoading, setLicenseLoading] = useState(false);
+  const [licenseValid, setLicenseValid] = useState(false);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+
+  const handleCheckLicense = async () => {
+    setLicenseLoading(true);
+    setLicenseError(null);
+    try {
+      const resp = await fetch("/api/check-license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serial: license }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setLicenseValid(true);
+      } else {
+        setLicenseError(data.error || "Invalid serial number");
+        setLicenseValid(false);
+      }
+    } catch (err) {
+      setLicenseError("Network or server error");
+      setLicenseValid(false);
+    } finally {
+      setLicenseLoading(false);
+    }
+  };
   const handleAdminSetup = async () => {
     setAdminSetupLoading(true);
     setAdminSetupResult(null);
@@ -39,7 +68,9 @@ export default function DatabaseSetupPage() {
       if (data.success) {
         setAdminSetupResult("✅ Database setup completed!");
       } else {
-        setAdminSetupResult(`❌ Setup failed: ${data.error || "Unknown error"}`);
+        setAdminSetupResult(
+          `❌ Setup failed: ${data.error || "Unknown error"}`
+        );
       }
     } catch (err) {
       setAdminSetupResult("❌ Network or server error");
@@ -157,140 +188,186 @@ export default function DatabaseSetupPage() {
   return (
     <div className="container mx-auto p-8 max-w-5xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
+        <h1 className="text-3xl font-bold mb-2">License Activation</h1>
         <p className="text-muted-foreground">
-          Configure your database and storage connections. This is a one-time
-          setup required before using the app.
+          Enter your serial number to activate your app. You must activate
+          before configuring your database.
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        {/* Config Form */}
-        <Card className="p-6 flex-1 min-w-0">
-          <div className="space-y-6">
-            {/* Postgres URL */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                PostgreSQL Connection URL
-              </label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Get this from your Vercel Storage → Postgres → .env.local tab.
-                Copy the{" "}
-                <code className="bg-accent px-1 py-0.5 rounded">
-                  POSTGRES_URL
-                </code>{" "}
-                value.
-              </p>
-              <Input
-                type="text"
-                placeholder="postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb"
-                value={postgresUrl}
-                onChange={(e) => setPostgresUrl(e.target.value)}
-                className="font-mono text-sm"
-              />
-            </div>
-
-            {/* Blob Token */}
-            <div>
-              <label className="block text-sm font-semibold mb-2">
-                Blob Storage Token
-              </label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Get this from your Vercel Storage → Blob → .env.local tab. Copy
-                the{" "}
-                <code className="bg-accent px-1 py-0.5 rounded">
-                  BLOB_READ_WRITE_TOKEN
-                </code>{" "}
-                value.
-              </p>
-              <Input
-                type="password"
-                placeholder="vercel_blob_rw_xxxxx"
-                value={blobToken}
-                onChange={(e) => setBlobToken(e.target.value)}
-                className="font-mono text-sm"
-              />
-            </div>
-
-            {/* Test Result */}
-            {testResult && (
-              <div
-                className={`p-4 rounded-lg ${
-                  testResult.success
-                    ? "bg-green-500/10 border border-green-500"
-                    : "bg-red-500/10 border border-red-500"
-                }`}
-              >
-                <p className="text-sm">{testResult.message}</p>
-              </div>
+      {/* License check form */}
+      {!licenseValid && (
+        <Card className="p-6 max-w-md mx-auto mb-8">
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold mb-2">
+              Serial Number
+            </label>
+            <Input
+              type="text"
+              placeholder="Enter your serial number"
+              value={license}
+              onChange={(e) => setLicense(e.target.value)}
+              className="font-mono text-sm"
+            />
+            <Button
+              onClick={handleCheckLicense}
+              disabled={!license || licenseLoading}
+              variant="primary"
+            >
+              {licenseLoading ? "Checking..." : "Check License"}
+            </Button>
+            {licenseError && (
+              <div className="text-red-500 text-sm mt-2">{licenseError}</div>
             )}
-
-            {/* Actions */}
-            <div className="flex gap-4 pt-4">
-              <Button
-                onClick={testConnection}
-                disabled={!postgresUrl || !blobToken || testing}
-                variant="outline"
-              >
-                {testing ? "Testing..." : "Test Connection"}
-              </Button>
-
-              <Button
-                onClick={handleSave}
-                disabled={
-                  !postgresUrl || !blobToken || loading || !isTestSuccessful
-                }
-                variant="primary"
-                title={
-                  !isTestSuccessful
-                    ? "Please test connection successfully first"
-                    : undefined
-                }
-              >
-                {loading ? "Saving..." : "Save & Continue to Profile Setup"}
-              </Button>
-
-              {/* Admin DB Setup Button */}
-              <Button
-                onClick={handleAdminSetup}
-                disabled={!postgresUrl || adminSetupLoading}
-                variant="secondary"
-              >
-                {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
-              </Button>
-              {adminSetupResult && (
-                <div className="mt-2 text-sm">{adminSetupResult}</div>
-              )}
-            </div>
           </div>
         </Card>
+      )}
 
-        {/* Instructions Card */}
-        <Card className="p-6 flex-1 min-w-0 bg-accent/20">
-          <h3 className="text-lg font-semibold mb-3">📋 Setup Instructions</h3>
-          <ol className="list-decimal list-inside space-y-2 text-sm">
-            <li>
-              Go to your Vercel project dashboard → <strong>Storage</strong> tab
-            </li>
-            <li>
-              Create a <strong>Postgres</strong> database if you haven't already
-            </li>
-            <li>
-              Create a <strong>Blob</strong> storage if you haven't already
-            </li>
-            <li>
-              Click on each storage → <strong>.env.local</strong> tab
-            </li>
-            <li>Copy the connection strings and paste them above</li>
-            <li>
-              Click <strong>Test Connection</strong> to verify
-            </li>
-            <li>
-              Click <strong>Save & Continue</strong> to proceed to profile setup
-            </li>
-          </ol>
-        </Card>
-      </div>
+      {/* Show DB config only if license is valid */}
+      {licenseValid && (
+        <>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
+            <p className="text-muted-foreground">
+              Configure your database and storage connections. This is a
+              one-time setup required before using the app.
+            </p>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Config Form */}
+            <Card className="p-6 flex-1 min-w-0">
+              <div className="space-y-6">
+                {/* Postgres URL */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    PostgreSQL Connection URL
+                  </label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Get this from your Vercel Storage → Postgres → .env.local
+                    tab. Copy the{" "}
+                    <code className="bg-accent px-1 py-0.5 rounded">
+                      POSTGRES_URL
+                    </code>{" "}
+                    value.
+                  </p>
+                  <Input
+                    type="text"
+                    placeholder="postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb"
+                    value={postgresUrl}
+                    onChange={(e) => setPostgresUrl(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </div>
+
+                {/* Blob Token */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">
+                    Blob Storage Token
+                  </label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Get this from your Vercel Storage → Blob → .env.local tab.
+                    Copy the{" "}
+                    <code className="bg-accent px-1 py-0.5 rounded">
+                      BLOB_READ_WRITE_TOKEN
+                    </code>{" "}
+                    value.
+                  </p>
+                  <Input
+                    type="password"
+                    placeholder="vercel_blob_rw_xxxxx"
+                    value={blobToken}
+                    onChange={(e) => setBlobToken(e.target.value)}
+                    className="font-mono text-sm"
+                  />
+                </div>
+
+                {/* Test Result */}
+                {testResult && (
+                  <div
+                    className={`p-4 rounded-lg ${
+                      testResult.success
+                        ? "bg-green-500/10 border border-green-500"
+                        : "bg-red-500/10 border border-red-500"
+                    }`}
+                  >
+                    <p className="text-sm">{testResult.message}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={testConnection}
+                    disabled={!postgresUrl || !blobToken || testing}
+                    variant="outline"
+                  >
+                    {testing ? "Testing..." : "Test Connection"}
+                  </Button>
+
+                  <Button
+                    onClick={handleSave}
+                    disabled={
+                      !postgresUrl || !blobToken || loading || !isTestSuccessful
+                    }
+                    variant="primary"
+                    title={
+                      !isTestSuccessful
+                        ? "Please test connection successfully first"
+                        : undefined
+                    }
+                  >
+                    {loading ? "Saving..." : "Save & Continue to Profile Setup"}
+                  </Button>
+
+                  {/* Admin DB Setup Button */}
+                  <Button
+                    onClick={handleAdminSetup}
+                    disabled={!postgresUrl || adminSetupLoading}
+                    variant="secondary"
+                  >
+                    {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
+                  </Button>
+                  {adminSetupResult && (
+                    <div className="mt-2 text-sm">{adminSetupResult}</div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            {/* Instructions Card */}
+            <Card className="p-6 flex-1 min-w-0 bg-accent/20">
+              <h3 className="text-lg font-semibold mb-3">
+                📋 Setup Instructions
+              </h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm">
+                <li>
+                  Go to your Vercel project dashboard → <strong>Storage</strong>{" "}
+                  tab
+                </li>
+                <li>
+                  Create a <strong>Postgres</strong> database if you haven't
+                  already
+                </li>
+                <li>
+                  Create a <strong>Blob</strong> storage if you haven't already
+                </li>
+                <li>
+                  Click on each storage → <strong>.env.local</strong> tab
+                </li>
+                <li>Copy the connection strings and paste them above</li>
+                <li>
+                  Click <strong>Test Connection</strong> to verify
+                </li>
+                <li>
+                  Click <strong>Save & Continue</strong> to proceed to profile
+                  setup
+                </li>
+              </ol>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
