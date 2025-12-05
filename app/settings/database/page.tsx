@@ -12,18 +12,11 @@ export default function DatabaseSetupPage() {
   const [blobToken, setBlobToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [initializing, setInitializing] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const [initResult, setInitResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-
   const isConnectionTested = !!testResult?.success;
-  const isDbInitialized = !!initResult?.success;
 
   const [dbType, setDbType] = useState<string>("");
   const dbTypes = [
@@ -100,7 +93,6 @@ export default function DatabaseSetupPage() {
   const testConnection = async () => {
     setTesting(true);
     setTestResult(null);
-    setInitResult(null); // Clear init result when re-testing
 
     try {
       // Save temporarily to test
@@ -139,37 +131,7 @@ export default function DatabaseSetupPage() {
     }
   };
 
-  const initializeDatabase = async () => {
-    setInitializing(true);
-    setInitResult(null);
 
-    try {
-      // Run schema push and generate
-      const response = await fetch("/api/setup-db", { method: "POST" });
-      const data = await response.json();
-
-      if (data.success) {
-        setInitResult({
-          success: true,
-          message: "✅ Database initialized successfully! Tables created.",
-        });
-      } else {
-        setInitResult({
-          success: false,
-          message: `❌ Database initialization failed: ${data.error}`,
-        });
-      }
-    } catch (error) {
-      setInitResult({
-        success: false,
-        message: `❌ Error initializing database: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-      });
-    } finally {
-      setInitializing(false);
-    }
-  };
 
   const handleSave = async () => {
     if (!postgresUrl) {
@@ -182,10 +144,6 @@ export default function DatabaseSetupPage() {
       return;
     }
 
-    if (!isDbInitialized) {
-      alert("Please initialize the database first");
-      return;
-    }
 
     setLoading(true);
 
@@ -318,7 +276,6 @@ export default function DatabaseSetupPage() {
                           onChange={(e) => {
                             setPostgresUrl(e.target.value);
                             setTestResult(null);
-                            setInitResult(null);
                           }}
                           className="font-mono text-sm"
                         />
@@ -342,7 +299,6 @@ export default function DatabaseSetupPage() {
                           onChange={(e) => {
                             setPostgresUrl(e.target.value);
                             setTestResult(null);
-                            setInitResult(null);
                           }}
                           className="font-mono text-sm"
                         />
@@ -366,7 +322,6 @@ export default function DatabaseSetupPage() {
                           onChange={(e) => {
                             setPostgresUrl(e.target.value);
                             setTestResult(null);
-                            setInitResult(null);
                           }}
                           className="font-mono text-sm"
                         />
@@ -390,7 +345,6 @@ export default function DatabaseSetupPage() {
                           onChange={(e) => {
                             setPostgresUrl(e.target.value);
                             setTestResult(null);
-                            setInitResult(null);
                           }}
                           className="font-mono text-sm"
                         />
@@ -428,17 +382,6 @@ export default function DatabaseSetupPage() {
                       </div>
                     )}
 
-                    {initResult && (
-                      <div
-                        className={`p-4 rounded-lg ${
-                          initResult.success
-                            ? "bg-green-500/10 border border-green-500"
-                            : "bg-red-500/10 border border-red-500"
-                        }`}
-                      >
-                        <p className="text-sm">{initResult.message}</p>
-                      </div>
-                    )}
 
                     <div className="flex flex-col gap-3 pt-4">
                       <div className="flex gap-3">
@@ -450,28 +393,17 @@ export default function DatabaseSetupPage() {
                         >
                           {testing ? "Testing..." : "1. Test Connection"}
                         </Button>
-
-                        <Button
-                          onClick={initializeDatabase}
-                          disabled={!isConnectionTested || initializing}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          {initializing
-                            ? "Initializing..."
-                            : "2. Initialize Database"}
-                        </Button>
                       </div>
 
                       <Button
                         onClick={handleSave}
-                        disabled={!isDbInitialized || loading}
+                        disabled={loading || !isConnectionTested}
                         variant="primary"
                         className="w-full"
                       >
                         {loading
                           ? "Saving..."
-                          : "3. Save & Continue to Profile"}
+                          : "2. Save & Continue to Profile"}
                       </Button>
                     </div>
                   </div>
@@ -489,8 +421,15 @@ export default function DatabaseSetupPage() {
                       connectivity
                     </li>
                     <li>
-                      Click <strong>Initialize Database</strong> to create
-                      tables
+                      <span className="font-semibold">After a successful connection:</span>
+                      <br />
+                      <span className="block mt-1">Run this command in your terminal (locally or in your server/CI):</span>
+                      <code className="block bg-accent px-2 py-1 rounded mt-2 font-mono text-xs">
+                        DATABASE_URL=your_connection_string npx prisma db push
+                      </code>
+                      <span className="block mt-1 text-xs text-muted-foreground">
+                        (Replace <code>your_connection_string</code> with your actual DB URL)
+                      </span>
                     </li>
                     <li>
                       Click <strong>Save & Continue</strong> to complete setup
@@ -500,8 +439,8 @@ export default function DatabaseSetupPage() {
                   <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500 rounded">
                     <p className="text-xs font-semibold mb-1">💡 Tip</p>
                     <p className="text-xs">
-                      The initialization step will create all required tables in
-                      your database. This only needs to be done once.
+                      For serverless (Vercel, Netlify, etc.), schema setup must be done outside the app.<br />
+                      For traditional servers, you can run the command above during deployment.
                     </p>
                   </div>
                 </Card>
