@@ -92,9 +92,6 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
     } finally {
       setLoading(false);
     }
-    } finally {
-      setLoading(false);
-    }
   };
 
   const isFormValid =
