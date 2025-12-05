@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  // Allow in all environments, but only if DB is not configured (very basic check)
-  // In production, you should add authentication and a more robust check!
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!dbUrl) {
     return NextResponse.json(
@@ -12,14 +10,21 @@ export async function POST() {
   }
 
   try {
-    // Dynamically import Prisma CLI to avoid bundling in production
     const { execSync } = await import("child_process");
-    // Run prisma db push to sync schema (idempotent)
-    execSync("npx prisma db push", { stdio: "inherit" });
+
+    // Step 1: Push the schema to create tables
+    console.log("Pushing schema to database...");
+    execSync("npx prisma db push --skip-generate", { stdio: "inherit" });
+
+    // Step 2: Generate Prisma Client to match the new schema
+    console.log("Generating Prisma Client...");
+    execSync("npx prisma generate", { stdio: "inherit" });
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error("Database setup error:", error);
     return NextResponse.json(
-      { success: false, error: error?.message || "Failed to push schema." },
+      { success: false, error: error?.message || "Failed to setup database." },
       { status: 500 }
     );
   }

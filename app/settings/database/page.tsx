@@ -12,13 +12,19 @@ export default function DatabaseSetupPage() {
   const [blobToken, setBlobToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const isTestSuccessful = !!testResult?.success;
+  const [initResult, setInitResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
-  // DB type selector
+  const isConnectionTested = !!testResult?.success;
+  const isDbInitialized = !!initResult?.success;
+
   const [dbType, setDbType] = useState<string>("");
   const dbTypes = [
     {
@@ -51,12 +57,6 @@ export default function DatabaseSetupPage() {
     },
   ];
 
-  // Admin DB Setup integration
-  const ADMIN_SETUP_URL = "http://localhost:4000/api/admin/setup-db"; // Change to your server's URL in production
-  const [adminSetupLoading, setAdminSetupLoading] = useState(false);
-  const [adminSetupResult, setAdminSetupResult] = useState<string | null>(null);
-
-  // License check state
   const [license, setLicense] = useState("");
   const [licenseLoading, setLicenseLoading] = useState(false);
   const [licenseValid, setLicenseValid] = useState(false);
@@ -85,35 +85,8 @@ export default function DatabaseSetupPage() {
       setLicenseLoading(false);
     }
   };
-  const handleAdminSetup = async () => {
-    setAdminSetupLoading(true);
-    setAdminSetupResult(null);
-    try {
-      const resp = await fetch(ADMIN_SETUP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          databaseUrl: postgresUrl,
-          secret: "changeme", // Use your real secret!
-        }),
-      });
-      const data = await resp.json();
-      if (data.success) {
-        setAdminSetupResult("✅ Database setup completed!");
-      } else {
-        setAdminSetupResult(
-          `❌ Setup failed: ${data.error || "Unknown error"}`
-        );
-      }
-    } catch (err) {
-      setAdminSetupResult("❌ Network or server error");
-    } finally {
-      setAdminSetupLoading(false);
-    }
-  };
 
   useEffect(() => {
-    // Load existing config if any
     const config = localStorage.getItem("pv:dbConfig");
     if (config) {
       try {
@@ -127,25 +100,26 @@ export default function DatabaseSetupPage() {
   const testConnection = async () => {
     setTesting(true);
     setTestResult(null);
+    setInitResult(null); // Clear init result when re-testing
 
     try {
       // Save temporarily to test
       const config = {
         postgresUrl,
         blobToken,
-        configured: true,
+        configured: false, // Not fully configured yet
         configuredAt: new Date().toISOString(),
       };
       localStorage.setItem("pv:dbConfig", JSON.stringify(config));
 
-      // Test database connection
-      const response = await fetch("/api/test-db");
+      // Test basic database connection (not table queries)
+      const response = await fetch("/api/test-db-connection");
       const data = await response.json();
 
       if (data.success) {
         setTestResult({
           success: true,
-          message: "✅ Database connection successful!",
+          message: "✅ Database connection successful! Ready to initialize.",
         });
       } else {
         setTestResult({
@@ -165,23 +139,58 @@ export default function DatabaseSetupPage() {
     }
   };
 
+  const initializeDatabase = async () => {
+    setInitializing(true);
+    setInitResult(null);
+
+    try {
+      // Run schema push and generate
+      const response = await fetch("/api/setup-db", { method: "POST" });
+      const data = await response.json();
+
+      if (data.success) {
+        setInitResult({
+          success: true,
+          message: "✅ Database initialized successfully! Tables created.",
+        });
+      } else {
+        setInitResult({
+          success: false,
+          message: `❌ Database initialization failed: ${data.error}`,
+        });
+      }
+    } catch (error) {
+      setInitResult({
+        success: false,
+        message: `❌ Error initializing database: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      });
+    } finally {
+      setInitializing(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!postgresUrl || !blobToken) {
-      alert("Please fill in all fields");
+    if (!postgresUrl) {
+      alert("Please enter a database connection string");
       return;
     }
 
-    if (!isTestSuccessful) {
-      alert(
-        "Please test the connection and ensure it is successful before saving."
-      );
+    if (!isConnectionTested) {
+      alert("Please test the connection first");
+      return;
+    }
+
+    if (!isDbInitialized) {
+      alert("Please initialize the database first");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Save configuration
+      // Save final configuration
       const config = {
         postgresUrl,
         blobToken,
@@ -196,18 +205,6 @@ export default function DatabaseSetupPage() {
         profileCompleted: false,
       };
       localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
-
-      // Call API to auto-create tables (prisma db push)
-      const resp = await fetch("/api/setup-db", { method: "POST" });
-      const result = await resp.json();
-      if (!result.success) {
-        alert(
-          "Database credentials saved, but failed to create tables: " +
-            (result.error || "Unknown error")
-        );
-        setLoading(false);
-        return;
-      }
 
       // Redirect to profile setup
       router.push("/settings?tab=profile&setup=true");
@@ -228,7 +225,6 @@ export default function DatabaseSetupPage() {
         </p>
       </div>
 
-      {/* License check form */}
       {!licenseValid && (
         <Card className="p-6 max-w-md mx-auto mb-8">
           <div className="space-y-4">
@@ -256,7 +252,6 @@ export default function DatabaseSetupPage() {
         </Card>
       )}
 
-      {/* Show DB type selector and config only if license is valid */}
       {licenseValid && (
         <>
           <div className="mb-8">
@@ -270,7 +265,11 @@ export default function DatabaseSetupPage() {
                 <button
                   key={type.key}
                   type="button"
-                  className={`border rounded-lg px-4 py-3 flex flex-col items-center justify-center w-full h-full min-h-[170px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400"}`}
+                  className={`border rounded-lg px-4 py-3 flex flex-col items-center justify-center w-full h-full min-h-[170px] cursor-pointer transition-all duration-150 ${
+                    dbType === type.key
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900"
+                      : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400"
+                  }`}
                   title={type.hint}
                   onClick={() => setDbType(type.key)}
                 >
@@ -286,7 +285,6 @@ export default function DatabaseSetupPage() {
             </div>
           </div>
 
-          {/* Show config form only after DB type is selected */}
           {dbType && (
             <>
               <div className="mb-8">
@@ -294,16 +292,14 @@ export default function DatabaseSetupPage() {
                   Database Configuration
                 </h1>
                 <p className="text-muted-foreground">
-                  Configure your database and storage connections. This is a
-                  one-time setup required before using the app.
+                  Configure your database connection. Follow the steps below to
+                  complete setup.
                 </p>
               </div>
 
               <div className="flex flex-col md:flex-row gap-6 items-start">
-                {/* Config Form - for now, show SQL fields as before. Later, make dynamic per dbType. */}
                 <Card className="p-6 flex-1 min-w-0">
                   <div className="space-y-6">
-                    {/* Postgres URL (for SQL) */}
                     {dbType === "sql" && (
                       <div>
                         <label className="block text-sm font-semibold mb-2">
@@ -319,12 +315,15 @@ export default function DatabaseSetupPage() {
                           type="text"
                           placeholder="postgres://user:pass@host:5432/db"
                           value={postgresUrl}
-                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          onChange={(e) => {
+                            setPostgresUrl(e.target.value);
+                            setTestResult(null);
+                            setInitResult(null);
+                          }}
                           className="font-mono text-sm"
                         />
                       </div>
                     )}
-                    {/* NoSQL Example (MongoDB) */}
                     {dbType === "nosql" && (
                       <div>
                         <label className="block text-sm font-semibold mb-2">
@@ -340,12 +339,15 @@ export default function DatabaseSetupPage() {
                           type="text"
                           placeholder="mongodb+srv://user:pass@cluster.mongodb.net/db"
                           value={postgresUrl}
-                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          onChange={(e) => {
+                            setPostgresUrl(e.target.value);
+                            setTestResult(null);
+                            setInitResult(null);
+                          }}
                           className="font-mono text-sm"
                         />
                       </div>
                     )}
-                    {/* Cloud DB Example */}
                     {dbType === "cloud" && (
                       <div>
                         <label className="block text-sm font-semibold mb-2">
@@ -361,12 +363,15 @@ export default function DatabaseSetupPage() {
                           type="text"
                           placeholder="postgres://user:pass@aws-rds.amazonaws.com:5432/db"
                           value={postgresUrl}
-                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          onChange={(e) => {
+                            setPostgresUrl(e.target.value);
+                            setTestResult(null);
+                            setInitResult(null);
+                          }}
                           className="font-mono text-sm"
                         />
                       </div>
                     )}
-                    {/* Object-Oriented DB Example */}
                     {dbType === "object" && (
                       <div>
                         <label className="block text-sm font-semibold mb-2">
@@ -382,13 +387,16 @@ export default function DatabaseSetupPage() {
                           type="text"
                           placeholder="objectdb://user:pass@host:port/db"
                           value={postgresUrl}
-                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          onChange={(e) => {
+                            setPostgresUrl(e.target.value);
+                            setTestResult(null);
+                            setInitResult(null);
+                          }}
                           className="font-mono text-sm"
                         />
                       </div>
                     )}
 
-                    {/* Blob Token (optional, shown for all for now) */}
                     <div>
                       <label className="block text-sm font-semibold mb-2">
                         Blob Storage Token
@@ -408,7 +416,6 @@ export default function DatabaseSetupPage() {
                       />
                     </div>
 
-                    {/* Test Result */}
                     {testResult && (
                       <div
                         className={`p-4 rounded-lg ${
@@ -421,92 +428,55 @@ export default function DatabaseSetupPage() {
                       </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex gap-4 pt-4">
-                      <Button
-                        onClick={async () => {
-                          setTesting(true);
-                          setTestResult(null);
-                          try {
-                            // Save temporarily to test
-                            const config = {
-                              postgresUrl,
-                              blobToken,
-                              configured: true,
-                              configuredAt: new Date().toISOString(),
-                            };
-                            localStorage.setItem(
-                              "pv:dbConfig",
-                              JSON.stringify(config)
-                            );
-                            // Test database connection
-                            const response = await fetch("/api/test-db");
-                            const data = await response.json();
-                            if (data.success) {
-                              setTestResult({
-                                success: true,
-                                message:
-                                  "✅ Database connection successful! Initializing database...",
-                              });
-                              // Auto-initialize DB (create tables)
-                              const initResp = await fetch("/api/setup-db", {
-                                method: "POST",
-                              });
-                              const initResult = await initResp.json();
-                              if (!initResult.success) {
-                                setTestResult({
-                                  success: false,
-                                  message: `❌ Database initialization failed: ${initResult.error || "Unknown error"}`,
-                                });
-                              } else {
-                                setTestResult({
-                                  success: true,
-                                  message:
-                                    "✅ Database connection and initialization successful!",
-                                });
-                              }
-                            } else {
-                              setTestResult({
-                                success: false,
-                                message: `❌ Database connection failed: ${data.error}`,
-                              });
-                            }
-                          } catch (error) {
-                            setTestResult({
-                              success: false,
-                              message: `❌ Error testing/initializing DB: ${error instanceof Error ? error.message : "Unknown error"}`,
-                            });
-                          } finally {
-                            setTesting(false);
-                          }
-                        }}
-                        disabled={!postgresUrl || testing}
-                        variant="outline"
+                    {initResult && (
+                      <div
+                        className={`p-4 rounded-lg ${
+                          initResult.success
+                            ? "bg-green-500/10 border border-green-500"
+                            : "bg-red-500/10 border border-red-500"
+                        }`}
                       >
-                        {testing
-                          ? "Testing..."
-                          : "Test & Initialize (always creates tables)"}
-                      </Button>
+                        <p className="text-sm">{initResult.message}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-3 pt-4">
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={testConnection}
+                          disabled={!postgresUrl || testing}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          {testing ? "Testing..." : "1. Test Connection"}
+                        </Button>
+
+                        <Button
+                          onClick={initializeDatabase}
+                          disabled={!isConnectionTested || initializing}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          {initializing
+                            ? "Initializing..."
+                            : "2. Initialize Database"}
+                        </Button>
+                      </div>
 
                       <Button
                         onClick={handleSave}
-                        disabled={!postgresUrl || loading || !isTestSuccessful}
+                        disabled={!isDbInitialized || loading}
                         variant="primary"
-                        title={
-                          !isTestSuccessful
-                            ? "Please test connection successfully first"
-                            : undefined
-                        }
+                        className="w-full"
                       >
                         {loading
                           ? "Saving..."
-                          : "Save & Continue to Profile Setup"}
+                          : "3. Save & Continue to Profile"}
                       </Button>
                     </div>
                   </div>
                 </Card>
 
-                {/* Instructions Card */}
                 <Card className="p-6 flex-1 min-w-0 bg-accent/20">
                   <h3 className="text-lg font-semibold mb-3">
                     📋 Setup Instructions
@@ -516,12 +486,24 @@ export default function DatabaseSetupPage() {
                     <li>Enter your connection string</li>
                     <li>
                       Click <strong>Test Connection</strong> to verify
+                      connectivity
                     </li>
                     <li>
-                      Click <strong>Save & Continue</strong> to proceed to
-                      profile setup
+                      Click <strong>Initialize Database</strong> to create
+                      tables
+                    </li>
+                    <li>
+                      Click <strong>Save & Continue</strong> to complete setup
                     </li>
                   </ol>
+
+                  <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500 rounded">
+                    <p className="text-xs font-semibold mb-1">💡 Tip</p>
+                    <p className="text-xs">
+                      The initialization step will create all required tables in
+                      your database. This only needs to be done once.
+                    </p>
+                  </div>
                 </Card>
               </div>
             </>
