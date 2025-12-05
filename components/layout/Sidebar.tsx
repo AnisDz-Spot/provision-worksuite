@@ -72,7 +72,7 @@ const isNavGroup = (item: NavItem | NavGroup): item is NavGroup => {
 
 // Workspace name now comes from settings context
 
-export function Sidebar() {
+export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
   const { collapsed, setCollapsed } = useSidebar();
   const { workspace } = useSettings();
   const pathname = usePathname();
@@ -149,23 +149,86 @@ export function Sidebar() {
             collapsed ? "gap-5 px-3" : "gap-1 px-2"
           )}
         >
-          {navItems.map((item) => {
-            if (isNavGroup(item)) {
-              const isExpanded = expandedGroups.includes(item.label);
-              const hasActive = isActiveInGroup(item.items);
-              return (
-                <div key={item.label} className="relative group">
-                  <button
-                    onClick={() => toggleGroup(item.label)}
-                    className={cn(
-                      "w-full flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
-                      collapsed ? "justify-center" : "justify-between",
-                      hasActive
-                        ? "bg-primary/5 text-primary"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          {canNavigate ? (
+            navItems.map((item) => {
+              if (isNavGroup(item)) {
+                const isExpanded = expandedGroups.includes(item.label);
+                const hasActive = isActiveInGroup(item.items);
+                return (
+                  <div key={item.label} className="relative group">
+                    <button
+                      onClick={() => toggleGroup(item.label)}
+                      className={cn(
+                        "w-full flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                        collapsed ? "justify-center" : "justify-between",
+                        hasActive
+                          ? "bg-primary/5 text-primary"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      )}
+                      disabled={!canNavigate}
+                    >
+                      <div className="flex items-center gap-2">
+                        <item.icon
+                          className={cn(
+                            "transition-all",
+                            collapsed ? "w-5 h-5" : "w-4 h-4"
+                          )}
+                        />
+                        {!collapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                      </div>
+                      {!collapsed &&
+                        (isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        ))}
+                    </button>
+                    {!collapsed && isExpanded && (
+                      <div className="ml-6 mt-1 space-y-1">
+                        {item.items.map((subItem) => {
+                          const isActive = pathname === subItem.href;
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={canNavigate ? subItem.href : "#"}
+                              className={cn(
+                                "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                                isActive
+                                  ? "bg-primary/10 text-primary font-medium"
+                                  : "text-sidebar-foreground",
+                                !canNavigate && "opacity-50 pointer-events-none"
+                              )}
+                              tabIndex={canNavigate ? 0 : -1}
+                            >
+                              <subItem.icon className="w-4 h-4" />
+                              <span className="truncate">{subItem.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     )}
-                  >
-                    <div className="flex items-center gap-2">
+                  </div>
+                );
+              } else {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname?.startsWith(item.href));
+                return (
+                  <div key={item.href} className="relative group w-full">
+                    <Link
+                      href={canNavigate ? item.href : "#"}
+                      className={cn(
+                        "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                        collapsed ? "justify-center" : "",
+                        isActive
+                          ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
+                          : "text-sidebar-foreground",
+                        !canNavigate && "opacity-50 pointer-events-none"
+                      )}
+                      tabIndex={canNavigate ? 0 : -1}
+                    >
                       <item.icon
                         className={cn(
                           "transition-all",
@@ -175,68 +238,16 @@ export function Sidebar() {
                       {!collapsed && (
                         <span className="truncate">{item.label}</span>
                       )}
-                    </div>
-                    {!collapsed &&
-                      (isExpanded ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      ))}
-                  </button>
-                  {!collapsed && isExpanded && (
-                    <div className="ml-6 mt-1 space-y-1">
-                      {item.items.map((subItem) => {
-                        const isActive = pathname === subItem.href;
-                        return (
-                          <Link
-                            key={subItem.href}
-                            href={subItem.href}
-                            className={cn(
-                              "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
-                              isActive
-                                ? "bg-primary/10 text-primary font-medium"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                            )}
-                          >
-                            <subItem.icon className="w-4 h-4" />
-                            <span className="truncate">{subItem.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            } else {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname?.startsWith(item.href));
-              return (
-                <div key={item.href} className="relative group w-full">
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
-                      collapsed ? "justify-center" : "",
-                      isActive
-                        ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                    )}
-                  >
-                    <item.icon
-                      className={cn(
-                        "transition-all",
-                        collapsed ? "w-5 h-5" : "w-4 h-4"
-                      )}
-                    />
-                    {!collapsed && (
-                      <span className="truncate">{item.label}</span>
-                    )}
-                  </Link>
-                </div>
-              );
-            }
-          })}
+                    </Link>
+                  </div>
+                );
+              }
+            })
+          ) : (
+            <div className="text-xs text-muted-foreground px-2 py-4">
+              Please select a mode to unlock navigation.
+            </div>
+          )}
         </nav>
       </div>
       <button

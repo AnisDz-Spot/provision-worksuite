@@ -17,6 +17,8 @@ import { AlertRulesManager } from "@/components/notifications/AlertRulesManager"
 import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
+import { useRouter } from "next/navigation";
+import { isDatabaseConfigured } from "@/lib/setup";
 
 type TabKey =
   | "profile"
@@ -25,7 +27,97 @@ type TabKey =
   | "appearance"
   | "roles"
   | "notifications"
-  | "blockers";
+  | "blockers"
+  | "dataSource";
+
+function DataSourceTab() {
+  const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
+    if (typeof window === "undefined") return "real";
+    const val = localStorage.getItem("pv:dataMode");
+    return val === "mock" ? "mock" : "real";
+  });
+  const [error, setError] = useState<string>("");
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+
+  const handleDataModeChange = (mode: "real" | "mock") => {
+    setDataMode(mode);
+    setError("");
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    localStorage.setItem("pv:dataMode", dataMode);
+    if (dataMode === "real") {
+      router.push("/settings/database");
+    } else {
+      router.push("/");
+    }
+    setSaving(false);
+  };
+
+  // On mount, check if redirected back from DB config and DB is not configured
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("dbfail") === "1") {
+        setDataMode("mock");
+        localStorage.setItem("pv:dataMode", "mock");
+        setError(
+          "You must finish the database configuration to use Live mode. Switched back to Dummy mode."
+        );
+      }
+    }
+  }, []);
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Choose between using real database data or dummy demo data. When dummy
+          data is enabled, a fake admin login is available.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={dataMode === "real" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleDataModeChange("real")}
+          >
+            Use Real Data
+          </Button>
+          <Button
+            variant={dataMode === "mock" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleDataModeChange("mock")}
+          >
+            Use Dummy Data
+          </Button>
+        </div>
+        {dataMode === "mock" && (
+          <div className="mt-3 text-xs text-muted-foreground">
+            Fake Admin: <span className="font-mono">admin@provision.com</span> /{" "}
+            <span className="font-mono">password1234567890</span>
+          </div>
+        )}
+        {error && (
+          <div className="mt-3 text-xs text-red-500 font-semibold">{error}</div>
+        )}
+        <div className="mt-6">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : "Save & Continue"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -49,7 +141,8 @@ function SettingsContent() {
           saved === "user" ||
           saved === "workspace" ||
           saved === "appearance" ||
-          saved === "notifications"
+          saved === "notifications" ||
+          saved === "dataSource"
         ) {
           setTab(saved as TabKey);
         }
@@ -101,6 +194,14 @@ function SettingsContent() {
               className={cn(tab === "workspace" && "shadow")}
             >
               Workspace / Agency
+            </Button>
+            <Button
+              variant={tab === "dataSource" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("dataSource")}
+              className={cn(tab === "dataSource" && "shadow")}
+            >
+              Data Source
             </Button>
             <Button
               variant={tab === "appearance" ? "primary" : "outline"}
@@ -157,38 +258,10 @@ function SettingsContent() {
           <UserSettingsForm />
         ))}
       {tab === "workspace" && <WorkspaceSettingsForm />}
+      {tab === "dataSource" && <DataSourceTab />}
+
       {tab === "appearance" && (
         <div className="max-w-2xl space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
-            <p className="text-sm text-muted-foreground mb-3">
-              Choose between using real database data or dummy demo data. When
-              dummy data is enabled, a fake admin login is available.
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={dataMode === "real" ? "primary" : "outline"}
-                size="sm"
-                onClick={() => handleDataModeChange("real")}
-              >
-                Use Real Data
-              </Button>
-              <Button
-                variant={dataMode === "mock" ? "primary" : "outline"}
-                size="sm"
-                onClick={() => handleDataModeChange("mock")}
-              >
-                Use Dummy Data
-              </Button>
-            </div>
-            {dataMode === "mock" && (
-              <div className="mt-3 text-xs text-muted-foreground">
-                Fake Admin:{" "}
-                <span className="font-mono">admin@provision.com</span> /{" "}
-                <span className="font-mono">password1234567890</span>
-              </div>
-            )}
-          </div>
           <div>
             <h2 className="text-lg font-semibold mb-2">Theme Mode</h2>
             <p className="text-sm text-muted-foreground mb-3">

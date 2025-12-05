@@ -27,7 +27,7 @@ const routeLabels: { [key: string]: string } = {
   "/auth/forgot": "Forgot Password",
 };
 
-export function Navbar() {
+export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, workspace } = useSettings();
@@ -43,9 +43,9 @@ export function Navbar() {
   const currentRoute = routeLabels[pathname] || prettyLast || "Dashboard";
   // Demo banner only; no copy functionality in header
 
-  // Track user activity on interaction
+  // Track user activity on interaction (only if navigation is allowed)
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !canNavigate) return;
 
     const trackActivity = () => {
       updateMemberActivity(currentUser.name);
@@ -64,7 +64,7 @@ export function Navbar() {
     // Track on mount and on user interaction
     trackActivity();
 
-    const events = ["mousedown", "keydown", "touchstart"]; // remove scroll to avoid dev recompiles
+    const events = ["mousedown", "keydown", "touchstart"];
     events.forEach((event) => window.addEventListener(event, trackActivity));
 
     // Track every 30 seconds
@@ -76,7 +76,7 @@ export function Navbar() {
       );
       clearInterval(interval);
     };
-  }, [currentUser]);
+  }, [currentUser, canNavigate]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -104,9 +104,13 @@ export function Navbar() {
             {currentRoute}
           </span>
           {shouldUseMockData() && (
-            <span className="ml-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-300 text-xs shrink-0">
+            <button
+              className="ml-2 inline-flex items-center gap-2 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-300 text-xs shrink-0 hover:bg-yellow-200 transition"
+              title="Go to Data Source settings"
+              onClick={() => router.push("/settings?tab=dataSource")}
+            >
               Demo Mode
-            </span>
+            </button>
           )}
           {workspace.tagline && (
             <div className="flex-1 min-w-0 max-w-md">

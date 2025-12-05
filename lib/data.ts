@@ -64,20 +64,17 @@ export async function loadProjects(): Promise<Project[]> {
     try {
       const res = await fetch("/api/projects");
       const result = await res.json();
-
       if (result.success) {
         return result.data || [];
       }
-
       console.error("Failed to load projects from database:", result.error);
-      return [];
+      // Fallback to mock data
     } catch (error) {
       console.error("Error loading projects from database:", error);
-      return [];
+      // Fallback to mock data
     }
   }
-
-  // Use localStorage mock data
+  // Always fallback to mock data if DB fails or not configured
   const stored = localStorage.getItem("pv:projects");
   if (stored) {
     try {
@@ -86,7 +83,6 @@ export async function loadProjects(): Promise<Project[]> {
       return PROJECTS as Project[];
     }
   }
-
   return PROJECTS as Project[];
 }
 
@@ -117,20 +113,17 @@ export async function loadTasks(): Promise<Task[]> {
     try {
       const res = await fetch("/api/tasks");
       const result = await res.json();
-
       if (result.success) {
         return result.data || [];
       }
-
       console.error("Failed to load tasks from database:", result.error);
-      return [];
+      // Fallback to mock data
     } catch (error) {
       console.error("Error loading tasks from database:", error);
-      return [];
+      // Fallback to mock data
     }
   }
-
-  // Use localStorage mock data
+  // Always fallback to mock data if DB fails or not configured
   const stored = localStorage.getItem("pv:tasks");
   if (stored) {
     try {
@@ -139,7 +132,6 @@ export async function loadTasks(): Promise<Task[]> {
       return TASKS as Task[];
     }
   }
-
   return TASKS as Task[];
 }
 
@@ -170,20 +162,17 @@ export async function loadUsers(): Promise<User[]> {
     try {
       const res = await fetch("/api/users");
       const result = await res.json();
-
       if (result.success) {
         return result.data || [];
       }
-
       console.error("Failed to load users from database:", result.error);
-      return [];
+      // Fallback to mock data
     } catch (error) {
       console.error("Error loading users from database:", error);
-      return [];
+      // Fallback to mock data
     }
   }
-
-  // Use localStorage mock data
+  // Always fallback to mock data if DB fails or not configured
   const stored = localStorage.getItem("pv:users");
   if (stored) {
     try {
@@ -202,7 +191,6 @@ export async function loadUsers(): Promise<User[]> {
       }));
     }
   }
-
   // Convert USERS data to User format
   return (USERS as any[]).map((u: any) => ({
     uid: u.id || u.uid,

@@ -8,7 +8,7 @@ export function isDatabaseConfigured(): boolean {
     if (!dbConfig) return false;
 
     const config = JSON.parse(dbConfig);
-    return !!(config.configured && config.postgresUrl && config.blobToken);
+    return !!(config.configured && config.postgresUrl);
   } catch {
     return false;
   }
