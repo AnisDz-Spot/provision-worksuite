@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,13 +33,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert admin user into database (provide all required fields)
+    // Hash password before saving
+    const passwordHash = await bcrypt.hash(password, 10);
     const result = await sql`
       INSERT INTO users (
         email, password_hash, full_name, avatar_url, system_role, timezone, employment_type, is_active, is_billable, default_working_hours_per_day, created_at
       ) VALUES (
         ${email},
-        ${password},
+        ${passwordHash},
         ${name},
         ${avatarUrl || null},
         'Administrator',

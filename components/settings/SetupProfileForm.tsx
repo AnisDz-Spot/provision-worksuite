@@ -10,6 +10,8 @@ interface SetupProfileFormProps {
 }
 
 export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
+    const [avatarPreview, setAvatarPreview] = useState<string>("");
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const router = useRouter();
   const [form, setForm] = useState({
     username: "",
@@ -27,82 +29,69 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       setError("Avatar image must be less than 5MB");
       return;
     }
-
-    // Only allow avatar upload after form validation passes
-    if (!form.username || !form.fullName || !form.email || !form.password) {
-      setError("Fill all required fields before uploading avatar");
-      return;
-    }
-
-    setUploadingAvatar(true);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
     setError("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/test-blob", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setForm((prev) => ({ ...prev, avatarUrl: data.url }));
-      } else {
-        setError("Failed to upload avatar: " + data.error);
-      }
-    } catch (err) {
-      setError("Failed to upload avatar");
-    } finally {
-      setUploadingAvatar(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    // Validation
-    if (!form.username || !form.fullName || !form.email || !form.password) {
-      setError("All fields are required");
-      return;
-    }
-
-    if (form.email !== form.emailConfirm) {
-      setError("Email addresses do not match");
-      return;
-    }
-
-    if (form.password !== form.passwordConfirm) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
-      setError("Invalid email address");
-      return;
-    }
-
     setLoading(true);
-
+    let avatarUrl = form.avatarUrl;
     try {
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        const formData = new FormData();
+        formData.append("file", avatarFile);
+        const response = await fetch("/api/test-blob", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json();
+        if (data.success) {
+          avatarUrl = data.url;
+        } else {
+          setError("Failed to upload avatar: " + data.error);
+          setUploadingAvatar(false);
+          setLoading(false);
+          return;
+        }
+        setUploadingAvatar(false);
+      }
       // Create user in database
       const response = await fetch("/api/setup/create-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: form.username,
+          name: form.fullName,
+          email: form.email,
+          password: form.password,
+          avatarUrl,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem("pv:setupStatus", JSON.stringify({
+          databaseConfigured: true,
+          profileCompleted: true,
+          completedAt: new Date().toISOString(),
+        }));
+        onComplete();
+        router.push("/");
+      } else {
+        setError(data.error || "Failed to create admin account");
+      }
+    } catch (err) {
+      setError("Failed to create admin account");
+    } finally {
+      setLoading(false);
+    }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,11 +163,10 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
           {/* Avatar Upload */}
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full bg-secondary border flex items-center justify-center overflow-hidden">
-              {form.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+              {avatarPreview ? (
                 <img
-                  src={form.avatarUrl}
-                  alt="Avatar"
+                  src={avatarPreview}
+                  alt="Avatar Preview"
                   className="object-cover w-full h-full"
                 />
               ) : (
