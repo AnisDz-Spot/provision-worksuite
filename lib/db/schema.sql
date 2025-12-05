@@ -167,3 +167,12 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_from_user ON messages(from_user);
 CREATE INDEX IF NOT EXISTS idx_messages_to_user ON messages(to_user);
+
+-- Presence table (tracks user online status and last seen)
+CREATE TABLE IF NOT EXISTS presence (
+  uid VARCHAR(255) PRIMARY KEY,
+  status VARCHAR(50) NOT NULL,
+  last_seen TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_presence_status ON presence(status);
