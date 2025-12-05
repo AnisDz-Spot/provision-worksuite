@@ -34,6 +34,12 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
       return;
     }
 
+    // Only allow avatar upload after form validation passes
+    if (!form.username || !form.fullName || !form.email || !form.password) {
+      setError("Fill all required fields before uploading avatar");
+      return;
+    }
+
     setUploadingAvatar(true);
     setError("");
 

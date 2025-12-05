@@ -4,7 +4,7 @@ import { sql } from "@vercel/postgres";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, name, email, password, avatarUrl } = body;
+    const { username, name, email, password, avatarUrl, timezone } = body;
 
     // Validate required fields
     if (!username || !name || !email || !password) {
@@ -32,18 +32,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert admin user into database
+    // Insert admin user into database (provide all required fields)
     const result = await sql`
-      INSERT INTO users (email, password_hash, full_name, avatar_url, system_role, created_at)
-      VALUES (
+      INSERT INTO users (
+        email, password_hash, full_name, avatar_url, system_role, timezone, employment_type, is_active, is_billable, default_working_hours_per_day, created_at
+      ) VALUES (
         ${email},
         ${password},
         ${name},
         ${avatarUrl || null},
         'Administrator',
+        ${timezone || 'UTC'},
+        'full-time',
+        true,
+        true,
+        8.0,
         NOW()
       )
-      RETURNING user_id, email, full_name, avatar_url, system_role
+      RETURNING user_id, email, full_name, avatar_url, system_role, timezone
     `;
 
     const user = result.rows[0];
@@ -58,6 +64,7 @@ export async function POST(request: NextRequest) {
         name: user.full_name,
         avatarUrl: user.avatar_url,
         role: user.system_role,
+        timezone: user.timezone,
       },
     });
   } catch (error) {
