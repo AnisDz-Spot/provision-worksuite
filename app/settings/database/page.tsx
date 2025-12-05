@@ -125,6 +125,10 @@ export default function DatabaseSettingsPage() {
   };
 
   useEffect(() => {
+    // Always reset license modal state on mount
+    setLicenseValid(false);
+    setLicense("");
+    setLicenseError(null);
     const config = localStorage.getItem("pv:dbConfig");
     if (config) {
       try {
