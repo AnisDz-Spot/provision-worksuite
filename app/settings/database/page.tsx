@@ -26,28 +26,28 @@ export default function DatabaseSetupPage() {
       label: "SQL Database",
       icon: "🗄️",
       example: "PostgreSQL, MySQL, MariaDB, SQL Server, SQLite",
-      hint: "Structured, relational databases. Use for most business data."
+      hint: "Structured, relational databases. Use for most business data.",
     },
     {
       key: "nosql",
       label: "NoSQL Database",
       icon: "📦",
       example: "MongoDB, DynamoDB, Firebase",
-      hint: "Flexible, document or key-value stores. Use for unstructured or rapidly changing data."
+      hint: "Flexible, document or key-value stores. Use for unstructured or rapidly changing data.",
     },
     {
       key: "cloud",
       label: "Cloud Database",
       icon: "☁️",
       example: "AWS RDS, Azure SQL, Google Cloud SQL, MongoDB Atlas",
-      hint: "Managed databases hosted in the cloud."
+      hint: "Managed databases hosted in the cloud.",
     },
     {
       key: "object",
       label: "Object-Oriented Database",
       icon: "🧩",
       example: "db4o, ObjectDB",
-      hint: "Store data as objects, ideal for complex data models."
+      hint: "Store data as objects, ideal for complex data models.",
     },
   ];
 
@@ -262,21 +262,25 @@ export default function DatabaseSetupPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Database Type</h1>
             <p className="text-muted-foreground mb-4">
-              Select the type of database you want to use. Not sure? Hover each option for a quick example.
+              Select the type of database you want to use. Not sure? Hover each
+              option for a quick example.
             </p>
-            <div className="flex flex-wrap gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 w-full">
               {dbTypes.map((type) => (
                 <button
                   key={type.key}
                   type="button"
-                  className={`border rounded-lg px-4 py-3 flex flex-col items-center justify-center min-w-[200px] min-h-[170px] max-w-[200px] max-h-[170px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400"}`}
-                  style={{ flex: "1 1 200px" }}
+                  className={`border rounded-lg px-4 py-3 flex flex-col items-center justify-center w-full h-full min-h-[170px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400"}`}
                   title={type.hint}
                   onClick={() => setDbType(type.key)}
                 >
                   <span className="text-3xl mb-2">{type.icon}</span>
-                  <span className="font-semibold mb-1 text-gray-900 dark:text-gray-100">{type.label}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-300 text-center">{type.example}</span>
+                  <span className="font-semibold mb-1 text-gray-900 dark:text-gray-100">
+                    {type.label}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-300 text-center">
+                    {type.example}
+                  </span>
                 </button>
               ))}
             </div>
@@ -286,9 +290,12 @@ export default function DatabaseSetupPage() {
           {dbType && (
             <>
               <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
+                <h1 className="text-3xl font-bold mb-2">
+                  Database Configuration
+                </h1>
                 <p className="text-muted-foreground">
-                  Configure your database and storage connections. This is a one-time setup required before using the app.
+                  Configure your database and storage connections. This is a
+                  one-time setup required before using the app.
                 </p>
               </div>
 
@@ -303,7 +310,10 @@ export default function DatabaseSetupPage() {
                           SQL Connection URL
                         </label>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Example: <code className="bg-accent px-1 py-0.5 rounded">postgres://user:pass@host:5432/db</code>
+                          Example:{" "}
+                          <code className="bg-accent px-1 py-0.5 rounded">
+                            postgres://user:pass@host:5432/db
+                          </code>
                         </p>
                         <Input
                           type="text"
@@ -321,7 +331,10 @@ export default function DatabaseSetupPage() {
                           NoSQL Connection URI
                         </label>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Example: <code className="bg-accent px-1 py-0.5 rounded">mongodb+srv://user:pass@cluster.mongodb.net/db</code>
+                          Example:{" "}
+                          <code className="bg-accent px-1 py-0.5 rounded">
+                            mongodb+srv://user:pass@cluster.mongodb.net/db
+                          </code>
                         </p>
                         <Input
                           type="text"
@@ -339,7 +352,10 @@ export default function DatabaseSetupPage() {
                           Cloud DB Connection URL
                         </label>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Example: <code className="bg-accent px-1 py-0.5 rounded">postgres://user:pass@aws-rds.amazonaws.com:5432/db</code>
+                          Example:{" "}
+                          <code className="bg-accent px-1 py-0.5 rounded">
+                            postgres://user:pass@aws-rds.amazonaws.com:5432/db
+                          </code>
                         </p>
                         <Input
                           type="text"
@@ -357,7 +373,10 @@ export default function DatabaseSetupPage() {
                           Object DB Connection String
                         </label>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Example: <code className="bg-accent px-1 py-0.5 rounded">objectdb://user:pass@host:port/db</code>
+                          Example:{" "}
+                          <code className="bg-accent px-1 py-0.5 rounded">
+                            objectdb://user:pass@host:port/db
+                          </code>
                         </p>
                         <Input
                           type="text"
@@ -375,7 +394,10 @@ export default function DatabaseSetupPage() {
                         Blob Storage Token
                       </label>
                       <p className="text-sm text-muted-foreground mb-3">
-                        (Optional) For file uploads. Example: <code className="bg-accent px-1 py-0.5 rounded">vercel_blob_rw_xxxxx</code>
+                        (Optional) For file uploads. Example:{" "}
+                        <code className="bg-accent px-1 py-0.5 rounded">
+                          vercel_blob_rw_xxxxx
+                        </code>
                       </p>
                       <Input
                         type="password"
@@ -413,17 +435,23 @@ export default function DatabaseSetupPage() {
                               configured: true,
                               configuredAt: new Date().toISOString(),
                             };
-                            localStorage.setItem("pv:dbConfig", JSON.stringify(config));
+                            localStorage.setItem(
+                              "pv:dbConfig",
+                              JSON.stringify(config)
+                            );
                             // Test database connection
                             const response = await fetch("/api/test-db");
                             const data = await response.json();
                             if (data.success) {
                               setTestResult({
                                 success: true,
-                                message: "✅ Database connection successful! Initializing database...",
+                                message:
+                                  "✅ Database connection successful! Initializing database...",
                               });
                               // Auto-initialize DB (create tables)
-                              const initResp = await fetch("/api/setup-db", { method: "POST" });
+                              const initResp = await fetch("/api/setup-db", {
+                                method: "POST",
+                              });
                               const initResult = await initResp.json();
                               if (!initResult.success) {
                                 setTestResult({
@@ -433,7 +461,8 @@ export default function DatabaseSetupPage() {
                               } else {
                                 setTestResult({
                                   success: true,
-                                  message: "✅ Database connection and initialization successful!",
+                                  message:
+                                    "✅ Database connection and initialization successful!",
                                 });
                               }
                             } else {
@@ -454,14 +483,14 @@ export default function DatabaseSetupPage() {
                         disabled={!postgresUrl || testing}
                         variant="outline"
                       >
-                        {testing ? "Testing..." : "Test & Initialize"}
+                        {testing
+                          ? "Testing..."
+                          : "Test & Initialize (always creates tables)"}
                       </Button>
 
                       <Button
                         onClick={handleSave}
-                        disabled={
-                          !postgresUrl || loading || !isTestSuccessful
-                        }
+                        disabled={!postgresUrl || loading || !isTestSuccessful}
                         variant="primary"
                         title={
                           !isTestSuccessful
@@ -469,7 +498,9 @@ export default function DatabaseSetupPage() {
                             : undefined
                         }
                       >
-                        {loading ? "Saving..." : "Save & Continue to Profile Setup"}
+                        {loading
+                          ? "Saving..."
+                          : "Save & Continue to Profile Setup"}
                       </Button>
                     </div>
                   </div>
@@ -483,8 +514,13 @@ export default function DatabaseSetupPage() {
                   <ol className="list-decimal list-inside space-y-2 text-sm">
                     <li>Select your database type above</li>
                     <li>Enter your connection string</li>
-                    <li>Click <strong>Test Connection</strong> to verify</li>
-                    <li>Click <strong>Save & Continue</strong> to proceed to profile setup</li>
+                    <li>
+                      Click <strong>Test Connection</strong> to verify
+                    </li>
+                    <li>
+                      Click <strong>Save & Continue</strong> to proceed to
+                      profile setup
+                    </li>
                   </ol>
                 </Card>
               </div>
