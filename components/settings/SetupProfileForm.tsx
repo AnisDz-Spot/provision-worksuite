@@ -92,32 +92,6 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
     } finally {
       setLoading(false);
     }
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: form.username,
-          name: form.fullName,
-          email: form.email,
-          password: form.password,
-          avatarUrl: form.avatarUrl,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Mark setup as complete
-        const setupStatus = {
-          databaseConfigured: true,
-          profileCompleted: true,
-          completedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
-
-        // Store new user credentials
-        localStorage.setItem(
-          "pv:adminUser",
-          JSON.stringify({
             id: data.user.uid,
             email: form.email,
             name: form.fullName,
