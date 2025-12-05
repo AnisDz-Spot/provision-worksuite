@@ -1,24 +1,24 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-// For copy-to-clipboard
-const commandRef = useRef<HTMLInputElement>(null);
-const [copied, setCopied] = useState(false);
 
-const handleCopyCommand = () => {
-  if (commandRef.current) {
-    commandRef.current.select();
-    document.execCommand("copy");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
-};
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 
 export default function DatabaseSetupPage() {
+  // For copy-to-clipboard
+  const commandRef = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState(false);
+  const handleCopyCommand = () => {
+    if (commandRef.current) {
+      commandRef.current.select();
+      document.execCommand("copy");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
   const router = useRouter();
   const [postgresUrl, setPostgresUrl] = useState("");
   const [blobToken, setBlobToken] = useState("");
