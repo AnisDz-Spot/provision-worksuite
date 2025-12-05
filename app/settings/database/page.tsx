@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRef } from "react";
-  // For copy-to-clipboard
-  const commandRef = useRef<HTMLInputElement>(null);
-  const [copied, setCopied] = useState(false);
+import { useState, useEffect, useRef } from "react";
+// For copy-to-clipboard
+const commandRef = useRef<HTMLInputElement>(null);
+const [copied, setCopied] = useState(false);
 
-  const handleCopyCommand = () => {
-    if (commandRef.current) {
-      commandRef.current.select();
-      document.execCommand("copy");
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }
-  };
+const handleCopyCommand = () => {
+  if (commandRef.current) {
+    commandRef.current.select();
+    document.execCommand("copy");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+};
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -391,11 +390,13 @@ export default function DatabaseSetupPage() {
                         <p className="text-sm flex items-center gap-2">
                           {testResult.success ? (
                             <span className="inline-flex items-center text-green-600 font-semibold">
-                              <span className="mr-1">✔</span> {testResult.message}
+                              <span className="mr-1">✔</span>{" "}
+                              {testResult.message}
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-red-600 font-semibold">
-                              <span className="mr-1">✖</span> {testResult.message}
+                              <span className="mr-1">✖</span>{" "}
+                              {testResult.message}
                             </span>
                           )}
                         </p>
@@ -445,7 +446,8 @@ export default function DatabaseSetupPage() {
                       </span>
                       <br />
                       <span className="block mt-1">
-                        Run this command in your terminal (locally or in your server/CI):
+                        Run this command in your terminal (locally or in your
+                        server/CI):
                       </span>
                       <div className="flex items-center gap-2 mt-2">
                         <input
@@ -466,7 +468,8 @@ export default function DatabaseSetupPage() {
                         </Button>
                       </div>
                       <span className="block mt-1 text-xs text-muted-foreground">
-                        (Replace <code>your_connection_string</code> with your actual DB URL)
+                        (Replace <code>your_connection_string</code> with your
+                        actual DB URL)
                       </span>
                     </li>
                     <li>
@@ -477,9 +480,18 @@ export default function DatabaseSetupPage() {
                   <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500 rounded">
                     <p className="text-xs font-semibold mb-1">💡 Tip</p>
                     <ul className="text-xs list-disc pl-4">
-                      <li>For <b>serverless</b> (Vercel, Netlify, etc.): schema setup must be done outside the app.</li>
-                      <li>For <b>traditional servers</b>: run the command above during deployment or after DB config.</li>
-                      <li>Need help? See the included documentation or contact support.</li>
+                      <li>
+                        For <b>serverless</b> (Vercel, Netlify, etc.): schema
+                        setup must be done outside the app.
+                      </li>
+                      <li>
+                        For <b>traditional servers</b>: run the command above
+                        during deployment or after DB config.
+                      </li>
+                      <li>
+                        Need help? See the included documentation or contact
+                        support.
+                      </li>
                     </ul>
                   </div>
                 </Card>
