@@ -11,7 +11,8 @@ export async function GET() {
   }
 
   try {
-    // Test connection by attempting to connect and disconnect
+    // Set the connection string dynamically before instantiating PrismaClient
+    process.env.DATABASE_URL = dbUrl;
     const prisma = new PrismaClient();
     await prisma.$connect();
     await prisma.$disconnect();
