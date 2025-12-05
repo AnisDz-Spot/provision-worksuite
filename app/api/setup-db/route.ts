@@ -14,17 +14,41 @@ export async function POST() {
 
     // Step 1: Push the schema to create tables
     console.log("Pushing schema to database...");
-    execSync("npx prisma db push --skip-generate", {
-      stdio: "inherit",
-      env: { ...process.env, DATABASE_URL: dbUrl },
-    });
+    try {
+      execSync("npx prisma db push --skip-generate", {
+        stdio: "pipe",
+        env: { ...process.env, DATABASE_URL: dbUrl },
+      });
+    } catch (pushError: any) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: pushError?.message || "Failed to setup database.",
+          stdout: pushError?.stdout?.toString(),
+          stderr: pushError?.stderr?.toString(),
+        },
+        { status: 500 }
+      );
+    }
 
     // Step 2: Generate Prisma Client to match the new schema
     console.log("Generating Prisma Client...");
-    execSync("npx prisma generate", {
-      stdio: "inherit",
-      env: { ...process.env, DATABASE_URL: dbUrl },
-    });
+    try {
+      execSync("npx prisma generate", {
+        stdio: "pipe",
+        env: { ...process.env, DATABASE_URL: dbUrl },
+      });
+    } catch (genError: any) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: genError?.message || "Failed to generate Prisma client.",
+          stdout: genError?.stdout?.toString(),
+          stderr: genError?.stderr?.toString(),
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
