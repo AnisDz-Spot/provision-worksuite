@@ -34,7 +34,7 @@ export async function GET(request: Request) {
              (ARRAY_AGG(ROW(message, created_at) ORDER BY created_at DESC))[1] AS last_row
       FROM conv
       GROUP BY other_user
-      ORDER BY (last_row).f2 DESC
+      ORDER BY ((ARRAY_AGG(ROW(message, created_at) ORDER BY created_at DESC))[1]).f2 DESC
     `;
 
     const data = result.rows.map((row: any) => ({
@@ -49,7 +49,12 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Get conversations error:", error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : String(error), data: [], details: error },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        data: [],
+        details: error,
+      },
       { status: 500 }
     );
   }
