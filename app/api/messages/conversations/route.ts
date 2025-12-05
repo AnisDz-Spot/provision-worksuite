@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
 export async function GET(request: Request) {
+  // Prevent DB access if not configured
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      { success: false, error: "Database not configured" },
+      { status: 503 }
+    );
+  }
   const { searchParams } = new URL(request.url);
   const user = searchParams.get("user");
   if (!user) {
