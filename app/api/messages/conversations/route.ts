@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Get conversations error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch conversations", data: [] },
+      { success: false, error: error instanceof Error ? error.message : String(error), data: [], details: error },
       { status: 500 }
     );
   }

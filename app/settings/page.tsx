@@ -50,7 +50,8 @@ function DataSourceTab() {
     setError("");
     localStorage.setItem("pv:dataMode", dataMode);
     if (dataMode === "real") {
-      router.push("/settings/database");
+      // Force reload to reset state and show license modal
+      window.location.href = "/settings/database";
     } else {
       router.push("/");
     }
