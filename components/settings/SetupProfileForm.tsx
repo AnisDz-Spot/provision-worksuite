@@ -92,22 +92,6 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
     } finally {
       setLoading(false);
     }
-            id: data.user.uid,
-            email: form.email,
-            name: form.fullName,
-            role: "Administrator",
-            isAdmin: true,
-          })
-        );
-
-        // Log out the global admin and redirect to login
-        localStorage.removeItem("pv:currentUser");
-        router.push("/auth/login?setup=complete");
-      } else {
-        setError(data.error || "Failed to create admin account");
-      }
-    } catch (err) {
-      setError("Failed to create admin account. Please try again.");
     } finally {
       setLoading(false);
     }
