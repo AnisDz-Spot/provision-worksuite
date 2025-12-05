@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRef } from "react";
+  // For copy-to-clipboard
+  const commandRef = useRef<HTMLInputElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCommand = () => {
+    if (commandRef.current) {
+      commandRef.current.select();
+      document.execCommand("copy");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -131,8 +144,6 @@ export default function DatabaseSetupPage() {
     }
   };
 
-
-
   const handleSave = async () => {
     if (!postgresUrl) {
       alert("Please enter a database connection string");
@@ -143,7 +154,6 @@ export default function DatabaseSetupPage() {
       alert("Please test the connection first");
       return;
     }
-
 
     setLoading(true);
 
@@ -378,10 +388,19 @@ export default function DatabaseSetupPage() {
                             : "bg-red-500/10 border border-red-500"
                         }`}
                       >
-                        <p className="text-sm">{testResult.message}</p>
+                        <p className="text-sm flex items-center gap-2">
+                          {testResult.success ? (
+                            <span className="inline-flex items-center text-green-600 font-semibold">
+                              <span className="mr-1">✔</span> {testResult.message}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-red-600 font-semibold">
+                              <span className="mr-1">✖</span> {testResult.message}
+                            </span>
+                          )}
+                        </p>
                       </div>
                     )}
-
 
                     <div className="flex flex-col gap-3 pt-4">
                       <div className="flex gap-3">
@@ -421,12 +440,31 @@ export default function DatabaseSetupPage() {
                       connectivity
                     </li>
                     <li>
-                      <span className="font-semibold">After a successful connection:</span>
+                      <span className="font-semibold">
+                        After a successful connection:
+                      </span>
                       <br />
-                      <span className="block mt-1">Run this command in your terminal (locally or in your server/CI):</span>
-                      <code className="block bg-accent px-2 py-1 rounded mt-2 font-mono text-xs">
-                        DATABASE_URL=your_connection_string npx prisma db push
-                      </code>
+                      <span className="block mt-1">
+                        Run this command in your terminal (locally or in your server/CI):
+                      </span>
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          ref={commandRef}
+                          readOnly
+                          value={`DATABASE_URL=${postgresUrl || "your_connection_string"} npx prisma db push`}
+                          className="bg-accent px-2 py-1 rounded font-mono text-xs w-full cursor-pointer border border-gray-300"
+                          onClick={handleCopyCommand}
+                          aria-label="Copy schema push command"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyCommand}
+                        >
+                          {copied ? "Copied!" : "Copy"}
+                        </Button>
+                      </div>
                       <span className="block mt-1 text-xs text-muted-foreground">
                         (Replace <code>your_connection_string</code> with your actual DB URL)
                       </span>
@@ -438,10 +476,11 @@ export default function DatabaseSetupPage() {
 
                   <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500 rounded">
                     <p className="text-xs font-semibold mb-1">💡 Tip</p>
-                    <p className="text-xs">
-                      For serverless (Vercel, Netlify, etc.), schema setup must be done outside the app.<br />
-                      For traditional servers, you can run the command above during deployment.
-                    </p>
+                    <ul className="text-xs list-disc pl-4">
+                      <li>For <b>serverless</b> (Vercel, Netlify, etc.): schema setup must be done outside the app.</li>
+                      <li>For <b>traditional servers</b>: run the command above during deployment or after DB config.</li>
+                      <li>Need help? See the included documentation or contact support.</li>
+                    </ul>
                   </div>
                 </Card>
               </div>

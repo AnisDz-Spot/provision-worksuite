@@ -21,4 +21,3 @@ export async function POST() {
       "Prisma CLI commands (db push, generate) cannot be run in Vercel/serverless environments. Please run them locally or in CI/CD before deploy."
   });
 }
-}
