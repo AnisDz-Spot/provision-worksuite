@@ -269,13 +269,14 @@ export default function DatabaseSetupPage() {
                 <button
                   key={type.key}
                   type="button"
-                  className={`border rounded-lg px-4 py-3 flex flex-col items-center min-w-[180px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white hover:border-blue-400"}`}
+                  className={`border rounded-lg px-4 py-3 flex flex-col items-center justify-center min-w-[200px] min-h-[170px] max-w-[200px] max-h-[170px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50 dark:bg-blue-900" : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400"}`}
+                  style={{ flex: "1 1 200px" }}
                   title={type.hint}
                   onClick={() => setDbType(type.key)}
                 >
                   <span className="text-3xl mb-2">{type.icon}</span>
-                  <span className="font-semibold mb-1">{type.label}</span>
-                  <span className="text-xs text-gray-500 text-center">{type.example}</span>
+                  <span className="font-semibold mb-1 text-gray-900 dark:text-gray-100">{type.label}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-300 text-center">{type.example}</span>
                 </button>
               ))}
             </div>
@@ -401,11 +402,59 @@ export default function DatabaseSetupPage() {
                     {/* Actions */}
                     <div className="flex gap-4 pt-4">
                       <Button
-                        onClick={testConnection}
+                        onClick={async () => {
+                          setTesting(true);
+                          setTestResult(null);
+                          try {
+                            // Save temporarily to test
+                            const config = {
+                              postgresUrl,
+                              blobToken,
+                              configured: true,
+                              configuredAt: new Date().toISOString(),
+                            };
+                            localStorage.setItem("pv:dbConfig", JSON.stringify(config));
+                            // Test database connection
+                            const response = await fetch("/api/test-db");
+                            const data = await response.json();
+                            if (data.success) {
+                              setTestResult({
+                                success: true,
+                                message: "✅ Database connection successful! Initializing database...",
+                              });
+                              // Auto-initialize DB (create tables)
+                              const initResp = await fetch("/api/setup-db", { method: "POST" });
+                              const initResult = await initResp.json();
+                              if (!initResult.success) {
+                                setTestResult({
+                                  success: false,
+                                  message: `❌ Database initialization failed: ${initResult.error || "Unknown error"}`,
+                                });
+                              } else {
+                                setTestResult({
+                                  success: true,
+                                  message: "✅ Database connection and initialization successful!",
+                                });
+                              }
+                            } else {
+                              setTestResult({
+                                success: false,
+                                message: `❌ Database connection failed: ${data.error}`,
+                              });
+                            }
+                          } catch (error) {
+                            setTestResult({
+                              success: false,
+                              message: `❌ Error testing/initializing DB: ${error instanceof Error ? error.message : "Unknown error"}`,
+                            });
+                          } finally {
+                            setTesting(false);
+                          }
+                        }}
                         disabled={!postgresUrl || testing}
                         variant="outline"
                       >
-                        {testing ? "Testing..." : "Test Connection"}
+                        {testing ? "Testing..." : "Test & Initialize"}
                       </Button>
 
                       <Button
@@ -422,18 +471,6 @@ export default function DatabaseSetupPage() {
                       >
                         {loading ? "Saving..." : "Save & Continue to Profile Setup"}
                       </Button>
-
-                      {/* Admin DB Setup Button */}
-                      <Button
-                        onClick={handleAdminSetup}
-                        disabled={!postgresUrl || adminSetupLoading}
-                        variant="secondary"
-                      >
-                        {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
-                      </Button>
-                      {adminSetupResult && (
-                        <div className="mt-2 text-sm">{adminSetupResult}</div>
-                      )}
                     </div>
                   </div>
                 </Card>
