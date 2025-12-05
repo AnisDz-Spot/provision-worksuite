@@ -34,7 +34,7 @@ export async function createUser(
     ) VALUES (
         ${user.email}, ${user.passwordHash}, ${user.fullName}, ${user.avatarUrl || null}, ${user.isActive},
       ${user.systemRole}, ${user.jobTitle || null}, ${user.department || null}, ${user.timezone},
-      ${user.themePreference || 'light'}, ${user.phoneNumber || null}, ${user.slackHandle || null},
+      ${user.themePreference || "light"}, ${user.phoneNumber || null}, ${user.slackHandle || null},
       ${user.hourlyCostRate}, ${user.hourlyBillableRate}, ${user.isBillable}, ${user.employmentType},
       ${user.defaultWorkingHoursPerDay}, ${user.hireDate || null}, ${user.terminationDate || null}
     )

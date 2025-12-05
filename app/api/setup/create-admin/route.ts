@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const existing = await sql`
-      SELECT uid FROM users WHERE email = ${email} LIMIT 1
+      SELECT user_id FROM users WHERE email = ${email} LIMIT 1
     `;
 
     if (existing.rows.length > 0) {
@@ -32,32 +32,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create unique ID
-    const uid = `user_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-
     // Insert admin user into database
-    await sql`
-      INSERT INTO users (uid, email, name, avatar_url, role, password_hash, created_at)
+    const result = await sql`
+      INSERT INTO users (email, password_hash, full_name, avatar_url, system_role, created_at)
       VALUES (
-        ${uid},
         ${email},
+        ${password},
         ${name},
         ${avatarUrl || null},
         'Administrator',
-        ${password},
         NOW()
       )
+      RETURNING user_id, email, full_name, avatar_url, system_role
     `;
+
+    const user = result.rows[0];
 
     // Return success with user data
     return NextResponse.json({
       success: true,
       message: "Admin account created successfully",
       user: {
-        uid,
-        email,
-        name,
-        role: "Administrator",
+        user_id: user.user_id,
+        email: user.email,
+        name: user.full_name,
+        avatarUrl: user.avatar_url,
+        role: user.system_role,
       },
     });
   } catch (error) {
