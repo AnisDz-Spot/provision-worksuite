@@ -154,3 +154,16 @@ CREATE TABLE IF NOT EXISTS blockers (
 
 CREATE INDEX IF NOT EXISTS idx_blockers_project_id ON blockers(project_id);
 CREATE INDEX IF NOT EXISTS idx_blockers_status ON blockers(status);
+
+-- Messages table (for chat/conversations)
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  from_user VARCHAR(255) NOT NULL,
+  to_user VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  is_read BOOLEAN DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_from_user ON messages(from_user);
+CREATE INDEX IF NOT EXISTS idx_messages_to_user ON messages(to_user);
