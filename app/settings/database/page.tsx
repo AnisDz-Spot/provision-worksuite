@@ -18,6 +18,39 @@ export default function DatabaseSetupPage() {
   } | null>(null);
   const isTestSuccessful = !!testResult?.success;
 
+  // DB type selector
+  const [dbType, setDbType] = useState<string>("");
+  const dbTypes = [
+    {
+      key: "sql",
+      label: "SQL Database",
+      icon: "🗄️",
+      example: "PostgreSQL, MySQL, MariaDB, SQL Server, SQLite",
+      hint: "Structured, relational databases. Use for most business data."
+    },
+    {
+      key: "nosql",
+      label: "NoSQL Database",
+      icon: "📦",
+      example: "MongoDB, DynamoDB, Firebase",
+      hint: "Flexible, document or key-value stores. Use for unstructured or rapidly changing data."
+    },
+    {
+      key: "cloud",
+      label: "Cloud Database",
+      icon: "☁️",
+      example: "AWS RDS, Azure SQL, Google Cloud SQL, MongoDB Atlas",
+      hint: "Managed databases hosted in the cloud."
+    },
+    {
+      key: "object",
+      label: "Object-Oriented Database",
+      icon: "🧩",
+      example: "db4o, ObjectDB",
+      hint: "Store data as objects, ideal for complex data models."
+    },
+  ];
+
   // Admin DB Setup integration
   const ADMIN_SETUP_URL = "http://localhost:4000/api/admin/setup-db"; // Change to your server's URL in production
   const [adminSetupLoading, setAdminSetupLoading] = useState(false);
@@ -223,149 +256,203 @@ export default function DatabaseSetupPage() {
         </Card>
       )}
 
-      {/* Show DB config only if license is valid */}
+      {/* Show DB type selector and config only if license is valid */}
       {licenseValid && (
         <>
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
-            <p className="text-muted-foreground">
-              Configure your database and storage connections. This is a
-              one-time setup required before using the app.
+            <h1 className="text-3xl font-bold mb-2">Database Type</h1>
+            <p className="text-muted-foreground mb-4">
+              Select the type of database you want to use. Not sure? Hover each option for a quick example.
             </p>
+            <div className="flex flex-wrap gap-4 mb-8">
+              {dbTypes.map((type) => (
+                <button
+                  key={type.key}
+                  type="button"
+                  className={`border rounded-lg px-4 py-3 flex flex-col items-center min-w-[180px] cursor-pointer transition-all duration-150 ${dbType === type.key ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white hover:border-blue-400"}`}
+                  title={type.hint}
+                  onClick={() => setDbType(type.key)}
+                >
+                  <span className="text-3xl mb-2">{type.icon}</span>
+                  <span className="font-semibold mb-1">{type.label}</span>
+                  <span className="text-xs text-gray-500 text-center">{type.example}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            {/* Config Form */}
-            <Card className="p-6 flex-1 min-w-0">
-              <div className="space-y-6">
-                {/* Postgres URL */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    PostgreSQL Connection URL
-                  </label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Get this from your Vercel Storage → Postgres → .env.local
-                    tab. Copy the{" "}
-                    <code className="bg-accent px-1 py-0.5 rounded">
-                      POSTGRES_URL
-                    </code>{" "}
-                    value.
-                  </p>
-                  <Input
-                    type="text"
-                    placeholder="postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb"
-                    value={postgresUrl}
-                    onChange={(e) => setPostgresUrl(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                </div>
-
-                {/* Blob Token */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Blob Storage Token
-                  </label>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Get this from your Vercel Storage → Blob → .env.local tab.
-                    Copy the{" "}
-                    <code className="bg-accent px-1 py-0.5 rounded">
-                      BLOB_READ_WRITE_TOKEN
-                    </code>{" "}
-                    value.
-                  </p>
-                  <Input
-                    type="password"
-                    placeholder="vercel_blob_rw_xxxxx"
-                    value={blobToken}
-                    onChange={(e) => setBlobToken(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                </div>
-
-                {/* Test Result */}
-                {testResult && (
-                  <div
-                    className={`p-4 rounded-lg ${
-                      testResult.success
-                        ? "bg-green-500/10 border border-green-500"
-                        : "bg-red-500/10 border border-red-500"
-                    }`}
-                  >
-                    <p className="text-sm">{testResult.message}</p>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-4 pt-4">
-                  <Button
-                    onClick={testConnection}
-                    disabled={!postgresUrl || !blobToken || testing}
-                    variant="outline"
-                  >
-                    {testing ? "Testing..." : "Test Connection"}
-                  </Button>
-
-                  <Button
-                    onClick={handleSave}
-                    disabled={
-                      !postgresUrl || !blobToken || loading || !isTestSuccessful
-                    }
-                    variant="primary"
-                    title={
-                      !isTestSuccessful
-                        ? "Please test connection successfully first"
-                        : undefined
-                    }
-                  >
-                    {loading ? "Saving..." : "Save & Continue to Profile Setup"}
-                  </Button>
-
-                  {/* Admin DB Setup Button */}
-                  <Button
-                    onClick={handleAdminSetup}
-                    disabled={!postgresUrl || adminSetupLoading}
-                    variant="secondary"
-                  >
-                    {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
-                  </Button>
-                  {adminSetupResult && (
-                    <div className="mt-2 text-sm">{adminSetupResult}</div>
-                  )}
-                </div>
+          {/* Show config form only after DB type is selected */}
+          {dbType && (
+            <>
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold mb-2">Database Configuration</h1>
+                <p className="text-muted-foreground">
+                  Configure your database and storage connections. This is a one-time setup required before using the app.
+                </p>
               </div>
-            </Card>
 
-            {/* Instructions Card */}
-            <Card className="p-6 flex-1 min-w-0 bg-accent/20">
-              <h3 className="text-lg font-semibold mb-3">
-                📋 Setup Instructions
-              </h3>
-              <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>
-                  Go to your Vercel project dashboard → <strong>Storage</strong>{" "}
-                  tab
-                </li>
-                <li>
-                  Create a <strong>Postgres</strong> database if you haven't
-                  already
-                </li>
-                <li>
-                  Create a <strong>Blob</strong> storage if you haven't already
-                </li>
-                <li>
-                  Click on each storage → <strong>.env.local</strong> tab
-                </li>
-                <li>Copy the connection strings and paste them above</li>
-                <li>
-                  Click <strong>Test Connection</strong> to verify
-                </li>
-                <li>
-                  Click <strong>Save & Continue</strong> to proceed to profile
-                  setup
-                </li>
-              </ol>
-            </Card>
-          </div>
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                {/* Config Form - for now, show SQL fields as before. Later, make dynamic per dbType. */}
+                <Card className="p-6 flex-1 min-w-0">
+                  <div className="space-y-6">
+                    {/* Postgres URL (for SQL) */}
+                    {dbType === "sql" && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">
+                          SQL Connection URL
+                        </label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Example: <code className="bg-accent px-1 py-0.5 rounded">postgres://user:pass@host:5432/db</code>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="postgres://user:pass@host:5432/db"
+                          value={postgresUrl}
+                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    )}
+                    {/* NoSQL Example (MongoDB) */}
+                    {dbType === "nosql" && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">
+                          NoSQL Connection URI
+                        </label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Example: <code className="bg-accent px-1 py-0.5 rounded">mongodb+srv://user:pass@cluster.mongodb.net/db</code>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="mongodb+srv://user:pass@cluster.mongodb.net/db"
+                          value={postgresUrl}
+                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    )}
+                    {/* Cloud DB Example */}
+                    {dbType === "cloud" && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">
+                          Cloud DB Connection URL
+                        </label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Example: <code className="bg-accent px-1 py-0.5 rounded">postgres://user:pass@aws-rds.amazonaws.com:5432/db</code>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="postgres://user:pass@aws-rds.amazonaws.com:5432/db"
+                          value={postgresUrl}
+                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    )}
+                    {/* Object-Oriented DB Example */}
+                    {dbType === "object" && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">
+                          Object DB Connection String
+                        </label>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Example: <code className="bg-accent px-1 py-0.5 rounded">objectdb://user:pass@host:port/db</code>
+                        </p>
+                        <Input
+                          type="text"
+                          placeholder="objectdb://user:pass@host:port/db"
+                          value={postgresUrl}
+                          onChange={(e) => setPostgresUrl(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* Blob Token (optional, shown for all for now) */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">
+                        Blob Storage Token
+                      </label>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        (Optional) For file uploads. Example: <code className="bg-accent px-1 py-0.5 rounded">vercel_blob_rw_xxxxx</code>
+                      </p>
+                      <Input
+                        type="password"
+                        placeholder="vercel_blob_rw_xxxxx"
+                        value={blobToken}
+                        onChange={(e) => setBlobToken(e.target.value)}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+
+                    {/* Test Result */}
+                    {testResult && (
+                      <div
+                        className={`p-4 rounded-lg ${
+                          testResult.success
+                            ? "bg-green-500/10 border border-green-500"
+                            : "bg-red-500/10 border border-red-500"
+                        }`}
+                      >
+                        <p className="text-sm">{testResult.message}</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-4 pt-4">
+                      <Button
+                        onClick={testConnection}
+                        disabled={!postgresUrl || testing}
+                        variant="outline"
+                      >
+                        {testing ? "Testing..." : "Test Connection"}
+                      </Button>
+
+                      <Button
+                        onClick={handleSave}
+                        disabled={
+                          !postgresUrl || loading || !isTestSuccessful
+                        }
+                        variant="primary"
+                        title={
+                          !isTestSuccessful
+                            ? "Please test connection successfully first"
+                            : undefined
+                        }
+                      >
+                        {loading ? "Saving..." : "Save & Continue to Profile Setup"}
+                      </Button>
+
+                      {/* Admin DB Setup Button */}
+                      <Button
+                        onClick={handleAdminSetup}
+                        disabled={!postgresUrl || adminSetupLoading}
+                        variant="secondary"
+                      >
+                        {adminSetupLoading ? "Setting up..." : "Run Admin DB Setup"}
+                      </Button>
+                      {adminSetupResult && (
+                        <div className="mt-2 text-sm">{adminSetupResult}</div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Instructions Card */}
+                <Card className="p-6 flex-1 min-w-0 bg-accent/20">
+                  <h3 className="text-lg font-semibold mb-3">
+                    📋 Setup Instructions
+                  </h3>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Select your database type above</li>
+                    <li>Enter your connection string</li>
+                    <li>Click <strong>Test Connection</strong> to verify</li>
+                    <li>Click <strong>Save & Continue</strong> to proceed to profile setup</li>
+                  </ol>
+                </Card>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
