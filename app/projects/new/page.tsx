@@ -49,19 +49,11 @@ export default function NewProjectPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      // notify invalid type
-      try {
-        /* uses provider from layout */ /* @ts-ignore */ showToast(
-          "Please select an image file",
-          "warning"
-        );
-      } catch {}
+      showToast("Please select an image file", "warning");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      try {
-        /* @ts-ignore */ showToast("Image too large (max 5MB)", "warning");
-      } catch {}
+      showToast("Image too large (max 5MB)", "warning");
       return;
     }
     const reader = new FileReader();

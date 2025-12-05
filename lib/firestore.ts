@@ -20,6 +20,7 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp,
+  FieldValue,
   writeBatch,
   QueryConstraint,
 } from "firebase/firestore";
@@ -40,8 +41,8 @@ export type Project = {
   budget?: number;
   progress?: number;
   starred?: boolean;
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: Date | Timestamp | FieldValue;
+  updatedAt?: Date | Timestamp | FieldValue;
   userId?: string; // Owner's user ID for security rules
 };
 
@@ -56,8 +57,8 @@ export type Task = {
   estimateHours?: number;
   loggedHours?: number;
   milestoneId?: string;
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: Date | Timestamp | FieldValue;
+  updatedAt?: Date | Timestamp | FieldValue;
 };
 
 export type TimeLog = {
@@ -67,7 +68,7 @@ export type TimeLog = {
   hours: number;
   note?: string;
   loggedBy: string;
-  loggedAt: any;
+  loggedAt: Date | Timestamp | FieldValue;
 };
 
 export type User = {
@@ -77,8 +78,8 @@ export type User = {
   role: string;
   isAdmin: boolean;
   avatar?: string;
-  createdAt?: any;
-  updatedAt?: any;
+  createdAt?: Date | Timestamp | FieldValue;
+  updatedAt?: Date | Timestamp | FieldValue;
 };
 
 // ============================================================================

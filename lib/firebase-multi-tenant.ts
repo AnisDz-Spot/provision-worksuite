@@ -156,7 +156,7 @@ export async function initializeTenantFirebase(tenantId: string): Promise<{
     tenantDb.set(tenantId, db);
     tenantStorage.set(tenantId, storage);
 
-    console.log(`✅ Firebase initialized for tenant: ${tenantId}`);
+    // Firebase initialized for tenant
 
     return { app, auth, db, storage };
   } catch (error) {

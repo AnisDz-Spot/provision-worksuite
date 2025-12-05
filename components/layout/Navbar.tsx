@@ -48,7 +48,13 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
     if (!currentUser || !canNavigate) return;
 
     const trackActivity = () => {
-      updateMemberActivity(currentUser.name);
+      if (currentUser.name) {
+        updateMemberActivity({
+          memberName: currentUser.name,
+          lastActive: Date.now(),
+          status: "online",
+        });
+      }
       // Send presence heartbeat only when DB is configured
       if (!shouldUseDatabaseData()) return;
       try {

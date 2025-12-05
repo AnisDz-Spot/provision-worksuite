@@ -1,3 +1,7 @@
+# Checkpoint: Remove legacy mode selection modal and keep new design (Dec 5, 2025)
+- Removed all code related to the old mode selection modal from `app/layout.tsx`.
+- Ensured only the new onboarding and dashboard design is present.
+- Verified no legacy modal code remains.
 # Workspace Modifications Log
 
 This file tracks all code and config changes made by GitHub Copilot for easy review and revert in case of major errors.

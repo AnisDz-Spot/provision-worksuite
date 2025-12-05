@@ -147,6 +147,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     try {
       const projects = readProjects();
       projects.forEach((project) => {
+        if (!project.name) return;
         // Strip HTML tags from description
         const stripHtml = (html: string) => {
           const tmp = document.createElement("div");
@@ -154,20 +155,23 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
           return tmp.textContent || tmp.innerText || "";
         };
 
-        const cleanDescription = project.description
-          ? stripHtml(project.description)
-          : project.status;
+        const cleanDescription =
+          project.description && typeof project.description === "string"
+            ? stripHtml(project.description)
+            : typeof project.status === "string"
+              ? project.status
+              : "";
 
         results.push({
           id: `project-${project.id}`,
           type: "project",
           title: project.name,
           subtitle: "Project",
-          description: cleanDescription,
+          description: cleanDescription || undefined,
           url: `/projects/${project.id}`,
           icon: <FolderKanban className="w-4 h-4 text-blue-600" />,
           keywords: [project.name, project.owner, project.status].filter(
-            Boolean
+            (k): k is string => typeof k === "string" && Boolean(k)
           ),
         });
       });

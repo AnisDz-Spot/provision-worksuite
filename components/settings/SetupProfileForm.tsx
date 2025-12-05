@@ -10,8 +10,8 @@ interface SetupProfileFormProps {
 }
 
 export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
-    const [avatarPreview, setAvatarPreview] = useState<string>("");
-    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const router = useRouter();
   const [form, setForm] = useState({
     username: "",
@@ -77,11 +77,14 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
       });
       const data = await response.json();
       if (data.success) {
-        localStorage.setItem("pv:setupStatus", JSON.stringify({
-          databaseConfigured: true,
-          profileCompleted: true,
-          completedAt: new Date().toISOString(),
-        }));
+        localStorage.setItem(
+          "pv:setupStatus",
+          JSON.stringify({
+            databaseConfigured: true,
+            profileCompleted: true,
+            completedAt: new Date().toISOString(),
+          })
+        );
         onComplete();
         router.push("/");
       } else {

@@ -24,19 +24,24 @@ import {
 
 // DB-backed helpers
 async function dbFetchThread(user1: string, user2: string) {
-  const res = await fetch(
-    `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return [] as ChatMessage[];
-  return (data.data || []).map((row: any) => ({
-    id: String(row.id),
-    fromUser: row.from_user,
-    toUser: row.to_user,
-    message: row.message,
-    timestamp: new Date(row.created_at).getTime(),
-    read: !!row.is_read,
-  }));
+  try {
+    const res = await fetch(
+      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`
+    );
+    const data = await res.json();
+    if (!res.ok || !data?.success) return [] as ChatMessage[];
+    return (data.data || []).map((row: any) => ({
+      id: String(row.id),
+      fromUser: row.from_user,
+      toUser: row.to_user,
+      message: row.message,
+      timestamp: new Date(row.created_at).getTime(),
+      read: !!row.is_read,
+    }));
+  } catch (error) {
+    // Silently fail - API might not be available
+    return [] as ChatMessage[];
+  }
 }
 
 async function dbSendMessage(
@@ -61,18 +66,26 @@ async function dbMarkRead(currentUser: string, otherUser: string) {
 }
 
 async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
-  const res = await fetch(
-    `/api/messages/conversations?user=${encodeURIComponent(user)}`
-  );
-  const data = await res.json();
-  if (!res.ok || !data?.success) return [];
-  return (data.data || []).map((row: any) => ({
-    withUser: row.withUser,
-    lastMessage: row.lastMessage,
-    lastTimestamp: new Date(row.lastTimestamp).getTime(),
-    unreadCount: row.unreadCount || 0,
-    isOnline: false,
-  }));
+  // Don't make API call if not in database mode
+  if (!shouldUseDatabaseData()) return [];
+
+  try {
+    const res = await fetch(
+      `/api/messages/conversations?user=${encodeURIComponent(user)}`
+    );
+    const data = await res.json();
+    if (!res.ok || !data?.success) return [];
+    return (data.data || []).map((row: any) => ({
+      withUser: row.withUser,
+      lastMessage: row.lastMessage,
+      lastTimestamp: new Date(row.lastTimestamp).getTime(),
+      unreadCount: row.unreadCount || 0,
+      isOnline: false,
+    }));
+  } catch (error) {
+    // Silently fail - API might not be available in mock mode
+    return [];
+  }
 }
 
 type ChatWindowProps = {

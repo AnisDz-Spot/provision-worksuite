@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         ${name},
         ${avatarUrl || null},
         'Administrator',
-        ${timezone || 'UTC'},
+        ${timezone || "UTC"},
         'full-time',
         true,
         true,

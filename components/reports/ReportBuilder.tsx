@@ -208,7 +208,7 @@ export function ReportBuilder() {
       <p style="color: #6b7280; margin: 8px 0;">${project.description || "No description"}</p>
       <div style="display: flex; gap: 24px; margin-top: 16px; font-size: 14px;">
         <div><strong>Owner:</strong> ${project.owner}</div>
-        <div><strong>Deadline:</strong> ${new Date(project.deadline).toLocaleDateString()}</div>
+        <div><strong>Deadline:</strong> ${project.deadline ? new Date(project.deadline).toLocaleDateString() : "No deadline"}</div>
         <div><strong>Tasks:</strong> ${completedTasks}/${tasks.length} completed</div>
       </div>
 `;
@@ -238,7 +238,12 @@ export function ReportBuilder() {
       }
 
       // Team Section
-      if (config.includeSections.team && project.members?.length > 0) {
+      if (
+        config.includeSections.team &&
+        project.members &&
+        Array.isArray(project.members) &&
+        project.members.length > 0
+      ) {
         html += `
       <div style="margin-top: 20px;">
         <h4 style="margin: 0 0 8px 0; font-size: 16px;">Team Members</h4>
@@ -286,7 +291,7 @@ export function ReportBuilder() {
           <td>${tasks.length}</td>
           <td>${completed}</td>
           <td>${progress}%</td>
-          <td>${new Date(project.deadline).toLocaleDateString()}</td>
+          <td>${project.deadline ? new Date(project.deadline).toLocaleDateString() : "No deadline"}</td>
         </tr>
 `;
       });

@@ -39,22 +39,58 @@ function DataSourceTab() {
   const [error, setError] = useState<string>("");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  // License activation state
+  const [license, setLicense] = useState("");
+  const [licenseLoading, setLicenseLoading] = useState(false);
+  const [licenseValid, setLicenseValid] = useState(false);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
 
   const handleDataModeChange = (mode: "real" | "mock") => {
     setDataMode(mode);
     setError("");
+    if (mode === "real") {
+      setLicenseValid(false);
+      setLicense("");
+      setLicenseError(null);
+    }
+  };
+
+  const handleCheckLicense = async () => {
+    setLicenseLoading(true);
+    setLicenseError(null);
+    try {
+      const resp = await fetch("/api/check-license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serial: license }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setLicenseValid(true);
+      } else {
+        setLicenseError(data.error || "Invalid serial number");
+        setLicenseValid(false);
+      }
+    } catch (err) {
+      setLicenseError("Network or server error");
+      setLicenseValid(false);
+    } finally {
+      setLicenseLoading(false);
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
     setError("");
     localStorage.setItem("pv:dataMode", dataMode);
+
+    // Navigate based on selected mode
     if (dataMode === "real") {
-      // Redirect to license page and block config until license is valid
-      window.location.replace("/settings/database");
+      router.push("/settings/database");
     } else {
       router.push("/");
     }
+
     setSaving(false);
   };
 
@@ -74,6 +110,8 @@ function DataSourceTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Hide left navbar during mode selection, license, and db config */}
+      <style>{`.sidebar, .Navbar { display: none !important; }`}</style>
       <div>
         <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
         <p className="text-sm text-muted-foreground mb-3">
@@ -100,6 +138,22 @@ function DataSourceTab() {
           <div className="mt-3 text-xs text-muted-foreground">
             Fake Admin: <span className="font-mono">admin@provision.com</span> /{" "}
             <span className="font-mono">password1234567890</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-4"
+              onClick={() => {
+                setDataMode("real");
+                setLicenseValid(false);
+                setLicense("");
+                setLicenseError(null);
+                // Persist mode change BEFORE navigation
+                localStorage.setItem("pv:dataMode", "real");
+                router.push("/settings/database");
+              }}
+            >
+              Switch to Live Mode
+            </Button>
           </div>
         )}
         {error && (
@@ -114,6 +168,24 @@ function DataSourceTab() {
           >
             {saving ? "Saving..." : "Save & Continue"}
           </Button>
+          {dataMode === "real" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-4"
+              onClick={() => {
+                setDataMode("mock");
+                setLicenseValid(false);
+                setLicense("");
+                setLicenseError(null);
+                // Persist mode change BEFORE navigation
+                localStorage.setItem("pv:dataMode", "mock");
+                router.push("/settings?tab=dataSource");
+              }}
+            >
+              Revert to Dummy Mode
+            </Button>
+          )}
         </div>
       </div>
     </div>

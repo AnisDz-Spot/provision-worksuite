@@ -52,7 +52,6 @@ export default function DatabaseSettingsPage() {
     message: string;
   } | null>(null);
   const isConnectionTested = !!testResult?.success;
-  // For the Prisma push command (must be after postgresUrl is defined)
   const pushCmd = `DATABASE_URL=${postgresUrl || "your_connection_string"} npx prisma db push`;
   const handleCopyCommand = () => {
     if (commandRef.current) {
@@ -228,32 +227,34 @@ export default function DatabaseSettingsPage() {
           before configuring your database.
         </p>
       </div>
-      {!licenseValid && (
-        <Card className="p-6 max-w-md mx-auto mb-8">
-          <div className="space-y-4">
-            <label className="block text-sm font-semibold mb-2">
-              Serial Number
-            </label>
-            <Input
-              type="text"
-              placeholder="Enter your serial number"
-              value={license}
-              onChange={(e) => setLicense(e.target.value)}
-              className="font-mono text-sm"
-            />
-            <Button
-              onClick={handleCheckLicense}
-              disabled={!license || licenseLoading}
-              variant="primary"
-            >
-              {licenseLoading ? "Checking..." : "Check License"}
-            </Button>
-            {licenseError && (
-              <div className="text-red-500 text-sm mt-2">{licenseError}</div>
-            )}
-          </div>
-        </Card>
-      )}
+      <Card className="p-6 max-w-md mx-auto mb-8">
+        <div className="space-y-4">
+          <label className="block text-sm font-semibold mb-2">
+            Serial Number
+          </label>
+          <Input
+            type="text"
+            placeholder="Enter your serial number"
+            value={license}
+            onChange={(e) => setLicense(e.target.value)}
+            className="font-mono text-sm"
+          />
+          <Button
+            onClick={handleCheckLicense}
+            disabled={!license || licenseLoading || licenseValid}
+            variant="primary"
+          >
+            {licenseLoading
+              ? "Checking..."
+              : licenseValid
+                ? "Activated"
+                : "Check License"}
+          </Button>
+          {licenseError && (
+            <div className="text-red-500 text-sm mt-2">{licenseError}</div>
+          )}
+        </div>
+      </Card>
       {licenseValid && (
         <>
           <div className="mb-8">
@@ -268,23 +269,20 @@ export default function DatabaseSettingsPage() {
                   "border rounded-lg px-4 py-3 flex flex-col items-center justify-center w-full h-full min-h-[170px] cursor-pointer transition-all duration-150 " +
                   (dbType === type.key
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900"
-                    : "border-gray-300 bg-white dark:bg-gray-800 hover:border-blue-400");
+                    : "border-gray-300 bg-white dark:bg-gray-800");
                 return (
-                  <button
+                  <div
                     key={type.key}
-                    type="button"
                     className={btnClass}
-                    title={type.hint}
                     onClick={() => setDbType(type.key)}
+                    title={type.example}
                   >
-                    <span className="text-3xl mb-2">{type.icon}</span>
-                    <span className="font-semibold mb-1 text-gray-900 dark:text-gray-100">
-                      {type.label}
+                    <span className="text-2xl mb-2">{type.icon}</span>
+                    <span className="font-semibold mb-1">{type.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {type.hint}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-300 text-center">
-                      {type.example}
-                    </span>
-                  </button>
+                  </div>
                 );
               })}
             </div>
