@@ -1,3 +1,90 @@
+export type User = {
+  userId: string;
+  email: string;
+  passwordHash: string;
+  fullName: string;
+  avatarUrl?: string;
+  isActive: boolean;
+  systemRole: string;
+  jobTitle?: string;
+  department?: string;
+  timezone: string;
+  themePreference?: string;
+  phoneNumber?: string;
+  slackHandle?: string;
+  hourlyCostRate: number;
+  hourlyBillableRate: number;
+  isBillable: boolean;
+  employmentType: string;
+  defaultWorkingHoursPerDay: number;
+  hireDate?: string;
+  terminationDate?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export async function createUser(
+  user: Omit<User, "userId" | "createdAt" | "updatedAt">
+) {
+  const result = await sql`
+    INSERT INTO users (
+      email, password_hash, full_name, avatar_url, is_active, system_role, job_title, department, timezone,
+      theme_preference, phone_number, slack_handle, hourly_cost_rate, hourly_billable_rate, is_billable,
+      employment_type, default_working_hours_per_day, hire_date, termination_date
+    ) VALUES (
+        ${user.email}, ${user.passwordHash}, ${user.fullName}, ${user.avatarUrl || null}, ${user.isActive},
+      ${user.systemRole}, ${user.jobTitle || null}, ${user.department || null}, ${user.timezone},
+      ${user.themePreference || 'light'}, ${user.phoneNumber || null}, ${user.slackHandle || null},
+      ${user.hourlyCostRate}, ${user.hourlyBillableRate}, ${user.isBillable}, ${user.employmentType},
+      ${user.defaultWorkingHoursPerDay}, ${user.hireDate || null}, ${user.terminationDate || null}
+    )
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
+export async function updateUser(userId: string, updates: Partial<User>) {
+  const result = await sql`
+    UPDATE users SET
+      email = COALESCE(${updates.email}, email),
+        password_hash = COALESCE(${updates.passwordHash}, password_hash),
+      full_name = COALESCE(${updates.fullName}, full_name),
+      avatar_url = COALESCE(${updates.avatarUrl}, avatar_url),
+      is_active = COALESCE(${updates.isActive}, is_active),
+      system_role = COALESCE(${updates.systemRole}, system_role),
+      job_title = COALESCE(${updates.jobTitle}, job_title),
+      department = COALESCE(${updates.department}, department),
+      timezone = COALESCE(${updates.timezone}, timezone),
+      theme_preference = COALESCE(${updates.themePreference}, theme_preference),
+      phone_number = COALESCE(${updates.phoneNumber}, phone_number),
+      slack_handle = COALESCE(${updates.slackHandle}, slack_handle),
+      hourly_cost_rate = COALESCE(${updates.hourlyCostRate}, hourly_cost_rate),
+      hourly_billable_rate = COALESCE(${updates.hourlyBillableRate}, hourly_billable_rate),
+      is_billable = COALESCE(${updates.isBillable}, is_billable),
+      employment_type = COALESCE(${updates.employmentType}, employment_type),
+      default_working_hours_per_day = COALESCE(${updates.defaultWorkingHoursPerDay}, default_working_hours_per_day),
+      hire_date = COALESCE(${updates.hireDate}, hire_date),
+      termination_date = COALESCE(${updates.terminationDate}, termination_date),
+      updated_at = NOW()
+    WHERE user_id = ${userId}
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
+export async function getUserById(userId: string) {
+  const result = await sql`SELECT * FROM users WHERE user_id = ${userId}`;
+  return result.rows[0];
+}
+
+export async function getAllUsers() {
+  const result = await sql`SELECT * FROM users ORDER BY updated_at DESC`;
+  return result.rows;
+}
+
+export async function deleteUser(userId: string) {
+  await sql`DELETE FROM users WHERE user_id = ${userId}`;
+}
 import { sql } from "@vercel/postgres";
 
 export type Project = {

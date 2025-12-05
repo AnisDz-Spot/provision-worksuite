@@ -30,14 +30,30 @@ CREATE TABLE IF NOT EXISTS invoices (
 
 CREATE INDEX IF NOT EXISTS idx_invoices_project_id ON invoices(project_id);
 -- Users table
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  uid VARCHAR(255) UNIQUE NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  name VARCHAR(255) NOT NULL,
+  user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
   avatar_url TEXT,
-  role VARCHAR(50) DEFAULT 'member',
-  password_hash VARCHAR(255),
+  is_active BOOLEAN DEFAULT TRUE,
+  system_role VARCHAR(50) NOT NULL,
+  job_title VARCHAR(100),
+  department VARCHAR(100),
+  timezone VARCHAR(50) NOT NULL,
+  theme_preference VARCHAR(20) DEFAULT 'light',
+  phone_number VARCHAR(20),
+  slack_handle VARCHAR(50),
+  hourly_cost_rate NUMERIC(10, 2) DEFAULT 0.00,
+  hourly_billable_rate NUMERIC(10, 2) DEFAULT 0.00,
+  is_billable BOOLEAN DEFAULT TRUE,
+  employment_type VARCHAR(50) NOT NULL,
+  default_working_hours_per_day NUMERIC(4, 2) DEFAULT 8.00,
+  hire_date DATE,
+  termination_date DATE,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );

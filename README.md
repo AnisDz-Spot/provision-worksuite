@@ -212,6 +212,10 @@ This section explains how purchasers can install or host the app.
    - Go to **Query** tab
    - Copy entire content from `lib/db/schema.sql` in this repository
    - Paste and click **Run**
+   - Or, from your terminal, run:
+     ```bash
+     psql <your-db-url> -f lib/db/schema.sql
+     ```
 
 4. **First-Time Setup** (One-time only):
    - Visit your deployed URL
@@ -219,19 +223,15 @@ This section explains how purchasers can install or host the app.
    - You'll be redirected to **Database Configuration** page
    - Enter your Postgres URL and Blob Token (found in Vercel Storage → .env.local tabs)
    - Click **Test Connection** → Should show green ✅
-   - Click **Save & Continue**
+   - Click **Save & Continue** to store your credentials
    - Complete your **Admin Profile**:
-     - Username, full name
+     - Full name
      - Your real email address (confirm it)
-     - Your secure password (confirm it)
-     - Optional: Upload avatar
+     - Your secure password (confirm it; will be securely hashed)
+     - Optional: Upload avatar (will be stored and displayed)
    - Click **Complete Setup**
    - You'll be logged out automatically
-
-5. **Login with Your New Account**:
-   - Login with your newly created email and password
-   - The temporary `anis@provision.com` login is now disabled
-   - Start using ProVision WorkSuite!
+   - Log in with your new account to access all features
 
 ### Database Configuration
 

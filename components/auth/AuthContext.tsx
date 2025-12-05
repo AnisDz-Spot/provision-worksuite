@@ -9,6 +9,7 @@ type User = {
   email: string;
   role: string;
   isAdmin: boolean;
+  avatarUrl?: string;
   password?: string;
 };
 

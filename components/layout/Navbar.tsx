@@ -147,10 +147,10 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
               }}
               className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             >
-              {currentUser?.email && user.avatarDataUrl ? (
+              {currentUser?.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={user.avatarDataUrl}
+                  src={currentUser.avatarUrl}
                   alt="Avatar"
                   className="w-8 h-8 rounded-full object-cover border"
                 />
