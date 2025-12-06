@@ -333,8 +333,13 @@ export default function OnboardingPage() {
               <button
                 onClick={async () => {
                   setDbError(null);
-                  if (!dbUrl.startsWith("postgres://")) {
-                    setDbError("Invalid connection string format");
+                  if (
+                    !dbUrl.startsWith("postgres://") &&
+                    !dbUrl.startsWith("postgresql://")
+                  ) {
+                    setDbError(
+                      "Invalid connection string format. Must start with postgres:// or postgresql://"
+                    );
                     return;
                   }
                   await new Promise((resolve) => setTimeout(resolve, 1000));
