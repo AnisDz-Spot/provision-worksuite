@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
+export const dynamic = "force-dynamic";
+
 async function ensureTable() {
   await sql`CREATE TABLE IF NOT EXISTS time_logs (
     id bigserial primary key,

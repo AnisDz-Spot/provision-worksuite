@@ -1,13 +1,25 @@
-import { put, del, list } from "@vercel/blob";
+import { LocalStorageProvider } from "./local";
+import { VercelBlobProvider } from "./vercel-provider";
+import { StorageProvider, UploadProgress } from "./types";
 
-export type UploadProgress = {
-  loaded: number;
-  total: number;
-  progress: number;
+// Factory to get the active provider
+// Default to Vercel Blob if not specified, or Local if specified
+const getProvider = (): StorageProvider => {
+  const provider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
+  // Note: We use NEXT_PUBLIC_ because this might be called on client side (though abstract methods usually call API)
+  // Actually, Vercel Blob `put` works on client side? Yes, if token is present.
+  // My LocalStorageProvider works on client side via API.
+
+  if (provider === "local") {
+    return new LocalStorageProvider();
+  }
+  return new VercelBlobProvider();
 };
 
+const provider = getProvider();
+
 // ============================================================================
-// FILE UPLOADS
+// CORE OPERATIONS
 // ============================================================================
 
 export async function uploadFile(
@@ -15,41 +27,47 @@ export async function uploadFile(
   path: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-  try {
-    // Simulate progress if callback provided
-    if (onProgress) {
-      onProgress({ loaded: 0, total: file.size, progress: 0 });
-    }
+  // Ensure path has filename if not provided?
+  // Usually path is folder + filename.
+  // My previous code: `put(${path}/${file.name})`
+  // Let's standardise: path argument should be the FULL path including filename?
+  // Or folder?
+  // In vercel-blob.ts: `put(${path}/${file.name}` so input 'path' was a folder.
+  // In LocalStorageProvider: `formData.append("path", path)` -> route uses `uploads/path`.
+  // If I pass "avatars/user1" to uploadFile, I want it to be "avatars/user1/filename.jpg" or just "avatars/user1.jpg"?
 
-    const blob = await put(`${path}/${file.name}`, file, {
-      access: "public",
-    });
+  // Existing usage: `uploadFile(file, "avatars/userId", ...)` (from vercel-blob.ts)
+  // and `put` uses `${path}/${file.name}`.
+  // So 'path' meant 'directory'.
 
-    if (onProgress) {
-      onProgress({ loaded: file.size, total: file.size, progress: 100 });
-    }
-
-    return blob.url;
-  } catch (error) {
-    console.error("Upload failed:", error);
-    throw new Error("Failed to upload file");
-  }
+  // let's follow that convention
+  const fullPath = `${path}/${file.name}`;
+  return provider.uploadFile(file, fullPath, onProgress);
 }
+
+export async function deleteFile(url: string): Promise<void> {
+  return provider.deleteFile(url);
+}
+
+export async function listFiles(path: string) {
+  return provider.listFiles(path);
+}
+
+// ============================================================================
+// HIGH-LEVEL HELPERS
+// ============================================================================
 
 export async function uploadAvatar(
   file: File,
   userId: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-  // Validate file
   if (!file.type.startsWith("image/")) {
     throw new Error("File must be an image");
   }
-
   if (file.size > 5 * 1024 * 1024) {
     throw new Error("Image must be less than 5MB");
   }
-
   return uploadFile(file, `avatars/${userId}`, onProgress);
 }
 
@@ -58,11 +76,9 @@ export async function uploadProjectDocument(
   projectId: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-  // Validate file size
   if (file.size > 10 * 1024 * 1024) {
     throw new Error("File must be less than 10MB");
   }
-
   return uploadFile(file, `projects/${projectId}`, onProgress);
 }
 
@@ -74,31 +90,7 @@ export async function uploadTaskAttachment(
   if (file.size > 10 * 1024 * 1024) {
     throw new Error("File must be less than 10MB");
   }
-
   return uploadFile(file, `tasks/${taskId}`, onProgress);
-}
-
-// ============================================================================
-// FILE OPERATIONS
-// ============================================================================
-
-export async function deleteFile(url: string): Promise<void> {
-  try {
-    await del(url);
-  } catch (error) {
-    console.error("Delete failed:", error);
-    throw new Error("Failed to delete file");
-  }
-}
-
-export async function listFiles(path: string) {
-  try {
-    const { blobs } = await list({ prefix: path });
-    return blobs;
-  } catch (error) {
-    console.error("List files failed:", error);
-    throw new Error("Failed to list files");
-  }
 }
 
 // ============================================================================

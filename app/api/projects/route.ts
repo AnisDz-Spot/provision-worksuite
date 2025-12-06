@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAllProjects } from "@/lib/db/postgres";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const projects = await getAllProjects();

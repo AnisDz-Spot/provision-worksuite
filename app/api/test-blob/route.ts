@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { uploadFile } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,25 +29,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload to Vercel Blob
-    const blob = await put(`test-uploads/${file.name}`, file, {
-      access: "public",
-    });
+    // Upload using unified provider
+    // path 'test-uploads' will result in 'test-uploads/filename'
+    const url = await uploadFile(file, "test-uploads");
 
     return NextResponse.json({
       success: true,
       message: "File uploaded successfully!",
-      url: blob.url,
+      url: url,
       fileName: file.name,
       fileSize: file.size,
       contentType: file.type,
+      provider: process.env.STORAGE_PROVIDER || "vercel-blob",
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-        hint: "Make sure Blob storage is set up and BLOB_READ_WRITE_TOKEN is configured",
+        hint: "Check your storage configuration",
       },
       { status: 500 }
     );
@@ -54,7 +56,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: "Blob storage test endpoint. Use POST to upload a file.",
+    message: "Storage test endpoint. Use POST to upload a file.",
+    provider: process.env.STORAGE_PROVIDER || "vercel-blob",
     usage: 'Send a multipart/form-data request with a "file" field',
   });
 }

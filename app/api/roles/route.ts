@@ -3,6 +3,8 @@ import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { getAllRoles, upsertRole } from "@/lib/db/roles";
 import { sql } from "@vercel/postgres";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(

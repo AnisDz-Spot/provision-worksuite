@@ -7,10 +7,13 @@ import ws from "ws";
 neonConfig.webSocketConstructor = ws;
 
 // Validate DATABASE_URL exists
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL is not defined. Please set it in your .env file."
+// Validate DATABASE_URL exists (or use dummy for build)
+const connectionString =
+  process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
+
+if (!process.env.DATABASE_URL) {
+  console.warn(
+    "⚠️ DATABASE_URL is not defined. Using dummy connection for build/static generation."
   );
 }
 

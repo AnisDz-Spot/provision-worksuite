@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
+import { getAuthenticatedUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   // Prevent DB access if not configured
@@ -9,25 +12,46 @@ export async function GET(request: Request) {
       { status: 503 }
     );
   }
-  const { searchParams } = new URL(request.url);
-  const user = searchParams.get("user");
+
+  const user = await getAuthenticatedUser();
   if (!user) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const targetUser = searchParams.get("user");
+  if (!targetUser) {
     return NextResponse.json(
       { success: false, error: "Missing user" },
       { status: 400 }
     );
   }
+
+  // Enforce that the requester is the user whose conversations are being requested
+  if (user.uid !== targetUser) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Forbidden: You can only view your own conversations",
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     // Aggregate conversations: last message and unread count per other user
     const result = await sql`
       WITH conv AS (
         SELECT 
-          CASE WHEN from_user = ${user} THEN to_user ELSE from_user END AS other_user,
+          CASE WHEN from_user = ${targetUser} THEN to_user ELSE from_user END AS other_user,
           message,
           created_at,
-          (CASE WHEN to_user = ${user} AND is_read = false THEN 1 ELSE 0 END) AS unread_unit
+          (CASE WHEN to_user = ${targetUser} AND is_read = false THEN 1 ELSE 0 END) AS unread_unit
         FROM messages
-        WHERE from_user = ${user} OR to_user = ${user}
+        WHERE from_user = ${targetUser} OR to_user = ${targetUser}
       )
       SELECT other_user,
              SUM(unread_unit)::int AS unread_count,

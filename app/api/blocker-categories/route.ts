@@ -5,6 +5,8 @@ import {
   upsertBlockerCategories,
 } from "@/lib/db/blockers";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(

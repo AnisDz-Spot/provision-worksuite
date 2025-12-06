@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  app:
+    container_name: provision-worksuite-app
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://provision:provision_password@postgres:5432/provision_db
+      - NEXT_PUBLIC_STORAGE_PROVIDER=local
+      # Add your Firebase credentials here
+      # - NEXT_PUBLIC_FIREBASE_API_KEY=...
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      - postgres
+
+  postgres:
+    container_name: provision-worksuite-db
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=provision
+      - POSTGRES_PASSWORD=provision_password
+      - POSTGRES_DB=provision_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  uploads_data:

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { getAllBlockers, createBlocker } from "@/lib/db/blockers";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json(

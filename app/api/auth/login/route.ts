@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 import bcrypt from "bcryptjs";
+import { signToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,8 +50,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return user data (without password)
-    return NextResponse.json({
+    // Generate JWT token
+    const token = await signToken({
+      uid: user.uid,
+      email: user.email,
+      role: user.role,
+    });
+
+    // Create response with user data
+    const response = NextResponse.json({
       success: true,
       user: {
         uid: user.uid,
@@ -60,6 +68,19 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
     });
+
+    // Set HTTP-only cookie
+    response.cookies.set({
+      name: "auth-token",
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24, // 1 day
+      path: "/",
+      sameSite: "strict",
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

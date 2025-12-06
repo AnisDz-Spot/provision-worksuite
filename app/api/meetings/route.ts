@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
+export const dynamic = "force-dynamic";
+
 async function ensureMeetingsTable() {
   await sql`
     CREATE TABLE IF NOT EXISTS meetings (

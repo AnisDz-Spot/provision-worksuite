@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "@vercel/postgres";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const result = await sql`SELECT uid, status, last_seen FROM presence`;
