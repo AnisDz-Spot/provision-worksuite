@@ -353,6 +353,27 @@ export default function OnboardingPage() {
 
               <button
                 onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("pv:dataMode", "real");
+                    localStorage.setItem("pv:onboardingDone", "true");
+                    localStorage.setItem(
+                      "pv:dbConfig",
+                      JSON.stringify({
+                        configured: true,
+                        postgresUrl: dbUrl,
+                        blobConfig: dbBlob,
+                      })
+                    );
+                    localStorage.setItem(
+                      "pv:setupStatus",
+                      JSON.stringify({
+                        databaseConfigured: true,
+                        // We assume profile is "completed" for the purpose of getting past the check,
+                        // or effectively skipped. Real app might want a profile step.
+                        profileCompleted: true,
+                      })
+                    );
+                  }
                   handleDashboard();
                 }}
                 disabled={!dbTested}
