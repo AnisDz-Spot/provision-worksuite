@@ -19,8 +19,9 @@ import {
   upsertTask,
   getMilestonesByProject,
 } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 type Project = {
   id: string;
@@ -35,18 +36,44 @@ type Project = {
   tags?: string[];
   isTemplate?: boolean;
   archived?: boolean;
+  category?: string;
+  categories?: string[];
+  client?: string;
 };
 
 export function ProjectGrid() {
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { showToast } = useToast();
-  const [query, setQuery] = React.useState("");
-  const [status, setStatus] = React.useState("all");
-  const [sortBy, setSortBy] = React.useState("name-asc");
-  const [starredOnly, setStarredOnly] = React.useState(false);
-  const [clientFilter, setClientFilter] = React.useState("all");
+
+  const [query, setQuery] = React.useState(searchParams.get("query") || "");
+  const [status, setStatus] = React.useState(
+    searchParams.get("status") || "all"
+  );
+  const [sortBy, setSortBy] = React.useState(
+    searchParams.get("sort") || "name-asc"
+  );
+  const [starredOnly, setStarredOnly] = React.useState(
+    searchParams.get("starred") === "true"
+  );
+  const [clientFilter, setClientFilter] = React.useState(
+    searchParams.get("client") || "all"
+  );
+  const [categoryFilter, setCategoryFilter] = React.useState(
+    searchParams.get("category") || "all"
+  );
+  const [tagFilter, setTagFilter] = React.useState(
+    searchParams.get("tag") || "all"
+  );
+
+  const [currentPage, setCurrentPage] = React.useState(
+    parseInt(searchParams.get("page") || "1")
+  );
+  const itemsPerPage = 9;
+
   const [menuOpen, setMenuOpen] = React.useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
     id: string;
@@ -78,6 +105,27 @@ export function ProjectGrid() {
     setSavedViews(getSavedViews());
   }, []);
 
+  // Sync state to URL
+  const updateUrl = React.useCallback(
+    (params: Record<string, string | null>) => {
+      const newParams = new URLSearchParams(searchParams.toString());
+      Object.entries(params).forEach(([key, value]) => {
+        if (
+          value === null ||
+          value === "" ||
+          value === "all" ||
+          value === "false"
+        ) {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, value);
+        }
+      });
+      router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
   const loadProjects = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -105,6 +153,7 @@ export function ProjectGrid() {
                 ],
                 cover: "",
                 tags: ["design", "web"],
+                category: "Web Development",
               },
               {
                 id: "p2",
@@ -116,6 +165,7 @@ export function ProjectGrid() {
                 members: [{ name: "Bob" }, { name: "Alice" }],
                 cover: "",
                 tags: ["ops"],
+                category: "Internal Ops",
               },
               {
                 id: "p3",
@@ -128,6 +178,7 @@ export function ProjectGrid() {
                 members: [{ name: "Carol" }],
                 cover: "",
                 tags: [],
+                category: "Marketing",
               },
             ];
       setProjects(seed);
@@ -276,7 +327,14 @@ export function ProjectGrid() {
       const clientOk =
         clientFilter === "all" ||
         ((p as any).client || "").toLowerCase() === clientFilter.toLowerCase();
-      return matches && statusOk && starOk && clientOk;
+
+      const categoryOk =
+        categoryFilter === "all" ||
+        (p.category || "") === categoryFilter ||
+        (p.categories || []).includes(categoryFilter);
+      const tagOk = tagFilter === "all" || (p.tags || []).includes(tagFilter);
+
+      return matches && statusOk && starOk && clientOk && categoryOk && tagOk;
     });
     const sorted = [...base].sort((a, b) => {
       switch (sortBy) {
@@ -295,63 +353,171 @@ export function ProjectGrid() {
       }
     });
     return sorted;
-  }, [projects, query, status, sortBy, starredOnly, clientFilter]);
+  }, [
+    projects,
+    query,
+    status,
+    sortBy,
+    starredOnly,
+    clientFilter,
+    categoryFilter,
+    tagFilter,
+  ]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedProjects = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [query, status, starredOnly, clientFilter, categoryFilter, tagFilter]);
+
+  // Extract all categories and tags for filter dropdowns
+  const allCategories = React.useMemo(() => {
+    const raw = projects.map((p) => [p.category, ...(p.categories || [])]);
+    const flattened = raw.flat().filter(Boolean) as string[];
+    return Array.from(new Set(flattened));
+  }, [projects]);
+
+  const allTags = React.useMemo(() => {
+    const tags = new Set<string>();
+    projects.forEach((p) => p.tags?.forEach((t) => tags.add(t)));
+    return Array.from(tags);
+  }, [projects]);
+
+  const allStatuses = React.useMemo(() => {
+    const statuses = new Set<string>();
+    projects.forEach((p) => {
+      if (p.status) statuses.add(p.status);
+    });
+    return Array.from(statuses);
+  }, [projects]);
+
+  const allClients = React.useMemo(
+    () =>
+      Array.from(
+        new Set(projects.map((p) => (p as any).client).filter(Boolean))
+      ) as string[],
+    [projects]
+  );
 
   return (
     <>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-3 border rounded-xl mb-4 bg-card">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search projects..."
-          className="w-64 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-        />
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-        >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="paused">Paused</option>
-          <option value="in progress">In Progress</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-        >
-          <option value="name-asc">Name ↑</option>
-          <option value="name-desc">Name ↓</option>
-          <option value="deadline-asc">Deadline ↑</option>
-          <option value="deadline-desc">Deadline ↓</option>
-          <option value="starred">Starred first</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={starredOnly}
-            onChange={(e) => setStarredOnly(e.target.checked)}
-            className="cursor-pointer"
-          />
-          Starred only
+        <label htmlFor="search-projects" className="sr-only">
+          Search
         </label>
-        <select
-          value={clientFilter}
-          onChange={(e) => setClientFilter(e.target.value)}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-        >
-          <option value="all">All clients</option>
-          {Array.from(
-            new Set(projects.map((p) => (p as any).client).filter(Boolean))
-          ).map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <input
+          id="search-projects"
+          name="query"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            updateUrl({ query: e.target.value });
+          }}
+          placeholder="Search projects..."
+          className="w-48 lg:w-64 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+        />
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Dynamic Status Filter */}
+          <select
+            id="filter-status"
+            name="status"
+            aria-label="Filter by Status"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              updateUrl({ status: e.target.value });
+            }}
+            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
+          >
+            <option value="all">Status: All</option>
+            {allStatuses.map((s) => (
+              <option key={s} value={s.toLowerCase()}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          <select
+            id="filter-category"
+            name="category"
+            aria-label="Filter by Category"
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              updateUrl({ category: e.target.value });
+            }}
+            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
+          >
+            <option value="all">Category: All</option>
+            {allCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            id="filter-tag"
+            name="tag"
+            aria-label="Filter by Tag"
+            value={tagFilter}
+            onChange={(e) => {
+              setTagFilter(e.target.value);
+              updateUrl({ tag: e.target.value });
+            }}
+            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
+          >
+            <option value="all">Tag: All</option>
+            {allTags.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+
+          <select
+            id="filter-client"
+            name="client"
+            aria-label="Filter by Client"
+            value={clientFilter}
+            onChange={(e) => {
+              setClientFilter(e.target.value);
+              updateUrl({ client: e.target.value });
+            }}
+            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
+          >
+            <option value="all">Client: All</option>
+            {allClients.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            id="sort-projects"
+            name="sort"
+            aria-label="Sort Projects"
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              updateUrl({ sort: e.target.value });
+            }}
+            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
+          >
+            <option value="name-asc">Sort: Name (A-Z)</option>
+            <option value="name-desc">Sort: Name (Z-A)</option>
+            <option value="deadline-asc">Sort: Deadline (Earliest)</option>
+            <option value="deadline-desc">Sort: Deadline (Latest)</option>
+            <option value="starred">Sort: Starred</option>
+          </select>
+        </div>
         <div className="ml-auto flex items-center gap-2">
           {!selectMode && (
             <Button
@@ -368,6 +534,9 @@ export function ProjectGrid() {
           {selectMode && (
             <>
               <select
+                id="bulk-status"
+                name="bulkStatus"
+                aria-label="Set status for selected projects"
                 className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 onChange={(e) => {
                   const val = e.target.value as Project["status"];
@@ -425,6 +594,9 @@ export function ProjectGrid() {
           {savedViews.length > 0 && (
             <div className="relative">
               <select
+                id="load-view"
+                name="loadView"
+                aria-label="Load Saved View"
                 className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm pr-8"
                 onChange={(e) => {
                   const v = savedViews.find(
@@ -454,7 +626,12 @@ export function ProjectGrid() {
             </Button>
           ) : (
             <div className="flex items-center gap-2">
+              <label htmlFor="view-name" className="sr-only">
+                View Name
+              </label>
               <input
+                id="view-name"
+                name="viewName"
                 className="w-32 rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm"
                 placeholder="View name"
                 value={viewName}
@@ -484,9 +661,19 @@ export function ProjectGrid() {
             onClick={() => {
               setQuery("");
               setStatus("all");
+              updateUrl({
+                query: "",
+                status: null,
+                category: null,
+                tag: null,
+                client: null,
+                starred: null,
+              });
               setSortBy("name-asc");
               setStarredOnly(false);
               setClientFilter("all");
+              setCategoryFilter("all");
+              setTagFilter("all");
             }}
           >
             Reset
@@ -535,424 +722,504 @@ export function ProjectGrid() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((p) => {
-            const totalMembers = (p.members || []).length;
-            const fallbackProgress =
-              p.status === "Completed"
-                ? 100
-                : p.status === "Active"
-                  ? 65
-                  : p.status === "In Progress"
-                    ? 40
-                    : 20;
-            const daysLeft = p.deadline
-              ? Math.max(
-                  0,
-                  Math.ceil(
-                    (new Date(p.deadline).getTime() - Date.now()) /
-                      (1000 * 60 * 60 * 24)
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedProjects.map((p) => {
+              const totalMembers = (p.members || []).length;
+              const fallbackProgress =
+                p.status === "Completed"
+                  ? 100
+                  : p.status === "Active"
+                    ? 65
+                    : p.status === "In Progress"
+                      ? 40
+                      : 20;
+              const daysLeft = p.deadline
+                ? Math.max(
+                    0,
+                    Math.ceil(
+                      (new Date(p.deadline).getTime() - Date.now()) /
+                        (1000 * 60 * 60 * 24)
+                    )
                   )
-                )
-              : null;
-            const health = calculateProjectHealth({
-              id: p.id,
-              deadline: p.deadline,
-              status: p.status,
-            });
-            // Snapshot health (once per day per project)
-            try {
-              snapshotHealth(p.id, health.score);
-            } catch {}
-            const filesCount = getProjectFiles(p.id).length;
-            const taskStats = getTaskCompletionForProject(p.id);
-            const hasTasks = taskStats.total > 0;
-            const progress = hasTasks ? taskStats.percent : fallbackProgress;
+                : null;
+              const health = calculateProjectHealth({
+                id: p.id,
+                deadline: p.deadline,
+                status: p.status,
+              });
+              // Snapshot health (once per day per project)
+              try {
+                snapshotHealth(p.id, health.score);
+              } catch {}
+              const filesCount = getProjectFiles(p.id).length;
+              const taskStats = getTaskCompletionForProject(p.id);
+              const hasTasks = taskStats.total > 0;
+              const progress = hasTasks ? taskStats.percent : fallbackProgress;
 
-            return (
-              <Card
-                key={p.id}
-                className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
-                onClick={() => router.push(`/projects/${p.id}`)}
-              >
-                {selectMode && (
-                  <div className="absolute top-2 left-2 z-20">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(p.id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (e.target.checked) next.add(p.id);
-                          else next.delete(p.id);
-                          return next;
-                        });
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-                {/* Gradient overlay (visual only, ignore pointer events) */}
-                <div className="absolute inset-0 pointer-events-none bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                {/* Cover with overlay gradient */}
-                <div className="relative h-36 bg-linear-to-br from-primary/20 to-accent/30 overflow-hidden">
-                  {p.cover ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={p.cover}
-                        alt={p.name}
-                        className="w-full h-full object-cover"
+              return (
+                <Card
+                  key={p.id}
+                  className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
+                  onClick={() => router.push(`/projects/${p.id}`)}
+                >
+                  {selectMode && (
+                    <div className="absolute top-2 left-2 z-20">
+                      <input
+                        id={`select-${p.id}`}
+                        name={`select_${p.id}`}
+                        aria-label={`Select ${p.name}`}
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(p.id);
+                            else next.delete(p.id);
+                            return next;
+                          });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                       />
-                      <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="text-6xl font-bold text-primary/10">
-                        {p.name.charAt(0).toUpperCase()}
-                      </div>
                     </div>
                   )}
+                  {/* Gradient overlay (visual only, ignore pointer events) */}
+                  <div className="absolute inset-0 pointer-events-none bg-linear-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  {/* Floating action buttons */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1">
-                    <button
-                      className={`p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
-                      title={p.starred ? "Unstar" : "Star"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStar(p.id);
-                      }}
-                    >
-                      <Star
-                        className="w-4 h-4"
-                        fill={p.starred ? "currentColor" : "none"}
-                      />
-                    </button>
-                    <div className="relative">
+                  {/* Cover with overlay gradient */}
+                  <div className="relative h-36 bg-linear-to-br from-primary/20 to-accent/30 overflow-hidden">
+                    {p.cover ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={p.cover}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-6xl font-bold text-primary/10">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Floating action buttons */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
                       <button
-                        className="p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 text-muted-foreground"
+                        className={`p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
+                        title={p.starred ? "Unstar" : "Star"}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setMenuOpen(menuOpen === p.id ? null : p.id);
+                          toggleStar(p.id);
                         }}
                       >
-                        <MoreVertical className="w-4 h-4" />
+                        <Star
+                          className="w-4 h-4"
+                          fill={p.starred ? "currentColor" : "none"}
+                        />
                       </button>
-                      {menuOpen === p.id && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMenuOpen(null);
-                            }}
-                          />
-                          <div className="absolute right-0 top-10 z-20 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px]">
-                            <button
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                      <div className="relative">
+                        <button
+                          className="p-2 rounded-lg cursor-pointer backdrop-blur-sm bg-white/90 shadow-md transition-all hover:scale-110 text-muted-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuOpen(menuOpen === p.id ? null : p.id);
+                          }}
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {menuOpen === p.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setMenuOpen(null);
-                                router.push(`/projects/${p.id}`);
                               }}
-                            >
-                              Open
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMenuOpen(null);
-                                setDeleteConfirm({ id: p.id, name: p.name });
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status badge overlay */}
-                  <div className="absolute bottom-2 left-2">
-                    <Badge
-                      variant={
-                        p.status === "Active"
-                          ? "info"
-                          : p.status === "Completed"
-                            ? "success"
-                            : "warning"
-                      }
-                      pill
-                      className="backdrop-blur-sm bg-white/90 shadow-md"
-                    >
-                      {p.status}
-                    </Badge>
-                  </div>
-
-                  {/* Health score badge with hover breakdown + sparkline */}
-                  <div className="absolute bottom-2 right-2">
-                    <div
-                      className={`group relative backdrop-blur-sm bg-white/90 shadow-md px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                        health.status === "excellent"
-                          ? "text-green-600"
-                          : health.status === "good"
-                            ? "text-blue-600"
-                            : health.status === "warning"
-                              ? "text-amber-600"
-                              : "text-red-600"
-                      }`}
-                      title={`Health Score: ${health.score}/100`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          health.status === "excellent"
-                            ? "bg-green-600"
-                            : health.status === "good"
-                              ? "bg-blue-600"
-                              : health.status === "warning"
-                                ? "bg-amber-600"
-                                : "bg-red-600"
-                        }`}
-                      />
-                      {health.score}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5 space-y-4">
-                  {/* Header */}
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
-                      {p.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Owner: {p.owner}
-                    </p>
-                  </div>
-
-                  {/* Progress bar with percentage (uses tasks when available) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-muted-foreground">
-                        Progress
-                        {hasTasks
-                          ? ` • ${taskStats.done}/${taskStats.total}`
-                          : ""}
-                      </span>
-                      <span className="font-bold text-primary">
-                        {progress}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-accent rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-linear-to-r from-primary to-primary/60 transition-all duration-500 rounded-full"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Stats grid */}
-                  <div className="grid grid-cols-3 gap-3 py-3 border-t border-b border-border">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-primary">
-                        {totalMembers}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Members
-                      </div>
-                    </div>
-                    <div className="text-center border-l border-r border-border">
-                      <div className="text-lg font-bold text-primary">
-                        {filesCount}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Files</div>
-                    </div>
-                    <div className="text-center">
-                      <div
-                        className={`text-lg font-bold ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-primary"}`}
-                      >
-                        {daysLeft !== null ? daysLeft : "—"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Days left
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Members avatars */}
-                  {totalMembers > 0 && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {(p.members || []).slice(0, 4).map((m, idx) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={idx}
-                            src={
-                              m.avatarUrl ||
-                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                            }
-                            alt={m.name}
-                            className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border cursor-pointer hover:scale-110 transition-transform"
-                            title={m.name}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Find member uid from team members list or use name as fallback
-                              const member = teamMembers.find(
-                                (tm) => tm.name === m.name
-                              );
-                              const memberId =
-                                member?.id ||
-                                member?.uid ||
-                                encodeURIComponent(m.name);
-                              router.push(`/team/${memberId}`);
-                            }}
-                          />
-                        ))}
-                        {totalMembers > 4 && (
-                          <div className="w-8 h-8 rounded-full border-2 border-card bg-accent text-foreground text-xs flex items-center justify-center font-medium ring-1 ring-border">
-                            +{totalMembers - 4}
-                          </div>
+                            />
+                            <div className="absolute right-0 top-10 z-20 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px]">
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpen(null);
+                                  router.push(`/projects/${p.id}`);
+                                }}
+                              >
+                                Open
+                              </button>
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpen(null);
+                                  setDeleteConfirm({ id: p.id, name: p.name });
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
-                      {p.priority && (
-                        <Badge
-                          variant={
-                            p.priority === "high"
-                              ? "warning"
-                              : p.priority === "medium"
-                                ? "info"
-                                : "secondary"
-                          }
-                          pill
-                          className="ml-auto"
-                        >
-                          {p.priority}
-                        </Badge>
-                      )}
                     </div>
-                  )}
 
-                  {/* Custom Fields Chips */}
-                  {((p as any).client ||
-                    (p as any).budget ||
-                    (p as any).sla) && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                      {(p as any).client && (
-                        <Badge variant="secondary" pill>
-                          Client: {(p as any).client}
-                        </Badge>
-                      )}
-                      {(p as any).budget && (
-                        <Badge variant="info" pill>
-                          Budget: ${(p as any).budget}
-                        </Badge>
-                      )}
-                      {(p as any).sla && (
-                        <Badge variant="info" pill>
-                          <abbr
-                            className="border-b border-dashed border-current no-underline cursor-help"
-                            title="Service Level Agreement"
-                          >
-                            SLA
-                          </abbr>
-                          : {(p as any).sla}d
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Quick actions */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddForProject(p.id);
-                        setNewTaskTitle("");
-                        setNewTaskAssignee("You");
-                        setNewTaskDue(
-                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                            .toISOString()
-                            .slice(0, 10)
-                        );
-                        setNewTaskPriority("medium");
-                        setNewTaskMilestone("");
-                        setAddOpen(true);
-                      }}
-                    >
-                      + Task
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Toggle Complete/Undo
-                        setProjects((prev) => {
-                          const next = prev.map((pr) =>
-                            pr.id === p.id
-                              ? {
-                                  ...pr,
-                                  status:
-                                    pr.status === "Completed"
-                                      ? ("Active" as const)
-                                      : ("Completed" as const),
-                                }
-                              : pr
-                          );
-                          try {
-                            localStorage.setItem(
-                              "pv:projects",
-                              JSON.stringify(next)
-                            );
-                            logProjectEvent(p.id, "edit", {
-                              status:
-                                p.status === "Completed"
-                                  ? "Active"
-                                  : "Completed",
-                            });
-                          } catch {}
-                          return next;
-                        });
-                        if (p.status !== "Completed") {
-                          setCompletedFlash(p.id);
-                          setTimeout(() => setCompletedFlash(null), 1200);
+                    {/* Status badge overlay */}
+                    <div className="absolute bottom-2 left-2">
+                      <Badge
+                        variant={
+                          p.status === "Active"
+                            ? "info"
+                            : p.status === "Completed"
+                              ? "success"
+                              : "warning"
                         }
-                      }}
-                    >
-                      {p.status === "Completed" ? "Undo" : "Mark Complete"}
-                    </Button>
-                  </div>
+                        pill
+                        className="backdrop-blur-sm bg-white/90 shadow-md"
+                      >
+                        {p.status}
+                      </Badge>
+                    </div>
 
-                  {/* Deadline */}
-                  <div className="flex items-center gap-1 text-xs pt-2">
-                    <span className="text-muted-foreground">Due:</span>
-                    <span
-                      className={`font-medium ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
-                    >
-                      {p.deadline || "No deadline"}
-                    </span>
-                  </div>
-                  {/* Completed flash overlay */}
-                  {completedFlash === p.id && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-600/10">
-                      <div className="text-green-600 text-4xl font-black">
-                        ✓
+                    {/* Health score badge with hover breakdown + sparkline */}
+                    <div className="absolute bottom-2 right-2">
+                      <div
+                        className={`group relative backdrop-blur-sm bg-white/90 shadow-md px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                          health.status === "excellent"
+                            ? "text-green-600"
+                            : health.status === "good"
+                              ? "text-blue-600"
+                              : health.status === "warning"
+                                ? "text-amber-600"
+                                : "text-red-600"
+                        }`}
+                        title={`Health Score: ${health.score}/100`}
+                      >
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            health.status === "excellent"
+                              ? "bg-green-600"
+                              : health.status === "good"
+                                ? "bg-blue-600"
+                                : health.status === "warning"
+                                  ? "bg-amber-600"
+                                  : "bg-red-600"
+                          }`}
+                        />
+                        {health.score}
                       </div>
                     </div>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-5 space-y-4">
+                    {/* Header */}
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors">
+                        {p.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {p.client ? `Client: ${p.client}` : "Internal Project"}
+                      </p>
+                    </div>
+                    {/* Categories and Tags */}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {/* Show all categories, preferring the array but falling back to legacy single string */}
+                      {(p.categories && p.categories.length > 0
+                        ? p.categories
+                        : p.category
+                          ? [p.category]
+                          : []
+                      ).map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCategoryFilter(cat);
+                            updateUrl({ category: cat });
+                          }}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                      {p.tags?.slice(0, 3).map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTagFilter(tag);
+                            updateUrl({ tag });
+                          }}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-muted-foreground hover:bg-accent/80 transition-colors"
+                        >
+                          #{tag}
+                        </button>
+                      ))}
+                      {(p.tags?.length || 0) > 3 && (
+                        <span className="text-[10px] px-1.5 py-0.5 text-muted-foreground">
+                          +{(p.tags?.length || 0) - 3}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Progress bar with percentage (uses tasks when available) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-muted-foreground">
+                          Progress
+                          {hasTasks
+                            ? ` • ${taskStats.done}/${taskStats.total}`
+                            : ""}
+                        </span>
+                        <span className="font-bold text-primary">
+                          {progress}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-accent rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-linear-to-r from-primary to-primary/60 transition-all duration-500 rounded-full"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats grid */}
+                    <div className="grid grid-cols-3 gap-3 py-3 border-t border-b border-border">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-primary">
+                          {totalMembers}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Members
+                        </div>
+                      </div>
+                      <div className="text-center border-l border-r border-border">
+                        <div className="text-lg font-bold text-primary">
+                          {filesCount}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Files
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div
+                          className={`text-lg font-bold ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-primary"}`}
+                        >
+                          {daysLeft !== null ? daysLeft : "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Days left
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Members avatars */}
+                    {totalMembers > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex -space-x-2">
+                          {(p.members || []).slice(0, 4).map((m, idx) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              key={idx}
+                              src={
+                                m.avatarUrl ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
+                              }
+                              alt={m.name}
+                              className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border cursor-pointer hover:scale-110 transition-transform"
+                              title={m.name}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Find member uid from team members list or use name as fallback
+                                const member = teamMembers.find(
+                                  (tm) => tm.name === m.name
+                                );
+                                const memberId =
+                                  member?.id ||
+                                  member?.uid ||
+                                  encodeURIComponent(m.name);
+                                router.push(`/team/${memberId}`);
+                              }}
+                            />
+                          ))}
+                          {totalMembers > 4 && (
+                            <div className="w-8 h-8 rounded-full border-2 border-card bg-accent text-foreground text-xs flex items-center justify-center font-medium ring-1 ring-border">
+                              +{totalMembers - 4}
+                            </div>
+                          )}
+                        </div>
+                        {p.priority && (
+                          <Badge
+                            variant={
+                              p.priority === "high"
+                                ? "warning"
+                                : p.priority === "medium"
+                                  ? "info"
+                                  : "secondary"
+                            }
+                            pill
+                            className="ml-auto"
+                          >
+                            {p.priority}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Custom Fields Chips */}
+                    {((p as any).client ||
+                      (p as any).budget ||
+                      (p as any).sla) && (
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+                        {(p as any).client && (
+                          <Badge variant="secondary" pill>
+                            Client: {(p as any).client}
+                          </Badge>
+                        )}
+                        {(p as any).budget && (
+                          <Badge variant="info" pill>
+                            Budget: ${(p as any).budget}
+                          </Badge>
+                        )}
+                        {(p as any).sla && (
+                          <Badge variant="info" pill>
+                            <abbr
+                              className="border-b border-dashed border-current no-underline cursor-help"
+                              title="Service Level Agreement"
+                            >
+                              SLA
+                            </abbr>
+                            : {(p as any).sla}d
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Quick actions */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddForProject(p.id);
+                          setNewTaskTitle("");
+                          setNewTaskAssignee("You");
+                          setNewTaskDue(
+                            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                              .toISOString()
+                              .slice(0, 10)
+                          );
+                          setNewTaskPriority("medium");
+                          setNewTaskMilestone("");
+                          setAddOpen(true);
+                        }}
+                      >
+                        + Task
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Toggle Complete/Undo
+                          setProjects((prev) => {
+                            const next = prev.map((pr) =>
+                              pr.id === p.id
+                                ? {
+                                    ...pr,
+                                    status:
+                                      pr.status === "Completed"
+                                        ? ("Active" as const)
+                                        : ("Completed" as const),
+                                  }
+                                : pr
+                            );
+                            try {
+                              localStorage.setItem(
+                                "pv:projects",
+                                JSON.stringify(next)
+                              );
+                              logProjectEvent(p.id, "edit", {
+                                status:
+                                  p.status === "Completed"
+                                    ? "Active"
+                                    : "Completed",
+                              });
+                            } catch {}
+                            return next;
+                          });
+                          if (p.status !== "Completed") {
+                            setCompletedFlash(p.id);
+                            setTimeout(() => setCompletedFlash(null), 1200);
+                          }
+                        }}
+                      >
+                        {p.status === "Completed" ? "Undo" : "Mark Complete"}
+                      </Button>
+                    </div>
+
+                    {/* Deadline */}
+                    <div className="flex items-center gap-1 text-xs pt-2">
+                      <span className="text-muted-foreground">Due:</span>
+                      <span
+                        className={`font-medium ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
+                      >
+                        {p.deadline || "No deadline"}
+                      </span>
+                    </div>
+                    {/* Completed flash overlay */}
+                    {completedFlash === p.id && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-green-600/10">
+                        <div className="text-green-600 text-4xl font-black">
+                          ✓
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => {
+                  const p = Math.max(1, currentPage - 1);
+                  setCurrentPage(p);
+                  updateUrl({ page: p.toString() });
+                }}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+              </Button>
+              <div className="text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => {
+                  const p = Math.min(totalPages, currentPage + 1);
+                  setCurrentPage(p);
+                  updateUrl({ page: p.toString() });
+                }}
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Modal */}
@@ -967,10 +1234,15 @@ export function ProjectGrid() {
               </span>
               ? This action cannot be undone.
             </p>
-            <p className="text-sm text-muted-foreground mb-2">
+            <label
+              htmlFor="confirm-delete-input"
+              className="text-sm text-muted-foreground mb-2 block"
+            >
               Type the project name to confirm:
-            </p>
+            </label>
             <input
+              id="confirm-delete-input"
+              name="confirmProjectName"
               type="text"
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
@@ -1006,8 +1278,12 @@ export function ProjectGrid() {
           <h3 className="text-xl font-semibold">Create Task</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Title</label>
+              <label htmlFor="task-title" className="text-sm font-medium">
+                Title
+              </label>
               <input
+                id="task-title"
+                name="taskTitle"
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
@@ -1015,8 +1291,12 @@ export function ProjectGrid() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Assignee</label>
+              <label htmlFor="task-assignee" className="text-sm font-medium">
+                Assignee
+              </label>
               <select
+                id="task-assignee"
+                name="taskAssignee"
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 value={newTaskAssignee}
                 onChange={(e) => setNewTaskAssignee(e.target.value)}
@@ -1030,8 +1310,12 @@ export function ProjectGrid() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Due Date</label>
+              <label htmlFor="task-due" className="text-sm font-medium">
+                Due Date
+              </label>
               <input
+                id="task-due"
+                name="taskDue"
                 type="date"
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 value={newTaskDue}
@@ -1039,8 +1323,12 @@ export function ProjectGrid() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
+              <label htmlFor="task-priority" className="text-sm font-medium">
+                Priority
+              </label>
               <select
+                id="task-priority"
+                name="taskPriority"
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                 value={newTaskPriority}
                 onChange={(e) => setNewTaskPriority(e.target.value)}

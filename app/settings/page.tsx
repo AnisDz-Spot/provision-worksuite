@@ -133,7 +133,12 @@ function DataSourceTab() {
           <Button
             variant={dataMode === "mock" ? "primary" : "outline"}
             size="sm"
-            onClick={() => handleDataModeChange("mock")}
+            onClick={async () => {
+              handleDataModeChange("mock");
+              // Seed data if missing
+              const { seedLocalData } = await import("@/lib/seedData");
+              seedLocalData();
+            }}
           >
             Use Dummy Data
           </Button>
@@ -180,7 +185,7 @@ function DataSourceTab() {
               variant="outline"
               size="sm"
               className="ml-4"
-              onClick={() => {
+              onClick={async () => {
                 setDataMode("mock");
                 setLicenseValid(false);
                 setLicense("");
@@ -190,6 +195,11 @@ function DataSourceTab() {
                 localStorage.removeItem("pv:session");
                 // Persist mode change BEFORE navigation
                 localStorage.setItem("pv:dataMode", "mock");
+
+                // Seed data for rich experience
+                const { seedLocalData } = await import("@/lib/seedData");
+                seedLocalData();
+
                 router.push("/settings?tab=dataSource");
               }}
             >

@@ -62,28 +62,32 @@ export default function OnboardingPage() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <button
-                onClick={() => {
+                onClick={async () => {
                   setDataMode("mock");
                   setStep("license");
                   if (typeof window !== "undefined") {
+                    // Seed data for a rich demo experience
+                    const { seedLocalData } = await import("@/lib/seedData");
+                    seedLocalData();
+
                     localStorage.setItem("pv:dataMode", "mock");
                     localStorage.setItem("pv:onboardingDone", "true");
                   }
                 }}
-                className="group relative overflow-hidden bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-850 hover:from-slate-100 hover:to-slate-200 dark:hover:from-slate-750 dark:hover:to-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                className="group relative overflow-hidden bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 hover:from-slate-100 hover:to-slate-200 dark:hover:from-slate-650 dark:hover:to-slate-750 border-2 border-slate-200 dark:border-slate-600 rounded-2xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl"
               >
-                <div className="absolute inset-0 bg-linear-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-300"></div>
+                <div className="absolute inset-0 bg-linear-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 dark:group-hover:from-indigo-500/10 dark:group-hover:to-purple-500/10 transition-all duration-300"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+                    <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-600 flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-slate-600 dark:text-slate-200" />
                     </div>
                     <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                     Demo Mode
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm mb-4">
+                  <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">
                     Explore with sample data. Perfect for testing and getting
                     familiar with features.
                   </p>

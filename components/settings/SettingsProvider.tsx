@@ -29,8 +29,14 @@ const defaultUser: UserSettingsData = {
   fullName: "Alex Admin",
   email: "alex@provision.com",
   phone: "",
-  title: "Administrator",
   bio: "",
+  role: "Administrator",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  country: "",
+  postalCode: "",
   avatarDataUrl: undefined,
 };
 

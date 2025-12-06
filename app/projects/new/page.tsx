@@ -5,8 +5,12 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
-import { X } from "lucide-react";
-import { logProjectEvent, setProjectDependencies } from "@/lib/utils";
+import { X, Upload, FolderPlus, FileText } from "lucide-react";
+import {
+  logProjectEvent,
+  setProjectDependencies,
+  addProjectFile,
+} from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import { useState, useEffect } from "react";
 import usersData from "@/data/users.json";
@@ -31,8 +35,10 @@ export default function NewProjectPage() {
     members: [] as { name: string; avatarUrl?: string }[],
     dependencies: [] as string[],
     client: "",
+    clientLogo: "",
     budget: "",
     sla: "",
+    files: [] as File[],
   });
   const [tagInput, setTagInput] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
@@ -96,8 +102,10 @@ export default function NewProjectPage() {
       members: [],
       dependencies: [],
       client: (tpl as any).client || "",
+      clientLogo: (tpl as any).clientLogo || "",
       budget: (tpl as any).budget || "",
       sla: (tpl as any).sla || "",
+      files: [],
     });
   };
 
@@ -241,13 +249,79 @@ export default function NewProjectPage() {
               <option value="private">Private</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Client</label>
-            <Input
-              value={draft.client}
-              onChange={(e) => setDraft({ ...draft, client: e.target.value })}
-              placeholder="Client or organization name"
-            />
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Client Name</label>
+              <Input
+                value={draft.client}
+                onChange={(e) => setDraft({ ...draft, client: e.target.value })}
+                placeholder="Client or organization name"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Client Logo</label>
+              <div className="flex gap-2">
+                <Input
+                  value={draft.clientLogo}
+                  onChange={(e) =>
+                    setDraft({ ...draft, clientLogo: e.target.value })
+                  }
+                  placeholder="Paste URL or upload"
+                />
+                <input
+                  type="file"
+                  id="client-logo-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 1 * 1024 * 1024) {
+                        showToast("Logo must be less than 1MB", "warning");
+                        e.target.value = "";
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setDraft((d) => ({
+                          ...d,
+                          clientLogo: reader.result as string,
+                        }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    document.getElementById("client-logo-upload")?.click()
+                  }
+                  title="Upload Logo"
+                >
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+              {draft.clientLogo && (
+                <div className="mt-2 flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={draft.clientLogo}
+                    alt="Client logo preview"
+                    className="w-10 h-10 rounded border border-border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDraft({ ...draft, clientLogo: "" })}
+                    className="text-xs text-destructive hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Budget (USD)</label>
@@ -273,156 +347,236 @@ export default function NewProjectPage() {
               placeholder="e.g., 30"
             />
           </div>
-          <div className="md:col-span-2 space-y-2">
-            <label className="text-sm font-medium">Categories</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {draft.categories.map((cat, idx) => (
-                <span
-                  key={idx}
-                  className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
-                >
-                  {cat}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        categories: draft.categories.filter(
-                          (_, i) => i !== idx
-                        ),
-                      })
-                    }
-                    className="text-muted-foreground hover:text-destructive"
+          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Categories</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {draft.categories.map((cat, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <select
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm mb-2"
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value && !draft.categories.includes(value)) {
-                  setDraft({
-                    ...draft,
-                    categories: [...draft.categories, value],
-                  });
-                }
-                e.target.value = "";
-              }}
-              value=""
-            >
-              <option value="">+ Select Category</option>
-              {allCategories
-                .filter((c) => !draft.categories.includes(c))
-                .map((cat) => (
-                  <option key={cat} value={cat}>
                     {cat}
-                  </option>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          categories: draft.categories.filter(
+                            (_, i) => i !== idx
+                          ),
+                        })
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
                 ))}
-            </select>
-            <div className="flex gap-2">
-              <Input
-                value={categoryInput}
-                onChange={(e) => setCategoryInput(e.target.value)}
-                placeholder="Add new category"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && categoryInput.trim()) {
-                    e.preventDefault();
-                    const newCat = categoryInput.trim();
-                    if (!allCategories.includes(newCat)) {
-                      const updated = [...allCategories, newCat];
-                      setAllCategories(updated);
-                      localStorage.setItem(
-                        "pv:categories",
-                        JSON.stringify(updated)
-                      );
-                    }
-                    if (!draft.categories.includes(newCat)) {
-                      setDraft({
-                        ...draft,
-                        categories: [...draft.categories, newCat],
-                      });
-                    }
-                    setCategoryInput("");
+              </div>
+              <select
+                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm mb-2"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && !draft.categories.includes(value)) {
+                    setDraft({
+                      ...draft,
+                      categories: [...draft.categories, value],
+                    });
                   }
+                  e.target.value = "";
+                }}
+                value=""
+              >
+                <option value="">+ Select Category</option>
+                {allCategories
+                  .filter((c) => !draft.categories.includes(c))
+                  .map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+              </select>
+              <div className="flex gap-2">
+                <Input
+                  value={categoryInput}
+                  onChange={(e) => setCategoryInput(e.target.value)}
+                  placeholder="Add new category"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && categoryInput.trim()) {
+                      e.preventDefault();
+                      const newCat = categoryInput.trim();
+                      if (!allCategories.includes(newCat)) {
+                        const updated = [...allCategories, newCat];
+                        setAllCategories(updated);
+                        localStorage.setItem(
+                          "pv:categories",
+                          JSON.stringify(updated)
+                        );
+                      }
+                      if (!draft.categories.includes(newCat)) {
+                        setDraft({
+                          ...draft,
+                          categories: [...draft.categories, newCat],
+                        });
+                      }
+                      setCategoryInput("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (categoryInput.trim()) {
+                      const newCat = categoryInput.trim();
+                      if (!allCategories.includes(newCat)) {
+                        const updated = [...allCategories, newCat];
+                        setAllCategories(updated);
+                        localStorage.setItem(
+                          "pv:categories",
+                          JSON.stringify(updated)
+                        );
+                      }
+                      if (!draft.categories.includes(newCat)) {
+                        setDraft({
+                          ...draft,
+                          categories: [...draft.categories, newCat],
+                        });
+                      }
+                      setCategoryInput("");
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select from list or add new category
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tags</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {draft.tags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          tags: draft.tags.filter((_, i) => i !== idx),
+                        })
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && tagInput.trim()) {
+                    e.preventDefault();
+                    setDraft({
+                      ...draft,
+                      tags: [...draft.tags, tagInput.trim()],
+                    });
+                    setTagInput("");
+                  }
+                }}
+                placeholder="Type tag and press Enter"
+              />
+              <p className="text-xs text-muted-foreground">
+                Press Enter to add a tag
+              </p>
+            </div>
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <FolderPlus className="w-4 h-4" />
+              Attachments
+            </label>
+            <div className="border border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-accent/20">
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                id="file-attachments"
+                onChange={(e) => {
+                  const newFiles = Array.from(e.target.files || []);
+                  setDraft((d) => ({
+                    ...d,
+                    files: [...d.files, ...newFiles],
+                  }));
+                  // Reset input
+                  e.target.value = "";
                 }}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (categoryInput.trim()) {
-                    const newCat = categoryInput.trim();
-                    if (!allCategories.includes(newCat)) {
-                      const updated = [...allCategories, newCat];
-                      setAllCategories(updated);
-                      localStorage.setItem(
-                        "pv:categories",
-                        JSON.stringify(updated)
-                      );
-                    }
-                    if (!draft.categories.includes(newCat)) {
-                      setDraft({
-                        ...draft,
-                        categories: [...draft.categories, newCat],
-                      });
-                    }
-                    setCategoryInput("");
+              <div className="flex flex-col items-center gap-2 mb-4">
+                <div className="p-3 bg-background rounded-full shadow-sm">
+                  <Upload className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium">
+                    Click to upload documents
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    PDF, DOC, Images (max 10MB)
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    document.getElementById("file-attachments")?.click()
                   }
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Select from list or add new category
-            </p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tags</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {draft.tags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
                 >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        tags: draft.tags.filter((_, i) => i !== idx),
-                      })
-                    }
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+                  Select Files
+                </Button>
+              </div>
+              {draft.files.length > 0 && (
+                <div className="w-full max-w-md space-y-2 mt-2">
+                  {draft.files.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 bg-card border border-border rounded-md text-sm"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                        <span className="truncate max-w-[200px]">
+                          {file.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(file.size / 1024).toFixed(0)} KB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraft((d) => ({
+                            ...d,
+                            files: d.files.filter((_, i) => i !== idx),
+                          }))
+                        }
+                        className="text-muted-foreground hover:text-destructive p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && tagInput.trim()) {
-                  e.preventDefault();
-                  setDraft({
-                    ...draft,
-                    tags: [...draft.tags, tagInput.trim()],
-                  });
-                  setTagInput("");
-                }
-              }}
-              placeholder="Type tag and press Enter"
-            />
-            <p className="text-xs text-muted-foreground">
-              Press Enter to add a tag
-            </p>
           </div>
           <div className="md:col-span-2 space-y-2">
             <label className="text-sm font-medium">Team Members</label>
@@ -566,6 +720,7 @@ export default function NewProjectPage() {
                 categories: draft.categories,
                 description: draft.description || "",
                 client: draft.client || "",
+                clientLogo: draft.clientLogo || "",
                 budget: draft.budget || "",
                 sla: draft.sla || "",
               };
@@ -578,6 +733,12 @@ export default function NewProjectPage() {
                 // Save dependencies
                 if (draft.dependencies.length > 0) {
                   setProjectDependencies(newProj.id, draft.dependencies);
+                }
+                // Save attachments
+                if (draft.files.length > 0) {
+                  draft.files.forEach(async (file) => {
+                    await addProjectFile(newProj.id, file, "You");
+                  });
                 }
                 showToast(
                   `Project "${newProj.name}" created successfully`,

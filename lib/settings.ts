@@ -1,12 +1,17 @@
 export const LS_KEY_USER = "pv:user-settings";
 export const LS_KEY_WORKSPACE = "pv:workspace-settings";
-
 export interface UserSettingsData {
   fullName: string;
   email: string;
   phone: string;
-  title: string;
   bio: string;
+  role: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
   avatarDataUrl?: string;
 }
 
