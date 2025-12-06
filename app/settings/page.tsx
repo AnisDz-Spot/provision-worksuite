@@ -82,6 +82,10 @@ function DataSourceTab() {
   const handleSave = async () => {
     setSaving(true);
     setError("");
+    // Clear session to force re-login with appropriate credentials/mode
+    localStorage.removeItem("pv:currentUser");
+    localStorage.removeItem("pv:session");
+
     localStorage.setItem("pv:dataMode", dataMode);
 
     // Navigate based on selected mode
@@ -147,6 +151,9 @@ function DataSourceTab() {
                 setLicenseValid(false);
                 setLicense("");
                 setLicenseError(null);
+                // Clear session to force re-login
+                localStorage.removeItem("pv:currentUser");
+                localStorage.removeItem("pv:session");
                 // Persist mode change BEFORE navigation
                 localStorage.setItem("pv:dataMode", "real");
                 router.push("/settings/database");
@@ -178,6 +185,9 @@ function DataSourceTab() {
                 setLicenseValid(false);
                 setLicense("");
                 setLicenseError(null);
+                // Clear session to force re-login
+                localStorage.removeItem("pv:currentUser");
+                localStorage.removeItem("pv:session");
                 // Persist mode change BEFORE navigation
                 localStorage.setItem("pv:dataMode", "mock");
                 router.push("/settings?tab=dataSource");
