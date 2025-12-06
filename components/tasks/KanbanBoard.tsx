@@ -124,6 +124,10 @@ type KanbanBoardProps = {
   onTaskUpdate?: () => void;
 };
 
+import { shouldUseMockData } from "@/lib/dataSource";
+
+// ... existing imports
+
 export function KanbanBoard({
   projectId,
   projectMembers = [],
@@ -131,7 +135,43 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
   const { startTimer } = useTimeTracker();
   const { show } = useToaster();
-  const [columns, setColumns] = useState(MOCK_BOARD);
+
+  // Strict Mode: Only use MOCK_BOARD if explicitly in mock mode
+  const [columns, setColumns] = useState(
+    shouldUseMockData()
+      ? MOCK_BOARD
+      : [
+          {
+            id: "todo",
+            title: "Todo",
+            color: "border-slate-400",
+            bgColor: "bg-slate-50 dark:bg-slate-900/30",
+            tasks: [],
+          },
+          {
+            id: "in-progress",
+            title: "In Progress",
+            color: "border-blue-400",
+            bgColor: "bg-blue-50 dark:bg-blue-900/30",
+            tasks: [],
+          },
+          {
+            id: "review",
+            title: "Review",
+            color: "border-amber-400",
+            bgColor: "bg-amber-50 dark:bg-amber-900/30",
+            tasks: [],
+          },
+          {
+            id: "done",
+            title: "Done",
+            color: "border-green-400",
+            bgColor: "bg-green-50 dark:bg-green-900/30",
+            tasks: [],
+          },
+        ]
+  );
+
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -140,11 +180,15 @@ export function KanbanBoard({
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [newTaskPriority, setNewTaskPriority] = useState("medium");
+
+  // Strict Mode: Only use mock users if explicitly in mock mode
   const memberList: Array<{ id: string; name: string; avatarColor?: string }> =
     (
       projectMembers && projectMembers.length > 0
         ? projectMembers.map((m, i) => ({ id: `pm-${i}`, name: m.name }))
-        : (users as any)
+        : shouldUseMockData()
+          ? (users as any)
+          : []
     ) as Array<{ id: string; name: string; avatarColor?: string }>;
 
   const getAvatarColorClass = (color?: string) => {
@@ -270,8 +314,16 @@ export function KanbanBoard({
   };
 
   useEffect(() => {
-    if (projectId) refreshFromStorage();
-    else setColumns(MOCK_BOARD);
+    if (projectId) {
+      refreshFromStorage();
+    } else {
+      if (shouldUseMockData()) {
+        setColumns(MOCK_BOARD);
+      } else {
+        // Clear board if not mock mode
+        setColumns((prev) => prev.map((c) => ({ ...c, tasks: [] })));
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { Trash2 } from "lucide-react";
 import usersData from "@/data/users.json";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 function formatDate(ts: number) {
   const d = new Date(ts);
@@ -57,11 +58,12 @@ export function ProjectComments({ projectId }: { projectId: string }) {
           className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-xs"
         >
           <option value="You">You</option>
-          {usersData.map((u) => (
-            <option key={u.id} value={u.name}>
-              {u.name}
-            </option>
-          ))}
+          {shouldUseMockData() &&
+            usersData.map((u) => (
+              <option key={u.id} value={u.name}>
+                {u.name}
+              </option>
+            ))}
         </select>
       </div>
       <div className="space-y-2">

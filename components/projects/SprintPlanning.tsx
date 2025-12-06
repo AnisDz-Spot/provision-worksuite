@@ -107,15 +107,31 @@ const columns = [
   { id: "done", title: "Done", color: "bg-green-500" },
 ] as const;
 
+import { shouldUseMockData } from "@/lib/dataSource";
+
 export function SprintPlanning() {
-  const [sprint, setSprint] = useState<Sprint>(defaultSprint);
+  // Strict Mode: Use empty sprint if not in mock mode
+  const [sprint, setSprint] = useState<Sprint>(
+    shouldUseMockData()
+      ? defaultSprint
+      : {
+          id: "sprint-empty",
+          name: "Current Sprint",
+          startDate: new Date().toISOString(),
+          endDate: new Date(
+            Date.now() + 14 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          capacity: 0,
+          tasks: [],
+        }
+  );
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<SprintTask | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("You");
-  const memberList = users as Array<{
+  const memberList = (shouldUseMockData() ? users : []) as Array<{
     id: string;
     name: string;
     avatarColor?: string;

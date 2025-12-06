@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // If admin selected dummy data mode, allow fake admin login
+    // If admin selected dummy data mode, check for fake admin login first
     if (shouldUseMockData()) {
       if (
         email === "admin@provision.com" &&
@@ -199,17 +199,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSessionExpiry(30);
         return { success: true };
       }
-      // In dummy mode, reject other credentials
-      return {
-        success: false,
-        error: "Use fake admin credentials in dummy data mode.",
-      };
+
+      // If we are here, credentials didn't match the Demo Admin.
+      // If the user hasn't EXPLICITLY set "mock" mode, we should try the database.
+      // This handles fresh production deployments where localStorage is empty (so defaults to mock)
+      // but the server is actually ready.
+      const explicitMock =
+        typeof window !== "undefined" &&
+        localStorage.getItem("pv:dataMode") === "mock";
+
+      if (!explicitMock) {
+        // Fallthrough to try API login below
+      } else {
+        // In explicit dummy mode, reject other credentials
+        return {
+          success: false,
+          error: "Use fake admin credentials in dummy data mode.",
+        };
+      }
     }
 
     // Check if setup is complete - if yes, ONLY allow database login
+    // ... OR if we act "optimistically" because we fell through from above
     const setupComplete = isSetupComplete();
 
-    if (setupComplete) {
+    // Try Database Login if setup is complete OR if we are in that implicit mock state (fallthrough)
+    if (
+      setupComplete ||
+      !shouldUseMockData() ||
+      (shouldUseMockData() &&
+        typeof window !== "undefined" &&
+        localStorage.getItem("pv:dataMode") !== "mock")
+    ) {
       // Setup is complete - only allow database authentication
       try {
         const response = await fetch("/api/auth/login", {
@@ -232,16 +253,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(authUser);
           setIsAuthenticated(true);
           localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+          // If we successfully logged in via DB but client thought we were in implicit mock mode,
+          // update client state to "real" to prevent future confusion.
+          if (!setupComplete) {
+            localStorage.setItem("pv:dataMode", "real");
+          }
           setSessionExpiry(30);
 
           return { success: true };
         } else {
+          // If DB login failed, and we weren't strictly set up, don't return error yet?
+          // No, proper error is better.
           return {
             success: false,
             error: data.error || "Invalid email or password",
           };
         }
       } catch (error) {
+        // If API failed (e.g. 500 or 404), maybe we really ARE in mock mode without DB.
+        // fallback to global admin logic below?
+        // No, standard flow.
         return {
           success: false,
           error:

@@ -59,6 +59,9 @@ export interface User {
 /**
  * Load projects from database or localStorage
  */
+/**
+ * Load projects from database or localStorage
+ */
 export async function loadProjects(): Promise<Project[]> {
   if (shouldUseDatabaseData()) {
     try {
@@ -68,13 +71,13 @@ export async function loadProjects(): Promise<Project[]> {
         return result.data || [];
       }
       console.error("Failed to load projects from database:", result.error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure, do NOT fallback to mock
     } catch (error) {
       console.error("Error loading projects from database:", error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure
     }
   }
-  // Always fallback to mock data if DB fails or not configured
+  // Fallback behavior only if explicitly NOT in database mode
   const stored = localStorage.getItem("pv:projects");
   if (stored) {
     try {
@@ -117,13 +120,13 @@ export async function loadTasks(): Promise<Task[]> {
         return result.data || [];
       }
       console.error("Failed to load tasks from database:", result.error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure
     } catch (error) {
       console.error("Error loading tasks from database:", error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure
     }
   }
-  // Always fallback to mock data if DB fails or not configured
+  // Fallback behavior only if explicitly NOT in database mode
   const stored = localStorage.getItem("pv:tasks");
   if (stored) {
     try {
@@ -166,13 +169,13 @@ export async function loadUsers(): Promise<User[]> {
         return result.data || [];
       }
       console.error("Failed to load users from database:", result.error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure
     } catch (error) {
       console.error("Error loading users from database:", error);
-      // Fallback to mock data
+      return []; // Strict Live Mode: Return empty array on failure
     }
   }
-  // Always fallback to mock data if DB fails or not configured
+  // Fallback behavior only if explicitly NOT in database mode
   const stored = localStorage.getItem("pv:users");
   if (stored) {
     try {
