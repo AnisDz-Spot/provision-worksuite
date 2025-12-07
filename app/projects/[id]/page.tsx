@@ -346,7 +346,7 @@ export default function ProjectDetailsPage() {
                   <Link href={`/projects/${project.id}/edit`}>
                     <Button
                       variant="outline"
-                      size="default"
+                      size="md"
                       className="whitespace-nowrap"
                     >
                       Edit Project

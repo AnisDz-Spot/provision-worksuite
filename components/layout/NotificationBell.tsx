@@ -45,6 +45,47 @@ export function NotificationBell() {
     }
   };
 
+  // Setup chat notification simulation in dummy mode
+  useEffect(() => {
+    if (!mounted) return;
+
+    async function setupChatSimulation() {
+      try {
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        if (!shouldUseMockData()) return;
+
+        const { startChatNotificationSimulation } =
+          await import("@/lib/chatNotificationSimulator");
+
+        const cleanup = startChatNotificationSimulation((chatNotif) => {
+          // Create a notification for the chat message
+          const notification: Notification = {
+            id: chatNotif.id,
+            type: "info",
+            title: `New message from ${chatNotif.from}`,
+            message: chatNotif.message,
+            timestamp: chatNotif.timestamp,
+            read: false,
+          };
+
+          // Add to notifications
+          const stored = localStorage.getItem("pv:notifications");
+          const current: Notification[] = stored ? JSON.parse(stored) : [];
+          const updated = [notification, ...current];
+
+          setNotifications(updated);
+          localStorage.setItem("pv:notifications", JSON.stringify(updated));
+        }, 60000 /* Check every 60 seconds */);
+
+        return cleanup;
+      } catch (error) {
+        console.error("Failed to setup chat simulation:", error);
+      }
+    }
+
+    setupChatSimulation();
+  }, [mounted]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
