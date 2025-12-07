@@ -13,6 +13,9 @@ export async function proxy(request: NextRequest) {
   const publicRoutes = [
     "/api/auth/login",
     "/api/setup/create-admin",
+    "/api/setup/check-system",
+    "/api/setup/config",
+    "/api/setup-db",
     "/api/test-db-connection",
     "/api/db-status",
     "/api/check-license",
