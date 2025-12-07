@@ -44,123 +44,105 @@ function LoginForm() {
     setLoading(false);
   };
 
+  const fillDemoCredentials = () => {
+    setEmail("admin@provision.com");
+    setPassword("password123578951");
+  };
+
   return (
-    <div className="w-full max-w-md relative">
-      <div className="relative p-8 md:p-10 bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl shadow-xl">
-        {/* Logo/Brand Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            ProVision
+    <div className="w-full max-w-xl mx-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-8 sm:p-10 md:p-12">
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Sign in to ProVision
           </h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Welcome back! Please sign in to continue
+          <p className="mt-2 text-base text-gray-600 dark:text-gray-400">
+            Enter your credentials to continue
           </p>
         </div>
 
-        {/* Alert Messages */}
+        {/* Demo Mode Alert */}
         {mounted && shouldUseMockData() && (
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 backdrop-blur-sm">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-yellow-500/20 flex items-center justify-center mt-0.5">
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
                 <svg
-                  className="w-3 h-3 text-yellow-600"
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
                   <path
                     fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                     clipRule="evenodd"
                   />
                 </svg>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
                   Demo Mode Active
-                </p>
-                <button
-                  className="mt-1 text-xs text-yellow-700 dark:text-yellow-300 hover:underline"
-                  onClick={() =>
-                    navigator.clipboard
-                      .writeText("admin@provision.com / password123578951")
-                      .catch(() => {})
-                  }
-                  title="Click to copy demo credentials"
-                >
-                  📋 Copy credentials: admin@provision.com / password123578951
-                </button>
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={fillDemoCredentials}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded transition-colors"
+              >
+                Autofill
+              </button>
             </div>
           </div>
         )}
 
+        {/* Setup Complete Alert */}
         {setupComplete && (
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                Setup complete! Please log in with your new credentials.
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Setup complete! Please sign in with your credentials.
               </p>
             </div>
           </div>
         )}
 
+        {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-pink-500/10 border border-red-500/20 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-red-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                {error}
-              </p>
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             </div>
           </div>
         )}
 
         {/* Login Form */}
-        <div className="flex flex-col gap-5">
-          <div className="space-y-2">
+        <div className="space-y-5">
+          <div>
             <label
               htmlFor="email"
-              className="text-sm font-medium flex items-center gap-2"
+              className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              <svg
-                className="w-4 h-4 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-                />
-              </svg>
-              Email Address
+              Email address
             </label>
             <input
               id="email"
@@ -168,31 +150,18 @@ function LoginForm() {
               autoFocus
               required
               placeholder="you@example.com"
-              className="w-full border border-border/50 rounded-xl px-4 py-3 outline-none bg-input/50 backdrop-blur-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
+              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
-          <div className="space-y-2">
+          <div>
             <label
               htmlFor="password"
-              className="text-sm font-medium flex items-center gap-2"
+              className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              <svg
-                className="w-4 h-4 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
               Password
             </label>
             <input
@@ -200,22 +169,22 @@ function LoginForm() {
               type="password"
               required
               placeholder="••••••••"
-              className="w-full border border-border/50 rounded-xl px-4 py-3 outline-none bg-input/50 backdrop-blur-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
+              className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
           <Button
             onClick={handleLogin}
-            className="w-full mt-3 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             disabled={loading}
+            className="w-full mt-8 py-3 text-base bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <svg
-                  className="animate-spin w-5 h-5"
+                  className="animate-spin w-4 h-4"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -236,60 +205,30 @@ function LoginForm() {
                 Signing in...
               </span>
             ) : (
-              <span className="flex items-center justify-center gap-2">
-                Sign In
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14 5l7 7m0 0l-7 7m7-7H3"
-                  />
-                </svg>
-              </span>
+              "Sign in"
             )}
           </Button>
         </div>
 
-        {/* Footer Links */}
-        <div className="mt-8 pt-6 border-t border-border/50">
+        {/* Footer */}
+        <div className="mt-6 text-center">
           <Link
             href="/auth/forgot"
-            className="block text-center text-sm text-muted-foreground hover:text-blue-600 transition-colors duration-200"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
           >
             Forgot your password?
           </Link>
         </div>
 
-        {/* Setup Credentials Info */}
+        {/* Setup Credentials */}
         {mounted && !shouldUseMockData() && (
-          <div className="mt-6 p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30">
-            <p className="text-xs text-muted-foreground text-center mb-2">
-              First-time setup credentials:
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
+              First-time setup credentials
             </p>
-            <div className="flex items-center justify-center gap-2 font-mono text-xs bg-background/50 rounded-lg px-3 py-2">
-              <svg
-                className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                />
-              </svg>
-              <span className="text-foreground">
-                admin@provision.com / password123578951
-              </span>
-            </div>
+            <p className="text-xs font-mono text-center text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 py-2 px-3 rounded">
+              admin@provision.com / password123578951
+            </p>
           </div>
         )}
       </div>
@@ -299,13 +238,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <Suspense
         fallback={
-          <div className="w-full max-w-md p-8 md:p-10 bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl shadow-2xl">
-            <div className="text-center flex items-center justify-center gap-2">
+          <div className="w-full max-w-xl mx-auto bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-8 sm:p-10 md:p-12">
+            <div className="flex flex-col items-center justify-center gap-3">
               <svg
-                className="animate-spin w-5 h-5"
+                className="animate-spin w-8 h-8 text-blue-600"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -323,7 +262,9 @@ export default function LoginPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Loading...
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Loading...
+              </p>
             </div>
           </div>
         }
