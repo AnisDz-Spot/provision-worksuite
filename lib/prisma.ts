@@ -1,7 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  // Safe fallback for build environment where env vars might be missing
+  const url =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    "postgresql://build:build@localhost:5432/build";
+
+  return new PrismaClient({
+    // @ts-ignore - datasources is valid at runtime but types might be strict
+    datasources: {
+      db: {
+        url,
+      },
+    },
+  });
 };
 
 declare global {
