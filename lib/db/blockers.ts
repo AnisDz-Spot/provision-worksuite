@@ -1,4 +1,4 @@
-import { sql } from "@vercel/postgres";
+import prisma from "@/lib/prisma";
 
 export type DbBlockerCategory = {
   id: string; // kebab-case id
@@ -8,25 +8,46 @@ export type DbBlockerCategory = {
   icon_emoji: string;
 };
 
+// Mapper
+function mapCategory(c: any): DbBlockerCategory {
+  return {
+    id: c.id,
+    label: c.label,
+    default_owner_group: c.defaultOwnerGroup,
+    sla_days: c.slaDays,
+    icon_emoji: c.iconEmoji,
+  };
+}
+
 export async function getAllBlockerCategories(): Promise<DbBlockerCategory[]> {
-  const res =
-    await sql`SELECT id, label, default_owner_group, sla_days, icon_emoji FROM blocker_categories ORDER BY id ASC`;
-  return res.rows as any;
+  const categories = await prisma.blockerCategory.findMany({
+    orderBy: { id: "asc" },
+  });
+  return categories.map(mapCategory);
 }
 
 export async function upsertBlockerCategories(
   categories: DbBlockerCategory[]
 ): Promise<void> {
+  // Prisma doesn't have a bulk upsert that is easy / standard for all DBs,
+  // but we can iterate since categories are few.
   for (const c of categories) {
-    await sql`
-      INSERT INTO blocker_categories (id, label, default_owner_group, sla_days, icon_emoji)
-      VALUES (${c.id}, ${c.label}, ${c.default_owner_group}, ${c.sla_days}, ${c.icon_emoji})
-      ON CONFLICT (id) DO UPDATE SET 
-        label = EXCLUDED.label,
-        default_owner_group = EXCLUDED.default_owner_group,
-        sla_days = EXCLUDED.sla_days,
-        icon_emoji = EXCLUDED.icon_emoji
-    `;
+    await prisma.blockerCategory.upsert({
+      where: { id: c.id },
+      create: {
+        id: c.id,
+        label: c.label,
+        defaultOwnerGroup: c.default_owner_group,
+        slaDays: c.sla_days,
+        iconEmoji: c.icon_emoji,
+      },
+      update: {
+        label: c.label,
+        defaultOwnerGroup: c.default_owner_group,
+        slaDays: c.sla_days,
+        iconEmoji: c.icon_emoji,
+      },
+    });
   }
 }
 
@@ -49,52 +70,99 @@ export type DbBlocker = {
   updated_at?: Date;
 };
 
+function mapBlocker(b: any): DbBlocker {
+  return {
+    id: b.id,
+    title: b.title,
+    description: b.description || "",
+    level: b.level,
+    status: b.status,
+    impacted_tasks: b.impactedTasks ? JSON.parse(b.impactedTasks) : [],
+    assigned_to: b.assignedTo,
+    reported_by: b.reportedBy,
+    reported_date: b.reportedDate.toISOString().split("T")[0], // Simplified date handling
+    resolved_date: b.resolvedDate
+      ? b.resolvedDate.toISOString().split("T")[0]
+      : undefined,
+    resolution: b.resolution,
+    category: b.category,
+    project_id: b.projectId,
+    created_at: b.createdAt,
+    updated_at: b.updatedAt,
+  };
+}
+
 export async function getAllBlockers(projectId?: string): Promise<DbBlocker[]> {
   if (projectId) {
-    const res =
-      await sql`SELECT * FROM blockers WHERE project_id = ${projectId} ORDER BY created_at DESC`;
-    return res.rows as any;
+    const res = await prisma.blocker.findMany({
+      where: { projectId },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.map(mapBlocker);
   }
-  const res = await sql`SELECT * FROM blockers ORDER BY created_at DESC`;
-  return res.rows as any;
+  const res = await prisma.blocker.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  return res.map(mapBlocker);
 }
 
 export async function createBlocker(
   blocker: Omit<DbBlocker, "id" | "created_at" | "updated_at">
 ): Promise<DbBlocker> {
   const id = `b${Date.now()}`;
-  const res = await sql`
-    INSERT INTO blockers (id, title, description, level, status, impacted_tasks, assigned_to, reported_by, reported_date, category, project_id)
-    VALUES (${id}, ${blocker.title}, ${blocker.description}, ${blocker.level}, ${blocker.status}, 
-            ${JSON.stringify(blocker.impacted_tasks)}, ${blocker.assigned_to || null}, ${blocker.reported_by}, 
-            ${blocker.reported_date}, ${blocker.category}, ${blocker.project_id || null})
-    RETURNING *
-  `;
-  return res.rows[0] as any;
+
+  // Convert tasks array to string for JSON storage if that's how it's defined in Prisma schema
+  // Schema says: impactedTasks String? @map("impacted_tasks") -> So it's a string there too.
+  const impactedTasksStr = JSON.stringify(blocker.impacted_tasks);
+
+  const newBlocker = await prisma.blocker.create({
+    data: {
+      id,
+      title: blocker.title,
+      description: blocker.description,
+      level: blocker.level,
+      status: blocker.status,
+      impactedTasks: impactedTasksStr,
+      assignedTo: blocker.assigned_to,
+      reportedBy: blocker.reported_by,
+      reportedDate: new Date(blocker.reported_date),
+      category: blocker.category,
+      projectId: blocker.project_id,
+      // resolvedDate and resolution are null by default for new
+    },
+  });
+
+  return mapBlocker(newBlocker);
 }
 
 export async function updateBlocker(
   id: string,
   updates: Partial<DbBlocker>
 ): Promise<DbBlocker> {
-  const res = await sql`
-    UPDATE blockers
-    SET
-      title = COALESCE(${updates.title}, title),
-      description = COALESCE(${updates.description}, description),
-      level = COALESCE(${updates.level}, level),
-      status = COALESCE(${updates.status}, status),
-      impacted_tasks = COALESCE(${updates.impacted_tasks ? JSON.stringify(updates.impacted_tasks) : null}, impacted_tasks),
-      assigned_to = COALESCE(${updates.assigned_to}, assigned_to),
-      resolved_date = COALESCE(${updates.resolved_date}, resolved_date),
-      resolution = COALESCE(${updates.resolution}, resolution),
-      updated_at = NOW()
-    WHERE id = ${id}
-    RETURNING *
-  `;
-  return res.rows[0] as any;
+  const data: any = {};
+
+  if (updates.title) data.title = updates.title;
+  if (updates.description !== undefined) data.description = updates.description;
+  if (updates.level) data.level = updates.level;
+  if (updates.status) data.status = updates.status;
+  if (updates.impacted_tasks)
+    data.impactedTasks = JSON.stringify(updates.impacted_tasks);
+  if (updates.assigned_to !== undefined) data.assignedTo = updates.assigned_to;
+  if (updates.resolved_date !== undefined)
+    data.resolvedDate = updates.resolved_date
+      ? new Date(updates.resolved_date)
+      : null;
+  if (updates.resolution !== undefined) data.resolution = updates.resolution;
+
+  const updated = await prisma.blocker.update({
+    where: { id },
+    data,
+  });
+  return mapBlocker(updated);
 }
 
 export async function deleteBlocker(id: string): Promise<void> {
-  await sql`DELETE FROM blockers WHERE id = ${id}`;
+  await prisma.blocker.delete({
+    where: { id },
+  });
 }

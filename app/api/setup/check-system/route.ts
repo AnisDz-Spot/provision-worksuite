@@ -1,0 +1,42 @@
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    // 1. Check Environment Variables
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!dbUrl) {
+      return NextResponse.json(
+        {
+          ready: false,
+          error:
+            "DATABASE_URL or POSTGRES_URL environment variable is missing.",
+        },
+        { status: 200 } // Return 200 so UI can handle it gracefully as "not ready"
+      );
+    }
+
+    // 2. Check Database Connectivity
+    await prisma.$connect();
+
+    // 3. Check optional Storage (just existence)
+    const storageProvider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
+
+    return NextResponse.json({
+      ready: true,
+      provider: storageProvider || "vercel-blob (default)",
+      dbConfigured: true,
+    });
+  } catch (error: any) {
+    console.error("System check failed:", error);
+    return NextResponse.json(
+      {
+        ready: false,
+        error: `Database connection failed: ${error.message}`,
+      },
+      { status: 200 }
+    );
+  }
+}

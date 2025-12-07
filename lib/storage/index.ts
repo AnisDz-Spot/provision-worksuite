@@ -1,17 +1,17 @@
 import { LocalStorageProvider } from "./local";
 import { VercelBlobProvider } from "./vercel-provider";
+import { S3StorageProvider } from "./s3-provider";
 import { StorageProvider, UploadProgress } from "./types";
 
 // Factory to get the active provider
-// Default to Vercel Blob if not specified, or Local if specified
 const getProvider = (): StorageProvider => {
   const provider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
-  // Note: We use NEXT_PUBLIC_ because this might be called on client side (though abstract methods usually call API)
-  // Actually, Vercel Blob `put` works on client side? Yes, if token is present.
-  // My LocalStorageProvider works on client side via API.
 
   if (provider === "local") {
     return new LocalStorageProvider();
+  }
+  if (provider === "s3") {
+    return new S3StorageProvider();
   }
   return new VercelBlobProvider();
 };
@@ -27,21 +27,18 @@ export async function uploadFile(
   path: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-  // Ensure path has filename if not provided?
-  // Usually path is folder + filename.
-  // My previous code: `put(${path}/${file.name})`
-  // Let's standardise: path argument should be the FULL path including filename?
-  // Or folder?
-  // In vercel-blob.ts: `put(${path}/${file.name}` so input 'path' was a folder.
-  // In LocalStorageProvider: `formData.append("path", path)` -> route uses `uploads/path`.
-  // If I pass "avatars/user1" to uploadFile, I want it to be "avatars/user1/filename.jpg" or just "avatars/user1.jpg"?
+  // Ensure we consistently use forward slashes and no leading slash
+  const cleanPath = path.replace(/^\/+/, "");
+  // Should we append filename? Yes if path acts as "directory"
+  // But caller might pass full path.
+  // existing abstraction usage: `uploadFile(file, "avatars/userId")` -> expects result to be in that folder.
 
-  // Existing usage: `uploadFile(file, "avatars/userId", ...)` (from vercel-blob.ts)
-  // and `put` uses `${path}/${file.name}`.
-  // So 'path' meant 'directory'.
+  // Let's standardise: Caller passes DIRECTORY. We append filename.
+  // OR Caller converts to proper logic.
+  // lib/storage/index.ts previous logic: const fullPath = `${path}/${file.name}`;
+  // Let's keep that.
 
-  // let's follow that convention
-  const fullPath = `${path}/${file.name}`;
+  const fullPath = `${cleanPath}/${file.name}`;
   return provider.uploadFile(file, fullPath, onProgress);
 }
 

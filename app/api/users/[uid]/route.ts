@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: NextRequest,

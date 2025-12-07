@@ -1,36 +1,54 @@
-import { sql } from "@vercel/postgres";
+import prisma from "@/lib/prisma";
 
 export type DbRole = {
   id: string; // kebab-case id
   name: string;
   description?: string;
-  color_hex?: string;
+  color_hex?: string; // Mapped to colorHex in schema?
   order: number;
   created_at?: Date;
   updated_at?: Date;
 };
 
+// Prisma result mapper to match legacy snake_case interface if needed
+function mapRole(role: any): DbRole {
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    color_hex: role.colorHex,
+    order: role.order || 0,
+    created_at: role.createdAt,
+    updated_at: role.updatedAt,
+  };
+}
+
 export async function getAllRoles(): Promise<DbRole[]> {
-  const res =
-    await sql`SELECT id, name, description, color_hex, order, created_at, updated_at FROM roles ORDER BY order ASC, name ASC`;
-  return res.rows as any;
+  const roles = await prisma.role.findMany({
+    orderBy: [{ order: "asc" }, { name: "asc" }],
+  });
+  return roles.map(mapRole);
 }
 
 export async function upsertRole(role: DbRole): Promise<DbRole> {
-  const res = await sql`
-    INSERT INTO roles (id, name, description, color_hex, order)
-    VALUES (${role.id}, ${role.name}, ${role.description || null}, ${role.color_hex || null}, ${role.order})
-    ON CONFLICT (id) DO UPDATE SET 
-      name = EXCLUDED.name,
-      description = EXCLUDED.description,
-      color_hex = EXCLUDED.color_hex,
-      order = EXCLUDED.order,
-      updated_at = NOW()
-    RETURNING id, name, description, color_hex, order, created_at, updated_at
-  `;
-  return res.rows[0] as any;
+  const data = {
+    name: role.name,
+    description: role.description,
+    colorHex: role.color_hex,
+    order: role.order,
+  };
+
+  const upserted = await prisma.role.upsert({
+    where: { id: role.id },
+    create: { id: role.id, ...data },
+    update: data,
+  });
+
+  return mapRole(upserted);
 }
 
 export async function deleteRole(id: string): Promise<void> {
-  await sql`DELETE FROM roles WHERE id = ${id}`;
+  await prisma.role.delete({
+    where: { id },
+  });
 }

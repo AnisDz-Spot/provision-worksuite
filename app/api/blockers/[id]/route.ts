@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { updateBlocker, deleteBlocker } from "@/lib/db/blockers";
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -18,13 +18,58 @@ export default function OnboardingPage() {
   const [licenseLoading, setLicenseLoading] = useState(false);
   const [licenseValid, setLicenseValid] = useState(false);
   const [licenseError, setLicenseError] = useState<string | null>(null);
-  const [dbUrl, setDbUrl] = useState("");
-  const [dbBlob, setDbBlob] = useState(`{
-  "sslmode": "require",
-  "poolSize": 10
-}`);
+
+  // DB Config State
   const [dbTested, setDbTested] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // Fallback Config State
+  const [showConfigForm, setShowConfigForm] = useState(false);
+  const [dbUrl, setDbUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Timer state
+  // 3 minutes = 180 seconds
+  const [timeLeft, setTimeLeft] = useState<number>(180);
+
+  useEffect(() => {
+    // Only run timer if we are in setup flow (not mock) and not done yet (dbTested true means effectively done with config)
+    // If they choose demo mode, we stop.
+    // If they finish setup (dbTested), we stop.
+
+    if (dataMode === "mock" || dbTested) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Timeout reached
+          handleTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [dataMode, dbTested]);
+
+  const handleTimeout = () => {
+    // Force Demo Mode
+    setDataMode("mock");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pv:dataMode", "mock");
+      localStorage.setItem("pv:onboardingDone", "true");
+      alert("Setup time expired. Switching to Demo Mode.");
+      window.location.href = "/";
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const handleDashboard = () => {
     router.push("/");
@@ -36,7 +81,15 @@ export default function OnboardingPage() {
   // Step 1: Mode selection
   if (step === "mode") {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4 relative">
+        {/* Timer Display */}
+        <div className="absolute top-6 right-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-full font-mono font-medium text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
+          Setup Time:{" "}
+          <span className={timeLeft < 60 ? "text-red-500" : "text-indigo-600"}>
+            {formatTime(timeLeft)}
+          </span>
+        </div>
+
         <div className="w-full max-w-2xl">
           {/* Progress indicator */}
           <div className="flex items-center justify-center gap-2 mb-8">
@@ -135,7 +188,13 @@ export default function OnboardingPage() {
   // Step 2: License activation for real data mode
   if (step === "license" && dataMode === "real") {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4 relative">
+        <div className="absolute top-6 right-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-full font-mono font-medium text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
+          Setup Time:{" "}
+          <span className={timeLeft < 60 ? "text-red-500" : "text-indigo-600"}>
+            {formatTime(timeLeft)}
+          </span>
+        </div>
         <div className="w-full max-w-lg">
           {/* Progress indicator */}
           <div className="flex items-center justify-center gap-2 mb-8">
@@ -238,10 +297,17 @@ export default function OnboardingPage() {
       </div>
     );
   }
-  // Step 3: Database configuration
+
+  // Step 3: System Configuration Check (With Fallback)
   if (step === "db" && dataMode === "real") {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
+      <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4 relative">
+        <div className="absolute top-6 right-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-full font-mono font-medium text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
+          Setup Time:{" "}
+          <span className={timeLeft < 60 ? "text-red-500" : "text-indigo-600"}>
+            {formatTime(timeLeft)}
+          </span>
+        </div>
         <div className="w-full max-w-2xl">
           {/* Progress indicator */}
           <div className="flex items-center justify-center gap-2 mb-8">
@@ -266,119 +332,192 @@ export default function OnboardingPage() {
                 <Database className="w-7 h-7 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                Database Configuration
+                System Configuration
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                Connect your PostgreSQL database to get started
+                Verifying your server environment
               </p>
             </div>
 
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Connection String
-                </label>
-                <input
-                  type="text"
-                  placeholder="postgres://user:password@host:port/dbname"
-                  value={dbUrl}
-                  onChange={(e) => setDbUrl(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono text-sm"
-                />
+            <div className="space-y-6">
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+                  Environment Check
+                </h3>
+
+                {!showConfigForm ? (
+                  <>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                      Checking for <code>POSTGRES_URL</code> in environment
+                      variables...
+                    </p>
+
+                    {dbTested && !dbError && (
+                      <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                          <Check className="w-5 h-5" />
+                        </div>
+                        Configuration valid! Database connected.
+                      </div>
+                    )}
+
+                    {dbError && (
+                      <div className="flex flex-col gap-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 p-4 rounded-lg border border-red-100 dark:border-red-900/30">
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 mt-0.5 shrink-0">⚠️</div>
+                          <div>
+                            <p className="font-medium mb-1">
+                              Configuration Missing
+                            </p>
+                            <p className="text-sm opacity-90">{dbError}</p>
+                          </div>
+                        </div>
+                        {/* Fallback Trigger */}
+                        <button
+                          onClick={() => {
+                            setShowConfigForm(true);
+                            setDbError(null);
+                          }}
+                          className="mt-2 text-sm underline text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 font-medium text-left"
+                        >
+                          I cannot set Environment Variables. Configure manually
+                          →
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Manual Configuration Form */
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        Database Connection String
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="postgres://user:password@host:port/dbname"
+                        value={dbUrl}
+                        onChange={(e) => setDbUrl(e.target.value)}
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono text-sm"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">
+                        This will be written to a local <code>.env</code> file.
+                        Ensure your server environment supports persistent
+                        files.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={async () => {
+                          setIsSaving(true);
+                          setDbError(null);
+                          try {
+                            const res = await fetch("/api/setup/config", {
+                              method: "POST",
+                              body: JSON.stringify({ postgresUrl: dbUrl }),
+                              headers: { "Content-Type": "application/json" },
+                            });
+                            if (res.ok) {
+                              // Re-run check
+                              const check = await fetch(
+                                "/api/setup/check-system"
+                              );
+                              const data = await check.json();
+                              if (data.ready) {
+                                setDbTested(true);
+                                setShowConfigForm(false);
+                              } else {
+                                setDbError(
+                                  data.error || "Saved, but connection failed."
+                                );
+                              }
+                            } else {
+                              const err = await res.json();
+                              setDbError(
+                                err.error || "Failed to save configuration"
+                              );
+                            }
+                          } catch (e: any) {
+                            setDbError("Error: " + e.message);
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }}
+                        disabled={isSaving || !dbUrl}
+                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {isSaving ? "Saving..." : "Save & Connect"}
+                      </button>
+                      <button
+                        onClick={() => setShowConfigForm(false)}
+                        className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {dbError && (
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                        {dbError}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Advanced Configuration (Optional) removed as requested */}
+              {!dbTested ? (
+                !showConfigForm && (
+                  <button
+                    onClick={async () => {
+                      setDbError(null);
+                      setLicenseLoading(true); // Reuse loading state
+                      try {
+                        const res = await fetch("/api/setup/check-system");
+                        const data = await res.json();
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Storage / Media Blob
-                  <span className="ml-2 text-xs font-normal text-slate-500">
-                    (Optional)
-                  </span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Paste or describe storage/media config, S3 bucket, etc. (optional)"
-                  value={dbBlob}
-                  onChange={(e) => setDbBlob(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono text-sm resize-none"
-                />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  For storage/media configuration (e.g., S3, Azure Blob, etc).
-                  Leave blank if not needed.
-                </p>
-              </div>
-
-              {dbTested && (
-                <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                  <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    Connection successful!
-                  </p>
-                </div>
+                        if (data.ready) {
+                          setDbTested(true);
+                        } else {
+                          // If check fails, we show error which triggers the fallback UI option
+                          setDbError(
+                            data.error ||
+                              "System check failed. No configuration found."
+                          );
+                        }
+                      } catch (e: any) {
+                        setDbError("Network error: " + e.message);
+                      } finally {
+                        setLicenseLoading(false);
+                      }
+                    }}
+                    disabled={licenseLoading}
+                    className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {licenseLoading ? "Verifying..." : "Verify Configuration"}
+                  </button>
+                )
+              ) : (
+                <button
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("pv:dataMode", "real");
+                      localStorage.setItem("pv:onboardingDone", "true");
+                      localStorage.setItem(
+                        "pv:setupStatus",
+                        JSON.stringify({
+                          databaseConfigured: true,
+                          profileCompleted: false,
+                        })
+                      );
+                      // Redirect to register to create the admin account
+                      window.location.href = "/auth/register?flow=onboarding";
+                    }
+                  }}
+                  className="w-full py-3.5 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  Initialize System & Create Admin
+                  <ArrowRight className="w-5 h-5" />
+                </button>
               )}
-
-              {dbError && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {dbError}
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={async () => {
-                  setDbError(null);
-                  if (
-                    !dbUrl.startsWith("postgres://") &&
-                    !dbUrl.startsWith("postgresql://")
-                  ) {
-                    setDbError(
-                      "Invalid connection string format. Must start with postgres:// or postgresql://"
-                    );
-                    return;
-                  }
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
-                  setDbTested(true);
-                }}
-                disabled={!dbUrl}
-                className="w-full py-3 border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:bg-slate-100 dark:disabled:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Test Connection
-              </button>
-
-              <button
-                onClick={() => {
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("pv:dataMode", "real");
-                    localStorage.setItem("pv:onboardingDone", "true");
-                    localStorage.setItem(
-                      "pv:dbConfig",
-                      JSON.stringify({
-                        configured: true,
-                        postgresUrl: dbUrl,
-                        blobConfig: dbBlob,
-                      })
-                    );
-                    localStorage.setItem(
-                      "pv:setupStatus",
-                      JSON.stringify({
-                        databaseConfigured: true,
-                        // We assume profile is "completed" for the purpose of getting past the check,
-                        // or effectively skipped. Real app might want a profile step.
-                        profileCompleted: true,
-                      })
-                    );
-                  }
-                  handleDashboard();
-                }}
-                disabled={!dbTested}
-                className="w-full py-3.5 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-slate-300 disabled:to-slate-400 dark:disabled:from-slate-700 dark:disabled:to-slate-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl disabled:shadow-none transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                Complete Setup
-                <ArrowRight className="w-5 h-5" />
-              </button>
 
               <button
                 onClick={() => {
@@ -396,5 +535,3 @@ export default function OnboardingPage() {
     );
   }
 }
-
-// Demo mode final step

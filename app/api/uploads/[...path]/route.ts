@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params;
 
-  if (process.env.STORAGE_PROVIDER !== "local") {
+  if (process.env.NEXT_PUBLIC_STORAGE_PROVIDER !== "local") {
     // In production with Vercel Blob/S3, this route shouldn't really be hit
     // unless we're proxying, but generally we want to serve directly.
     // However, for simplicity, we allow it if the file exists.

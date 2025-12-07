@@ -5,7 +5,7 @@ import path from "path";
 export async function POST(request: NextRequest) {
   // Only allow in development or self-hosting mode
   if (
-    process.env.STORAGE_PROVIDER !== "local" &&
+    process.env.NEXT_PUBLIC_STORAGE_PROVIDER !== "local" &&
     process.env.NODE_ENV === "production"
   ) {
     return NextResponse.json(

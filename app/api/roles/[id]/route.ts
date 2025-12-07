@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { upsertRole, deleteRole } from "@/lib/db/roles";
+import prisma from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: NextRequest,

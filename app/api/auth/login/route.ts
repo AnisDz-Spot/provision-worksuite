@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
 import { LoginSchema } from "@/lib/schemas";
 import { rateLimitLogin } from "@/lib/ratelimit";
 import { log } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {

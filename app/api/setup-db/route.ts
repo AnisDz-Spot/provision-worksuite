@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 // Please run `npx prisma db push` and `npx prisma generate` locally or in your CI/CD pipeline before deploying.
 // This endpoint only validates that the API is reachable and the DB URL is set.
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (!dbUrl) {
@@ -18,6 +20,6 @@ export async function POST() {
   return NextResponse.json({
     success: false,
     error:
-      "Prisma CLI commands (db push, generate) cannot be run in Vercel/serverless environments. Please run them locally or in CI/CD before deploy."
+      "Prisma CLI commands (db push, generate) cannot be run in Vercel/serverless environments. Please run them locally or in CI/CD before deploy.",
   });
 }

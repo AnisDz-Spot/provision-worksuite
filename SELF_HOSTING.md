@@ -1,102 +1,69 @@
 # Self-Hosting Guide
 
-This guide explains how to deploy ProVision WorkSuite on any server (VPS, Dedicated, Cloud) using Docker. This approach gives you full control over your data and infrastructure.
+This guide explains how to deploy ProVision WorkSuite. This application requires **Environment Variables** to be set on the server for security. Database credentials are NO LONGER configured via the UI.
 
 ## Prerequisites
 
-- A server with **Docker** and **Docker Compose** installed.
-- A **Firebase Project** (for Authentication).
-- A domain name pointing to your server.
+- A server with **Docker** & **Docker Compose** installed.
+- A **PostgreSQL Database** (e.g., Neon, AWS RDS, or local Docker container).
+- A domain name (optional but recommended for SSL).
 
 ## 1. Prepare Environment Variables
 
-Create a `.env` file in the project root (or copy `.env.example`):
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and configure the following:
+Create a `.env` or `.env.local` file in the project root:
 
 ```env
-# Database (Auto-configured in Docker, but needed if running outside)
-DATABASE_URL=postgresql://provision:provision_password@postgres:5432/provision_db
+# Database Connection (REQUIRED)
+# Must be a valid connection string to your PostgreSQL instance
+POSTGRES_URL=postgresql://user:password@host:5432/dbname?sslmode=require
 
-# Storage Provider
-# Options: 'local' (files stored on server) or 'vercel-blob' (cloud storage)
+# Storage Provider (REQUIRED)
+# Options: 'local', 'vercel-blob', 's3'
 NEXT_PUBLIC_STORAGE_PROVIDER=local
 
-# Firebase Configuration (REQUIRED)
-# Get these from your Firebase Console
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+# If using S3 Storage:
+S3_REGION=us-east-1
+S3_BUCKET_NAME=your-bucket
+S3_ACCESS_KEY_ID=xxx
+S3_SECRET_ACCESS_KEY=xxx
+S3_ENDPOINT=https://s3.amazonaws.com # Optional, for Custom/MinIO
+S3_PUBLIC_URL=https://cdn.yourdomain.com # Optional
+
+# If using Vercel Blob:
+BLOB_READ_WRITE_TOKEN=xxx
 ```
 
 ## 2. Run with Docker Compose
-
-Running the application is as simple as:
 
 ```bash
 docker-compose up -d
 ```
 
-This will start:
+### Persistent Data (Local Mode)
 
-- **App**: Accessible at `http://your-server-ip:3000`
-- **Postgres**: Database service
+If using `NEXT_PUBLIC_STORAGE_PROVIDER=local`:
 
-### Persistent Data
+- **Uploads** are stored in the `/uploads` directory mapped to a volume.
+- **Database** (if utilizing the docker-compose postgres service) is stored in `postgres_data`.
 
-- **Database**: Stored in a named volume `postgres_data`.
-- **Uploads**: Stored in a named volume `uploads_data`.
+## 3. First-Time Setup (Onboarding)
 
-## 3. Reverse Proxy (Nginx) - Recommended
-
-For production, you should run Nginx in front of the app to handle SSL (HTTPS).
-
-Example Nginx config:
-
-```nginx
-server {
-    server_name worksuite.yourdomain.com;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Use Certbot to get free SSL certificates:
-
-```bash
-sudo certbot --nginx -d worksuite.yourdomain.com
-```
+1. **Access the App**: Go to `http://your-server:3000`.
+2. **Onboarding Screen**: You will see a "System Configuration" check.
+   - Click **Verify Configuration**.
+   - The system checks if `POSTGRES_URL` is valid and the DB is reachable.
+3. **Registration**:
+   - Once verified, you will be redirected to the **Registration Page**.
+   - The **First User** to register is automatically assigned the **Global Admin** role.
+   - **Note**: Registration is CLOSED after the first user. Subsequent users must be invited by the Admin.
 
 ## Troubleshooting
 
-**Rebuild containers after code changes:**
+**"System Configuration Failed"**:
 
-```bash
-docker-compose up -d --build
-```
+- Ensure `POSTGRES_URL` is set in your environment (e.g., in `.env` or Docker vars).
+- Check database connectivity (firewalls, pg_hba.conf).
 
-**View logs:**
+**"Registration Closed"**:
 
-```bash
-docker-compose logs -f
-```
-
-**Access Database directly:**
-
-```bash
-docker exec -it provision-worksuite-db psql -U provision -d provision_db
-```
+- This means a user already exists in the `User` table. Login with the existing admin account.

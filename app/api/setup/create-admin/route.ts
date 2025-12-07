@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { CreateAdminSchema } from "@/lib/schemas";
 import { rateLimitSignup } from "@/lib/ratelimit";
 import { log } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
