@@ -230,7 +230,7 @@ export function ProjectsCharts() {
     switch (statusChartType) {
       case "pie":
         return (
-          <PieChart>
+          <PieChart style={{ position: "relative", zIndex: 1 }}>
             <Pie
               data={projectStatusData}
               cx="50%"
@@ -240,9 +240,16 @@ export function ProjectsCharts() {
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"
+              startAngle={90}
+              endAngle={-270}
             >
               {projectStatusData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color}
+                  stroke="#fff"
+                  strokeWidth={2}
+                />
               ))}
             </Pie>
             <Tooltip {...chartTooltipStyle} />

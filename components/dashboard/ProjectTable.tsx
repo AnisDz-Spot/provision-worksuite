@@ -560,7 +560,8 @@ export function ProjectTable() {
         </div>
       ) : (
         <>
-          <table className="min-w-full text-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
             <thead className="bg-accent/20">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
@@ -743,6 +744,7 @@ export function ProjectTable() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between p-3 border-t text-sm">
