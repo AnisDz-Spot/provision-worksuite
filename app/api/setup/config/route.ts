@@ -4,7 +4,7 @@ import path from "path";
 
 export async function POST(req: Request) {
   try {
-    const { postgresUrl } = await req.json();
+    const { postgresUrl, dbType = "postgresql" } = await req.json();
 
     if (!postgresUrl) {
       return NextResponse.json(
@@ -13,13 +13,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Basic security check on format
-    if (
-      !postgresUrl.startsWith("postgres://") &&
-      !postgresUrl.startsWith("postgresql://")
-    ) {
+    // Basic security check on format based on database type
+    const validFormats: Record<string, string[]> = {
+      postgresql: ["postgres://", "postgresql://"],
+      mysql: ["mysql://"],
+      sqlite: ["file:", "sqlite:"],
+    };
+
+    const formats = validFormats[dbType] || validFormats.postgresql;
+    const isValid = formats.some((format) => postgresUrl.startsWith(format));
+
+    if (!isValid) {
       return NextResponse.json(
-        { error: "Invalid connection string format" },
+        { error: `Invalid connection string format for ${dbType}` },
         { status: 400 }
       );
     }
@@ -34,14 +40,22 @@ export async function POST(req: Request) {
       // File doesn't exist, start new
     }
 
+    // Determine the appropriate env var name based on DB type
+    const envVarNames: Record<string, string> = {
+      postgresql: "POSTGRES_URL",
+      mysql: "MYSQL_URL",
+      sqlite: "SQLITE_URL",
+    };
+    const dbEnvVar = envVarNames[dbType] || "POSTGRES_URL";
+
     // Check if variable exists to replace or append
-    if (envContent.includes("POSTGRES_URL=")) {
+    if (envContent.includes(`${dbEnvVar}=`)) {
       envContent = envContent.replace(
-        /POSTGRES_URL=.*/g,
-        `POSTGRES_URL="${postgresUrl}"`
+        new RegExp(`${dbEnvVar}=.*`, "g"),
+        `${dbEnvVar}="${postgresUrl}"`
       );
     } else {
-      envContent += `\nPOSTGRES_URL="${postgresUrl}"\n`;
+      envContent += `\n${dbEnvVar}="${postgresUrl}"\n`;
     }
 
     // Also set DATABASE_URL for Prisma
@@ -54,15 +68,19 @@ export async function POST(req: Request) {
       envContent += `\nDATABASE_URL="${postgresUrl}"\n`;
     }
 
+    // Store dbType for reference
+    if (envContent.includes("DB_TYPE=")) {
+      envContent = envContent.replace(/DB_TYPE=.*/g, `DB_TYPE="${dbType}"`);
+    } else {
+      envContent += `\nDB_TYPE="${dbType}"\n`;
+    }
+
     await fs.writeFile(envPath, envContent);
 
     // 2. Runtime Injection
-    // This allows the app to work immediately without restart (mostly)
-    // Note: Prisma Client might need re-instantiation if it's already connected?
-    // Usually Serverless functions spin up fresh, but long-running servers might hold stale config.
-    // We explicitly set it here for the current process.
-    process.env.POSTGRES_URL = postgresUrl;
+    process.env[dbEnvVar] = postgresUrl;
     process.env.DATABASE_URL = postgresUrl;
+    process.env.DB_TYPE = dbType;
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
