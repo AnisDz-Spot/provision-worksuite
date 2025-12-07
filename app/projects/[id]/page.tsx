@@ -344,7 +344,11 @@ export default function ProjectDetailsPage() {
                     Save as Template
                   </Button>
                   <Link href={`/projects/${project.id}/edit`}>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="whitespace-nowrap"
+                    >
                       Edit Project
                     </Button>
                   </Link>

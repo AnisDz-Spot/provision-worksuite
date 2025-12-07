@@ -67,7 +67,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none focus:outline-none min-h-[200px] p-4 text-foreground",
+          "prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4 text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground",
       },
     },
   });

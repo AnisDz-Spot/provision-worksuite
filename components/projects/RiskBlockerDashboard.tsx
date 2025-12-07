@@ -484,6 +484,15 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
               .join(" ")}
           </Button>
         ))}
+        {(filter.level || filter.status || filter.category) && (
+          <>
+            <div className="w-px h-6 bg-border my-auto mx-1" />
+            <Button variant="ghost" size="sm" onClick={() => setFilter({})}>
+              <XCircle className="w-4 h-4 mr-1" />
+              Clear Filters
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Blockers List */}

@@ -367,14 +367,14 @@ export function SprintPlanning() {
                   key={task.id}
                   draggable
                   onDragStart={() => handleDragStart(task.id)}
-                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-move hover:shadow-md transition-all group relative ${draggedTask === task.id ? "opacity-50" : ""}`}
+                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-pointer hover:shadow-md transition-all group relative ${draggedTask === task.id ? "opacity-50" : ""}`}
                   onClick={() => {
                     setEditTaskId(task.id);
                     setEditTask(task);
                   }}
                 >
                   <div className="flex items-start gap-2">
-                    <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
+                    <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5 cursor-move" />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium mb-2 line-clamp-2">
                         {task.title}
