@@ -15,6 +15,7 @@ export async function proxy(request: NextRequest) {
     "/api/setup/create-admin",
     "/api/test-db-connection",
     "/api/db-status",
+    "/api/check-license",
   ];
 
   // Allow public API routes
