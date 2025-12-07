@@ -39,25 +39,17 @@ function DataSourceTab() {
   const [error, setError] = useState<string>("");
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  // License activation state
   const [license, setLicense] = useState("");
-  const [licenseLoading, setLicenseLoading] = useState(false);
-  const [licenseValid, setLicenseValid] = useState(false);
-  const [licenseError, setLicenseError] = useState<string | null>(null);
 
   const handleDataModeChange = (mode: "real" | "mock") => {
     setDataMode(mode);
     setError("");
     if (mode === "real") {
-      setLicenseValid(false);
       setLicense("");
-      setLicenseError(null);
     }
   };
 
   const handleCheckLicense = async () => {
-    setLicenseLoading(true);
-    setLicenseError(null);
     try {
       const resp = await fetch("/api/check-license", {
         method: "POST",
@@ -66,16 +58,10 @@ function DataSourceTab() {
       });
       const data = await resp.json();
       if (data.success) {
-        setLicenseValid(true);
       } else {
-        setLicenseError(data.error || "Invalid serial number");
-        setLicenseValid(false);
       }
     } catch (err) {
-      setLicenseError("Network or server error");
-      setLicenseValid(false);
     } finally {
-      setLicenseLoading(false);
     }
   };
 
@@ -88,11 +74,11 @@ function DataSourceTab() {
 
     localStorage.setItem("pv:dataMode", dataMode);
 
-    // Navigate based on selected mode
-    if (dataMode === "real") {
-      router.push("/settings/database");
-    } else {
+    // Redirect based on mode: dummy -> '/', real -> '/onboarding'
+    if (dataMode === "mock") {
       router.push("/");
+    } else {
+      router.push("/onboarding");
     }
 
     setSaving(false);
@@ -153,9 +139,7 @@ function DataSourceTab() {
               className="ml-4"
               onClick={() => {
                 setDataMode("real");
-                setLicenseValid(false);
                 setLicense("");
-                setLicenseError(null);
                 // Clear session to force re-login
                 localStorage.removeItem("pv:currentUser");
                 localStorage.removeItem("pv:session");
@@ -187,9 +171,7 @@ function DataSourceTab() {
               className="ml-4"
               onClick={async () => {
                 setDataMode("mock");
-                setLicenseValid(false);
                 setLicense("");
-                setLicenseError(null);
                 // Clear session to force re-login
                 localStorage.removeItem("pv:currentUser");
                 localStorage.removeItem("pv:session");

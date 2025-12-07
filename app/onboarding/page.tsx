@@ -64,14 +64,13 @@ export default function OnboardingPage() {
               <button
                 onClick={async () => {
                   setDataMode("mock");
-                  setStep("license");
                   if (typeof window !== "undefined") {
                     // Seed data for a rich demo experience
                     const { seedLocalData } = await import("@/lib/seedData");
                     seedLocalData();
-
                     localStorage.setItem("pv:dataMode", "mock");
                     localStorage.setItem("pv:onboardingDone", "true");
+                    window.location.href = "/";
                   }
                 }}
                 className="group relative overflow-hidden bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 hover:from-slate-100 hover:to-slate-200 dark:hover:from-slate-650 dark:hover:to-slate-750 border-2 border-slate-200 dark:border-slate-600 rounded-2xl p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl"
@@ -133,7 +132,7 @@ export default function OnboardingPage() {
     );
   }
 
-  // Step 2: License activation
+  // Step 2: License activation for real data mode
   if (step === "license" && dataMode === "real") {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
@@ -164,21 +163,22 @@ export default function OnboardingPage() {
                 <Key className="w-7 h-7 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                Activate License
+                License Activation
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                Enter your serial number to unlock all features
+                Enter your serial number to activate your app. You must activate
+                before configuring your database.
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  License Serial Number
+                  Serial Number
                 </label>
                 <input
                   type="text"
-                  placeholder="XXXX-XXXX-XXXX-XXXX"
+                  placeholder="Enter your serial number"
                   value={license}
                   onChange={(e) => setLicense(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono"
@@ -199,8 +199,8 @@ export default function OnboardingPage() {
                   setLicenseLoading(true);
                   setLicenseError(null);
 
-                  // Simulate API call
-                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                  // Simulate API call or real check
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
 
                   if (license.length > 10) {
                     setLicenseValid(true);
@@ -224,23 +224,12 @@ export default function OnboardingPage() {
                   "Activate & Continue"
                 )}
               </button>
-
-              <button
-                onClick={() => {
-                  setDataMode("mock");
-                  setStep("license");
-                }}
-                className="w-full py-3 border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl transition-all"
-              >
-                Switch to Demo Mode
-              </button>
             </div>
           </div>
         </div>
       </div>
     );
   }
-
   // Step 3: Database configuration
   if (step === "db" && dataMode === "real") {
     return (
@@ -398,38 +387,6 @@ export default function OnboardingPage() {
       </div>
     );
   }
-
-  // Demo mode final step
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
-      <div className="w-full max-w-lg">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 p-8 md:p-10">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-linear-to-br from-green-400 to-emerald-500 mb-6 shadow-lg animate-bounce">
-              <Check className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">
-              All Set!
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-2">
-              You're in Demo Mode with sample data
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-500 mb-8">
-              Switch to Production Mode anytime from settings
-            </p>
-
-            <button
-              onClick={() => {
-                handleDashboard();
-              }}
-              className="w-full py-3.5 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-            >
-              Go to Dashboard
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
+
+// Demo mode final step
