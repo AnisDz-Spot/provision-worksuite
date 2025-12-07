@@ -10,7 +10,7 @@ import { BlockerCategorySettings } from "@/components/settings/BlockerCategorySe
 import RiskLevelSettings from "@/components/settings/RiskLevelSettings";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { Bell, Shield } from "lucide-react";
+import { Bell, Shield, Mail } from "lucide-react";
 import RolesSettings from "@/components/settings/RolesSettings";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AlertRulesManager } from "@/components/notifications/AlertRulesManager";
@@ -26,6 +26,7 @@ type TabKey =
   | "workspace"
   | "appearance"
   | "roles"
+  | "email"
   | "notifications"
   | "blockers"
   | "dataSource";
@@ -309,6 +310,14 @@ function SettingsContent() {
             Blockers
           </Button>
           <Button
+            variant={tab === "email" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("email")}
+            className={cn(tab === "email" && "shadow")}
+          >
+            Email
+          </Button>
+          <Button
             variant={tab === "notifications" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleSetTab("notifications")}
@@ -379,6 +388,22 @@ function SettingsContent() {
             </p>
           </div>
           <RiskLevelSettings />
+        </div>
+      )}
+      {tab === "email" && !isSetupMode && (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-primary/10 text-primary">
+              <Mail className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Email Configuration</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure email provider for sending notifications
+              </p>
+            </div>
+          </div>
+          <IntegrationSettings mode="email" />
         </div>
       )}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
@@ -478,7 +503,7 @@ function NotificationsSettingsTabs() {
       {activeTab === "notifications" && <NotificationCenter />}
       {activeTab === "rules" && <AlertRulesManager />}
       {activeTab === "watch" && <ProjectWatch />}
-      {activeTab === "integrations" && <IntegrationSettings />}
+      {activeTab === "integrations" && <IntegrationSettings mode="slack" />}
     </div>
   );
 }

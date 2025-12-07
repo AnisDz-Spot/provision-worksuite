@@ -102,7 +102,11 @@ const DEFAULT_CONFIG: IntegrationConfig = {
   },
 };
 
-export function IntegrationSettings() {
+export function IntegrationSettings({
+  mode = "both",
+}: {
+  mode?: "email" | "slack" | "both";
+}) {
   const { isAdmin } = useAuth();
   const [config, setConfig] = useState<IntegrationConfig>(DEFAULT_CONFIG);
   const [draftConfig, setDraftConfig] = useState<IntegrationConfig | null>(
@@ -263,6 +267,7 @@ export function IntegrationSettings() {
   return (
     <div className="space-y-6">
       {/* Email Integration */}
+      {(mode === "both" || mode === "email") && (
       <Card className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -943,8 +948,10 @@ export function IntegrationSettings() {
           </div>
         )}
       </Card>
+      )}
 
       {/* Slack Integration */}
+      {(mode === "both" || mode === "slack") && (
       <Card className="p-6">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1060,9 +1067,12 @@ export function IntegrationSettings() {
             </div>
           </div>
         )}
+        )}
       </Card>
+      )}
 
       {/* Integration Status Summary */}
+      {mode === "both" && (
       <Card className="p-6 bg-accent/20">
         <h3 className="font-semibold mb-4">Integration Status</h3>
         <div className="space-y-3">
@@ -1090,6 +1100,7 @@ export function IntegrationSettings() {
           </div>
         </div>
       </Card>
+      )}
     </div>
   );
 }
