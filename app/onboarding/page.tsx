@@ -22,6 +22,16 @@ export default function OnboardingPage() {
   // DB Config State
   const [dbTested, setDbTested] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // Fallback Config State
+  const [showConfigForm, setShowConfigForm] = useState(false);
+  const [dbUrl, setDbUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Timer state
+  // 3 minutes = 180 seconds
+  const [timeLeft, setTimeLeft] = useState<number>(180);
+
   useEffect(() => {
     // Only run timer if we are in setup flow (not mock) and not done yet (dbTested true means effectively done with config)
     // If they choose demo mode, we stop.
