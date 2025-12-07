@@ -15,6 +15,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [setupComplete, setSetupComplete] = useState(false);
+  const [showMockWarning, setShowMockWarning] = useState(false);
+  const [showLiveMessage, setShowLiveMessage] = useState(false);
+
+  // Check mock data mode client-side only to avoid hydration mismatch
+  useEffect(() => {
+    setShowMockWarning(shouldUseMockData());
+    setShowLiveMessage(!shouldUseMockData());
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("setup") === "complete") {
@@ -45,7 +53,7 @@ function LoginForm() {
       <h1 className="text-2xl font-bold mb-7 text-center">
         Sign In to ProVision
       </h1>
-      {shouldUseMockData() && (
+      {showMockWarning && (
         <div className="mb-4 p-3 rounded bg-yellow-100 border border-yellow-300 text-yellow-800 text-center text-xs">
           Demo Mode is enabled.
           <button
@@ -111,7 +119,7 @@ function LoginForm() {
           Forgot password?
         </Link>
       </div>
-      {!shouldUseMockData() && (
+      {showLiveMessage && (
         <div className="mt-4 text-center text-sm text-muted-foreground">
           <p>First-time setup credentials:</p>
           <p className="font-mono text-xs mt-1">
