@@ -28,6 +28,24 @@ export function getDatabaseStatus(): Promise<{ configured: boolean }> {
 }
 
 /**
+ * Client-side check if database is configured
+ * Checks localStorage for database configuration flag (not credentials)
+ */
+export function isDatabaseConfigured(): boolean {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const setupStatus = localStorage.getItem("pv:setupStatus");
+    if (!setupStatus) return false;
+
+    const status = JSON.parse(setupStatus);
+    return !!status.databaseConfigured;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Client-side setup completion check
  * Only stores non-sensitive setup state flags, not credentials
  */
