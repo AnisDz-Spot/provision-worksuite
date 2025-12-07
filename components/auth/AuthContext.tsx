@@ -192,6 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser(authUser);
       setIsAuthenticated(true);
       localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+      // Force mock mode for global admin so they aren't redirected to DB config
+      localStorage.setItem("pv:dataMode", "mock");
       setSessionExpiry(30);
       return { success: true };
     }
