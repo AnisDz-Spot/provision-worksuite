@@ -5,14 +5,19 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // 1. Check Environment Variables
-    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    // 1. Check Environment Variables - support multiple DB types
+    const dbUrl =
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.MYSQL_URL ||
+      process.env.SQLITE_URL;
+
     if (!dbUrl) {
       return NextResponse.json(
         {
           ready: false,
           error:
-            "DATABASE_URL or POSTGRES_URL environment variable is missing.",
+            "Database environment variable is missing. Configure your database connection.",
         },
         { status: 200 } // Return 200 so UI can handle it gracefully as "not ready"
       );
