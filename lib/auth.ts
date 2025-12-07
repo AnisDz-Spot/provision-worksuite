@@ -1,14 +1,18 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = "auth-token";
 
-if (!JWT_SECRET) {
-  throw new Error(
-    "CRITICAL: JWT_SECRET environment variable must be set. Application cannot start without it."
-  );
-}
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL: JWT_SECRET env var must be set in production");
+    }
+    return "dev-secret-do-not-use-in-prod";
+  }
+  return secret;
+};
 
 export type AuthUser = {
   uid: string;
@@ -17,7 +21,7 @@ export type AuthUser = {
 };
 
 export async function signToken(payload: AuthUser): Promise<string> {
-  const secret = new TextEncoder().encode(JWT_SECRET);
+  const secret = new TextEncoder().encode(getJwtSecret());
   const alg = "HS256";
 
   return new SignJWT(payload)
@@ -29,7 +33,7 @@ export async function signToken(payload: AuthUser): Promise<string> {
 
 export async function verifyToken(token: string): Promise<AuthUser | null> {
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
+    const secret = new TextEncoder().encode(getJwtSecret());
     const { payload } = await jwtVerify(token, secret);
     return payload as unknown as AuthUser;
   } catch (error) {
