@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +25,41 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [timer, setTimer] = useState(180); // 3 minutes
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [expired, setExpired] = useState(false);
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (timer <= 0) {
+      setExpired(true);
+      // Cleanup: remove DB config, license, restore global admin, dummy mode, seed mock data
+      localStorage.removeItem("pv:dbConfig");
+      localStorage.removeItem("pv:licenseActivated");
+      localStorage.setItem("pv:dataMode", "mock");
+      // Restore global admin session (simulate by setting demo user/session)
+      localStorage.setItem(
+        "pv:currentUser",
+        JSON.stringify({
+          email: "admin@provision.com",
+          role: "admin",
+          demo: true,
+        })
+      );
+      localStorage.setItem("pv:session", "demo-session");
+      // Seed mock data
+      import("@/lib/seedData").then(({ seedLocalData }) => seedLocalData());
+      // Redirect to data source selection after short delay
+      setTimeout(() => {
+        router.replace("/settings?tab=dataSource&timeout=1");
+      }, 1000);
+      return;
+    }
+    timerRef.current = setTimeout(() => setTimer((t) => t - 1), 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timer, router]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,6 +120,26 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
             completedAt: new Date().toISOString(),
           })
         );
+        // Remove global admin session and all mock/demo data except theme, settings, etc.
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            key.startsWith("pv:") &&
+            ![
+              "pv:dbConfig",
+              "pv:licenseActivated",
+              "pv:dataMode",
+              "pv:setupStatus",
+              "pv:theme",
+              "pv:settingsTab",
+              "pv:notificationsSubTab",
+            ].includes(key)
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
+        // Remove global admin session
+        localStorage.removeItem("pv:currentUser");
+        localStorage.removeItem("pv:session");
         onComplete();
         router.push("/");
       } else {
@@ -115,9 +170,16 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
           This will be your permanent admin account. The temporary login will be
           disabled after this step.
         </p>
+        <div className="mt-2 text-xs text-red-500 font-semibold">
+          {expired
+            ? "⏰ Setup timed out! Restoring demo mode..."
+            : `⏳ Complete setup within ${Math.floor(timer / 60)}:${(timer % 60)
+                .toString()
+                .padStart(2, "0")}`}
+        </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
           {/* Avatar Upload */}
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full bg-secondary border flex items-center justify-center overflow-hidden">

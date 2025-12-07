@@ -141,30 +141,42 @@ export default function DatabaseSettingsPage() {
   const handleSave = async () => {
     if (!postgresUrl) {
       alert("Please enter a database connection string");
-      return;
-    }
-    if (!isConnectionTested) {
-      alert("Please test the connection first");
-      return;
-    }
-    setLoading(true);
-    try {
-      const config = {
-        postgresUrl,
-        blobToken,
-        configured: true,
-        configuredAt: new Date().toISOString(),
-      };
-      localStorage.setItem("pv:dbConfig", JSON.stringify(config));
-      const setupStatus = {
-        databaseConfigured: true,
-        profileCompleted: false,
-      };
-      localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
-      // Remove demo session/localStorage keys
-      localStorage.removeItem("pv:currentUser");
-      localStorage.removeItem("pv:session");
-      localStorage.setItem("pv:dataMode", "real");
+      setLoading(true);
+      try {
+        const config = {
+          postgresUrl,
+          blobToken,
+          configured: true,
+          configuredAt: new Date().toISOString(),
+        };
+        localStorage.setItem("pv:dbConfig", JSON.stringify(config));
+        const setupStatus = {
+          databaseConfigured: true,
+          profileCompleted: false,
+        };
+        localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
+        localStorage.setItem("pv:dataMode", "real");
+        // Ensure global admin session is preserved until profile setup is completed or timed out
+        if (!localStorage.getItem("pv:currentUser")) {
+          localStorage.setItem(
+            "pv:currentUser",
+            JSON.stringify({ email: "admin@provision.com", role: "admin", demo: true })
+          );
+        }
+        if (!localStorage.getItem("pv:session")) {
+          localStorage.setItem("pv:session", "demo-session");
+        }
+        // Redirect to API route that sets the cookie and then to profile setup
+        window.location.href = "/api/auth/redirect-global-admin";
+        return;
+      } catch (error) {
+        alert("Failed to save configuration");
+      } finally {
+        setLoading(false);
+      }
+    };
+        body: JSON.stringify({ email: "admin@provision.com", role: "admin" }),
+      });
       // Redirect to account setup
       router.push("/settings?tab=profile&setup=true");
     } catch (error) {
