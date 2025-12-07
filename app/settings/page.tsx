@@ -241,6 +241,10 @@ function SettingsContent() {
 
   return (
     <section className="p-4 md:p-8 max-w-5xl flex flex-col gap-8">
+      {/* Hide all navigation UI if in setup mode */}
+      {isSetupMode && (
+        <style>{`.sidebar, .Navbar, .nav, .navigation, .menu, .drawer, .topbar, .appbar, .AppBar, .app-bar, .header, .Header, .footer, .Footer { display: none !important; }`}</style>
+      )}
       <div>
         <h1 className="text-3xl font-bold mb-2">
           {isSetupMode ? "Complete Your Profile" : "Settings"}
@@ -251,69 +255,70 @@ function SettingsContent() {
             : "Manage your profile and workspace configuration."}
         </p>
       </div>
-      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
-        <Button
-          variant={tab === "profile" || tab === "user" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("profile")}
-          className={cn((tab === "profile" || tab === "user") && "shadow")}
-        >
-          Profile
-        </Button>
-        {!isSetupMode && (
-          <>
-            <Button
-              variant={tab === "workspace" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("workspace")}
-              className={cn(tab === "workspace" && "shadow")}
-            >
-              Workspace / Agency
-            </Button>
-            <Button
-              variant={tab === "dataSource" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("dataSource")}
-              className={cn(tab === "dataSource" && "shadow")}
-            >
-              Data Source
-            </Button>
-            <Button
-              variant={tab === "appearance" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("appearance")}
-              className={cn(tab === "appearance" && "shadow")}
-            >
-              Appearance
-            </Button>
-            <Button
-              variant={tab === "roles" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("roles")}
-              className={cn(tab === "roles" && "shadow")}
-            >
-              Roles
-            </Button>
-            <Button
-              variant={tab === "blockers" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("blockers")}
-              className={cn(tab === "blockers" && "shadow")}
-            >
-              Blockers
-            </Button>
-            <Button
-              variant={tab === "notifications" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleSetTab("notifications")}
-              className={cn(tab === "notifications" && "shadow")}
-            >
-              Notifications
-            </Button>
-          </>
-        )}
-      </div>
-      {tab === "roles" && (
+      {/* Hide navigation tabs if in setup mode */}
+      {!isSetupMode && (
+        <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
+          <Button
+            variant={
+              tab === "profile" || tab === "user" ? "primary" : "outline"
+            }
+            size="sm"
+            onClick={() => handleSetTab("profile")}
+            className={cn((tab === "profile" || tab === "user") && "shadow")}
+          >
+            Profile
+          </Button>
+          <Button
+            variant={tab === "workspace" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("workspace")}
+            className={cn(tab === "workspace" && "shadow")}
+          >
+            Workspace / Agency
+          </Button>
+          <Button
+            variant={tab === "dataSource" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("dataSource")}
+            className={cn(tab === "dataSource" && "shadow")}
+          >
+            Data Source
+          </Button>
+          <Button
+            variant={tab === "appearance" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("appearance")}
+            className={cn(tab === "appearance" && "shadow")}
+          >
+            Appearance
+          </Button>
+          <Button
+            variant={tab === "roles" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("roles")}
+            className={cn(tab === "roles" && "shadow")}
+          >
+            Roles
+          </Button>
+          <Button
+            variant={tab === "blockers" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("blockers")}
+            className={cn(tab === "blockers" && "shadow")}
+          >
+            Blockers
+          </Button>
+          <Button
+            variant={tab === "notifications" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("notifications")}
+            className={cn(tab === "notifications" && "shadow")}
+          >
+            Notifications
+          </Button>
+        </div>
+      )}
+      {tab === "roles" && !isSetupMode && (
         <div className="max-w-3xl space-y-6">
           <div className="space-y-2">
             <h2 className="text-xl font-bold">Team Roles</h2>
@@ -332,10 +337,10 @@ function SettingsContent() {
         ) : (
           <UserSettingsForm />
         ))}
-      {tab === "workspace" && <WorkspaceSettingsForm />}
-      {tab === "dataSource" && <DataSourceTab />}
+      {tab === "workspace" && !isSetupMode && <WorkspaceSettingsForm />}
+      {tab === "dataSource" && !isSetupMode && <DataSourceTab />}
 
-      {tab === "appearance" && (
+      {tab === "appearance" && !isSetupMode && (
         <div className="max-w-2xl space-y-6">
           <div>
             <h2 className="text-lg font-semibold mb-2">Theme Mode</h2>
@@ -353,7 +358,7 @@ function SettingsContent() {
           </div>
         </div>
       )}
-      {tab === "blockers" && (
+      {tab === "blockers" && !isSetupMode && (
         <div className="max-w-3xl space-y-6">
           <div className="space-y-2">
             <h2 className="text-xl font-bold">Blocker Categories</h2>
@@ -376,7 +381,7 @@ function SettingsContent() {
           <RiskLevelSettings />
         </div>
       )}
-      {tab === "notifications" && <NotificationsSettingsTabs />}
+      {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
     </section>
   );
 }

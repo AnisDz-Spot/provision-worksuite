@@ -159,6 +159,11 @@ export default function DatabaseSettingsPage() {
         profileCompleted: false,
       };
       localStorage.setItem("pv:setupStatus", JSON.stringify(setupStatus));
+      // Remove demo session/localStorage keys
+      localStorage.removeItem("pv:currentUser");
+      localStorage.removeItem("pv:session");
+      localStorage.setItem("pv:dataMode", "real");
+      // Redirect to account setup
       router.push("/settings?tab=profile&setup=true");
     } catch (error) {
       alert("Failed to save configuration");
