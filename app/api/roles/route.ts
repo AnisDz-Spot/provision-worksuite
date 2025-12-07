@@ -1,68 +1,68 @@
 import { NextResponse } from "next/server";
-import { shouldUseDatabaseData } from "@/lib/dataSource";
-import { getAllRoles, upsertRole } from "@/lib/db/roles";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json(
-      { success: false, error: "Database mode disabled" },
-      { status: 400 }
-    );
-  }
   try {
-    // Always return roles ordered by order, name
-    const roles = await getAllRoles();
-    const ordered = Array.isArray(roles)
-      ? [...roles].sort((a, b) => {
-          if ((a.order ?? 0) !== (b.order ?? 0))
-            return (a.order ?? 0) - (b.order ?? 0);
-          return a.name.localeCompare(b.name);
-        })
-      : roles;
-    return NextResponse.json({ success: true, data: ordered });
-  } catch (e: any) {
+    const roles = await prisma.role.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+    });
+
+    log.info({ count: roles.length }, "Fetched roles");
+
+    return NextResponse.json({ success: true, data: roles });
+  } catch (error) {
+    log.error({ err: error }, "Get roles error");
     return NextResponse.json(
-      { success: false, error: e?.message || "Failed to load roles" },
+      { success: false, error: "Failed to load roles" },
       { status: 500 }
     );
   }
 }
 
 export async function POST(request: Request) {
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json(
-      { success: false, error: "Database mode disabled" },
-      { status: 400 }
-    );
-  }
   try {
     const body = await request.json();
-    await sql`
-      INSERT INTO roles (id, name, description, color_hex, "order")
-      VALUES (${body.id}, ${body.name}, ${body.description || null}, ${body.color_hex || body.colorHex || null}, ${body.order ?? 0})
-      ON CONFLICT (id) DO UPDATE SET 
-        name = EXCLUDED.name,
-        description = EXCLUDED.description,
-        color_hex = EXCLUDED.color_hex,
-        "order" = EXCLUDED."order",
-        updated_at = NOW()
-    `;
-    // Return the full ordered list for UI refresh
-    const roles = await getAllRoles();
-    const ordered = Array.isArray(roles)
-      ? [...roles].sort((a, b) => {
-          if ((a.order ?? 0) !== (b.order ?? 0))
-            return (a.order ?? 0) - (b.order ?? 0);
-          return a.name.localeCompare(b.name);
-        })
-      : roles;
-    return NextResponse.json({ success: true, data: ordered });
-  } catch (e: any) {
+    const { id, name, description, color_hex, colorHex, order } = body;
+
+    if (!id || !name) {
+      return NextResponse.json(
+        { success: false, error: "ID and name are required" },
+        { status: 400 }
+      );
+    }
+
+    const role = await prisma.role.upsert({
+      where: { id },
+      update: {
+        name,
+        description: description || null,
+        colorHex: color_hex || colorHex || null,
+        order: order ?? 0,
+      },
+      create: {
+        id,
+        name,
+        description: description || null,
+        colorHex: color_hex || colorHex || null,
+        order: order ?? 0,
+      },
+    });
+
+    // Return all roles sorted
+    const roles = await prisma.role.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+    });
+
+    log.info({ roleId: id, action: "upsert" }, "Role upserted");
+
+    return NextResponse.json({ success: true, data: roles });
+  } catch (error) {
+    log.error({ err: error }, "Save role error");
     return NextResponse.json(
-      { success: false, error: e?.message || "Failed to save role" },
+      { success: false, error: "Failed to save role" },
       { status: 500 }
     );
   }
@@ -70,20 +70,16 @@ export async function POST(request: Request) {
 
 // Batch upsert to reduce API calls
 export async function PUT(request: Request) {
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json(
-      { success: false, error: "Database mode disabled" },
-      { status: 400 }
-    );
-  }
   try {
     const body = await request.json();
+
     if (!Array.isArray(body)) {
       return NextResponse.json(
         { success: false, error: "Expected an array of roles" },
         { status: 400 }
       );
     }
+
     // Validate required fields and duplicates
     const ids = new Set<string>();
     for (const r of body) {
@@ -113,32 +109,38 @@ export async function PUT(request: Request) {
       ids.add(id);
     }
 
+    // Upsert each role
     for (const r of body) {
-      const normalized = {
-        id: r.id,
-        name: r.name,
-        description: r.description || null,
-        color_hex: r.color_hex || r.colorHex || null,
-        order: r.order ?? 0,
-      } as any;
-      await sql`
-        INSERT INTO roles (id, name, description, color_hex, "order")
-        VALUES (${normalized.id}, ${normalized.name}, ${normalized.description}, ${normalized.color_hex}, ${normalized.order})
-        ON CONFLICT (id) DO UPDATE SET 
-          name = EXCLUDED.name,
-          description = EXCLUDED.description,
-          color_hex = EXCLUDED.color_hex,
-          "order" = EXCLUDED."order",
-          updated_at = NOW()
-      `;
+      await prisma.role.upsert({
+        where: { id: r.id },
+        update: {
+          name: r.name,
+          description: r.description || null,
+          colorHex: r.color_hex || r.colorHex || null,
+          order: r.order ?? 0,
+        },
+        create: {
+          id: r.id,
+          name: r.name,
+          description: r.description || null,
+          colorHex: r.color_hex || r.colorHex || null,
+          order: r.order ?? 0,
+        },
+      });
     }
 
     // Return authoritative ordered list
-    const ordered = await getAllRoles();
-    return NextResponse.json({ success: true, data: ordered });
-  } catch (e: any) {
+    const roles = await prisma.role.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+    });
+
+    log.info({ count: body.length }, "Batch roles upserted");
+
+    return NextResponse.json({ success: true, data: roles });
+  } catch (error) {
+    log.error({ err: error }, "Batch save roles error");
     return NextResponse.json(
-      { success: false, error: e?.message || "Failed to batch save roles" },
+      { success: false, error: "Failed to batch save roles" },
       { status: 500 }
     );
   }

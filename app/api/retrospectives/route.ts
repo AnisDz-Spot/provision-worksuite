@@ -1,76 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-async function ensureRetrospectivesTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS retrospectives (
-      id SERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      project_id TEXT,
-      sprint_number INTEGER,
-      date TIMESTAMP NOT NULL,
-      attendees JSONB DEFAULT '[]',
-      went_well JSONB DEFAULT '[]',
-      needs_improvement JSONB DEFAULT '[]',
-      action_items JSONB DEFAULT '[]',
-      created_by TEXT,
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    );
-  `;
-}
+/**
+ * Retrospectives endpoint - Placeholder implementation
+ *
+ * Note: Retrospectives table is not in Prisma schema. This is an optional feature.
+ * To enable: Add Retrospective model to prisma/schema.prisma and run migrations.
+ *
+ * For now, returns empty data to prevent errors.
+ */
 
 export async function GET() {
-  try {
-    await ensureRetrospectivesTable();
-    const result = await sql`SELECT * FROM retrospectives ORDER BY date DESC`;
-    return NextResponse.json({ success: true, data: result.rows });
-  } catch (error: any) {
-    console.error("Retrospectives GET error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
-  }
+  log.warn(
+    "Retrospectives feature not implemented - add to Prisma schema if needed"
+  );
+  return NextResponse.json({
+    success: true,
+    data: [],
+    message: "Retrospectives feature requires Prisma schema update",
+  });
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    await ensureRetrospectivesTable();
-    const {
-      title,
-      projectId,
-      sprintNumber,
-      date,
-      attendees,
-      wentWell,
-      needsImprovement,
-      actionItems,
-      createdBy,
-    } = await req.json();
-    const result = await sql`
-      INSERT INTO retrospectives (title, project_id, sprint_number, date, attendees, went_well, needs_improvement, action_items, created_by)
-      VALUES (
-        ${title},
-        ${projectId || null},
-        ${sprintNumber || null},
-        ${date},
-        ${JSON.stringify(attendees || [])},
-        ${JSON.stringify(wentWell || [])},
-        ${JSON.stringify(needsImprovement || [])},
-        ${JSON.stringify(actionItems || [])},
-        ${createdBy || null}
-      )
-      RETURNING *
-    `;
-    return NextResponse.json({ success: true, data: result.rows[0] });
-  } catch (error: any) {
-    console.error("Retrospectives POST error:", error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
-  }
+  log.warn(
+    "Retrospectives POST not implemented - add to Prisma schema if needed"
+  );
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        "Retrospectives feature requires Prisma schema update. Add Retrospective model to schema.prisma.",
+    },
+    { status: 501 }
+  );
 }

@@ -1,33 +1,46 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export async function POST(request: Request) {
-  // Prevent DB access if not configured
-  if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      { success: false, error: "Database not configured" },
-      { status: 503 }
-    );
-  }
   try {
     const body = await request.json();
     const { uid, status } = body || {};
+
     if (!uid) {
       return NextResponse.json(
         { success: false, error: "Missing uid" },
         { status: 400 }
       );
     }
+
     const stat = typeof status === "string" && status ? status : "available";
-    const result = await sql`
-      INSERT INTO presence (uid, status, last_seen)
-      VALUES (${uid}, ${stat}, now())
-      ON CONFLICT (uid) DO UPDATE SET status = ${stat}, last_seen = now()
-      RETURNING uid, status, last_seen
-    `;
-    return NextResponse.json({ success: true, data: result.rows[0] });
+
+    // Upsert presence record
+    const presence = await prisma.presence.upsert({
+      where: { uid },
+      update: {
+        status: stat,
+        lastSeen: new Date(),
+      },
+      create: {
+        uid,
+        status: stat,
+      },
+    });
+
+    // Map to frontend expectations
+    const mapped = {
+      uid: presence.uid,
+      status: presence.status,
+      last_seen: presence.lastSeen,
+    };
+
+    log.debug({ uid, status: stat }, "Presence heartbeat");
+
+    return NextResponse.json({ success: true, data: mapped });
   } catch (error) {
-    console.error("Presence heartbeat error", error);
+    log.error({ err: error }, "Presence heartbeat error");
     return NextResponse.json(
       { success: false, error: "Failed to update presence" },
       { status: 500 }

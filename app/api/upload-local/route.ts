@@ -26,12 +26,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: Sanitize and validate file path to prevent directory traversal
+    const safePath = filePath
+      .replace(/\.\./g, "")
+      .replace(/^\//, "")
+      .replace(/\\/g, "/");
+
+    // Validate: only alphanumeric, dash, underscore, slash, dot
+    if (!/^[a-zA-Z0-9\-_\/\.]+$/.test(safePath)) {
+      return NextResponse.json(
+        { error: "Invalid file path characters" },
+        { status: 400 }
+      );
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Ensure uploads directory exists
-    // We'll store files in a folder named 'uploads' in the project root
     const uploadDir = path.join(process.cwd(), "uploads");
-    const fullPath = path.join(uploadDir, filePath);
+    const fullPath = path.join(uploadDir, safePath);
+
+    // SECURITY: Ensure normalized path is still within uploads directory
+    const normalizedPath = path.normalize(fullPath);
+    if (!normalizedPath.startsWith(uploadDir)) {
+      return NextResponse.json(
+        { error: "Invalid path: directory traversal detected" },
+        { status: 403 }
+      );
+    }
+
     const dir = path.dirname(fullPath);
 
     await mkdir(dir, { recursive: true });
@@ -39,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // Return the URL to access the file
     // This assumes we have a route handler for /api/uploads
-    const url = `/api/uploads/${filePath}`;
+    const url = `/api/uploads/${safePath}`;
 
     return NextResponse.json({ url });
   } catch (error) {

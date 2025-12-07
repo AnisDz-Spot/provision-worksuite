@@ -1,21 +1,42 @@
-import prisma from "@/lib/prisma";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const result =
-      await sql`SELECT uid, email, name, avatar_url, role, created_at FROM users ORDER BY created_at DESC`;
+    const users = await prisma.user.findMany({
+      select: {
+        userId: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        systemRole: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Map to match frontend expectations (if needed)
+    const mappedUsers = users.map((user) => ({
+      uid: user.userId,
+      email: user.email,
+      name: user.fullName,
+      avatar_url: user.avatarUrl,
+      role: user.systemRole,
+      created_at: user.createdAt,
+    }));
+
+    log.info({ count: users.length }, "Fetched all users");
 
     return NextResponse.json({
       success: true,
-      data: result.rows,
+      data: mappedUsers,
       source: "database",
     });
   } catch (error) {
-    console.error("Get users error:", error);
+    log.error({ err: error }, "Get users error");
     return NextResponse.json(
       {
         success: false,
@@ -63,32 +84,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate a unique uid for the user
-    const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-
-    // Create user
+    // Create user with Prisma
     const user = await prisma.user.create({
       data: {
-        uid,
-        name,
         email,
-        role,
-        avatar_url,
-        password_hash,
-        phone,
-        bio,
-        addressLine1,
-        addressLine2,
-        city,
-        state,
-        country,
-        postalCode,
+        fullName: name,
+        systemRole: role,
+        avatarUrl: avatar_url,
+        passwordHash: password_hash || "",
+        phoneNumber: phone,
+        // Note: bio, addressLine1, etc. don't exist in the Prisma schema
+        // If needed, add them to the schema first
+        employmentType: "full-time", // default
+        timezone: "UTC", // default
       },
     });
 
+    log.info({ email, userId: user.userId }, "User created");
+
     return NextResponse.json({ success: true, user });
   } catch (error) {
-    console.error("Create user error:", error);
+    log.error({ err: error }, "Create user error");
     return NextResponse.json(
       { success: false, error: "Failed to create user." },
       { status: 500 }

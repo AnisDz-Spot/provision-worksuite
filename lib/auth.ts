@@ -1,9 +1,14 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "development_secret_do_not_use_in_production";
+const JWT_SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = "auth-token";
+
+if (!JWT_SECRET) {
+  throw new Error(
+    "CRITICAL: JWT_SECRET environment variable must be set. Application cannot start without it."
+  );
+}
 
 export type AuthUser = {
   uid: string;

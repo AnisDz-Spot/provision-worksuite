@@ -1,30 +1,95 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-async function ensureTable() {
-  await sql`CREATE TABLE IF NOT EXISTS time_logs (
-    id bigserial primary key,
-    task_id text,
-    project_id text,
-    hours numeric not null default 0,
-    note text,
-    logged_by text,
-    logged_at timestamptz not null default now()
-  )`;
-}
-
 export async function GET() {
   try {
-    await ensureTable();
-    const result =
-      await sql`SELECT id, task_id, project_id, hours, note, logged_by, logged_at FROM time_logs ORDER BY logged_at DESC`;
-    return NextResponse.json({ success: true, data: result.rows });
+    const timeLogs = await prisma.timeLog.findMany({
+      include: {
+        task: {
+          select: {
+            uid: true,
+            title: true,
+          },
+        },
+        project: {
+          select: {
+            uid: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { loggedAt: "desc" },
+    });
+
+    // Map to match frontend expectations
+    const mappedLogs = timeLogs.map((tl) => ({
+      id: tl.id,
+      task_id: tl.taskId,
+      project_id: tl.projectId,
+      hours: tl.hours,
+      note: tl.note,
+      logged_by: tl.loggedBy,
+      logged_at: tl.loggedAt,
+    }));
+
+    log.info({ count: timeLogs.length }, "Fetched time logs");
+
+    return NextResponse.json({ success: true, data: mappedLogs });
   } catch (error) {
-    console.error("Get time logs error:", error);
+    log.error({ err: error }, "Get time logs error");
     return NextResponse.json(
       { success: false, error: "Failed to fetch time logs", data: [] },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { taskId, projectId, hours, note, loggedBy } = body;
+
+    if (!taskId || !projectId || !hours) {
+      return NextResponse.json(
+        { success: false, error: "taskId, projectId, and hours are required" },
+        { status: 400 }
+      );
+    }
+
+    const timeLog = await prisma.timeLog.create({
+      data: {
+        taskId,
+        projectId,
+        hours: parseFloat(hours),
+        note: note || null,
+        loggedBy: loggedBy || "unknown",
+      },
+      include: {
+        task: true,
+        project: true,
+      },
+    });
+
+    // Update task logged hours
+    await prisma.task.update({
+      where: { uid: taskId }, // taskId is actually the uid (String), not the id (Int)
+      data: {
+        loggedHours: {
+          increment: parseFloat(hours),
+        },
+      },
+    });
+
+    log.info({ taskId, projectId, hours }, "Time log created");
+
+    return NextResponse.json({ success: true, data: timeLog });
+  } catch (error) {
+    log.error({ err: error }, "Create time log error");
+    return NextResponse.json(
+      { success: false, error: "Failed to create time log" },
       { status: 500 }
     );
   }

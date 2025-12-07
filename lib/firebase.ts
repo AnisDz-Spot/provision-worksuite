@@ -15,14 +15,25 @@ const requiredEnvVars = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Validate all required env vars are present (warn only for build)
+// Validate all required env vars are present
 Object.entries(requiredEnvVars).forEach(([key, value]) => {
   if (!value) {
-    console.warn(
-      `⚠️ Missing required Firebase environment variable: NEXT_PUBLIC_FIREBASE_${key.replace(/([A-Z])/g, "_$1").toUpperCase()}. using dummy value for build.`
-    );
-    // @ts-ignore
-    requiredEnvVars[key] = "dummy-value-for-build";
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        `FATAL: Missing required Firebase environment variable: NEXT_PUBLIC_FIREBASE_${key
+          .replace(/([A-Z])/g, "_$1")
+          .toUpperCase()}. ` +
+          `Application cannot start in production without proper Firebase configuration.`
+      );
+    } else {
+      console.warn(
+        `⚠️ Missing required Firebase environment variable: NEXT_PUBLIC_FIREBASE_${key
+          .replace(/([A-Z])/g, "_$1")
+          .toUpperCase()}. Using dummy value for build.`
+      );
+      // @ts-ignore
+      requiredEnvVars[key] = "dummy-value-for-build";
+    }
   }
 });
 

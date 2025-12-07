@@ -1,3 +1,5 @@
+import { isValidUUID, isValidEmail, sanitizeString } from "../validation";
+
 export type User = {
   userId: string;
   email: string;
@@ -26,13 +28,22 @@ export type User = {
 export async function createUser(
   user: Omit<User, "userId" | "createdAt" | "updatedAt">
 ) {
+  // Validate email format
+  if (!isValidEmail(user.email)) {
+    throw new Error("Invalid email format");
+  }
+
+  // Sanitize string inputs
+  const sanitizedFullName = sanitizeString(user.fullName, 100);
+  const sanitizedEmail = sanitizeString(user.email, 255);
+
   const result = await sql`
     INSERT INTO users (
       email, password_hash, full_name, avatar_url, is_active, system_role, job_title, department, timezone,
       theme_preference, phone_number, slack_handle, hourly_cost_rate, hourly_billable_rate, is_billable,
       employment_type, default_working_hours_per_day, hire_date, termination_date
     ) VALUES (
-        ${user.email}, ${user.passwordHash}, ${user.fullName}, ${user.avatarUrl || null}, ${user.isActive},
+        ${sanitizedEmail}, ${user.passwordHash}, ${sanitizedFullName}, ${user.avatarUrl || null}, ${user.isActive},
       ${user.systemRole}, ${user.jobTitle || null}, ${user.department || null}, ${user.timezone},
       ${user.themePreference || "light"}, ${user.phoneNumber || null}, ${user.slackHandle || null},
       ${user.hourlyCostRate}, ${user.hourlyBillableRate}, ${user.isBillable}, ${user.employmentType},
@@ -44,27 +55,80 @@ export async function createUser(
 }
 
 export async function updateUser(userId: string, updates: Partial<User>) {
+  // Validate UUID format
+  if (!isValidUUID(userId)) {
+    throw new Error("Invalid user ID format");
+  }
+
+  // NEVER allow direct password hash updates - use separate password change function
+  const { passwordHash, ...safeUpdates } = updates;
+
+  // Validate email if being updated
+  if (safeUpdates.email && !isValidEmail(safeUpdates.email)) {
+    throw new Error("Invalid email format");
+  }
+
+  // Whitelist of allowed updatable fields
+  const allowedFields = [
+    "email",
+    "fullName",
+    "avatarUrl",
+    "isActive",
+    "systemRole",
+    "jobTitle",
+    "department",
+    "timezone",
+    "themePreference",
+    "phoneNumber",
+    "slackHandle",
+    "hourlyCostRate",
+    "hourlyBillableRate",
+    "isBillable",
+    "employmentType",
+    "defaultWorkingHoursPerDay",
+    "hireDate",
+    "terminationDate",
+  ];
+
+  // Filter to only allowed fields
+  const filteredUpdates: Partial<User> = Object.keys(safeUpdates)
+    .filter((key) => allowedFields.includes(key))
+    .reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: safeUpdates[key as keyof typeof safeUpdates],
+      }),
+      {} as Partial<User>
+    );
+
+  // Sanitize string inputs
+  if (filteredUpdates.fullName) {
+    filteredUpdates.fullName = sanitizeString(filteredUpdates.fullName, 100);
+  }
+  if (filteredUpdates.email) {
+    filteredUpdates.email = sanitizeString(filteredUpdates.email, 255);
+  }
+
   const result = await sql`
     UPDATE users SET
-      email = COALESCE(${updates.email}, email),
-        password_hash = COALESCE(${updates.passwordHash}, password_hash),
-      full_name = COALESCE(${updates.fullName}, full_name),
-      avatar_url = COALESCE(${updates.avatarUrl}, avatar_url),
-      is_active = COALESCE(${updates.isActive}, is_active),
-      system_role = COALESCE(${updates.systemRole}, system_role),
-      job_title = COALESCE(${updates.jobTitle}, job_title),
-      department = COALESCE(${updates.department}, department),
-      timezone = COALESCE(${updates.timezone}, timezone),
-      theme_preference = COALESCE(${updates.themePreference}, theme_preference),
-      phone_number = COALESCE(${updates.phoneNumber}, phone_number),
-      slack_handle = COALESCE(${updates.slackHandle}, slack_handle),
-      hourly_cost_rate = COALESCE(${updates.hourlyCostRate}, hourly_cost_rate),
-      hourly_billable_rate = COALESCE(${updates.hourlyBillableRate}, hourly_billable_rate),
-      is_billable = COALESCE(${updates.isBillable}, is_billable),
-      employment_type = COALESCE(${updates.employmentType}, employment_type),
-      default_working_hours_per_day = COALESCE(${updates.defaultWorkingHoursPerDay}, default_working_hours_per_day),
-      hire_date = COALESCE(${updates.hireDate}, hire_date),
-      termination_date = COALESCE(${updates.terminationDate}, termination_date),
+      email = COALESCE(${filteredUpdates.email}, email),
+      full_name = COALESCE(${filteredUpdates.fullName}, full_name),
+      avatar_url = COALESCE(${filteredUpdates.avatarUrl}, avatar_url),
+      is_active = COALESCE(${filteredUpdates.isActive}, is_active),
+      system_role = COALESCE(${filteredUpdates.systemRole}, system_role),
+      job_title = COALESCE(${filteredUpdates.jobTitle}, job_title),
+      department = COALESCE(${filteredUpdates.department}, department),
+      timezone = COALESCE(${filteredUpdates.timezone}, timezone),
+      theme_preference = COALESCE(${filteredUpdates.themePreference}, theme_preference),
+      phone_number = COALESCE(${filteredUpdates.phoneNumber}, phone_number),
+      slack_handle = COALESCE(${filteredUpdates.slackHandle}, slack_handle),
+      hourly_cost_rate = COALESCE(${filteredUpdates.hourlyCostRate}, hourly_cost_rate),
+      hourly_billable_rate = COALESCE(${filteredUpdates.hourlyBillableRate}, hourly_billable_rate),
+      is_billable = COALESCE(${filteredUpdates.isBillable}, is_billable),
+      employment_type = COALESCE(${filteredUpdates.employmentType}, employment_type),
+      default_working_hours_per_day = COALESCE(${filteredUpdates.defaultWorkingHoursPerDay}, default_working_hours_per_day),
+      hire_date = COALESCE(${filteredUpdates.hireDate}, hire_date),
+      termination_date = COALESCE(${filteredUpdates.terminationDate}, termination_date),
       updated_at = NOW()
     WHERE user_id = ${userId}
     RETURNING *

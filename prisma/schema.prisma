@@ -6,104 +6,238 @@ datasource db {
     provider = "postgresql"
 }
 
+// Messages for chat/conversations
 model Message {
     id        Int      @id @default(autoincrement())
-    fromUser  String
-    toUser    String
+    fromUser  String   @map("from_user")
+    toUser    String   @map("to_user")
     message   String
-    createdAt DateTime @default(now())
-    isRead    Boolean  @default(false)
+    createdAt DateTime @default(now()) @map("created_at")
+    isRead    Boolean  @default(false) @map("is_read")
+
+    @@index([fromUser])
+    @@index([toUser])
+    @@index([createdAt])
+    @@index([toUser, isRead])
+    @@map("messages")
 }
 
+// User online status tracking
 model Presence {
     uid      String   @id
     status   String   @default("available")
-    lastSeen DateTime @default(now())
+    lastSeen DateTime @default(now()) @map("last_seen")
+
+    @@index([status])
+    @@map("presence")
 }
 
+// Users table - matches SQL schema
 model User {
-    id            Int      @id @default(autoincrement())
-    uid           String   @unique
-    email         String   @unique
-    name          String
-    avatar_url    String?
-    role          String   @default("member")
-    password_hash String?
-    phone         String?
-    bio           String?
-    addressLine1  String?
-    addressLine2  String?
-    city          String?
-    state         String?
-    country       String?
-    postalCode    String?
-    created_at    DateTime @default(now())
-    updated_at    DateTime @updatedAt
+    userId                    String    @id @default(uuid()) @map("user_id") @db.Uuid
+    email                     String    @unique
+    passwordHash              String    @map("password_hash")
+    fullName                  String    @map("full_name") @db.VarChar(100)
+    avatarUrl                 String?   @map("avatar_url")
+    isActive                  Boolean   @default(true) @map("is_active")
+    systemRole                String    @map("system_role") @db.VarChar(50)
+    jobTitle                  String?   @map("job_title") @db.VarChar(100)
+    department                String?   @db.VarChar(100)
+    timezone                  String    @db.VarChar(50)
+    themePreference           String?   @default("light") @map("theme_preference") @db.VarChar(20)
+    phoneNumber               String?   @map("phone_number") @db.VarChar(20)
+    slackHandle               String?   @map("slack_handle") @db.VarChar(50)
+    hourlyCostRate            Decimal   @default(0.00) @map("hourly_cost_rate") @db.Decimal(10, 2)
+    hourlyBillableRate        Decimal   @default(0.00) @map("hourly_billable_rate") @db.Decimal(10, 2)
+    isBillable                Boolean   @default(true) @map("is_billable")
+    employmentType            String    @map("employment_type") @db.VarChar(50)
+    defaultWorkingHoursPerDay Decimal   @default(8.00) @map("default_working_hours_per_day") @db.Decimal(4, 2)
+    hireDate                  DateTime? @map("hire_date") @db.Date
+    terminationDate           DateTime? @map("termination_date") @db.Date
+    createdAt                 DateTime  @default(now()) @map("created_at")
+    updatedAt                 DateTime  @updatedAt @map("updated_at")
 
     // Relations
     projects Project[]
+
+    @@index([systemRole])
+    @@index([isActive])
+    @@index([createdAt])
+    @@map("users")
 }
 
+// Roles for RBAC
 model Role {
     id          String   @id
     name        String   @unique
     description String?
-    color_hex   String?
+    colorHex    String?  @map("color_hex") @db.VarChar(7)
     order       Int?     @default(0)
-    created_at  DateTime @default(now())
-    updated_at  DateTime @updatedAt
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    @@map("roles")
 }
 
+// Projects table
 model Project {
     id          Int       @id @default(autoincrement())
-    uid         String    @unique
-    name        String
+    uid         String    @unique @db.VarChar(255)
+    name        String    @db.VarChar(255)
     description String?
-    status      String    @default("active")
-    owner       String
-    start_date  DateTime?
-    deadline    DateTime?
-    budget      Float?
+    status      String    @default("active") @db.VarChar(50)
+    owner       String    @db.VarChar(255)
+    startDate   DateTime? @map("start_date") @db.Date
+    deadline    DateTime? @db.Date
+    budget      Decimal?  @db.Decimal(10, 2)
     progress    Int       @default(0)
-    priority    String?
-    user_id     Int
-    created_at  DateTime  @default(now())
-    updated_at  DateTime  @updatedAt
+    priority    String?   @db.VarChar(20)
+    userId      String    @map("user_id") @db.VarChar(255)
+    createdAt   DateTime  @default(now()) @map("created_at")
+    updatedAt   DateTime  @updatedAt @map("updated_at")
 
     // Relations
-    user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+    user     User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+    tasks    Task[]
+    timeLogs TimeLog[]
     expenses Expense[]
     invoices Invoice[]
+
+    @@index([userId])
+    @@index([status])
+    @@index([priority])
+    @@index([deadline])
+    @@index([createdAt])
+    @@map("projects")
 }
 
+// Tasks table
+model Task {
+    id            Int       @id @default(autoincrement())
+    uid           String    @unique @db.VarChar(255)
+    projectId     String    @map("project_id") @db.VarChar(255)
+    title         String    @db.VarChar(255)
+    description   String?
+    status        String    @default("todo") @db.VarChar(50)
+    priority      String    @default("medium") @db.VarChar(20)
+    assignee      String?   @db.VarChar(255)
+    due           DateTime? @db.Date
+    estimateHours Decimal?  @map("estimate_hours") @db.Decimal(5, 2)
+    loggedHours   Decimal   @default(0) @map("logged_hours") @db.Decimal(5, 2)
+    createdAt     DateTime  @default(now()) @map("created_at")
+    updatedAt     DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    project  Project   @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+    timeLogs TimeLog[]
+
+    @@index([projectId])
+    @@index([status])
+    @@index([priority])
+    @@index([assignee])
+    @@index([due])
+    @@index([createdAt])
+    @@index([projectId, status])
+    @@index([assignee, status])
+    @@map("tasks")
+}
+
+// Time logs table
+model TimeLog {
+    id        Int      @id @default(autoincrement())
+    taskId    String   @map("task_id") @db.VarChar(255)
+    projectId String   @map("project_id") @db.VarChar(255)
+    hours     Decimal  @db.Decimal(5, 2)
+    note      String?
+    loggedBy  String   @map("logged_by") @db.VarChar(255)
+    loggedAt  DateTime @default(now()) @map("logged_at")
+
+    // Relations
+    task    Task    @relation(fields: [taskId], references: [uid], onDelete: Cascade)
+    project Project @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+
+    @@index([taskId])
+    @@index([projectId])
+    @@index([loggedBy])
+    @@index([loggedAt])
+    @@map("time_logs")
+}
+
+// Expenses table
 model Expense {
-    id         Int      @id @default(autoincrement())
-    uid        String   @unique
-    project_id Int
-    date       DateTime
-    vendor     String?
-    amount     Float
-    note       String?
-    created_at DateTime @default(now())
-    updated_at DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    uid       String   @unique @db.VarChar(255)
+    projectId String   @map("project_id") @db.VarChar(255)
+    date      DateTime @db.Date
+    vendor    String?  @db.VarChar(255)
+    amount    Decimal  @db.Decimal(10, 2)
+    note      String?
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
 
     // Relations
-    project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+    project Project @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+
+    @@index([projectId])
+    @@map("expenses")
 }
 
+// Invoices table
 model Invoice {
-    id          Int      @id @default(autoincrement())
-    uid         String   @unique
-    project_id  Int
-    client_name String
-    issue_date  DateTime
-    due_date    DateTime
-    status      String   @default("draft")
-    items       Json
-    total       Float
-    created_at  DateTime @default(now())
-    updated_at  DateTime @updatedAt
+    id         Int      @id @default(autoincrement())
+    uid        String   @unique @db.VarChar(255)
+    projectId  String   @map("project_id") @db.VarChar(255)
+    clientName String   @map("client_name") @db.VarChar(255)
+    issueDate  DateTime @map("issue_date") @db.Date
+    dueDate    DateTime @map("due_date") @db.Date
+    status     String   @default("draft") @db.VarChar(20)
+    items      Json
+    total      Decimal  @db.Decimal(10, 2)
+    createdAt  DateTime @default(now()) @map("created_at")
+    updatedAt  DateTime @updatedAt @map("updated_at")
 
     // Relations
-    project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+    project Project @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+
+    @@index([projectId])
+    @@map("invoices")
+}
+
+// Blocker categories
+model BlockerCategory {
+    id                String @id @db.VarChar(255)
+    label             String @db.VarChar(255)
+    defaultOwnerGroup String @map("default_owner_group") @db.VarChar(255)
+    slaDays           Int    @default(7) @map("sla_days")
+    iconEmoji         String @map("icon_emoji") @db.VarChar(16)
+
+    blockers Blocker[]
+
+    @@map("blocker_categories")
+}
+
+// Blockers table
+model Blocker {
+    id            String    @id @db.VarChar(255)
+    title         String    @db.VarChar(255)
+    description   String?
+    level         String    @db.VarChar(50)
+    status        String    @db.VarChar(50)
+    impactedTasks String?   @map("impacted_tasks")
+    assignedTo    String?   @map("assigned_to") @db.VarChar(255)
+    reportedBy    String    @map("reported_by") @db.VarChar(255)
+    reportedDate  DateTime  @map("reported_date") @db.Date
+    resolvedDate  DateTime? @map("resolved_date") @db.Date
+    resolution    String?
+    category      String    @db.VarChar(255)
+    projectId     String?   @map("project_id") @db.VarChar(255)
+    createdAt     DateTime  @default(now()) @map("created_at")
+    updatedAt     DateTime  @updatedAt @map("updated_at")
+
+    // Relations
+    categoryRelation BlockerCategory @relation(fields: [category], references: [id])
+
+    @@index([projectId])
+    @@index([status])
+    @@map("blockers")
 }

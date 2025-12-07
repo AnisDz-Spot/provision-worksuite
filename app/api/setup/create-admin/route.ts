@@ -1,29 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { CreateAdminSchema } from "@/lib/schemas";
+import { rateLimitSignup } from "@/lib/ratelimit";
+import { log } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, name, email, password, avatarUrl, timezone } = body;
 
-    // Validate required fields
-    if (!username || !name || !email || !password) {
+    // Rate limiting - 3 signups per hour per IP
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const {
+      success: rateLimitSuccess,
+      remaining,
+      reset,
+    } = await rateLimitSignup(ip);
+
+    if (!rateLimitSuccess) {
+      const resetDate = new Date(reset);
       return NextResponse.json(
         {
           success: false,
-          error: "All fields are required",
+          error: `Too many signup attempts. Please try again after ${resetDate.toLocaleTimeString()}`,
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": "3",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": reset.toString(),
+          },
+        }
+      );
+    }
+
+    // Validate request body with Zod
+    const validation = CreateAdminSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation failed",
+          details: validation.error.issues,
         },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
-    const existing = await sql`
-      SELECT user_id FROM users WHERE email = ${email} LIMIT 1
-    `;
+    const { username, name, email, password, avatarUrl, timezone } =
+      validation.data;
 
-    if (existing.rows.length > 0) {
+    // Check if user already exists using Prisma
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { userId: true },
+    });
+
+    if (existing) {
       return NextResponse.json(
         {
           success: false,
@@ -33,44 +70,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password before saving
-    const passwordHash = await bcrypt.hash(password, 10);
-    const result = await sql`
-      INSERT INTO users (
-        email, password_hash, full_name, avatar_url, system_role, timezone, employment_type, is_active, is_billable, default_working_hours_per_day, created_at
-      ) VALUES (
-        ${email},
-        ${passwordHash},
-        ${name},
-        ${avatarUrl || null},
-        'Administrator',
-        ${timezone || "UTC"},
-        'full-time',
-        true,
-        true,
-        8.0,
-        NOW()
-      )
-      RETURNING user_id, email, full_name, avatar_url, system_role, timezone
-    `;
+    // Hash password with 12 rounds (stronger than default 10)
+    const passwordHash = await bcrypt.hash(password, 12);
 
-    const user = result.rows[0];
+    // Create user with Prisma
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        fullName: name,
+        avatarUrl: avatarUrl || null,
+        systemRole: "Administrator",
+        timezone: timezone || "UTC",
+        employmentType: "full-time",
+        isActive: true,
+        isBillable: true,
+        defaultWorkingHoursPerDay: 8.0,
+      },
+      select: {
+        userId: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        systemRole: true,
+        timezone: true,
+      },
+    });
+
+    log.info({ email, role: "Administrator" }, "Admin account created");
 
     // Return success with user data
     return NextResponse.json({
       success: true,
       message: "Admin account created successfully",
       user: {
-        user_id: user.user_id,
+        user_id: user.userId,
         email: user.email,
-        name: user.full_name,
-        avatarUrl: user.avatar_url,
-        role: user.system_role,
+        name: user.fullName,
+        avatarUrl: user.avatarUrl,
+        role: user.systemRole,
         timezone: user.timezone,
       },
     });
   } catch (error) {
-    console.error("Create admin error:", error);
+    log.error({ err: error }, "Create admin error");
     return NextResponse.json(
       {
         success: false,

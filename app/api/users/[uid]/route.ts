@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export async function PATCH(
   request: NextRequest,
@@ -17,44 +18,62 @@ export async function PATCH(
     const body = await request.json();
     const { name, email, avatar_url } = body || {};
 
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update data object
+    const updateData: any = {};
 
     if (typeof name === "string" && name.trim()) {
-      updates.push("name = $" + (values.length + 1));
-      values.push(name.trim());
+      updateData.fullName = name.trim();
     }
     if (typeof email === "string" && email.trim()) {
-      updates.push("email = $" + (values.length + 1));
-      values.push(email.trim());
+      updateData.email = email.trim();
     }
     if (typeof avatar_url === "string") {
-      updates.push("avatar_url = $" + (values.length + 1));
-      values.push(avatar_url);
+      updateData.avatarUrl = avatar_url;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { success: false, error: "No valid fields to update" },
         { status: 400 }
       );
     }
 
-    // Build parameterized query
-    const setClause = updates.join(", ");
-    const query = `UPDATE users SET ${setClause} WHERE uid = $${values.length + 1} RETURNING uid, email, name, avatar_url, role, created_at`;
-    const result = await sql.query(query, [...values, uid]);
+    // Update user with Prisma
+    const user = await prisma.user.update({
+      where: { userId: uid },
+      data: updateData,
+      select: {
+        userId: true,
+        email: true,
+        fullName: true,
+        avatarUrl: true,
+        systemRole: true,
+        createdAt: true,
+      },
+    });
 
-    if (result.rowCount === 0) {
+    // Map to frontend expectations
+    const mappedUser = {
+      uid: user.userId,
+      email: user.email,
+      name: user.fullName,
+      avatar_url: user.avatarUrl,
+      role: user.systemRole,
+      created_at: user.createdAt,
+    };
+
+    log.info({ uid, updates: Object.keys(updateData) }, "User updated");
+
+    return NextResponse.json({ success: true, data: mappedUser });
+  } catch (error: any) {
+    if (error.code === "P2025") {
       return NextResponse.json(
         { success: false, error: "User not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, data: result.rows[0] });
-  } catch (error) {
-    console.error("Update user error:", error);
+    log.error({ err: error, uid }, "Update user error");
     return NextResponse.json(
       { success: false, error: "Failed to update user" },
       { status: 500 }

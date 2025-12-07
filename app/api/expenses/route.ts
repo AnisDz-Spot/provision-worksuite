@@ -1,50 +1,70 @@
-import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-async function ensureExpensesTable() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS expenses (
-      id SERIAL PRIMARY KEY,
-      project_id TEXT,
-      date TEXT NOT NULL,
-      vendor TEXT NOT NULL,
-      amount NUMERIC(10, 2) NOT NULL,
-      note TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `;
-}
-
 export async function GET() {
   try {
-    await ensureExpensesTable();
-    const result = await sql`SELECT * FROM expenses ORDER BY date DESC`;
-    return NextResponse.json({ success: true, data: result.rows });
-  } catch (error: any) {
-    console.error("Expenses GET error:", error);
+    const expenses = await prisma.expense.findMany({
+      include: {
+        project: {
+          select: {
+            uid: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    log.info({ count: expenses.length }, "Fetched expenses");
+
+    return NextResponse.json({ success: true, data: expenses });
+  } catch (error) {
+    log.error({ err: error }, "Get expenses error");
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: "Failed to fetch expenses" },
       { status: 500 }
     );
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    await ensureExpensesTable();
-    const { projectId, date, vendor, amount, note } = await req.json();
-    const result = await sql`
-      INSERT INTO expenses (project_id, date, vendor, amount, note)
-      VALUES (${projectId}, ${date}, ${vendor}, ${amount}, ${note || ""})
-      RETURNING *
-    `;
-    return NextResponse.json({ success: true, data: result.rows[0] });
-  } catch (error: any) {
-    console.error("Expenses POST error:", error);
+    const body = await req.json();
+    const { projectId, date, vendor, amount, note } = body;
+
+    if (!projectId || !date || !amount) {
+      return NextResponse.json(
+        { success: false, error: "projectId, date, and amount are required" },
+        { status: 400 }
+      );
+    }
+
+    const uid = `expense_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+    const expense = await prisma.expense.create({
+      data: {
+        uid,
+        projectId,
+        date: new Date(date),
+        vendor: vendor || null,
+        amount: parseFloat(amount),
+        note: note || null,
+      },
+      include: {
+        project: true,
+      },
+    });
+
+    log.info({ expenseId: expense.id, projectId, amount }, "Expense created");
+
+    return NextResponse.json({ success: true, data: expense });
+  } catch (error) {
+    log.error({ err: error }, "Create expense error");
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: "Failed to create expense" },
       { status: 500 }
     );
   }

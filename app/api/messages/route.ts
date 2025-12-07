@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,34 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await sql`
-      SELECT id, from_user, to_user, message, created_at, is_read
-      FROM messages
-      WHERE (from_user = ${u1} AND to_user = ${u2}) OR (from_user = ${u2} AND to_user = ${u1})
-      ORDER BY created_at ASC
-    `;
-    return NextResponse.json({ success: true, data: result.rows });
+    const messages = await prisma.message.findMany({
+      where: {
+        OR: [
+          { fromUser: u1, toUser: u2 },
+          { fromUser: u2, toUser: u1 },
+        ],
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // Map to match frontend expectations
+    const mappedMessages = messages.map((msg) => ({
+      id: msg.id,
+      from_user: msg.fromUser,
+      to_user: msg.toUser,
+      message: msg.message,
+      created_at: msg.createdAt,
+      is_read: msg.isRead,
+    }));
+
+    log.info(
+      { user1: u1, user2: u2, count: messages.length },
+      "Fetched message thread"
+    );
+
+    return NextResponse.json({ success: true, data: mappedMessages });
   } catch (error) {
-    console.error("Get thread error:", error);
+    log.error({ err: error }, "Get thread error");
     return NextResponse.json(
       { success: false, error: "Failed to fetch messages", data: [] },
       { status: 500 }
@@ -79,14 +99,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await sql`
-      INSERT INTO messages (from_user, to_user, message)
-      VALUES (${fromUser}, ${toUser}, ${message})
-      RETURNING id, from_user, to_user, message, created_at, is_read
-    `;
-    return NextResponse.json({ success: true, data: result.rows[0] });
+    const newMessage = await prisma.message.create({
+      data: {
+        fromUser,
+        toUser,
+        message,
+      },
+    });
+
+    // Map to match frontend expectations
+    const mappedMessage = {
+      id: newMessage.id,
+      from_user: newMessage.fromUser,
+      to_user: newMessage.toUser,
+      message: newMessage.message,
+      created_at: newMessage.createdAt,
+      is_read: newMessage.isRead,
+    };
+
+    log.info({ from: fromUser, to: toUser }, "Message sent");
+
+    return NextResponse.json({ success: true, data: mappedMessage });
   } catch (error) {
-    console.error("Send message error:", error);
+    log.error({ err: error }, "Send message error");
     return NextResponse.json(
       { success: false, error: "Failed to send message" },
       { status: 500 }
