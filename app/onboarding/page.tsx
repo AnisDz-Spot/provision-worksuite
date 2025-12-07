@@ -198,19 +198,27 @@ export default function OnboardingPage() {
                 onClick={async () => {
                   setLicenseLoading(true);
                   setLicenseError(null);
-
-                  // Simulate API call or real check
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-                  if (license.length > 10) {
-                    setLicenseValid(true);
-                    setStep("db");
-                  } else {
-                    setLicenseError(
-                      "Invalid serial number. Please check and try again."
-                    );
+                  try {
+                    const resp = await fetch("/api/check-license", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ serial: license }),
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                      setLicenseValid(true);
+                      setStep("db");
+                    } else {
+                      setLicenseError(
+                        data.error ||
+                          "Invalid serial number. Please check and try again."
+                      );
+                    }
+                  } catch (err) {
+                    setLicenseError("Network or server error");
+                  } finally {
+                    setLicenseLoading(false);
                   }
-                  setLicenseLoading(false);
                 }}
                 disabled={!license || licenseLoading}
                 className="w-full py-3.5 bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-slate-300 disabled:to-slate-400 dark:disabled:from-slate-700 dark:disabled:to-slate-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl disabled:shadow-none transition-all disabled:cursor-not-allowed"
