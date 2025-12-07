@@ -22,16 +22,6 @@ export default function OnboardingPage() {
   // DB Config State
   const [dbTested, setDbTested] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
-
-  // Fallback Config State
-  const [showConfigForm, setShowConfigForm] = useState(false);
-  const [dbUrl, setDbUrl] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Timer state
-  // 3 minutes = 180 seconds
-  const [timeLeft, setTimeLeft] = useState<number>(180);
-
   useEffect(() => {
     // Only run timer if we are in setup flow (not mock) and not done yet (dbTested true means effectively done with config)
     // If they choose demo mode, we stop.
@@ -342,19 +332,6 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-                  Environment Check
-                </h3>
-
-                {!showConfigForm ? (
-                  <>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                      Checking for <code>POSTGRES_URL</code> in environment
-                      variables...
-                    </p>
-
-                    {dbTested && !dbError && (
-                      <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 font-medium">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                           <Check className="w-5 h-5" />
                         </div>
                         Configuration valid! Database connected.
@@ -391,19 +368,26 @@ export default function OnboardingPage() {
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                        Database Type
+                      </label>
+                      <select
+                        value={dbType}
+                        onChange={(e) => setDbType(e.target.value as any)}
+                        className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      >
+                        <option value="postgresql">PostgreSQL</option>
+                        <option value="mysql">MySQL</option>
+                        <option value="sqlite">SQLite</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         Database Connection String
                       </label>
                       <input
                         type="text"
-                        placeholder="postgres://user:password@host:port/dbname"
-                        value={dbUrl}
-                        onChange={(e) => setDbUrl(e.target.value)}
-                        className="w-full px-4 py-3 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all font-mono text-sm"
-                      />
-                      <p className="text-xs text-slate-500 mt-2">
-                        This will be written to a local <code>.env</code> file.
-                        Ensure your server environment supports persistent
-                        files.
+                        placeholder={
+                          dbType === "postgresql" ? "postgresql://user:password@host:port/dbname" :
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -451,21 +435,6 @@ export default function OnboardingPage() {
                       <button
                         onClick={() => setShowConfigForm(false)}
                         className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    {dbError && (
-                      <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                        {dbError}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {!dbTested ? (
-                !showConfigForm && (
                   <button
                     onClick={async () => {
                       setDbError(null);
