@@ -33,13 +33,13 @@ export function seedLocalData() {
 
     // Ensure Demo Admin exists
     const adminExists = formattedUsers.some(
-      (u) => u.email === "anis@provision.com"
+      (u) => u.email === "admin@provision.com"
     );
     if (!adminExists) {
       formattedUsers.push({
         id: "demo-admin",
         name: "Demo Admin",
-        email: "anis@provision.com",
+        email: "admin@provision.com",
         role: "Administrator",
         password: "password123578951",
         isAdmin: true,

@@ -79,7 +79,7 @@ function readUsers(): User[] {
       {
         id: "admin-global",
         name: "Global Admin",
-        email: "anis@provision.com",
+        email: "admin@provision.com",
         role: "Administrator",
         password: "password123578951",
         isAdmin: true,
@@ -99,7 +99,7 @@ function readUsers(): User[] {
     });
 
     // Only keep the global admin - remove any other users from localStorage
-    users = users.filter((u) => u.email === "anis@provision.com");
+    users = users.filter((u) => u.email === "admin@provision.com");
 
     if (needsUpdate || stored) {
       localStorage.setItem("pv:users", JSON.stringify(users));
@@ -180,38 +180,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // If admin selected dummy data mode, check for fake admin login first
-    if (shouldUseMockData()) {
-      if (email === "anis@provision.com" && password === "password123578951") {
-        const authUser: User = {
-          id: "demo-admin",
-          name: "Demo Admin",
-          email,
-          role: "Administrator",
-          isAdmin: true,
-        };
-        setCurrentUser(authUser);
-        setIsAuthenticated(true);
-        localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
-        setSessionExpiry(30);
-        return { success: true };
-      }
+    // ALWAYS check for global admin first (works without database)
+    if (email === "admin@provision.com" && password === "password123578951") {
+      const authUser: User = {
+        id: "global-admin",
+        name: "Admin",
+        email,
+        role: "Administrator",
+        isAdmin: true,
+      };
+      setCurrentUser(authUser);
+      setIsAuthenticated(true);
+      localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+      setSessionExpiry(30);
+      return { success: true };
+    }
 
-      // If we are here, credentials didn't match the Demo Admin.
-      // If the user hasn't EXPLICITLY set "mock" mode, we should try the database.
-      // This handles fresh production deployments where localStorage is empty (so defaults to mock)
-      // but the server is actually ready.
+    // If admin selected dummy data mode and it's not the global admin, reject
+    if (shouldUseMockData()) {
       const explicitMock =
         typeof window !== "undefined" &&
         localStorage.getItem("pv:dataMode") === "mock";
 
-      if (!explicitMock) {
-        // Fallthrough to try API login below
-      } else {
-        // In explicit dummy mode, reject other credentials
+      if (explicitMock) {
+        // In explicit dummy mode, only global admin is allowed
         return {
           success: false,
-          error: "Use fake admin credentials in dummy data mode.",
+          error:
+            "Use global admin credentials (admin@provision.com) in dummy data mode.",
         };
       }
     }

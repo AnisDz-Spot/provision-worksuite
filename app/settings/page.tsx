@@ -145,7 +145,7 @@ function DataSourceTab() {
         </div>
         {dataMode === "mock" && (
           <div className="mt-3 text-xs text-muted-foreground">
-            Fake Admin: <span className="font-mono">anis@provision.com</span> /{" "}
+            Fake Admin: <span className="font-mono">admin@provision.com</span> /{" "}
             <span className="font-mono">password123578951</span>
             <Button
               variant="outline"
