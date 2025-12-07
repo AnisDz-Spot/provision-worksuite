@@ -182,10 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success: boolean; error?: string }> => {
     // If admin selected dummy data mode, check for fake admin login first
     if (shouldUseMockData()) {
-      if (
-        email === "admin@provision.com" &&
-        password === "password1234567890"
-      ) {
+      if (email === "anis@provision.com" && password === "password123578951") {
         const authUser: User = {
           id: "demo-admin",
           name: "Demo Admin",

@@ -82,12 +82,12 @@ function LoginForm() {
                   className="mt-1 text-xs text-yellow-700 dark:text-yellow-300 hover:underline"
                   onClick={() =>
                     navigator.clipboard
-                      .writeText("admin@provision.com / password1234567890")
+                      .writeText("anis@provision.com / password123578951")
                       .catch(() => {})
                   }
                   title="Click to copy demo credentials"
                 >
-                  📋 Copy credentials: admin@provision.com / password1234567890
+                  📋 Copy credentials: anis@provision.com / password123578951
                 </button>
               </div>
             </div>
