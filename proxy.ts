@@ -6,7 +6,7 @@ import { verifyToken } from "@/lib/auth";
  * Middleware to protect API routes with authentication
  * Public routes are allowed, all others require valid JWT token
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
