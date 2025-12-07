@@ -11,18 +11,10 @@ const logger = pino({
     process.env.LOG_LEVEL ||
     (process.env.NODE_ENV === "production" ? "info" : "debug"),
 
-  // Pretty print in development
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-            ignore: "pid,hostname",
-            translateTime: "HH:MM:ss Z",
-          },
-        }
-      : undefined,
+  // Transport removed to fix build issues with Next.js/Turbopack
+  // Usage of pino-pretty should be done via CLI piping in dev:
+  // "dev": "next dev | pino-pretty"
+  transport: undefined,
 
   // Redact sensitive fields
   redact: {
@@ -120,28 +112,3 @@ export { logger };
 export function createChildLogger(context: object) {
   return logger.child(context);
 }
-
-/**
- * Usage examples:
- *
- * ```typescript
- * import { log } from '@/lib/logger';
- *
- * // Simple message
- * log.info('User logged in');
- *
- * // With context
- * log.info({ userId: '123', ip: '1.2.3.4' }, 'User logged in');
- *
- * // Error logging
- * try {
- *   // ...
- * } catch (error) {
- *   log.error({ err: error, userId }, 'Login failed');
- * }
- *
- * // Create child logger with persistent context
- * const requestLogger = createChildLogger({ requestId: '123' });
- * requestLogger.info('Processing request');
- * ```
- */

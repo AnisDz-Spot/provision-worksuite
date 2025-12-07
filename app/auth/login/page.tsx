@@ -287,7 +287,7 @@ function LoginForm() {
                 />
               </svg>
               <span className="text-foreground">
-                anis@provision.com / password123578951
+                admin@provision.com / password123578951
               </span>
             </div>
           </div>
