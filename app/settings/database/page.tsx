@@ -66,8 +66,10 @@ export default function DatabaseSettingsPage() {
   useEffect(() => {
     const mode = localStorage.getItem("pv:dataMode");
     const licenseActivated = localStorage.getItem("pv:licenseActivated");
-    setNeedsLicense(mode === "real" && licenseActivated !== "true");
-  }, []);
+    setNeedsLicense(
+      mode === "real" && (!licenseValid || licenseActivated !== "true")
+    );
+  }, [licenseValid]);
 
   // License check handler
   const handleCheckLicense = async () => {
@@ -209,8 +211,8 @@ export default function DatabaseSettingsPage() {
     };
   }, [router]);
 
-  // License UI conditional rendering
-  if (needsLicense) {
+  // License UI conditional rendering: always require valid license for DB config
+  if (needsLicense || !licenseValid) {
     return (
       <div className="container mx-auto p-8 max-w-5xl">
         <div className="mb-8">
