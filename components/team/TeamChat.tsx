@@ -294,12 +294,13 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   const [showConversations, setShowConversations] = useState(false);
   const [simulatedUnread, setSimulatedUnread] = useState(0);
 
-  // Hide on /chat page - use the full chat page instead
-  if (pathname?.startsWith("/chat")) {
-    return null;
-  }
+  // Track if we're on chat page (for conditional rendering, NOT for hooks)
+  const isOnChatPage = pathname?.startsWith("/chat");
 
   useEffect(() => {
+    // Don't load conversations if on chat page
+    if (isOnChatPage) return;
+
     loadConversations();
     const interval = setInterval(loadConversations, 5000);
 
@@ -320,10 +321,13 @@ export function TeamChat({ currentUser }: TeamChatProps) {
         handleOpenChat as EventListener
       );
     };
-  }, [currentUser]);
+  }, [currentUser, isOnChatPage]);
 
   // Listen for simulated chat notifications to update unread count
   useEffect(() => {
+    // Don't track notifications if on chat page
+    if (isOnChatPage) return;
+
     const handleNewMessage = () => {
       setSimulatedUnread((prev) => Math.min(prev + 1, 9));
     };
@@ -331,7 +335,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     window.addEventListener("chatNotification", handleNewMessage);
     return () =>
       window.removeEventListener("chatNotification", handleNewMessage);
-  }, []);
+  }, [isOnChatPage]);
 
   const loadConversations = async () => {
     if (shouldUseDatabaseData()) {
@@ -358,6 +362,12 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   );
   const totalUnread =
     conversationUnread > 0 ? conversationUnread : simulatedUnread;
+
+  // Hide on /chat page - use the full chat page instead
+  // This must be AFTER all hooks to comply with React rules of hooks
+  if (isOnChatPage) {
+    return null;
+  }
 
   return (
     <>
