@@ -19,7 +19,7 @@ export default function OnboardingPage() {
     try {
       const res = await fetch("/api/setup/check-system");
       const data = await res.json();
-      
+
       if (data.ready && data.dbConfigured) {
         // Already configured, redirect to registration
         router.replace("/auth/register?flow=onboarding");
@@ -49,9 +49,26 @@ export default function OnboardingPage() {
         throw new Error(data.error || "Configuration failed");
       }
 
+      if (data.warning) {
+        // Show warning but proceed
+        setError(data.warning); // Show as error/warning text
+        // Don't return, let it proceed to success step
+        // But maybe delay or require user acknowledgement?
+        // For now, let's just log and maybe show a non-blocking alert
+        if (typeof window !== "undefined") {
+          window.alert(`Warning: ${data.warning}`);
+        }
+      }
+
       // Save to localStorage for client-side persistence
-      localStorage.setItem("pv:dbConfig", JSON.stringify({ dbType, configured: true }));
-      localStorage.setItem("pv:setupStatus", JSON.stringify({ databaseConfigured: true, profileCompleted: false }));
+      localStorage.setItem(
+        "pv:dbConfig",
+        JSON.stringify({ dbType, configured: true })
+      );
+      localStorage.setItem(
+        "pv:setupStatus",
+        JSON.stringify({ databaseConfigured: true, profileCompleted: false })
+      );
       localStorage.setItem("pv:dataMode", "live");
 
       setStep("success");
@@ -117,7 +134,8 @@ export default function OnboardingPage() {
               Connect Your Database
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Choose your database type and provide the connection string. We support PostgreSQL, MySQL, and SQLite.
+              Choose your database type and provide the connection string. We
+              support PostgreSQL, MySQL, and SQLite.
             </p>
           </div>
 
@@ -130,7 +148,13 @@ export default function OnboardingPage() {
 
           <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
             <p className="text-xs text-blue-900 dark:text-blue-300">
-              <strong>Note:</strong> Your connection string will be securely stored in a <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/40 rounded">.env</code> file on the server. Make sure your hosting environment supports persistent file storage.
+              <strong>Note:</strong> Your connection string will be securely
+              stored in a{" "}
+              <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/40 rounded">
+                .env
+              </code>{" "}
+              file on the server. Make sure your hosting environment supports
+              persistent file storage.
             </p>
           </div>
         </div>

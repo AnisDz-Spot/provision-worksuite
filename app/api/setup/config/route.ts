@@ -75,20 +75,35 @@ export async function POST(req: Request) {
       envContent += `\nDB_TYPE="${dbType}"\n`;
     }
 
-    await fs.writeFile(envPath, envContent);
-
-    // 2. Runtime Injection
+    // 2. Runtime Injection (Always do this)
     process.env[dbEnvVar] = postgresUrl;
     process.env.DATABASE_URL = postgresUrl;
     process.env.DB_TYPE = dbType;
 
-    return NextResponse.json({ success: true });
+    let savedToFile = false;
+    let writeError = null;
+
+    try {
+      await fs.writeFile(envPath, envContent);
+      savedToFile = true;
+    } catch (err: any) {
+      console.warn("Could not write to .env file:", err.message);
+      writeError = err.message;
+      // Continue anyway - we set process.env for this session
+    }
+
+    return NextResponse.json({
+      success: true,
+      savedToFile,
+      warning: savedToFile
+        ? null
+        : "Could not save to .env file (read-only system). Configuration active for this session only.",
+    });
   } catch (error: any) {
-    console.error("Failed to save config:", error);
+    console.error("Failed to configure database:", error);
     return NextResponse.json(
       {
-        error:
-          "Failed to write configuration file. Please ensure the server allows file writing or set Envrionment Variables manually.",
+        error: error.message || "Unknown error during configuration",
       },
       { status: 500 }
     );
