@@ -148,9 +148,13 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         setError(data.error || "Failed to create admin account");
       }
     } catch (err) {
-      setError("Failed to create admin account");
+      console.error("Setup error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to create admin account"
+      );
     } finally {
       setLoading(false);
+      setUploadingAvatar(false);
     }
   };
 

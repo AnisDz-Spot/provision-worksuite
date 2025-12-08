@@ -53,7 +53,7 @@ function DataSourceTab() {
   });
 
   const [status, setStatus] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -83,12 +83,18 @@ function DataSourceTab() {
       const isMissingEverything =
         !status.hasEnvironmentVars && !status.hasDatabaseConfig;
       setShowCustomForm(isMissingEverything);
+      setLoading(false);
     }
   }, [status]);
 
   async function loadStatus() {
-    const result = await getDatabaseStatus();
-    setStatus(result);
+    setLoading(true);
+    try {
+      const result = await getDatabaseStatus();
+      setStatus(result);
+    } finally {
+      if (status) setLoading(false);
+    }
   }
 
   const handleDataModeChange = async (mode: "real" | "mock") => {
@@ -198,6 +204,14 @@ function DataSourceTab() {
 
         {dataMode === "real" && (
           <div className="space-y-6 mt-6">
+            {/* Loading State */}
+            {loading && !status && (
+              <div className="py-8 flex flex-col items-center justify-center text-muted-foreground animate-pulse">
+                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
+                <p>Checking database configuration...</p>
+              </div>
+            )}
+
             {/* Initialization Required State */}
             {status && status.hasEnvironmentVars && !status.hasTables && (
               <Card className="p-6 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
