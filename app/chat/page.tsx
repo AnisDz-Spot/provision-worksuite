@@ -72,6 +72,28 @@ export default function ChatPage() {
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowActionMenu(false);
+      }
+    }
+
+    if (showActionMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showActionMenu]);
 
   useEffect(() => {
     setMounted(true);
@@ -114,7 +136,7 @@ export default function ChatPage() {
 
     for (const attachment of attachments) {
       const fileMessage = `📎 ${attachment.name}`;
-      sendChatMessage(currentUser, activeChat, fileMessage);
+      sendChatMessage(currentUser, activeChat, fileMessage, attachment);
     }
 
     setInputMessage("");
@@ -347,7 +369,7 @@ export default function ChatPage() {
                     </p>
                   </div>
                 </div>
-                <div className="relative">
+                <div className="relative" ref={actionMenuRef}>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -407,14 +429,21 @@ export default function ChatPage() {
                               <span className="text-sm">{msg.message}</span>
                               <button
                                 onClick={() => {
-                                  const fileName = msg.message.replace(
-                                    "📎 ",
-                                    ""
-                                  );
-                                  const file = attachments.find(
-                                    (a) => a.name === fileName
-                                  );
-                                  if (file) setPreviewFile(file);
+                                  // Use attachment from message if available
+                                  if (msg.attachment) {
+                                    setPreviewFile(msg.attachment);
+                                  } else {
+                                    // Fallback for legacy messages or if attachment missing
+                                    const fileName = msg.message.replace(
+                                      "📎 ",
+                                      ""
+                                    );
+                                    // Try to find in current session attachments (unlikely but safe)
+                                    const file = attachments.find(
+                                      (a) => a.name === fileName
+                                    );
+                                    if (file) setPreviewFile(file);
+                                  }
                                 }}
                                 className="ml-2 p-1 hover:bg-accent/20 rounded"
                               >

@@ -1,8 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
-import { X, MessageCircle } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { X, MessageCircle, Send, Paperclip, Smile } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { playMessageTone } from "@/lib/notificationSound";
+import {
+  getChatMessages,
+  sendChatMessage,
+  markMessagesAsRead,
+  type ChatMessage,
+} from "@/lib/utils/team-utilities";
 
+// Simple toast for notifications
 type ToastNotification = {
   id: string;
   title: string;
@@ -12,28 +20,82 @@ type ToastNotification = {
 };
 
 export function ChatNotificationToast() {
+  const pathname = usePathname();
   const [notifications, setNotifications] = useState<ToastNotification[]>([]);
-  const [allMessages, setAllMessages] = useState<ToastNotification[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const [showPanel, setShowPanel] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentUser] = useState("You");
+  const [activeChat, setActiveChat] = useState<string>("Alice Johnson"); // Default to PM
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load messages from localStorage on mount
+  // Hide on /chat page
+  if (pathname === "/chat") return null;
+
+  // Poll for messages in active chat
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadMessages = () => {
+      const msgs = getChatMessages(currentUser, activeChat);
+      setMessages(msgs);
+      // Mark as read when panel is open
+      markMessagesAsRead(currentUser, activeChat);
+    };
+
+    loadMessages();
+    const interval = setInterval(loadMessages, 3000);
+    return () => clearInterval(interval);
+  }, [isOpen, activeChat, currentUser]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isOpen]);
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+
+    sendChatMessage(currentUser, activeChat, inputValue.trim());
+    setInputValue("");
+    setShowEmojiPicker(false);
+
+    // Refresh messages immediately
+    setMessages(getChatMessages(currentUser, activeChat));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // For demo: create blob URL and send as link
+      // In real app: upload to server
+      const msg = `📎 ${file.name}`;
+      const attachment = {
+        id: `file_${Date.now()}_${Math.random()}`,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      };
+      sendChatMessage(currentUser, activeChat, msg, attachment);
+      setMessages(getChatMessages(currentUser, activeChat));
+    }
+  };
+
+  const onEmojiClick = (emoji: string) => {
+    setInputValue((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  // Rest of the existing notification logic...
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
     setMounted(true);
-    try {
-      const stored = localStorage.getItem("pv:chatMessages");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setAllMessages(
-          parsed.map((m: any) => ({
-            ...m,
-            timestamp: new Date(m.timestamp),
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Failed to load chat messages:", error);
-    }
   }, []);
 
   useEffect(() => {
@@ -41,13 +103,13 @@ export function ChatNotificationToast() {
 
     async function setupChatToasts() {
       try {
-        const { shouldUseMockData } = await import("@/lib/dataSource");
-        if (!shouldUseMockData()) return;
-
         const { startChatNotificationSimulation } =
           await import("@/lib/chatNotificationSimulator");
 
         const cleanup = startChatNotificationSimulation((chatNotif) => {
+          // Play sound
+          playMessageTone();
+
           const toast: ToastNotification = {
             id: chatNotif.id,
             title: chatNotif.from,
@@ -56,26 +118,14 @@ export function ChatNotificationToast() {
             read: false,
           };
 
-          // Add to toast notifications (visible toasts)
+          // Add to visible toasts
           setNotifications((prev) => [toast, ...prev].slice(0, 3));
 
-          // Add to all messages (persistent)
-          setAllMessages((prev) => {
-            const updated = [toast, ...prev];
-            // Save to localStorage
-            try {
-              localStorage.setItem("pv:chatMessages", JSON.stringify(updated));
-            } catch (error) {
-              console.error("Failed to save messages:", error);
-            }
-            return updated;
-          });
-
-          // Auto-dismiss toast after 5 seconds
+          // Auto-dismiss toast
           setTimeout(() => {
             setNotifications((prev) => prev.filter((n) => n.id !== toast.id));
           }, 5000);
-        }, 60000); // Check every 60 seconds
+        }, 60000);
 
         return cleanup;
       } catch (error) {
@@ -86,40 +136,8 @@ export function ChatNotificationToast() {
     setupChatToasts();
   }, [mounted]);
 
-  const unreadCount = allMessages.filter((m) => !m.read).length;
-
-  const markAsRead = (id: string) => {
-    setAllMessages((prev) => {
-      const updated = prev.map((m) => (m.id === id ? { ...m, read: true } : m));
-      try {
-        localStorage.setItem("pv:chatMessages", JSON.stringify(updated));
-      } catch (error) {
-        console.error("Failed to save messages:", error);
-      }
-      return updated;
-    });
-  };
-
-  const markAllAsRead = () => {
-    setAllMessages((prev) => {
-      const updated = prev.map((m) => ({ ...m, read: true }));
-      try {
-        localStorage.setItem("pv:chatMessages", JSON.stringify(updated));
-      } catch (error) {
-        console.error("Failed to save messages:", error);
-      }
-      return updated;
-    });
-  };
-
-  const clearAll = () => {
-    setAllMessages([]);
-    try {
-      localStorage.removeItem("pv:chatMessages");
-    } catch (error) {
-      console.error("Failed to clear messages:", error);
-    }
-  };
+  // Calculate unread from actual messages in future (using simulation for now for badge)
+  const unreadCount = notifications.length;
 
   if (!mounted) return null;
 
@@ -147,7 +165,10 @@ export function ChatNotificationToast() {
                     setNotifications((prev) =>
                       prev.filter((n) => n.id !== notif.id)
                     );
-                    markAsRead(notif.id);
+                    // Mark as read in backend
+                    if (notif.title) {
+                      markMessagesAsRead(currentUser, notif.title);
+                    }
                   }}
                   className="p-1 hover:bg-accent rounded"
                 >
@@ -162,7 +183,7 @@ export function ChatNotificationToast() {
       {/* Floating Chat Button */}
       <div className="fixed bottom-4 right-4 z-50">
         <button
-          onClick={() => setShowPanel(!showPanel)}
+          onClick={() => setIsOpen(!isOpen)}
           className="relative p-4 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110"
           aria-label="Chat messages"
         >
@@ -175,78 +196,145 @@ export function ChatNotificationToast() {
         </button>
 
         {/* Messages Panel */}
-        {showPanel && (
-          <div className="absolute bottom-16 right-0 w-80 max-h-96 bg-card border-2 border-border shadow-xl rounded-lg overflow-hidden flex flex-col">
-            <div className="p-3 border-b border-border flex items-center justify-between bg-accent/20">
+        {isOpen && (
+          <div className="absolute bottom-16 right-0 w-80 md:w-96 h-[500px] bg-card border-2 border-border shadow-2xl rounded-xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-border bg-muted/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                <h3 className="font-semibold">Chat Messages</h3>
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-xs font-bold text-primary">AJ</span>
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card"></div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">Alice Johnson</h3>
+                  <p className="text-xs text-muted-foreground">Online</p>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-xs px-2 py-1 hover:bg-accent rounded text-primary"
-                  >
-                    Mark all read
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowPanel(false)}
-                  className="p-1 hover:bg-accent rounded"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-accent rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {allMessages.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground text-sm">
-                  No messages yet
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50">
+              {messages.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-xs text-muted-foreground">
+                    No messages yet. Say hello! 👋
+                  </p>
                 </div>
               ) : (
-                <div className="divide-y divide-border">
-                  {allMessages.map((msg) => (
+                messages.map((msg) => {
+                  const isMe = msg.fromUser === currentUser;
+                  return (
                     <div
                       key={msg.id}
-                      className={`p-3 hover:bg-accent/10 cursor-pointer ${
-                        !msg.read ? "bg-primary/5" : ""
-                      }`}
-                      onClick={() => markAsRead(msg.id)}
+                      className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-sm">
-                              {msg.title}
-                            </span>
-                            {!msg.read && (
-                              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            {msg.message}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {msg.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
+                      <div
+                        className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                          isMe
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted border border-border"
+                        }`}
+                      >
+                        <p>{msg.message}</p>
+                        <p
+                          className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                        >
+                          {new Date(msg.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
                       </div>
                     </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-3 border-t border-border bg-card">
+              {showEmojiPicker && (
+                <div className="absolute bottom-20 left-4 bg-card border border-border rounded-lg shadow-xl p-2 z-50 grid grid-cols-6 gap-2">
+                  {[
+                    "😊",
+                    "😂",
+                    "❤️",
+                    "👍",
+                    "🎉",
+                    "🔥",
+                    "🤔",
+                    "😢",
+                    "👀",
+                    "✅",
+                    "❌",
+                    "👋",
+                  ].map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => onEmojiClick(emoji)}
+                      className="hover:bg-accent p-1 rounded text-lg"
+                    >
+                      {emoji}
+                    </button>
                   ))}
                 </div>
               )}
-            </div>
-            {allMessages.length > 0 && (
-              <div className="p-2 border-t border-border">
-                <button
-                  onClick={clearAll}
-                  className="w-full text-xs text-destructive hover:bg-destructive/10 py-1 rounded"
-                >
-                  Clear all messages
-                </button>
+
+              <div className="flex items-end gap-2">
+                <div className="flex-1 flex flex-col gap-2 relative">
+                  <textarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    className="w-full min-h-[44px] max-h-32 px-3 py-2 rounded-lg border border-input bg-background resize-none text-sm focus:outline-none focus:ring-1 focus:ring-primary pr-8"
+                    rows={1}
+                  />
+                  <button
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <Smile className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!inputValue.trim()}
+                    className="p-2 rounded-lg bg-primary text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50 transition-all"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

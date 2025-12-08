@@ -160,7 +160,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                     <button
                       onClick={() => toggleGroup(item.label)}
                       className={cn(
-                        "w-full flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                        "w-full flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                         collapsed ? "justify-center" : "justify-between",
                         hasActive
                           ? "bg-primary/5 text-primary"
@@ -195,7 +195,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                               key={subItem.href}
                               href={canNavigate ? subItem.href : "#"}
                               className={cn(
-                                "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                                "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                                 isActive
                                   ? "bg-primary/10 text-primary font-medium"
                                   : "text-sidebar-foreground",
@@ -221,7 +221,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                     <Link
                       href={canNavigate ? item.href : "#"}
                       className={cn(
-                        "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors text-sm",
+                        "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                         collapsed ? "justify-center" : "",
                         isActive
                           ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
@@ -251,33 +251,35 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
           )}
         </nav>
       </div>
-      <button
-        className={cn(
-          "mt-auto mb-4 px-3 py-2 rounded-lg bg-sidebar-accent/20 hover:bg-sidebar-accent transition-colors flex items-center gap-2 cursor-pointer",
-          collapsed ? "mx-auto" : "ml-2 mr-auto"
-        )}
-        onClick={() => setCollapsed(!collapsed)}
-        aria-label="Collapse sidebar"
-        title={collapsed ? "Expand" : "Minimize"}
-      >
-        <svg
-          width="20"
-          height="20"
-          className={cn("transition-transform", collapsed && "rotate-180")}
+      <div className="p-3 mt-auto">
+        <button
+          className={cn(
+            "w-full px-3 py-2 rounded-lg bg-sidebar-accent/20 hover:bg-sidebar-accent transition-colors flex items-center gap-2 cursor-pointer",
+            collapsed ? "justify-center" : ""
+          )}
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label="Collapse sidebar"
+          title={collapsed ? "Expand" : "Minimize"}
         >
-          <path
-            d="M8 4l8 8-8 8"
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="none"
-          />
-        </svg>
-        {!collapsed && (
-          <span className="text-sm font-medium whitespace-nowrap">
-            Minimize
-          </span>
-        )}
-      </button>
+          <svg
+            width="20"
+            height="20"
+            className={cn("transition-transform", collapsed && "rotate-180")}
+          >
+            <path
+              d="M8 4l8 8-8 8"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+            />
+          </svg>
+          {!collapsed && (
+            <span className="text-sm font-medium whitespace-nowrap">
+              Minimize
+            </span>
+          )}
+        </button>
+      </div>
     </aside>
   );
 }

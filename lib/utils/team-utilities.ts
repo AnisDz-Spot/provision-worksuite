@@ -352,6 +352,13 @@ export type ChatMessage = {
   message: string; // Original property name used by components
   timestamp: number;
   read: boolean;
+  attachment?: {
+    id: string;
+    name: string;
+    type: string;
+    url: string; // Data URL for persistence
+    size: number;
+  };
 };
 
 export type ChatConversation = {
@@ -392,7 +399,8 @@ export function getChatMessages(user1: string, user2: string): ChatMessage[] {
 export function addChatMessage(
   from: string,
   to: string,
-  content: string
+  content: string,
+  attachment?: ChatMessage["attachment"]
 ): ChatMessage {
   const msg: ChatMessage = {
     id: `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -401,6 +409,7 @@ export function addChatMessage(
     message: content,
     timestamp: Date.now(),
     read: false,
+    attachment,
   };
   const all = readChatMessages();
   all.push(msg);
