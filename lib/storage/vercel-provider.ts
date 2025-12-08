@@ -1,7 +1,13 @@
 import { StorageProvider, UploadProgress } from "./types";
 import { put, del, list } from "@vercel/blob";
+import { getConfig } from "@/lib/config/auto-setup";
 
 export class VercelBlobProvider implements StorageProvider {
+  private async getToken(): Promise<string | undefined> {
+    const config = await getConfig();
+    return config.blobToken;
+  }
+
   async uploadFile(
     file: File,
     path: string,
@@ -12,8 +18,11 @@ export class VercelBlobProvider implements StorageProvider {
       onProgress({ loaded: 0, total: file.size, progress: 0 });
     }
 
+    const token = await this.getToken();
+
     const blob = await put(path, file, {
       access: "public",
+      token, // Explicitly pass token from config
     });
 
     if (onProgress) {
@@ -24,11 +33,13 @@ export class VercelBlobProvider implements StorageProvider {
   }
 
   async deleteFile(url: string): Promise<void> {
-    await del(url);
+    const token = await this.getToken();
+    await del(url, { token });
   }
 
   async listFiles(path: string): Promise<{ url: string; pathname: string }[]> {
-    const { blobs } = await list({ prefix: path });
+    const token = await this.getToken();
+    const { blobs } = await list({ prefix: path, token });
     return blobs.map((b) => ({ url: b.url, pathname: b.pathname }));
   }
 }

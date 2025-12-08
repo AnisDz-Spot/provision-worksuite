@@ -256,3 +256,16 @@ model PasswordResetToken {
     @@index([expiresAt])
     @@map("password_reset_tokens")
 }
+
+// System settings for multi-hosting configuration support
+model SystemSettings {
+    id          Int      @id @default(autoincrement())
+    key         String   @unique @map("setting_key") @db.VarChar(255)
+    value       String   @map("setting_value") @db.Text // Encrypted value
+    isEncrypted Boolean  @default(true) @map("is_encrypted")
+    updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+    updatedBy   String?  @map("updated_by") @db.VarChar(255)
+
+    @@index([key])
+    @@map("system_settings")
+}

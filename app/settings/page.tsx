@@ -20,6 +20,14 @@ import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
 import { isDatabaseConfigured } from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
+import {
+  saveDatabaseConfig,
+  getDatabaseStatus,
+  resetConfiguration,
+} from "./database/actions";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 
 type TabKey =
   | "profile"
@@ -39,159 +47,240 @@ function DataSourceTab() {
     const val = localStorage.getItem("pv:dataMode");
     return val === "mock" ? "mock" : "real";
   });
-  const [error, setError] = useState<string>("");
+
+  const [status, setStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [license, setLicense] = useState("");
 
-  const handleDataModeChange = (mode: "real" | "mock") => {
-    setDataMode(mode);
-    setError("");
-    if (mode === "real") {
-      setLicense("");
-    }
-  };
-
-  const handleCheckLicense = async () => {
-    try {
-      const resp = await fetch("/api/check-license", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serial: license }),
-      });
-      const data = await resp.json();
-      if (data.success) {
-      } else {
-      }
-    } catch (err) {
-    } finally {
-    }
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError("");
-    // Clear session to force re-login with appropriate credentials/mode
-    localStorage.removeItem("pv:currentUser");
-    localStorage.removeItem("pv:session");
-
-    localStorage.setItem("pv:dataMode", dataMode);
-
-    // Redirect based on mode: dummy -> '/', real -> '/onboarding'
-    if (dataMode === "mock") {
-      router.push("/");
-    } else {
-      router.push("/onboarding");
-    }
-
-    setSaving(false);
-  };
-
-  // On mount, check if redirected back from DB config and DB is not configured
   useEffect(() => {
+    loadStatus();
+
+    // Check for dbfail redirect
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("dbfail") === "1") {
         setDataMode("mock");
         localStorage.setItem("pv:dataMode", "mock");
-        setError(
-          "You must finish the database configuration to use Live mode. Switched back to Dummy mode."
-        );
+        setMessage({
+          type: "error",
+          text: "You must finish the database configuration to use Live mode. Switched back to Dummy mode.",
+        });
       }
     }
   }, []);
 
+  async function loadStatus() {
+    const result = await getDatabaseStatus();
+    setStatus(result);
+  }
+
+  const handleDataModeChange = async (mode: "real" | "mock") => {
+    setDataMode(mode);
+    setMessage(null);
+
+    // Clear session to force re-login
+    localStorage.removeItem("pv:currentUser");
+    localStorage.removeItem("pv:session");
+    localStorage.setItem("pv:dataMode", mode);
+
+    if (mode === "mock") {
+      // Seed data if missing
+      const { seedLocalData } = await import("@/lib/seedData");
+      seedLocalData();
+      router.push("/");
+    } else {
+      await loadStatus();
+      router.push("/settings?tab=dataSource");
+    }
+  };
+
+  async function handleSubmit(formData: FormData) {
+    setLoading(true);
+    setMessage(null);
+
+    const result = await saveDatabaseConfig(formData);
+
+    setLoading(false);
+    setMessage({
+      type: result.success ? "success" : "error",
+      text: result.message,
+    });
+
+    if (result.success) {
+      await loadStatus();
+      // Optional: Redirect to onboarding if this was part of setup?
+      // For settings page, we stay here but refresh status.
+    }
+  }
+
+  async function handleReset() {
+    if (
+      !confirm(
+        "Reset to environment variables? This will clear custom database credentials."
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    const result = await resetConfiguration();
+    setLoading(false);
+    setMessage({
+      type: "success",
+      text: result.message,
+    });
+    await loadStatus();
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
-      {/* Hide left navbar during mode selection, license, and db config */}
+      {/* Hide left navbar during mode selection */}
       <style>{`.sidebar, .Navbar { display: none !important; }`}</style>
+
       <div>
         <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Choose between using real database data or dummy demo data. When dummy
-          data is enabled, a fake admin login is available.
+          Choose between using real database data or dummy demo data.
         </p>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 mb-4">
           <Button
             variant={dataMode === "real" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleDataModeChange("real")}
           >
-            Use Real Data
+            Use Real Data (Live)
           </Button>
           <Button
             variant={dataMode === "mock" ? "primary" : "outline"}
             size="sm"
-            onClick={async () => {
-              handleDataModeChange("mock");
-              // Seed data if missing
-              const { seedLocalData } = await import("@/lib/seedData");
-              seedLocalData();
-            }}
+            onClick={() => handleDataModeChange("mock")}
           >
-            Use Dummy Data
+            Use Dummy Data (Demo)
           </Button>
         </div>
+
+        {message && (
+          <Alert
+            variant={message.type === "error" ? "destructive" : "default"}
+            className="mb-4"
+          >
+            <AlertDescription>{message.text}</AlertDescription>
+          </Alert>
+        )}
+
         {dataMode === "mock" && (
-          <div className="mt-3 text-xs text-muted-foreground">
-            Fake Admin: <span className="font-mono">admin@provision.com</span> /{" "}
-            <span className="font-mono">password123578951</span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4"
-              onClick={() => {
-                setDataMode("real");
-                setLicense("");
-                // Clear session to force re-login
-                localStorage.removeItem("pv:currentUser");
-                localStorage.removeItem("pv:session");
-                // Persist mode change BEFORE navigation
-                localStorage.setItem("pv:dataMode", "real");
-                router.push("/settings/database");
-              }}
-            >
-              Switch to Live Mode
-            </Button>
+          <div className="mt-3 text-xs text-muted-foreground p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+            <p className="mb-2">
+              <strong>Demo Mode Active</strong>
+            </p>
+            <p>
+              Fake Admin: <span className="font-mono">admin@provision.com</span>{" "}
+              / <span className="font-mono">password123578951</span>
+            </p>
           </div>
         )}
-        {error && (
-          <div className="mt-3 text-xs text-red-500 font-semibold">{error}</div>
+
+        {dataMode === "real" && (
+          <div className="space-y-6 mt-6">
+            {/* Status Card */}
+            {status && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  Configuration Status
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Source:</strong>{" "}
+                    {status.currentSource === "database"
+                      ? "🗄️ Database (Custom)"
+                      : "🌍 Environment Variables"}
+                  </p>
+                  <p>
+                    <strong>Environment Variables:</strong>{" "}
+                    {status.hasEnvironmentVars ? "✅ Configured" : "❌ Missing"}
+                  </p>
+                  <p>
+                    <strong>Custom Database Config:</strong>{" "}
+                    {status.hasDatabaseConfig ? "✅ Configured" : "❌ Not Set"}
+                  </p>
+                </div>
+
+                {status.recommendations.length > 0 && (
+                  <Alert className="mt-4 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800">
+                    <AlertDescription>
+                      {status.recommendations.map((rec: string, i: number) => (
+                        <div key={i}>{rec}</div>
+                      ))}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </Card>
+            )}
+
+            {/* Configuration Form */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">
+                Custom Database Credentials
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Configure custom database credentials that will override
+                environment variables.
+              </p>
+
+              <form action={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Postgres URL
+                  </label>
+                  <Input
+                    name="postgresUrl"
+                    type="text"
+                    placeholder="postgres://user:pass@host:5432/dbname"
+                    required
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Blob Storage Token
+                  </label>
+                  <Input
+                    name="blobToken"
+                    type="text"
+                    placeholder="vercel_blob_rw_..."
+                    required
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <Button type="submit" disabled={loading}>
+                    {loading
+                      ? "Testing & Saving..."
+                      : "Test & Save Configuration"}
+                  </Button>
+
+                  {status?.hasDatabaseConfig && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleReset}
+                      disabled={loading}
+                    >
+                      Reset to Env Vars
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </Card>
+          </div>
         )}
-        <div className="mt-6">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? "Saving..." : "Save & Continue"}
-          </Button>
-          {dataMode === "real" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4"
-              onClick={async () => {
-                setDataMode("mock");
-                setLicense("");
-                // Clear session to force re-login
-                localStorage.removeItem("pv:currentUser");
-                localStorage.removeItem("pv:session");
-                // Persist mode change BEFORE navigation
-                localStorage.setItem("pv:dataMode", "mock");
-
-                // Seed data for rich experience
-                const { seedLocalData } = await import("@/lib/seedData");
-                seedLocalData();
-
-                router.push("/settings?tab=dataSource");
-              }}
-            >
-              Revert to Dummy Mode
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );

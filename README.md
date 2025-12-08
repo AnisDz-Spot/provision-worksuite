@@ -233,30 +233,61 @@ This section explains how purchasers can install or host the app.
    - You'll be logged out automatically
    - Log in with your new account to access all features
 
-### Database Configuration
+## Database Configuration
 
-When you create Postgres and Blob storage in Vercel, you'll need these values (found in Storage → .env.local):
+ProVision WorkSuite uses an intelligent auto-configuration system that works on any hosting platform.
+
+### Configuration Priority
+
+The app loads database credentials in this order:
+
+1. **Custom credentials** (set via Settings → Database) - HIGHEST PRIORITY
+2. **Environment variables** (set in hosting platform or .env.local)
+3. **Setup wizard** (if no configuration found)
+
+### Deployment Options
+
+#### Option 1: Vercel (Fully Automatic)
+
+1. Deploy to Vercel
+2. Add Postgres + Blob storage in Vercel dashboard
+3. Environment variables auto-configure ✅
+4. Visit your app - it works immediately!
+5. **Optional**: Configure custom credentials in Settings → Database
+
+#### Option 2: Other Hosting (Railway, Render, Netlify, etc.)
+
+1. Deploy your app
+2. Add environment variables in platform dashboard:
+   - `POSTGRES_URL` - Your database connection string
+   - `BLOB_READ_WRITE_TOKEN` - Your storage token
+   - `ENCRYPTION_KEY` - Generate with: `openssl rand -hex 32`
+3. Visit your app - it works immediately! ✅
+4. **Optional**: Configure custom credentials in Settings → Database
+
+#### Option 3: Self-Hosted
+
+1. Create `.env.local`:
 
 ```env
-POSTGRES_URL=postgres://default:xxxxx@xxxx.neon.tech:5432/verceldb
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
+   POSTGRES_URL=your_postgres_url
+   BLOB_READ_WRITE_TOKEN=your_blob_token
+   ENCRYPTION_KEY=generate_with_openssl
 ```
 
-Enter these in the **Database Configuration** page during first-time setup. The app stores them securely and connects automatically.
+2. Run: `npm install && npm run build && npm start`
+3. Visit http://localhost:3000 ✅
+4. **Optional**: Configure custom credentials in Settings → Database
 
-### Alternative Hosting Options
+### Changing Database Credentials
 
-**Self-Host:**
+You can change database credentials anytime through **Settings → Database** without touching any files or redeploying!
 
-```bash
-npm install
-npm run build
-npm start
-```
+### Security
 
-Set environment variables in `.env.local` (same as above), execute `lib/db/schema.sql`, then visit `http://localhost:3000` for setup.
-
-**Netlify:** Build: `npm run build`, publish: `.next`. Add environment variables, execute schema, complete setup at your URL.
+- All custom credentials are encrypted with AES-256-GCM
+- Encryption key must be set in `ENCRYPTION_KEY` environment variable
+- Never commit `.env.local` or encryption keys to version control
 
 ### First-Run Checklist
 

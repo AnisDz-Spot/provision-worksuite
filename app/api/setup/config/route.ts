@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { saveSetting } from "@/lib/config/settings-db";
+import { invalidateConfigCache } from "@/lib/config/loader";
 
 export async function POST(req: Request) {
   try {
@@ -30,74 +30,40 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Write to .env file
-    const envPath = path.join(process.cwd(), ".env");
-    let envContent = "";
+    // 1. Save to Database (Encrypted System Settings)
+    // This persists the config for future sessions/restarts
+    let savedToDB = false;
+    let dbWarning = null;
 
     try {
-      envContent = await fs.readFile(envPath, "utf-8");
-    } catch (e) {
-      // File doesn't exist, start new
-    }
-
-    // Determine the appropriate env var name based on DB type
-    const envVarNames: Record<string, string> = {
-      postgresql: "POSTGRES_URL",
-      mysql: "MYSQL_URL",
-      sqlite: "SQLITE_URL",
-    };
-    const dbEnvVar = envVarNames[dbType] || "POSTGRES_URL";
-
-    // Check if variable exists to replace or append
-    if (envContent.includes(`${dbEnvVar}=`)) {
-      envContent = envContent.replace(
-        new RegExp(`${dbEnvVar}=.*`, "g"),
-        `${dbEnvVar}="${postgresUrl}"`
-      );
-    } else {
-      envContent += `\n${dbEnvVar}="${postgresUrl}"\n`;
-    }
-
-    // Also set DATABASE_URL for Prisma
-    if (envContent.includes("DATABASE_URL=")) {
-      envContent = envContent.replace(
-        /DATABASE_URL=.*/g,
-        `DATABASE_URL="${postgresUrl}"`
-      );
-    } else {
-      envContent += `\nDATABASE_URL="${postgresUrl}"\n`;
-    }
-
-    // Store dbType for reference
-    if (envContent.includes("DB_TYPE=")) {
-      envContent = envContent.replace(/DB_TYPE=.*/g, `DB_TYPE="${dbType}"`);
-    } else {
-      envContent += `\nDB_TYPE="${dbType}"\n`;
+      if (postgresUrl) {
+        // Validation of postgresUrl is already done above
+        await saveSetting("db_connection_string", postgresUrl, true);
+        await saveSetting("app_mode", "live", false); // "live" mode
+        savedToDB = true;
+      }
+    } catch (dbError: any) {
+      console.error("Failed to save settings to DB:", dbError);
+      // Fallback: If DB save fails (e.g. table doesn't exist yet), we proceed with runtime injection
+      dbWarning =
+        "Configuration active for session only. Could not persist to database (Bootstrap connection issue or table missing).";
     }
 
     // 2. Runtime Injection (Always do this)
-    process.env[dbEnvVar] = postgresUrl;
+    process.env.POSTGRES_URL = postgresUrl;
     process.env.DATABASE_URL = postgresUrl;
     process.env.DB_TYPE = dbType;
 
-    let savedToFile = false;
-    let writeError = null;
-
-    try {
-      await fs.writeFile(envPath, envContent);
-      savedToFile = true;
-    } catch (err: any) {
-      console.warn("Could not write to .env file:", err.message);
-      writeError = err.message;
-      // Continue anyway - we set process.env for this session
-    }
+    // Invalidate loader cache
+    invalidateConfigCache();
 
     return NextResponse.json({
       success: true,
-      savedToFile,
-      warning: savedToFile
-        ? null
-        : "Could not save to .env file (read-only system). Configuration active for this session only.",
+      savedToDB,
+      warning: dbWarning,
+      message: savedToDB
+        ? "Configuration saved to database."
+        : "Configuration active for session.",
     });
   } catch (error: any) {
     console.error("Failed to configure database:", error);
