@@ -471,3 +471,18 @@ export function getUnreadMessageCount(currentUser: string): number {
   return readChatMessages().filter((m) => m.toUser === currentUser && !m.read)
     .length;
 }
+
+// Active Chat Persistence
+export function getActiveChatUser(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("pv:activeChatUser");
+}
+
+export function setActiveChatUser(username: string | null) {
+  if (typeof window === "undefined") return;
+  if (username) {
+    localStorage.setItem("pv:activeChatUser", username);
+  } else {
+    localStorage.removeItem("pv:activeChatUser");
+  }
+}

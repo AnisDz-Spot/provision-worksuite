@@ -18,11 +18,13 @@ import {
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import {
+  getMemberActivity,
+  getActiveChatUser,
+  setActiveChatUser,
   sendChatMessage,
   getChatMessages,
   getChatConversations,
   markMessagesAsRead,
-  getMemberActivity,
   type ChatMessage,
   type ChatConversation,
 } from "@/lib/utils";
@@ -62,6 +64,7 @@ export default function ChatPage() {
   ]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const activeChatRef = useRef<string | null>(null); // For polling ref
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,7 +101,23 @@ export default function ChatPage() {
   useEffect(() => {
     setMounted(true);
     loadConversations();
-    const interval = setInterval(loadConversations, 5000);
+
+    // Load persisted active chat
+    const persistedChat = getActiveChatUser();
+    if (persistedChat) {
+      setActiveChat(persistedChat);
+      activeChatRef.current = persistedChat;
+    }
+
+    const interval = setInterval(() => {
+      loadConversations();
+      // Check for active chat changes from other tabs/components
+      const currentStored = getActiveChatUser();
+      if (currentStored !== activeChatRef.current) {
+        setActiveChat(currentStored);
+        activeChatRef.current = currentStored;
+      }
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -185,6 +204,8 @@ export default function ChatPage() {
 
   const handleStartChat = (memberName: string) => {
     setActiveChat(memberName);
+    activeChatRef.current = memberName;
+    setActiveChatUser(memberName);
     setShowMobileSidebar(false);
     loadMessages(memberName);
   };

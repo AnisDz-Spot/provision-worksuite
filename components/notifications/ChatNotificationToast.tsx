@@ -7,6 +7,7 @@ import {
   getChatMessages,
   sendChatMessage,
   markMessagesAsRead,
+  getActiveChatUser,
   type ChatMessage,
 } from "@/lib/utils/team-utilities";
 
@@ -31,11 +32,15 @@ export function ChatNotificationToast() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Hide on /chat page
-  if (pathname === "/chat") return null;
+  // Hide on /chat page (including sub-routes)
+  if (pathname?.startsWith("/chat")) return null;
 
   // Poll for messages in active chat
   useEffect(() => {
+    // Initial load of active chat from storage
+    const storedChat = getActiveChatUser();
+    if (storedChat) setActiveChat(storedChat);
+
     if (!isOpen) return;
 
     const loadMessages = () => {
@@ -43,6 +48,12 @@ export function ChatNotificationToast() {
       setMessages(msgs);
       // Mark as read when panel is open
       markMessagesAsRead(currentUser, activeChat);
+
+      // Check if active chat changed elsewhere
+      const currentStored = getActiveChatUser();
+      if (currentStored && currentStored !== activeChat) {
+        setActiveChat(currentStored);
+      }
     };
 
     loadMessages();
@@ -203,12 +214,18 @@ export function ChatNotificationToast() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">AJ</span>
+                    <span className="text-xs font-bold text-primary">
+                      {activeChat
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)}
+                    </span>
                   </div>
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card"></div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Alice Johnson</h3>
+                  <h3 className="font-semibold text-sm">{activeChat}</h3>
                   <p className="text-xs text-muted-foreground">Online</p>
                 </div>
               </div>
