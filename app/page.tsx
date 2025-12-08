@@ -5,12 +5,11 @@ import { ProjectsCharts } from "@/components/dashboard/ProjectsCharts";
 import { TasksCharts } from "@/components/dashboard/TasksCharts";
 import { TeamCharts } from "@/components/dashboard/TeamCharts";
 import { WeeklyDigest } from "@/components/reports/WeeklyDigest";
-import { ChatNotificationToast } from "@/components/notifications/ChatNotificationToast";
+// Note: Floating chat is handled by TeamChat in AppShell globally
 
 export default function DashboardPage() {
   return (
     <>
-      <ChatNotificationToast />
       <section className="flex flex-col gap-8 p-4 md:p-8">
         <AnalyticsWidgets />
 

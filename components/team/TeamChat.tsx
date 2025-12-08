@@ -379,12 +379,12 @@ export function TeamChat({ currentUser }: TeamChatProps) {
             // Clear simulated unread when opening list
             if (!showConversations) setSimulatedUnread(0);
           }}
-          className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer z-40 flex items-center justify-center"
+          className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer z-50 flex items-center justify-center relative"
           title="Team Chat"
         >
           <MessageCircle className="w-6 h-6" />
           {totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold animate-pulse">
+            <span className="absolute -top-2 -right-2 min-w-6 h-6 px-1 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold animate-pulse shadow-lg z-10">
               {totalUnread > 9 ? "9+" : totalUnread}
             </span>
           )}
