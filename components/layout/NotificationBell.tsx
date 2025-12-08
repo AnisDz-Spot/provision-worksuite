@@ -58,23 +58,32 @@ export function NotificationBell() {
           await import("@/lib/chatNotificationSimulator");
 
         const cleanup = startChatNotificationSimulation((chatNotif) => {
-          // Create a notification for the chat message
-          const notification: Notification = {
-            id: chatNotif.id,
-            type: "info",
-            title: `New message from ${chatNotif.from}`,
-            message: chatNotif.message,
-            timestamp: chatNotif.timestamp,
-            read: false,
-          };
+          // Only show in header bell if:
+          // 1. Sender is admin or project_manager
+          // 2. Will be shown after 10+ minutes of being unread (handled by filtering below)
+          const isAdminOrPM =
+            chatNotif.role === "admin" || chatNotif.role === "project_manager";
 
-          // Add to notifications
-          const stored = localStorage.getItem("pv:notifications");
-          const current: Notification[] = stored ? JSON.parse(stored) : [];
-          const updated = [notification, ...current];
+          if (isAdminOrPM) {
+            // Create a notification for the chat message
+            const notification: Notification = {
+              id: chatNotif.id,
+              type: "info",
+              title: `New message from ${chatNotif.from}${chatNotif.role === "admin" ? " (Admin)" : " (PM)"}`,
+              message: chatNotif.message,
+              timestamp: chatNotif.timestamp,
+              read: false,
+            };
 
-          setNotifications(updated);
-          localStorage.setItem("pv:notifications", JSON.stringify(updated));
+            // Add to notifications with delayed display logic
+            const stored = localStorage.getItem("pv:notifications");
+            const current: Notification[] = stored ? JSON.parse(stored) : [];
+            const updated = [notification, ...current];
+
+            setNotifications(updated);
+            localStorage.setItem("pv:notifications", JSON.stringify(updated));
+          }
+          // Regular member messages are ignored in header bell
         }, 60000 /* Check every 60 seconds */);
 
         return cleanup;
@@ -135,8 +144,20 @@ export function NotificationBell() {
 
   if (!mounted) return null;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const recentNotifications = notifications.slice(0, 5);
+  // Filter notifications to only show those unread for 10+ minutes
+  const now = new Date().getTime();
+  const filteredNotifications = notifications.filter((n) => {
+    if (n.read) return true; // Always show read notifications
+
+    const notifTime = new Date(n.timestamp).getTime();
+    const ageMinutes = (now - notifTime) / (1000 * 60);
+
+    // Only show unread notifications if they're 10+ minutes old
+    return ageMinutes >= 10;
+  });
+
+  const unreadCount = filteredNotifications.filter((n) => !n.read).length;
+  const recentNotifications = filteredNotifications.slice(0, 5);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -177,7 +198,7 @@ export function NotificationBell() {
             </div>
           </div>
           <div className="overflow-y-auto flex-1">
-            {notifications.length === 0 ? (
+            {filteredNotifications.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 No notifications
               </div>
@@ -227,12 +248,12 @@ export function NotificationBell() {
                     </div>
                   </div>
                 ))}
-                {notifications.length > 5 && (
+                {filteredNotifications.length > 5 && (
                   <Link
                     href="/settings/notifications"
                     className="block p-3 text-center text-sm text-primary hover:bg-accent/10 transition-colors"
                   >
-                    View all notifications ({notifications.length})
+                    View all notifications ({filteredNotifications.length})
                   </Link>
                 )}
               </>

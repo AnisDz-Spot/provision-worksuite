@@ -9,32 +9,39 @@ export type ChatNotification = {
   message: string;
   timestamp: string;
   avatar?: string;
+  role?: "admin" | "project_manager" | "member"; // Role of the sender
 };
 
 const SAMPLE_MESSAGES = [
   {
     from: "Alice Johnson",
     message: "Hey, can you review the latest designs?",
+    role: "project_manager" as const,
   },
   {
     from: "Bob Smith",
     message: "Meeting in 10 minutes!",
+    role: "member" as const,
   },
   {
     from: "Carol Davis",
     message: "I've pushed the latest changes to the repo.",
+    role: "member" as const,
   },
   {
     from: "David Lee",
     message: "Great work on the dashboard!",
+    role: "admin" as const,
   },
   {
     from: "Eve Wilson",
     message: "Can we schedule a call for tomorrow?",
+    role: "project_manager" as const,
   },
   {
     from: "Frank Miller",
     message: "The deployment was successful ✅",
+    role: "admin" as const,
   },
 ];
 
@@ -58,6 +65,7 @@ export function startChatNotificationSimulation(
       message: randomMessage.message,
       timestamp: new Date().toISOString(),
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(randomMessage.from)}`,
+      role: randomMessage.role,
     };
 
     // Play notification sound

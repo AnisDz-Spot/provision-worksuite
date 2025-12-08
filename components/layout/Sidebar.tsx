@@ -44,6 +44,7 @@ const navItems: (NavItem | NavGroup)[] = [
   { href: "/tasks", label: "Tasks", icon: ClipboardListIcon },
   { href: "/team", label: "Team", icon: UsersIcon },
   { href: "/calendar", label: "Calendar", icon: CalendarIcon },
+  { href: "/chat", label: "Messages", icon: MessageSquare },
   {
     label: "Knowledge",
     icon: BookOpen,

@@ -183,10 +183,35 @@ export function EnhancedBurndownChart({
 
   // Helpers for marker rendering
   const dateToIndex = (dateStr: string) => {
-    const idx = data.findIndex(
-      (d) => d.date.slice(0, 10) === dateStr.slice(0, 10)
-    );
-    return idx >= 0 ? idx : null;
+    // Normalize the input date to YYYY-MM-DD format
+    const targetDate = dateStr.slice(0, 10);
+
+    // Find the index where the date matches
+    const idx = data.findIndex((d) => {
+      const pointDate = d.date.slice(0, 10);
+      return pointDate === targetDate;
+    });
+
+    // If exact match not found, find the closest date within range
+    if (idx === -1) {
+      const target = new Date(targetDate).getTime();
+      let closestIdx = -1;
+      let closestDiff = Infinity;
+
+      data.forEach((d, i) => {
+        const pointTime = new Date(d.date.slice(0, 10)).getTime();
+        const diff = Math.abs(pointTime - target);
+        if (diff < closestDiff && diff < 24 * 60 * 60 * 1000) {
+          // Within 1 day
+          closestDiff = diff;
+          closestIdx = i;
+        }
+      });
+
+      return closestIdx >= 0 ? closestIdx : null;
+    }
+
+    return idx;
   };
 
   return (
@@ -282,7 +307,13 @@ export function EnhancedBurndownChart({
             onClick={() => {
               if (!newMarkerDate) return;
               const idx = dateToIndex(newMarkerDate);
-              if (idx === null) return;
+              if (idx === null) {
+                // Show error feedback
+                alert(
+                  "Selected date is outside the chart range. Please select a date within the displayed timeframe."
+                );
+                return;
+              }
               const next = [
                 ...scopeMarkers,
                 {
@@ -293,6 +324,17 @@ export function EnhancedBurndownChart({
               setScopeMarkers(next);
               setNewMarkerDate("");
               setNewMarkerNote("");
+
+              // Visual feedback - temporary highlight
+              const markerElements = document.querySelectorAll(
+                "[data-marker-highlight]"
+              );
+              markerElements.forEach((el) => el.classList.add("animate-pulse"));
+              setTimeout(() => {
+                markerElements.forEach((el) =>
+                  el.classList.remove("animate-pulse")
+                );
+              }, 1000);
             }}
           >
             Add Marker
