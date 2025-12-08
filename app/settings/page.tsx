@@ -43,6 +43,9 @@ type TabKey =
   | "dataSource";
 
 function DataSourceTab() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isSetupMode = searchParams.get("setup") === "true";
   const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
     if (typeof window === "undefined") return "real";
     const val = localStorage.getItem("pv:dataMode");
@@ -55,19 +58,7 @@ function DataSourceTab() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const isSetupMode = searchParams.get("setup") === "true";
   const [showCustomForm, setShowCustomForm] = useState(false);
-
-  useEffect(() => {
-    if (status) {
-      // Open form by default only if we are missing BOTH env vars AND custom config
-      const isMissingEverything =
-        !status.hasEnvironmentVars && !status.hasDatabaseConfig;
-      setShowCustomForm(isMissingEverything);
-    }
-  }, [status, isSetupMode]);
 
   useEffect(() => {
     loadStatus();
@@ -85,6 +76,15 @@ function DataSourceTab() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (status) {
+      // Open form by default only if we are missing BOTH env vars AND custom config
+      const isMissingEverything =
+        !status.hasEnvironmentVars && !status.hasDatabaseConfig;
+      setShowCustomForm(isMissingEverything);
+    }
+  }, [status]);
 
   async function loadStatus() {
     const result = await getDatabaseStatus();
@@ -256,7 +256,8 @@ function DataSourceTab() {
                     </div>
                   </div>
 
-                  {isSetupMode && (
+                  {/* Show continue button if in setup mode OR setup is incomplete */}
+                  {(isSetupMode || !status.isSetupComplete) && (
                     <div className="mt-2">
                       <Button
                         variant="primary"
