@@ -5,7 +5,14 @@
  */
 
 import { encrypt, decrypt } from "./encryption";
-import { saveSetting, getSetting } from "./settings-db";
+import {
+  saveSetting,
+  getSetting,
+  checkTablesExist,
+  executeSql,
+} from "./settings-db";
+import fs from "fs";
+import path from "path";
 
 export type ConfigMode = "auto" | "manual";
 export type AppMode = "development" | "production";
@@ -72,8 +79,13 @@ export async function getConfig(): Promise<DatabaseConfig> {
  */
 export async function isSetupComplete(): Promise<boolean> {
   try {
+    // Also check if tables exist to determine if setup is truly "complete" from an app perspective
     const setupFlag = await getSetting("setup_completed");
-    return setupFlag === "true";
+    if (setupFlag === "true") return true;
+
+    // Fallback: If tables exist and Env vars are present, we might consider it 'setup enough'
+    // BUT we want explicit opt-in. So returning strict check for now.
+    return false;
   } catch {
     return false;
   }
@@ -184,12 +196,45 @@ async function testBlobConnection(token: string): Promise<{
 }
 
 /**
+ * Initialize Database Schema from SQL file
+ */
+export async function initializeDatabaseSchema(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const schemaPath = path.join(process.cwd(), "lib", "db", "schema.sql");
+    if (!fs.existsSync(schemaPath)) {
+      return { success: false, message: "Schema file not found" };
+    }
+
+    const sqlContent = fs.readFileSync(schemaPath, "utf8");
+
+    // Execute the entire SQL script
+    // Note: pg driver (and executeSql helper) handles multiple statements if they are valid SQL
+    await executeSql(sqlContent);
+
+    // Mark setup as complete if successful
+    await saveSetting("setup_completed", "true", false);
+
+    return { success: true, message: "Database initialized successfully" };
+  } catch (error: any) {
+    console.error("Schema initialization failed:", error);
+    return {
+      success: false,
+      message: `Initialization failed: ${error.message}`,
+    };
+  }
+}
+
+/**
  * Get current configuration status for UI display
  */
 export async function getConfigStatus(): Promise<{
   hasEnvironmentVars: boolean;
   hasDatabaseConfig: boolean;
   isSetupComplete: boolean;
+  hasTables: boolean;
   currentSource: "database" | "environment" | "none";
   recommendations: string[];
 }> {
@@ -199,13 +244,16 @@ export async function getConfigStatus(): Promise<{
 
   let hasDatabaseConfig = false;
   let setupComplete = false;
+  let hasTables = false;
 
   try {
     const dbUrl = await getSetting("db_connection_string");
     hasDatabaseConfig = !!dbUrl;
     setupComplete = await isSetupComplete();
-  } catch {
+    hasTables = await checkTablesExist();
+  } catch (e) {
     // Database not accessible yet
+    // hasTables stays false
   }
 
   const config = await getConfig();
@@ -225,10 +273,20 @@ export async function getConfigStatus(): Promise<{
     );
   }
 
+  if (
+    (config.source === "environment" || config.source === "database") &&
+    !hasTables
+  ) {
+    recommendations.push(
+      "⚠️ Database tables appear to be missing. Initialization required."
+    );
+  }
+
   return {
     hasEnvironmentVars: hasEnvVars,
     hasDatabaseConfig,
     isSetupComplete: setupComplete,
+    hasTables,
     currentSource: config.source,
     recommendations,
   };

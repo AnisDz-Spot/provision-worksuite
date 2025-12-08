@@ -24,6 +24,7 @@ import {
   saveDatabaseConfig,
   getDatabaseStatus,
   resetConfiguration,
+  initializeSchema,
 } from "./database/actions";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
@@ -112,8 +113,6 @@ function DataSourceTab() {
 
     if (result.success) {
       await loadStatus();
-      // Optional: Redirect to onboarding if this was part of setup?
-      // For settings page, we stay here but refresh status.
     }
   }
 
@@ -187,6 +186,45 @@ function DataSourceTab() {
 
         {dataMode === "real" && (
           <div className="space-y-6 mt-6">
+            {/* Initialization Required State */}
+            {status && status.hasEnvironmentVars && !status.hasTables && (
+              <Card className="p-6 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+                <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-200">
+                  Initialization Required
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+                  Environment variables detected, but database tables are
+                  missing. Initialize the database to start using Live mode.
+                </p>
+
+                <Button
+                  onClick={async () => {
+                    if (
+                      !confirm(
+                        "This will create all necessary tables in your database. Continue?"
+                      )
+                    )
+                      return;
+                    setLoading(true);
+                    const res = await initializeSchema();
+                    setLoading(false);
+                    setMessage({
+                      type: res.success ? "success" : "error",
+                      text: res.message,
+                    });
+                    if (res.success) await loadStatus();
+                  }}
+                  disabled={loading}
+                  variant="default"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  {loading
+                    ? "Initializing Schema..."
+                    : "Initialize Database Tables"}
+                </Button>
+              </Card>
+            )}
+
             {/* Status Card */}
             {status && (
               <Card className="p-6">
@@ -208,6 +246,12 @@ function DataSourceTab() {
                     <strong>Custom Database Config:</strong>{" "}
                     {status.hasDatabaseConfig ? "✅ Configured" : "❌ Not Set"}
                   </p>
+                  {status.hasTables !== undefined && (
+                    <p>
+                      <strong>Database Tables:</strong>{" "}
+                      {status.hasTables ? "✅ Created" : "❌ Missing"}
+                    </p>
+                  )}
                 </div>
 
                 {status.recommendations.length > 0 && (

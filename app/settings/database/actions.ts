@@ -4,16 +4,12 @@ import {
   saveCustomCredentials,
   getConfigStatus,
   resetToEnvironmentConfig,
+  initializeDatabaseSchema,
 } from "@/lib/config/auto-setup";
 import { revalidatePath } from "next/cache";
-// import { auth } from '@/lib/firebase-admin'; // User mentioned firebase-admin, check if it exists or use verifySession
 
 export async function saveDatabaseConfig(formData: FormData) {
-  // TODO: Authenticate user properly
-  //   const session = await verifySession(); // example
-  //   if (!session) return { success: false, message: 'Unauthorized' };
-
-  const userId = "admin-user"; // Placeholder until proper auth context is piped in here (or we trust the middleware)
+  const userId = "admin-user"; // Placeholder until proper auth context is piped in here
 
   const postgresUrl = formData.get("postgresUrl") as string;
   const blobToken = formData.get("blobToken") as string;
@@ -38,4 +34,10 @@ export async function resetConfiguration() {
     success: true,
     message: "Configuration reset to environment variables",
   };
+}
+
+export async function initializeSchema() {
+  const result = await initializeDatabaseSchema();
+  revalidatePath("/settings");
+  return result;
 }

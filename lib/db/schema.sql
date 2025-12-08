@@ -176,3 +176,29 @@ CREATE TABLE IF NOT EXISTS presence (
 );
 
 CREATE INDEX IF NOT EXISTS idx_presence_status ON presence(status);
+
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+-- System Settings (for multi-hosting config)
+CREATE TABLE IF NOT EXISTS system_settings (
+  id SERIAL PRIMARY KEY,
+  setting_key VARCHAR(255) UNIQUE NOT NULL,
+  setting_value TEXT NOT NULL,
+  is_encrypted BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMP DEFAULT NOW(),
+  updated_by VARCHAR(255)
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(setting_key);
