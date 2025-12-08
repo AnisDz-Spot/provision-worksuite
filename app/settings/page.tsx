@@ -56,6 +56,18 @@ function DataSourceTab() {
     text: string;
   } | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isSetupMode = searchParams.get("setup") === "true";
+  const [showCustomForm, setShowCustomForm] = useState(false);
+
+  useEffect(() => {
+    if (status) {
+      // Open form by default only if we are missing BOTH env vars AND custom config
+      const isMissingEverything =
+        !status.hasEnvironmentVars && !status.hasDatabaseConfig;
+      setShowCustomForm(isMissingEverything);
+    }
+  }, [status, isSetupMode]);
 
   useEffect(() => {
     loadStatus();
@@ -225,6 +237,40 @@ function DataSourceTab() {
               </Card>
             )}
 
+            {/* Everything Good State */}
+            {status &&
+              status.hasTables &&
+              (status.hasEnvironmentVars || status.hasDatabaseConfig) && (
+                <Card className="p-6 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">
+                        System Ready
+                      </h3>
+                      <p className="text-sm text-green-700 dark:text-green-300 mb-4">
+                        Database is configured and ready to use.
+                        {status.currentSource === "environment"
+                          ? " Using environment variables."
+                          : " Using custom credentials."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isSetupMode && (
+                    <div className="mt-2">
+                      <Button
+                        variant="primary"
+                        onClick={() =>
+                          router.push("/settings?tab=profile&setup=true")
+                        }
+                      >
+                        Continue to Profile Setup →
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              )}
+
             {/* Status Card */}
             {status && (
               <Card className="p-6">
@@ -268,60 +314,76 @@ function DataSourceTab() {
 
             {/* Configuration Form */}
             <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Custom Database Credentials
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Configure custom database credentials that will override
-                environment variables.
-              </p>
-
-              <form action={handleSubmit} className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Postgres URL
-                  </label>
-                  <Input
-                    name="postgresUrl"
-                    type="text"
-                    placeholder="postgres://user:pass@host:5432/dbname"
-                    required
-                    className="font-mono text-xs"
-                  />
+                  <h3 className="text-lg font-semibold">
+                    Custom Database Credentials
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {status?.hasEnvironmentVars
+                      ? "Optional: Override environment variables with custom credentials."
+                      : "Configure database connection."}
+                  </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Blob Storage Token
-                  </label>
-                  <Input
-                    name="blobToken"
-                    type="text"
-                    placeholder="vercel_blob_rw_..."
-                    required
-                    className="font-mono text-xs"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-4 pt-2">
-                  <Button type="submit" disabled={loading}>
-                    {loading
-                      ? "Testing & Saving..."
-                      : "Test & Save Configuration"}
+                {status?.hasEnvironmentVars && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCustomForm(!showCustomForm)}
+                  >
+                    {showCustomForm ? "Hide Form" : "Configure Override"}
                   </Button>
+                )}
+              </div>
 
-                  {status?.hasDatabaseConfig && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleReset}
-                      disabled={loading}
-                    >
-                      Reset to Env Vars
+              {(showCustomForm || !status?.hasEnvironmentVars) && (
+                <form action={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Postgres URL
+                    </label>
+                    <Input
+                      name="postgresUrl"
+                      type="text"
+                      placeholder="postgres://user:pass@host:5432/dbname"
+                      required
+                      className="font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Blob Storage Token
+                    </label>
+                    <Input
+                      name="blobToken"
+                      type="text"
+                      placeholder="vercel_blob_rw_..."
+                      required
+                      className="font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 pt-2">
+                    <Button type="submit" disabled={loading}>
+                      {loading
+                        ? "Testing & Saving..."
+                        : "Test & Save Configuration"}
                     </Button>
-                  )}
-                </div>
-              </form>
+
+                    {status?.hasDatabaseConfig && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleReset}
+                        disabled={loading}
+                      >
+                        Reset to Env Vars
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              )}
             </Card>
           </div>
         )}
