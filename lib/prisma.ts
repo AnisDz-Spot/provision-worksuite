@@ -26,7 +26,18 @@ const getPrismaClient = () => {
       console.error("CRITICAL: DATABASE_URL not found in env or settings.");
     }
 
-    _prisma = new PrismaClient();
+    // Explicitly pass options to satisfy stricter constructor requirements
+    _prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: dbUrl || "postgresql://invalid:invalid@localhost:5432/invalid",
+        },
+      },
+      log:
+        process.env.NODE_ENV === "development"
+          ? ["query", "error", "warn"]
+          : ["error"],
+    } as any);
   }
   return _prisma;
 };
