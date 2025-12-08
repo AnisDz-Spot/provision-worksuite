@@ -19,7 +19,6 @@ import { IntegrationSettings } from "@/components/notifications/IntegrationSetti
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
 import { isDatabaseConfigured } from "@/lib/setup";
-import { DatabaseConfigForm } from "@/components/setup/DatabaseConfigForm";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 
 type TabKey =
@@ -194,24 +193,6 @@ function DataSourceTab() {
           )}
         </div>
       </div>
-      {/* Database Configuration */}
-      {dataMode === "real" && (
-        <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-semibold mb-4">Database Configuration</h3>
-          <DatabaseConfigForm
-            onSave={async (dbUrl, dbType) => {
-              const res = await fetch("/api/setup/config", {
-                method: "POST",
-                body: JSON.stringify({ postgresUrl: dbUrl, dbType }),
-                headers: { "Content-Type": "application/json" },
-              });
-              if (res.ok) alert("Saved! Restart application.");
-              else alert("Error saving configuration");
-            }}
-            onCancel={() => {}}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -566,4 +547,3 @@ export default function SettingsPage() {
     </Suspense>
   );
 }
-
