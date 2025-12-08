@@ -10,6 +10,10 @@ import {
   Search,
   MoreVertical,
   ArrowLeft,
+  Smile,
+  Trash2,
+  Download,
+  Eye,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -63,6 +67,9 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +138,27 @@ export default function ChatPage() {
   };
 
   const removeAttachment = (id: string) => {
+    const fileToRemove = attachments.find((a) => a.id === id);
+    if (fileToRemove) {
+      URL.revokeObjectURL(fileToRemove.url);
+    }
     setAttachments(attachments.filter((a) => a.id !== id));
+  };
+
+  const handleClearChat = () => {
+    if (activeChat && confirm(`Clear all messages with ${activeChat}?`)) {
+      localStorage.removeItem(
+        `pv:chat:${[currentUser, activeChat].sort().join(":")}`
+      );
+      setMessages([]);
+      loadConversations();
+      setShowActionMenu(false);
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setInputMessage(inputMessage + emoji);
+    setShowEmojiPicker(false);
   };
 
   const handleStartChat = (memberName: string) => {
@@ -320,9 +347,36 @@ export default function ChatPage() {
                     </p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowActionMenu(!showActionMenu)}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                  {showActionMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
+                      <button
+                        onClick={handleClearChat}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 rounded-t-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Clear Chat
+                      </button>
+                      <button
+                        onClick={() => {
+                          alert("Export feature coming soon!");
+                          setShowActionMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 rounded-b-lg"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export Chat
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -351,6 +405,21 @@ export default function ChatPage() {
                             <div className="flex items-center gap-2">
                               <File className="w-4 h-4" />
                               <span className="text-sm">{msg.message}</span>
+                              <button
+                                onClick={() => {
+                                  const fileName = msg.message.replace(
+                                    "📎 ",
+                                    ""
+                                  );
+                                  const file = attachments.find(
+                                    (a) => a.name === fileName
+                                  );
+                                  if (file) setPreviewFile(file);
+                                }}
+                                className="ml-2 p-1 hover:bg-accent/20 rounded"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </button>
                             </div>
                           ) : (
                             <p className="text-sm">{msg.message}</p>
@@ -420,7 +489,7 @@ export default function ChatPage() {
                     multiple
                     onChange={handleFileSelect}
                     className="hidden"
-                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
                   />
                   <Button
                     variant="ghost"
@@ -430,19 +499,61 @@ export default function ChatPage() {
                   >
                     <Paperclip className="w-5 h-5" />
                   </Button>
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) =>
-                      e.key === "Enter" && !e.shiftKey && handleSendMessage()
-                    }
-                    placeholder="Type a message..."
-                    className="flex-1"
-                  />
+                  <div className="relative flex-1">
+                    <Input
+                      id="chat-message-input"
+                      name="message"
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" && !e.shiftKey && handleSendMessage()
+                      }
+                      placeholder="Type a message..."
+                      className="flex-1 pr-10 h-12"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                    >
+                      <Smile className="w-5 h-5" />
+                    </Button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full right-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 max-w-xs">
+                        {[
+                          "😊",
+                          "😂",
+                          "❤️",
+                          "👍",
+                          "👎",
+                          "🎉",
+                          "🔥",
+                          "✅",
+                          "❌",
+                          "💯",
+                          "🤔",
+                          "😍",
+                          "😢",
+                          "😠",
+                          "🙏",
+                          "👏",
+                        ].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => handleEmojiSelect(emoji)}
+                            className="text-2xl hover:bg-accent p-2 rounded transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <Button
                     onClick={handleSendMessage}
                     disabled={!inputMessage.trim() && attachments.length === 0}
-                    className="shrink-0"
+                    className="shrink-0 h-12"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
@@ -455,6 +566,67 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewFile(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{previewFile.name}</h3>
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="p-2 hover:bg-accent rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="mb-4">
+              {previewFile.type.startsWith("image/") ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="w-full rounded-lg"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <File className="w-16 h-16 mb-4" />
+                  <p className="text-sm">{previewFile.name}</p>
+                  <p className="text-xs mt-1">
+                    {formatFileSize(previewFile.size)}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = previewFile.url;
+                  a.download = previewFile.name;
+                  a.click();
+                }}
+                className="flex-1"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPreviewFile(null)}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
