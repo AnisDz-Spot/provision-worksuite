@@ -83,7 +83,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         setUploadingAvatar(true);
         const formData = new FormData();
         formData.append("file", avatarFile);
-        const response = await fetch("/api/test-blob", {
+        const response = await fetch("/api/setup/upload-avatar", {
           method: "POST",
           body: formData,
         });
@@ -91,7 +91,9 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         if (data.success) {
           avatarUrl = data.url;
         } else {
-          setError("Failed to upload avatar: " + data.error);
+          setError(
+            "Failed to upload avatar: " + (data.error || "Unknown error")
+          );
           setUploadingAvatar(false);
           setLoading(false);
           return;
@@ -163,20 +165,37 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
     form.password === form.passwordConfirm;
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-2xl relative overflow-hidden">
+      {/* Timer Banner */}
+      <div
+        className={`absolute top-0 right-0 p-4 ${
+          timer < 60 ? "animate-pulse" : ""
+        }`}
+      >
+        <div
+          className={`text-2xl font-bold font-mono px-4 py-2 rounded-lg border shadow-sm ${
+            timer < 60
+              ? "bg-red-100 text-red-600 border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-800"
+              : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+          }`}
+        >
+          {expired ? (
+            "TIMEOUT"
+          ) : (
+            <>
+              ⏳ {Math.floor(timer / 60)}:
+              {(timer % 60).toString().padStart(2, "0")}
+            </>
+          )}
+        </div>
+      </div>
+
       <CardHeader>
         <CardTitle>Create Your Admin Account</CardTitle>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-2 max-w-[80%]">
           This will be your permanent admin account. The temporary login will be
           disabled after this step.
         </p>
-        <div className="mt-2 text-xs text-red-500 font-semibold">
-          {expired
-            ? "⏰ Setup timed out! Restoring demo mode..."
-            : `⏳ Complete setup within ${Math.floor(timer / 60)}:${(timer % 60)
-                .toString()
-                .padStart(2, "0")}`}
-        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">

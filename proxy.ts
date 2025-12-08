@@ -15,6 +15,7 @@ export async function proxy(request: NextRequest) {
     "/api/setup/create-admin",
     "/api/setup/check-system",
     "/api/setup/config",
+    "/api/setup/upload-avatar",
     "/api/setup-db",
     "/api/test-db-connection",
     "/api/db-status",
