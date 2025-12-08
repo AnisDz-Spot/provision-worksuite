@@ -45,55 +45,9 @@ export function NotificationBell() {
     }
   };
 
-  // Setup chat notification simulation in dummy mode
-  useEffect(() => {
-    if (!mounted) return;
-
-    async function setupChatSimulation() {
-      try {
-        const { shouldUseMockData } = await import("@/lib/dataSource");
-        if (!shouldUseMockData()) return;
-
-        const { startChatNotificationSimulation } =
-          await import("@/lib/chatNotificationSimulator");
-
-        const cleanup = startChatNotificationSimulation((chatNotif) => {
-          // Only show in header bell if:
-          // 1. Sender is admin or project_manager
-          // 2. Will be shown after 10+ minutes of being unread (handled by filtering below)
-          const isAdminOrPM =
-            chatNotif.role === "admin" || chatNotif.role === "project_manager";
-
-          if (isAdminOrPM) {
-            // Create a notification for the chat message
-            const notification: Notification = {
-              id: chatNotif.id,
-              type: "info",
-              title: `New message from ${chatNotif.from}${chatNotif.role === "admin" ? " (Admin)" : " (PM)"}`,
-              message: chatNotif.message,
-              timestamp: chatNotif.timestamp,
-              read: false,
-            };
-
-            // Add to notifications with delayed display logic
-            const stored = localStorage.getItem("pv:notifications");
-            const current: Notification[] = stored ? JSON.parse(stored) : [];
-            const updated = [notification, ...current];
-
-            setNotifications(updated);
-            localStorage.setItem("pv:notifications", JSON.stringify(updated));
-          }
-          // Regular member messages are ignored in header bell
-        }, 60000 /* Check every 60 seconds */);
-
-        return cleanup;
-      } catch (error) {
-        console.error("Failed to setup chat simulation:", error);
-      }
-    }
-
-    setupChatSimulation();
-  }, [mounted]);
+  // Note: Chat notifications are now handled by ChatNotificationToast (floating chat box)
+  // NotificationBell only shows system/project notifications, not chat messages
+  // Admin messages older than 10 minutes appear here only if user is still active
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

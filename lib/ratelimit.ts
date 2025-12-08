@@ -73,33 +73,74 @@ class MemoryRateLimiter {
   }
 }
 
-// Initialize rate limiter
-let ratelimit: any;
+// PERFORMANCE FIX: Create singleton Redis client to avoid connection leaks
+let redis: Redis | null = null;
+const getRedis = (): Redis | null => {
+  if (
+    !redis &&
+    upstashConfigured &&
+    process.env.USE_IN_MEMORY_RATELIMIT !== "true"
+  ) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    });
+  }
+  return redis;
+};
 
+// PERFORMANCE FIX: Pre-create rate limiters with singleton Redis client
+let loginRatelimit: Ratelimit | null = null;
+let signupRatelimit: Ratelimit | null = null;
+let apiRatelimit: Ratelimit | null = null;
+const memoryLimiter = new MemoryRateLimiter();
+
+const getLoginRatelimit = (): Ratelimit | null => {
+  const redisClient = getRedis();
+  if (!loginRatelimit && redisClient) {
+    loginRatelimit = new Ratelimit({
+      redis: redisClient,
+      limiter: Ratelimit.slidingWindow(5, "15 m"), // 5 requests per 15 minutes
+      analytics: true,
+      prefix: "@pv/ratelimit",
+    });
+  }
+  return loginRatelimit;
+};
+
+const getSignupRatelimit = (): Ratelimit | null => {
+  const redisClient = getRedis();
+  if (!signupRatelimit && redisClient) {
+    signupRatelimit = new Ratelimit({
+      redis: redisClient,
+      limiter: Ratelimit.slidingWindow(3, "60 m"), // 3 requests per hour
+      analytics: true,
+      prefix: "@pv/signup",
+    });
+  }
+  return signupRatelimit;
+};
+
+const getApiRatelimit = (): Ratelimit | null => {
+  const redisClient = getRedis();
+  if (!apiRatelimit && redisClient) {
+    apiRatelimit = new Ratelimit({
+      redis: redisClient,
+      limiter: Ratelimit.slidingWindow(100, "1 m"), // 100 requests per minute
+      analytics: true,
+      prefix: "@pv/api",
+    });
+  }
+  return apiRatelimit;
+};
+
+// Log once at startup
 if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
   console.log("✅ Using Upstash Redis for rate limiting");
-  const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
-
-  ratelimit = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(5, "15 m"), // 5 requests per 15 minutes
-    analytics: true,
-    prefix: "@pv/ratelimit",
-  });
 } else {
   console.warn(
     "⚠️ Using in-memory rate limiting (not suitable for production with multiple servers)"
   );
-  const memoryLimiter = new MemoryRateLimiter();
-
-  ratelimit = {
-    limit: async (identifier: string) => {
-      return await memoryLimiter.limit(identifier, 5, 15 * 60 * 1000); // 5 requests per 15 minutes
-    },
-  };
 }
 
 /**
@@ -107,11 +148,14 @@ if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
  * 5 attempts per 15 minutes per IP
  */
 export async function rateLimitLogin(identifier: string) {
-  const { success, limit, remaining, reset } = await ratelimit.limit(
-    `login:${identifier}`
-  );
-
-  return { success, limit, remaining, reset };
+  const ratelimit = getLoginRatelimit();
+  if (ratelimit) {
+    const { success, limit, remaining, reset } = await ratelimit.limit(
+      `login:${identifier}`
+    );
+    return { success, limit, remaining, reset };
+  }
+  return await memoryLimiter.limit(identifier, 5, 15 * 60 * 1000);
 }
 
 /**
@@ -119,28 +163,14 @@ export async function rateLimitLogin(identifier: string) {
  * 3 attempts per hour per IP
  */
 export async function rateLimitSignup(identifier: string) {
-  // For signup, we want even stricter limits
-  if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-
-    const signupRatelimit = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(3, "60 m"), // 3 requests per hour
-      analytics: true,
-      prefix: "@pv/signup",
-    });
-
-    const { success, limit, remaining, reset } = await signupRatelimit.limit(
+  const ratelimit = getSignupRatelimit();
+  if (ratelimit) {
+    const { success, limit, remaining, reset } = await ratelimit.limit(
       `signup:${identifier}`
     );
     return { success, limit, remaining, reset };
-  } else {
-    const memoryLimiter = new MemoryRateLimiter();
-    return await memoryLimiter.limit(identifier, 3, 60 * 60 * 1000); // 3 per hour
   }
+  return await memoryLimiter.limit(identifier, 3, 60 * 60 * 1000);
 }
 
 /**
@@ -148,25 +178,12 @@ export async function rateLimitSignup(identifier: string) {
  * 100 requests per minute per user
  */
 export async function rateLimitAPI(identifier: string) {
-  if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-
-    const apiRatelimit = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(100, "1 m"),
-      analytics: true,
-      prefix: "@pv/api",
-    });
-
-    const { success, limit, remaining, reset } = await apiRatelimit.limit(
+  const ratelimit = getApiRatelimit();
+  if (ratelimit) {
+    const { success, limit, remaining, reset } = await ratelimit.limit(
       `api:${identifier}`
     );
     return { success, limit, remaining, reset };
-  } else {
-    const memoryLimiter = new MemoryRateLimiter();
-    return await memoryLimiter.limit(identifier, 100, 60 * 1000);
   }
+  return await memoryLimiter.limit(identifier, 100, 60 * 1000);
 }

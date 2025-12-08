@@ -20,6 +20,7 @@ import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
 import { isDatabaseConfigured } from "@/lib/setup";
 import { DatabaseConfigForm } from "@/components/setup/DatabaseConfigForm";
+import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 
 type TabKey =
   | "profile"
@@ -27,6 +28,7 @@ type TabKey =
   | "workspace"
   | "appearance"
   | "roles"
+  | "chat"
   | "email"
   | "notifications"
   | "blockers"
@@ -329,6 +331,14 @@ function SettingsContent() {
             Blockers
           </Button>
           <Button
+            variant={tab === "chat" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("chat")}
+            className={cn(tab === "chat" && "shadow")}
+          >
+            Chat
+          </Button>
+          <Button
             variant={tab === "email" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleSetTab("email")}
@@ -423,6 +433,22 @@ function SettingsContent() {
             </div>
           </div>
           <IntegrationSettings mode="email" />
+        </div>
+      )}
+      {tab === "chat" && !isSetupMode && (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-primary/10 text-primary">
+              <Bell className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Chat Settings</h2>
+              <p className="text-sm text-muted-foreground">
+                Manage chat groups and team conversations
+              </p>
+            </div>
+          </div>
+          <ChatGroupSettings />
         </div>
       )}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}

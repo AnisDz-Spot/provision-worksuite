@@ -1,27 +1,35 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 type PostBody = {
   type: "slack" | "teams";
-  webhookUrl?: string;
   payload: any;
 };
 
 export async function POST(req: Request) {
   try {
+    // SECURITY: Require authentication to send webhooks
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = (await req.json()) as PostBody;
     if (!body || !body.type) {
       return NextResponse.json({ error: "Missing type" }, { status: 400 });
     }
 
-    // Prefer server-side env for security; fall back to provided URL
-    const slackEnv = process.env.SLACK_WEBHOOK_URL;
-    const teamsEnv = process.env.TEAMS_WEBHOOK_URL;
+    // SECURITY FIX: Only use server-configured webhook URLs - never accept from client
+    // This prevents SSRF (Server-Side Request Forgery) attacks
     const webhookUrl =
-      body.webhookUrl || (body.type === "slack" ? slackEnv : teamsEnv);
+      body.type === "slack"
+        ? process.env.SLACK_WEBHOOK_URL
+        : process.env.TEAMS_WEBHOOK_URL;
+
     if (!webhookUrl) {
       return NextResponse.json(
-        { error: "Webhook URL not configured" },
-        { status: 400 }
+        { error: `${body.type} webhook not configured on server` },
+        { status: 503 }
       );
     }
 

@@ -78,10 +78,8 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
   const { workspace } = useSettings();
   const pathname = usePathname();
   const WORKSPACE_NAME = workspace.name;
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([
-    "Knowledge",
-    "Insights",
-  ]);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  // Submenus are collapsed by default - user must click to expand
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) =>

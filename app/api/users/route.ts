@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    // SECURITY: Require authentication to list users
+    const currentUser = await getAuthenticatedUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const users = await prisma.user.findMany({
       select: {
         userId: true,
@@ -51,22 +61,25 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    // SECURITY: Require authentication and admin role to create users
+    const currentUser = await getAuthenticatedUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Only admins can create new users
+    if (currentUser.role !== "admin" && currentUser.role !== "global-admin") {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
-    const {
-      name,
-      email,
-      role,
-      avatar_url,
-      password_hash,
-      phone,
-      bio,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      country,
-      postalCode,
-    } = body;
+    const { name, email, role, avatar_url, password_hash, phone } = body;
 
     if (!name || !email || !role) {
       return NextResponse.json(

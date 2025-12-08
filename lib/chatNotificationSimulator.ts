@@ -46,6 +46,8 @@ const SAMPLE_MESSAGES = [
 ];
 
 let simulationInterval: NodeJS.Timeout | null = null;
+let notificationCount = 0;
+const MAX_DUMMY_NOTIFICATIONS = 5;
 
 export function startChatNotificationSimulation(
   onNewMessage: (notification: ChatNotification) => void,
@@ -55,7 +57,16 @@ export function startChatNotificationSimulation(
     stopChatNotificationSimulation();
   }
 
+  // Reset counter when starting new simulation
+  notificationCount = 0;
+
   simulationInterval = setInterval(() => {
+    // In dummy mode, limit to max 5 notifications
+    if (notificationCount >= MAX_DUMMY_NOTIFICATIONS) {
+      stopChatNotificationSimulation();
+      return;
+    }
+
     const randomMessage =
       SAMPLE_MESSAGES[Math.floor(Math.random() * SAMPLE_MESSAGES.length)];
 
@@ -67,6 +78,9 @@ export function startChatNotificationSimulation(
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(randomMessage.from)}`,
       role: randomMessage.role,
     };
+
+    // Increment counter
+    notificationCount++;
 
     // Play notification sound
     playMessageTone();

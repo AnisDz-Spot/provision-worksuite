@@ -7,6 +7,7 @@ import { SettingsProvider } from "@/components/settings/SettingsProvider";
 import { AuthProvider } from "@/components/auth/AuthContext";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { TimeTrackerProvider } from "@/components/timetracking/TimeTrackingWidget";
+import { ChatProvider } from "@/components/chat/ChatContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +16,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SettingsProvider>
           <AuthProvider>
             <SidebarProvider>
-              <TimeTrackerProvider>{children}</TimeTrackerProvider>
+              <ChatProvider>
+                <TimeTrackerProvider>{children}</TimeTrackerProvider>
+              </ChatProvider>
             </SidebarProvider>
           </AuthProvider>
         </SettingsProvider>

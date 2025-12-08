@@ -241,3 +241,18 @@ model Blocker {
     @@index([status])
     @@map("blockers")
 }
+
+// Password reset tokens for forgot password flow
+model PasswordResetToken {
+    id        String    @id @default(uuid()) @db.Uuid
+    userId    String    @map("user_id") @db.Uuid
+    token     String    @unique
+    expiresAt DateTime  @map("expires_at")
+    usedAt    DateTime? @map("used_at")
+    createdAt DateTime  @default(now()) @map("created_at")
+
+    @@index([userId])
+    @@index([token])
+    @@index([expiresAt])
+    @@map("password_reset_tokens")
+}

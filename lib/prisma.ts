@@ -5,9 +5,19 @@ let _prisma: PrismaClient | null = null;
 
 const getPrismaClient = () => {
   if (!_prisma) {
-    // Ensure DATABASE_URL is set (fallback for build environment)
-    if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
-      process.env.DATABASE_URL = "postgresql://localhost:5432/placeholder";
+    // Check for database URL at runtime
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!dbUrl) {
+      // During build, we allow no URL (Prisma generates client without connecting)
+      // At runtime in production, this would be a critical error
+      if (
+        process.env.NODE_ENV === "production" &&
+        typeof window === "undefined"
+      ) {
+        console.error(
+          "CRITICAL: DATABASE_URL or POSTGRES_URL must be set in production"
+        );
+      }
     }
     _prisma = new PrismaClient();
   }
