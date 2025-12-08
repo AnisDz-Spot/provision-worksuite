@@ -85,6 +85,13 @@ export function startChatNotificationSimulation(
     // Play notification sound
     playMessageTone();
 
+    // Dispatch event for TeamChat unread badge
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("chatNotification", { detail: notification })
+      );
+    }
+
     // Call the callback
     onNewMessage(notification);
   }, intervalMs);

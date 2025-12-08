@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -286,10 +287,17 @@ type TeamChatProps = {
 };
 
 export function TeamChat({ currentUser }: TeamChatProps) {
+  const pathname = usePathname();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
+  const [simulatedUnread, setSimulatedUnread] = useState(0);
+
+  // Hide on /chat page - use the full chat page instead
+  if (pathname?.startsWith("/chat")) {
+    return null;
+  }
 
   useEffect(() => {
     loadConversations();
@@ -314,6 +322,17 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     };
   }, [currentUser]);
 
+  // Listen for simulated chat notifications to update unread count
+  useEffect(() => {
+    const handleNewMessage = () => {
+      setSimulatedUnread((prev) => Math.min(prev + 1, 9));
+    };
+
+    window.addEventListener("chatNotification", handleNewMessage);
+    return () =>
+      window.removeEventListener("chatNotification", handleNewMessage);
+  }, []);
+
   const loadConversations = async () => {
     if (shouldUseDatabaseData()) {
       const convs = await dbFetchConversations(currentUser);
@@ -328,22 +347,34 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     setActiveChat(user);
     setShowConversations(false);
     setIsMinimized(false);
+    // Clear simulated unread when opening chat
+    setSimulatedUnread(0);
   };
 
-  const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
+  // Use real unread from conversations, or simulated unread for dummy mode
+  const conversationUnread = conversations.reduce(
+    (sum, c) => sum + c.unreadCount,
+    0
+  );
+  const totalUnread =
+    conversationUnread > 0 ? conversationUnread : simulatedUnread;
 
   return (
     <>
       {/* Chat Button */}
       {!activeChat && (
         <button
-          onClick={() => setShowConversations(!showConversations)}
+          onClick={() => {
+            setShowConversations(!showConversations);
+            // Clear simulated unread when opening list
+            if (!showConversations) setSimulatedUnread(0);
+          }}
           className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer z-40 flex items-center justify-center"
           title="Team Chat"
         >
           <MessageCircle className="w-6 h-6" />
           {totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold animate-pulse">
               {totalUnread > 9 ? "9+" : totalUnread}
             </span>
           )}
