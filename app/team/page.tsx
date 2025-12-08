@@ -189,3 +189,4 @@ export default function TeamPage() {
     </section>
   );
 }
+
