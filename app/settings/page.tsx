@@ -210,19 +210,6 @@ function DataSourceTab() {
                     setLoading(false);
                     setMessage({
                       type: res.success ? "success" : "error",
-                      text: res.message,
-                    });
-                    if (res.success) await loadStatus();
-                  }}
-                  disabled={loading}
-                  variant="default"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  {loading
-                    ? "Initializing Schema..."
-                    : "Initialize Database Tables"}
-                </Button>
-              </Card>
             )}
 
             {/* Status Card */}
