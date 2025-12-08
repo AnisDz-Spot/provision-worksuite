@@ -379,7 +379,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
             // Clear simulated unread when opening list
             if (!showConversations) setSimulatedUnread(0);
           }}
-          className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer z-50 flex items-center justify-center relative"
+          className="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all cursor-pointer z-50 flex items-center justify-center"
           title="Team Chat"
         >
           <MessageCircle className="w-6 h-6" />
