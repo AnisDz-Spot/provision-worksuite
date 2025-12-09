@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getConfig } from "@/lib/config/auto-setup";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 // Lazy-loaded Prisma client to avoid build-time instantiation issues
 let _prisma: PrismaClient | null = null;
@@ -17,27 +19,29 @@ const getPrismaClient = () => {
     // Check for database URL at runtime
     const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
-    // In production, we might want to log if we are falling back
-    if (
-      !dbUrl &&
-      process.env.NODE_ENV === "production" &&
-      typeof window === "undefined"
-    ) {
-      console.error("CRITICAL: DATABASE_URL not found in env or settings.");
-    }
+    // Log options
+    const logOptions =
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"];
 
-    // Explicitly set env var if not set, as constructor datasources is not supported here
     if (dbUrl) {
-      process.env.DATABASE_URL = dbUrl;
-    }
+      // Use adapter for Prisma 7 compatibility issues with specific engine types
+      // or simply because it's the recommended way for modern deployments
+      const pool = new Pool({ connectionString: dbUrl });
+      const adapter = new PrismaPg(pool);
 
-    // Pass log options (satisfies "non-empty" requirement if needed)
-    _prisma = new PrismaClient({
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["query", "error", "warn"]
-          : ["error"],
-    });
+      _prisma = new PrismaClient({
+        adapter,
+        log: logOptions as any,
+      });
+    } else {
+      // Fallback if no URL is present - usually implies setup not done
+      // PrismaClient might throw if used without connection, which is expected
+      _prisma = new PrismaClient({
+        log: logOptions as any,
+      });
+    }
   }
   return _prisma;
 };
