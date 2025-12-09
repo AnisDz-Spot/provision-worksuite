@@ -3,17 +3,24 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Database, CheckCircle2 } from "lucide-react";
 import { DatabaseConfigForm } from "@/components/setup/DatabaseConfigForm";
+import { useAuth } from "@/components/auth/AuthContext";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [step, setStep] = useState<"config" | "success">("config");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    checkSetupStatus();
-  }, []);
+    // Wait for auth to initialize before checking setup state
+    // This prevents race conditions where isAuthenticated is false temporarily
+    const timer = setTimeout(() => {
+      checkSetupStatus();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated]);
 
   async function checkSetupStatus() {
     try {
@@ -21,8 +28,15 @@ export default function OnboardingPage() {
       const data = await res.json();
 
       if (data.ready && data.dbConfigured) {
-        // Already configured, redirect to registration
-        router.replace("/auth/register?flow=onboarding");
+        // Already configured
+        if (isAuthenticated) {
+          // If already logged in, mark onboarding as done and go to dashboard
+          localStorage.setItem("pv:onboardingDone", "true");
+          router.replace("/dashboard");
+        } else {
+          // Otherwise go to registration
+          router.replace("/auth/register?flow=onboarding");
+        }
         return;
       }
     } catch (e) {
