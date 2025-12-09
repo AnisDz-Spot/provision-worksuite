@@ -33,6 +33,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // All hooks must be called before any return!
   React.useEffect(() => {
+    // Sync DB status from server to prevent redirect loop in Live mode
+    if (isAuthenticated) {
+      import("@/lib/setup").then(({ getDatabaseStatus, markSetupComplete }) => {
+        getDatabaseStatus().then((status) => {
+          if (status.configured) {
+            // Server says DB is configured, so update our local state
+            // We assume profile is completed if they are authenticated and valid
+            const currentSetup = localStorage.getItem("pv:setupStatus");
+            const profileDone = currentSetup
+              ? JSON.parse(currentSetup).profileCompleted
+              : true;
+            markSetupComplete(true, profileDone);
+          }
+        });
+      });
+    }
+
     if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
       const pref = localStorage.getItem("pv:dataMode");
       if (!pref) {

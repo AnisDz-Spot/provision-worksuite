@@ -129,10 +129,16 @@ export default function ProjectsPage() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Completed
                 </p>
-                <p className="text-4xl font-bold text-green-600">1</p>
+                <p className="text-4xl font-bold text-green-600">
+                  {
+                    projects.filter(
+                      (p) => p.status === "Completed" || p.status === "Done"
+                    ).length
+                  }
+                </p>
                 <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
                   <TrendingUp className="w-3 h-3" />
-                  <span>+25% from last month</span>
+                  <span>+0% (Historical data N/A)</span>
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-green-500/10">
@@ -172,7 +178,16 @@ export default function ProjectsPage() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Active
                 </p>
-                <p className="text-4xl font-bold text-blue-600">2</p>
+                <p className="text-4xl font-bold text-blue-600">
+                  {
+                    projects.filter(
+                      (p) =>
+                        p.status === "Active" ||
+                        p.status === "In Progress" ||
+                        !p.status
+                    ).length
+                  }
+                </p>
                 <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
                   <TrendingUp className="w-3 h-3" />
                   <span>On track</span>
@@ -252,7 +267,16 @@ export default function ProjectsPage() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   Paused
                 </p>
-                <p className="text-4xl font-bold text-amber-600">1</p>
+                <p className="text-4xl font-bold text-amber-600">
+                  {
+                    projects.filter(
+                      (p) =>
+                        p.status === "Paused" ||
+                        p.status === "On Hold" ||
+                        p.status === "Blocked"
+                    ).length
+                  }
+                </p>
                 <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
                   <AlertCircle className="w-3 h-3" />
                   <span>Needs attention</span>
@@ -334,4 +358,3 @@ export default function ProjectsPage() {
     </section>
   );
 }
-

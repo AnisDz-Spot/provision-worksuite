@@ -27,42 +27,6 @@ const defaultMembers: TeamMember[] = [
       { projectId: "p2", projectName: "Project Beta", allocated: 15 },
     ],
   },
-  {
-    id: "u2",
-    name: "Anis Dzed",
-    role: "Developer",
-    capacity: 40,
-    projects: [
-      { projectId: "p1", projectName: "Project Alpha", allocated: 35 },
-    ],
-  },
-  {
-    id: "u3",
-    name: "Bob",
-    role: "Frontend Developer",
-    capacity: 40,
-    projects: [
-      { projectId: "p1", projectName: "Project Alpha", allocated: 25 },
-      { projectId: "p3", projectName: "Project Gamma", allocated: 10 },
-    ],
-  },
-  {
-    id: "u4",
-    name: "Carol",
-    role: "UI/UX Designer",
-    capacity: 40,
-    projects: [{ projectId: "p2", projectName: "Project Beta", allocated: 30 }],
-  },
-  {
-    id: "u5",
-    name: "David",
-    role: "Backend Developer",
-    capacity: 40,
-    projects: [
-      { projectId: "p1", projectName: "Project Alpha", allocated: 20 },
-      { projectId: "p2", projectName: "Project Beta", allocated: 20 },
-    ],
-  },
 ];
 
 export function ResourceAllocation({
@@ -71,9 +35,73 @@ export function ResourceAllocation({
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
     "all"
   );
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(
+    members && members.length > 0 ? members : defaultMembers
+  );
+
+  useMemo(() => {
+    async function loadData() {
+      const { shouldUseMockData } = await import("@/lib/dataSource");
+      if (shouldUseMockData() && members && members.length > 0) return; // Use props if mock mode or provided
+
+      // In real mode, load users and tasks
+      const { loadUsers, loadTasks, loadProjects } = await import("@/lib/data");
+      try {
+        const [users, tasks, projects] = await Promise.all([
+          loadUsers(),
+          loadTasks(),
+          loadProjects(),
+        ]);
+
+        // Calculate allocation based on tasks
+        // Simplified logic: Each active task = 5 hours/week allocation (placeholder logic)
+        const newMembers: TeamMember[] = users.map((u) => {
+          const userTasks = tasks.filter(
+            (t) =>
+              (t.assignee === u.name || t.assignee === u.uid) &&
+              t.status !== "Done" &&
+              t.status !== "Completed"
+          );
+
+          // Group by project
+          const projectAllocations: Record<string, number> = {};
+          userTasks.forEach((t) => {
+            const pid = t.projectId || "unknown";
+            projectAllocations[pid] = (projectAllocations[pid] || 0) + 5;
+          });
+
+          const allocationList = Object.entries(projectAllocations).map(
+            ([pid, hours]) => {
+              const proj = projects.find((p) => p.id === pid);
+              return {
+                projectId: pid,
+                projectName: proj ? proj.name : "Unknown Project",
+                allocated: hours,
+              };
+            }
+          );
+
+          return {
+            id: u.uid,
+            name: u.name,
+            role: u.role || "Team Member",
+            capacity: 40, // Default capacity
+            projects: allocationList,
+          };
+        });
+
+        if (newMembers.length > 0) {
+          setTeamMembers(newMembers);
+        }
+      } catch (e) {
+        console.error("Failed to load resource data", e);
+      }
+    }
+    loadData();
+  }, [members]);
 
   const memberStats = useMemo(() => {
-    return members.map((member) => {
+    return teamMembers.map((member) => {
       const totalAllocated = member.projects.reduce(
         (sum, p) => sum + p.allocated,
         0
