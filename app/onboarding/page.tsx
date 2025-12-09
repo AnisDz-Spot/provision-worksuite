@@ -30,9 +30,9 @@ export default function OnboardingPage() {
       if (data.ready && data.dbConfigured) {
         // Already configured
         if (isAuthenticated) {
-          // If already logged in, mark onboarding as done and go to dashboard
+          // If already logged in, mark onboarding as done and go to root
           localStorage.setItem("pv:onboardingDone", "true");
-          router.replace("/dashboard");
+          router.replace("/");
         } else {
           // Otherwise go to registration
           router.replace("/auth/register?flow=onboarding");
