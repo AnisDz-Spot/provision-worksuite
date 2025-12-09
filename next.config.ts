@@ -71,7 +71,9 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.ALLOWED_ORIGINS || "*",
+            // SECURITY: Use specific origins, not wildcard
+            // In production, set ALLOWED_ORIGINS to your domain
+            value: process.env.ALLOWED_ORIGINS || "https://localhost:3000",
           },
           {
             key: "Access-Control-Allow-Methods",

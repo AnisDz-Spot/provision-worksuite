@@ -32,6 +32,22 @@ model Presence {
     @@map("presence")
 }
 
+// Chat Groups for team messaging
+model ChatGroup {
+    id          String   @id @default(uuid()) @db.Uuid
+    name        String   @db.VarChar(100)
+    description String?  @db.VarChar(500)
+    members     String[] // Array of user IDs or names
+    createdBy   String   @db.VarChar(100)
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+    isPrivate   Boolean  @default(false) @map("is_private")
+
+    @@index([createdBy])
+    @@index([createdAt])
+    @@map("chat_groups")
+}
+
 // Users table - matches SQL schema
 model User {
     userId                    String    @id @default(uuid()) @map("user_id") @db.Uuid

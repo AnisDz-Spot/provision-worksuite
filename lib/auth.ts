@@ -6,10 +6,12 @@ const COOKIE_NAME = "auth-token";
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL: JWT_SECRET env var must be set in production");
-    }
-    return "dev-secret-do-not-use-in-prod";
+    // SECURITY: Always throw error if JWT_SECRET is missing
+    // Never use fallback secrets, even in development
+    throw new Error(
+      "CRITICAL: JWT_SECRET environment variable is required. " +
+        "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
   }
   return secret;
 };

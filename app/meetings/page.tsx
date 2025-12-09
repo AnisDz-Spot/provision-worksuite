@@ -4,6 +4,9 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { Modal } from "@/components/ui/Modal";
+import { sanitizeHtml } from "@/lib/sanitize";
 import {
   Calendar,
   Plus,
@@ -16,8 +19,6 @@ import {
   List,
   MoreVertical,
 } from "lucide-react";
-import { RichTextEditor } from "@/components/ui/RichTextEditor";
-import { Modal } from "@/components/ui/Modal";
 
 type ActionItem = {
   id: string;
@@ -479,7 +480,9 @@ export default function MeetingsPage() {
                   <div className="mb-3">
                     <div
                       className={`prose dark:prose-invert prose-sm ${openMenuId === `expanded-${meeting.id}` ? "" : "max-h-40 overflow-y-hidden"}`}
-                      dangerouslySetInnerHTML={{ __html: meeting.content }}
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtml(meeting.content),
+                      }}
                     />
                     <div className="mt-2">
                       <button
@@ -890,7 +893,7 @@ export default function MeetingsPage() {
                     <div
                       className="prose dark:prose-invert prose-sm max-h-[60vh] overflow-y-auto p-4 bg-accent/10 rounded-lg border"
                       dangerouslySetInnerHTML={{
-                        __html: selectedMeeting.content,
+                        __html: sanitizeHtml(selectedMeeting.content),
                       }}
                     />
                   ) : (

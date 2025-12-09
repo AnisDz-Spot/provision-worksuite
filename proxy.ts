@@ -20,6 +20,8 @@ export async function proxy(request: NextRequest) {
     "/api/test-db-connection",
     "/api/db-status",
     "/api/check-license",
+    "/api/support/email",
+    "/api/chat-groups", // Temporary: allow in demo mode
   ];
 
   // Allow public API routes

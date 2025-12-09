@@ -14,6 +14,7 @@ import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { Trash2 } from "lucide-react";
 import usersData from "@/data/users.json";
 import { shouldUseMockData } from "@/lib/dataSource";
+import { sanitizeMentions } from "@/lib/sanitize";
 
 function formatDate(ts: number) {
   const d = new Date(ts);
@@ -115,7 +116,9 @@ export function ProjectComments({ projectId }: { projectId: string }) {
             </div>
             <div
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: highlightMentions(c.content) }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeMentions(highlightMentions(c.content)),
+              }}
             />
           </div>
         ))}

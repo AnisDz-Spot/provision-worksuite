@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 import { saveSetting } from "@/lib/config/settings-db";
 import { invalidateConfigCache } from "@/lib/config/loader";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  // SECURITY: Require global-admin authentication to modify database configuration
+  const currentUser = await getAuthenticatedUser();
+  if (!currentUser || currentUser.role !== "global-admin") {
+    return NextResponse.json(
+      {
+        error: currentUser
+          ? "Forbidden: Global admin access required"
+          : "Unauthorized",
+      },
+      { status: currentUser ? 403 : 401 }
+    );
+  }
+
   try {
     const { postgresUrl, dbType = "postgresql" } = await req.json();
 

@@ -15,6 +15,7 @@ import {
   User,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 type WikiPage = {
   id: string;
@@ -189,7 +190,9 @@ export default function WikiPage() {
           )}
           <div
             className="prose dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: selectedPage.content }}
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHtml(selectedPage.content),
+            }}
           />
         </Card>
       </section>
@@ -242,9 +245,10 @@ export default function WikiPage() {
                 <div
                   className="text-sm text-muted-foreground mb-3 line-clamp-2"
                   dangerouslySetInnerHTML={{
-                    __html:
+                    __html: sanitizeHtml(
                       page.content.replace(/<[^>]*>/g, "").substring(0, 150) +
-                      "...",
+                        "..."
+                    ),
                   }}
                 />
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">

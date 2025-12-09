@@ -16,6 +16,7 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
+  Menu,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -95,46 +96,25 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
     <aside
       className={cn(
         // Main sidebar with dark mode dark-blue color
-        "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-40",
+        "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-40 overflow-hidden",
         collapsed ? "w-16" : "w-60"
       )}
     >
-      <Link
-        href="/"
+      <button
+        onClick={() => setCollapsed(!collapsed)}
         className={cn(
-          "flex items-center h-16 px-3 gap-3 font-bold text-lg tracking-tight group relative cursor-pointer hover:opacity-80 transition-opacity"
+          "flex items-center justify-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full"
         )}
-        title={!collapsed ? undefined : WORKSPACE_NAME}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         <span className="inline-flex items-center justify-center">
-          {workspace.logoDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={workspace.logoDataUrl}
-              alt={WORKSPACE_NAME + " Logo"}
-              className={cn(
-                "rounded-full bg-white dark:bg-slate-700 p-1 w-10 h-10 object-contain",
-                collapsed ? "" : ""
-              )}
-            />
-          ) : (
-            <Image
-              src="/provision-logo.png"
-              alt="ProVision Logo"
-              width={36}
-              height={36}
-              priority
-              className={cn(
-                "rounded-full bg-white dark:bg-slate-700 p-1",
-                collapsed ? "" : ""
-              )}
-            />
-          )}
+          <Menu className="w-6 h-6" />
         </span>
         {!collapsed && (
           <span className="truncate select-none">{WORKSPACE_NAME}</span>
         )}
-      </Link>
+      </button>
       {/* Scrollable nav area */}
       <div
         className={cn(
@@ -145,7 +125,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
         <nav
           className={cn(
             "flex flex-col mt-4 pb-2",
-            collapsed ? "gap-5 px-3" : "gap-1 px-2"
+            collapsed ? "gap-6 px-3" : "gap-4 px-2"
           )}
         >
           {canNavigate ? (
@@ -158,7 +138,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                     <button
                       onClick={() => toggleGroup(item.label)}
                       className={cn(
-                        "w-full flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                        "w-full flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                         collapsed ? "justify-center" : "justify-between",
                         hasActive
                           ? "bg-primary/5 text-primary"
@@ -169,7 +149,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                       <div className="flex items-center gap-2">
                         <item.icon
                           className={cn(
-                            "transition-all",
+                            "transition-all shrink-0",
                             collapsed ? "w-5 h-5" : "w-4 h-4"
                           )}
                         />
@@ -193,15 +173,16 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                               key={subItem.href}
                               href={canNavigate ? subItem.href : "#"}
                               className={cn(
-                                "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                                "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                                 isActive
                                   ? "bg-primary/10 text-primary font-medium"
                                   : "text-sidebar-foreground",
                                 !canNavigate && "opacity-50 pointer-events-none"
                               )}
                               tabIndex={canNavigate ? 0 : -1}
+                              title={collapsed ? subItem.label : undefined}
                             >
-                              <subItem.icon className="w-4 h-4" />
+                              <subItem.icon className="w-4 h-4 shrink-0" />
                               <span className="truncate">{subItem.label}</span>
                             </Link>
                           );
@@ -219,7 +200,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                     <Link
                       href={canNavigate ? item.href : "#"}
                       className={cn(
-                        "flex items-center gap-2 py-1.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                        "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
                         collapsed ? "justify-center" : "",
                         isActive
                           ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
@@ -227,10 +208,11 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                         !canNavigate && "opacity-50 pointer-events-none"
                       )}
                       tabIndex={canNavigate ? 0 : -1}
+                      title={collapsed ? item.label : undefined}
                     >
                       <item.icon
                         className={cn(
-                          "transition-all",
+                          "transition-all shrink-0",
                           collapsed ? "w-5 h-5" : "w-4 h-4"
                         )}
                       />
@@ -248,35 +230,6 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
             </div>
           )}
         </nav>
-      </div>
-      <div className="p-3 mt-auto">
-        <button
-          className={cn(
-            "w-full px-3 py-2 rounded-lg bg-sidebar-accent/20 hover:bg-sidebar-accent transition-colors flex items-center gap-2 cursor-pointer",
-            collapsed ? "justify-center" : ""
-          )}
-          onClick={() => setCollapsed(!collapsed)}
-          aria-label="Collapse sidebar"
-          title={collapsed ? "Expand" : "Minimize"}
-        >
-          <svg
-            width="20"
-            height="20"
-            className={cn("transition-transform", collapsed && "rotate-180")}
-          >
-            <path
-              d="M8 4l8 8-8 8"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-          {!collapsed && (
-            <span className="text-sm font-medium whitespace-nowrap">
-              Minimize
-            </span>
-          )}
-        </button>
       </div>
     </aside>
   );

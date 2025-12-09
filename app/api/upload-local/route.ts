@@ -1,29 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { getAuthenticatedUser } from "@/lib/auth";
+import {
+  validateFileUpload,
+  sanitizeFilename,
+  MAX_DOCUMENT_SIZE,
+} from "@/lib/file-validation";
 
 export async function POST(request: NextRequest) {
-  // Only allow in development or self-hosting mode
-  if (
-    process.env.NEXT_PUBLIC_STORAGE_PROVIDER !== "local" &&
-    process.env.NODE_ENV === "production"
-  ) {
-    return NextResponse.json(
-      { error: "Local upload not enabled" },
-      { status: 403 }
-    );
-  }
-
   try {
+    // SECURITY: Require authentication
+    const currentUser = await getAuthenticatedUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Only allow in development or self-hosting mode
+    if (
+      process.env.NEXT_PUBLIC_STORAGE_PROVIDER !== "local" &&
+      process.env.NODE_ENV === "production"
+    ) {
+      return NextResponse.json(
+        { error: "Local upload not enabled" },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Validate file upload
+    const validation = await validateFileUpload(request, {
+      maxSize: MAX_DOCUMENT_SIZE,
+    });
+
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const file = validation.file!;
     const formData = await request.formData();
-    const file = formData.get("file") as File;
     const filePath = formData.get("path") as string;
 
-    if (!file || !filePath) {
-      return NextResponse.json(
-        { error: "Missing file or path" },
-        { status: 400 }
-      );
+    if (!filePath) {
+      return NextResponse.json({ error: "Missing path" }, { status: 400 });
     }
 
     // SECURITY: Sanitize and validate file path to prevent directory traversal

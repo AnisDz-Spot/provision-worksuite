@@ -14,6 +14,10 @@ import {
   Trash2,
   Download,
   Eye,
+  Plus,
+  Users,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -43,21 +47,25 @@ export default function ChatPage() {
   const [teamMembers] = useState([
     {
       name: "Alice Johnson",
+      email: "alice.johnson@company.com",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
       role: "project_manager",
     },
     {
       name: "Bob Smith",
+      email: "bob.smith@company.com",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
       role: "member",
     },
     {
       name: "Carol Davis",
+      email: "carol.davis@company.com",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carol",
       role: "admin",
     },
     {
       name: "David Lee",
+      email: "david.lee@company.com",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
       role: "member",
     },
@@ -76,6 +84,88 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [currentUserRole] = useState<string>("admin"); // In real app, get from auth
+  const canCreateGroups =
+    currentUserRole === "admin" || currentUserRole === "project_manager";
+
+  // Group creation state
+  const [newGroup, setNewGroup] = useState({
+    name: "",
+    description: "",
+    members: [] as string[],
+    isPrivate: false,
+  });
+
+  // Group creation status notification
+  const [groupCreationStatus, setGroupCreationStatus] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({ show: false, type: "success", message: "" });
+
+  // Chat groups state
+  const [chatGroups, setChatGroups] = useState<any[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+
+  const loadChatGroups = async () => {
+    setIsLoadingGroups(true);
+    try {
+      // Try API first
+      const response = await fetch("/api/chat-groups", {
+        credentials: "include", // Include auth cookies
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Check if response indicates offline mode
+        if (data.offline && Array.isArray(data.groups)) {
+          // Use localStorage for offline mode
+          const stored = localStorage.getItem("pv:chatGroups");
+          if (stored) {
+            setChatGroups(JSON.parse(stored));
+          } else {
+            setChatGroups([]);
+          }
+        } else if (Array.isArray(data)) {
+          // Normal API response - only update if not empty
+          if (data.length > 0) {
+            setChatGroups(data);
+            localStorage.setItem("pv:chatGroups", JSON.stringify(data));
+          } else {
+            // API empty - keep localStorage
+            const stored = localStorage.getItem("pv:chatGroups");
+            setChatGroups(stored ? JSON.parse(stored) : []);
+          }
+        }
+      } else if (response.status === 401) {
+        // Not authenticated, fall back to localStorage
+        const stored = localStorage.getItem("pv:chatGroups");
+        if (stored) {
+          setChatGroups(JSON.parse(stored));
+        }
+      } else {
+        throw new Error("Failed to fetch groups");
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load chat groups from API, using localStorage:",
+        error
+      );
+      // Fallback to localStorage
+      try {
+        const stored = localStorage.getItem("pv:chatGroups");
+        if (stored) {
+          setChatGroups(JSON.parse(stored));
+        }
+      } catch (localError) {
+        console.error("Failed to load from localStorage:", localError);
+      }
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -101,6 +191,7 @@ export default function ChatPage() {
   useEffect(() => {
     setMounted(true);
     loadConversations();
+    loadChatGroups(); // Load groups on mount
 
     // Load persisted active chat
     const persistedChat = getActiveChatUser();
@@ -111,13 +202,14 @@ export default function ChatPage() {
 
     const interval = setInterval(() => {
       loadConversations();
+      loadChatGroups(); // Refresh groups
       // Check for active chat changes from other tabs/components
       const currentStored = getActiveChatUser();
       if (currentStored !== activeChatRef.current) {
         setActiveChat(currentStored);
         activeChatRef.current = currentStored;
       }
-    }, 2000);
+    }, 10000); // Poll every 10 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -242,6 +334,187 @@ export default function ChatPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const toggleMember = (memberName: string) => {
+    setNewGroup((prev) => ({
+      ...prev,
+      members: prev.members.includes(memberName)
+        ? prev.members.filter((m) => m !== memberName)
+        : [...prev.members, memberName],
+    }));
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroup.name.trim()) return;
+
+    try {
+      // Try API first
+      const response = await fetch("/api/chat-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Include auth cookies
+        body: JSON.stringify({
+          name: newGroup.name.trim(),
+          description: newGroup.description.trim() || undefined,
+          members: newGroup.members,
+          isPrivate: newGroup.isPrivate,
+        }),
+      });
+
+      if (response.ok) {
+        const createdGroup = await response.json();
+
+        // Update localStorage cache
+        const stored = localStorage.getItem("pv:chatGroups");
+        const groups = stored ? JSON.parse(stored) : [];
+        localStorage.setItem(
+          "pv:chatGroups",
+          JSON.stringify([...groups, createdGroup])
+        );
+
+        // Reset form and close modal
+        setNewGroup({
+          name: "",
+          description: "",
+          members: [],
+          isPrivate: false,
+        });
+        setShowCreateGroup(false);
+        loadChatGroups(); // Refresh groups list
+
+        // Show success notification
+        setGroupCreationStatus({
+          show: true,
+          type: "success",
+          message: `Group "${createdGroup.name}" created successfully!`,
+        });
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+          setGroupCreationStatus({ show: false, type: "success", message: "" });
+        }, 5000);
+      } else if (response.status === 503) {
+        // Database offline - use fallback
+        const data = await response.json();
+
+        // Create local version using fallback data
+        const localGroup = {
+          id: `group_${Date.now()}`,
+          name: data.fallback?.name || newGroup.name.trim(),
+          description:
+            data.fallback?.description ||
+            newGroup.description.trim() ||
+            undefined,
+          members: data.fallback?.members || [currentUser, ...newGroup.members],
+          createdBy: currentUser,
+          createdAt: new Date().toISOString(),
+          isPrivate: data.fallback?.isPrivate || newGroup.isPrivate,
+        };
+
+        const stored = localStorage.getItem("pv:chatGroups");
+        const groups = stored ? JSON.parse(stored) : [];
+        localStorage.setItem(
+          "pv:chatGroups",
+          JSON.stringify([...groups, localGroup])
+        );
+
+        // Reset form and close modal
+        setNewGroup({
+          name: "",
+          description: "",
+          members: [],
+          isPrivate: false,
+        });
+        setShowCreateGroup(false);
+        loadChatGroups(); // Refresh groups list
+
+        // Show success notification with offline indicator
+        setGroupCreationStatus({
+          show: true,
+          type: "success",
+          message: `Group "${localGroup.name}" created successfully! (Offline mode)`,
+        });
+
+        setTimeout(() => {
+          setGroupCreationStatus({ show: false, type: "success", message: "" });
+        }, 5000);
+      } else if (response.status === 403) {
+        setGroupCreationStatus({
+          show: true,
+          type: "error",
+          message: "You don't have permission to create chat groups.",
+        });
+      } else if (response.status === 409) {
+        setGroupCreationStatus({
+          show: true,
+          type: "error",
+          message: "You already have a group with this name.",
+        });
+      } else {
+        // Generic error
+        const errorData = await response.json().catch(() => ({}));
+        setGroupCreationStatus({
+          show: true,
+          type: "error",
+          message:
+            errorData.error || "Failed to create group. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Failed to create group via API, trying localStorage:",
+        error
+      );
+
+      // Fallback to localStorage only
+      try {
+        const group = {
+          id: `group_${Date.now()}`,
+          name: newGroup.name.trim(),
+          description: newGroup.description.trim() || undefined,
+          members: newGroup.members,
+          createdBy: currentUser,
+          createdAt: new Date().toISOString(),
+          isPrivate: newGroup.isPrivate,
+        };
+
+        const stored = localStorage.getItem("pv:chatGroups");
+        const groups = stored ? JSON.parse(stored) : [];
+        localStorage.setItem(
+          "pv:chatGroups",
+          JSON.stringify([...groups, group])
+        );
+
+        // Reset form and close modal
+        setNewGroup({
+          name: "",
+          description: "",
+          members: [],
+          isPrivate: false,
+        });
+        setShowCreateGroup(false);
+        loadChatGroups(); // Refresh groups list
+
+        // Show success notification
+        setGroupCreationStatus({
+          show: true,
+          type: "success",
+          message: `Group "${group.name}" created successfully! (Offline mode)`,
+        });
+
+        setTimeout(() => {
+          setGroupCreationStatus({ show: false, type: "success", message: "" });
+        }, 5000);
+      } catch (localError) {
+        console.error("Failed to create group:", localError);
+        setGroupCreationStatus({
+          show: true,
+          type: "error",
+          message: "Failed to create group. Please try again.",
+        });
+      }
+    }
+  };
+
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -264,7 +537,56 @@ export default function ChatPage() {
             </p>
           </div>
         </div>
+        {canCreateGroups && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreateGroup(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Group
+          </Button>
+        )}
       </div>
+
+      {/* Group Creation Success/Error Toast */}
+      {groupCreationStatus.show && (
+        <div
+          className={`mx-4 mt-4 p-4 rounded-lg border flex items-start gap-3 animate-in slide-in-from-top ${
+            groupCreationStatus.type === "success"
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+          }`}
+        >
+          {groupCreationStatus.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          )}
+          <p
+            className={`text-sm font-medium flex-1 ${
+              groupCreationStatus.type === "success"
+                ? "text-green-800 dark:text-green-200"
+                : "text-red-800 dark:text-red-200"
+            }`}
+          >
+            {groupCreationStatus.message}
+          </p>
+          <button
+            onClick={() =>
+              setGroupCreationStatus({
+                show: false,
+                type: "success",
+                message: "",
+              })
+            }
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         <div
@@ -286,56 +608,108 @@ export default function ChatPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {filteredMembers.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                {searchQuery ? "No matches found" : "No team members available"}
-              </div>
-            ) : (
-              filteredMembers.map((member) => {
-                const conv = conversations.find(
-                  (c) => c.withUser === member.name
-                );
-                const status = getOnlineStatus(member.name);
-
-                return (
+            {/* Chat Groups Section */}
+            {chatGroups.length > 0 && (
+              <div className="border-b border-border">
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                  Groups
+                </div>
+                {chatGroups.map((group) => (
                   <button
-                    key={member.name}
-                    onClick={() => handleStartChat(member.name)}
+                    key={group.id}
+                    onClick={() => handleStartChat(group.id)}
                     className={`w-full p-4 hover:bg-accent/50 transition-colors border-b border-border text-left ${
-                      activeChat === member.name ? "bg-accent" : ""
+                      activeChat === group.id ? "bg-accent" : ""
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          className="w-12 h-12 rounded-full"
-                        />
-                        <Circle
-                          className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(status)} rounded-full border-2 border-card`}
-                          fill="currentColor"
-                        />
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="w-6 h-6 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-sm truncate">
-                            {member.name}
+                            {group.name}
                           </span>
-                          {conv && conv.unreadCount > 0 && (
-                            <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-                              {conv.unreadCount}
+                          {group.isPrivate && (
+                            <span className="text-xs bg-muted px-2 py-0.5 rounded ml-2">
+                              Private
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
-                          {conv?.lastMessage || "No messages yet"}
+                          {group.members.length} member
+                          {group.members.length !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
                   </button>
-                );
-              })
+                ))}
+              </div>
+            )}
+
+            {/* Individual Members Section */}
+            {filteredMembers.length === 0 && chatGroups.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                {searchQuery ? "No matches found" : "No contacts available"}
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No individual contacts match your search
+              </div>
+            ) : (
+              <>
+                {chatGroups.length > 0 && (
+                  <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                    Direct Messages
+                  </div>
+                )}
+                {filteredMembers.map((member) => {
+                  const conv = conversations.find(
+                    (c) => c.withUser === member.name
+                  );
+                  const status = getOnlineStatus(member.name);
+
+                  return (
+                    <button
+                      key={member.name}
+                      onClick={() => handleStartChat(member.name)}
+                      className={`w-full p-4 hover:bg-accent/50 transition-colors border-b border-border text-left ${
+                        activeChat === member.name ? "bg-accent" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            className="w-12 h-12 rounded-full"
+                          />
+                          <Circle
+                            className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(status)} rounded-full border-2 border-card`}
+                            fill="currentColor"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-sm truncate">
+                              {member.name}
+                            </span>
+                            {conv && conv.unreadCount > 0 && (
+                              <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                                {conv.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {conv?.lastMessage || "No messages yet"}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
             )}
           </div>
         </div>
@@ -368,27 +742,50 @@ export default function ChatPage() {
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
-                  <div className="relative">
-                    <img
-                      src={
-                        teamMembers.find((m) => m.name === activeChat)
-                          ?.avatar ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat}`
-                      }
-                      alt={activeChat}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <Circle
-                      className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(getOnlineStatus(activeChat))} rounded-full border-2 border-card`}
-                      fill="currentColor"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{activeChat}</h3>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {getOnlineStatus(activeChat)}
-                    </p>
-                  </div>
+                  {(() => {
+                    const group = chatGroups.find((g) => g.id === activeChat);
+                    if (group) {
+                      return (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{group.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {group.members.length} members
+                            </p>
+                          </div>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <div className="relative">
+                            <img
+                              src={
+                                teamMembers.find((m) => m.name === activeChat)
+                                  ?.avatar ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat}`
+                              }
+                              alt={activeChat}
+                              className="w-10 h-10 rounded-full"
+                            />
+                            <Circle
+                              className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(getOnlineStatus(activeChat))} rounded-full border-2 border-card`}
+                              fill="currentColor"
+                            />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{activeChat}</h3>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {getOnlineStatus(activeChat)}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    }
+                  })()}
                 </div>
                 <div className="relative" ref={actionMenuRef}>
                   <Button
@@ -673,6 +1070,129 @@ export default function ChatPage() {
               >
                 Close
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateGroup && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowCreateGroup(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-lg p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Create Chat Group</h3>
+              <button
+                onClick={() => setShowCreateGroup(false)}
+                className="p-2 hover:bg-accent rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Group Name *
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g., Project Team"
+                  className="w-full"
+                  value={newGroup.name}
+                  onChange={(e) =>
+                    setNewGroup((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Description
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Optional description"
+                  className="w-full"
+                  value={newGroup.description}
+                  onChange={(e) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Add Members
+                </label>
+                <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+                  {teamMembers.map((member) => (
+                    <label
+                      key={member.name}
+                      className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={newGroup.members.includes(member.email)}
+                        onChange={() => toggleMember(member.email)}
+                      />
+                      <img
+                        src={member.avatar}
+                        alt={member.name}
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {member.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {member.role.replace("_", " ")}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="private"
+                  className="rounded"
+                  checked={newGroup.isPrivate}
+                  onChange={(e) =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      isPrivate: e.target.checked,
+                    }))
+                  }
+                />
+                <label htmlFor="private" className="text-sm">
+                  Private group (only visible to members)
+                </label>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateGroup(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateGroup}
+                  disabled={!newGroup.name.trim()}
+                  className="flex-1"
+                >
+                  Create Group
+                </Button>
+              </div>
             </div>
           </div>
         </div>

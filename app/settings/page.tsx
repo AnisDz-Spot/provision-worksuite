@@ -10,7 +10,7 @@ import { BlockerCategorySettings } from "@/components/settings/BlockerCategorySe
 import RiskLevelSettings from "@/components/settings/RiskLevelSettings";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { Bell, Shield, Mail } from "lucide-react";
+import { Bell, Shield, Mail, HelpCircle } from "lucide-react";
 import RolesSettings from "@/components/settings/RolesSettings";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AlertRulesManager } from "@/components/notifications/AlertRulesManager";
@@ -20,6 +20,7 @@ import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
 import { isDatabaseConfigured } from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
+import { SupportTab } from "@/components/settings/SupportTab";
 import {
   saveDatabaseConfig,
   getDatabaseStatus,
@@ -40,7 +41,8 @@ type TabKey =
   | "email"
   | "notifications"
   | "blockers"
-  | "dataSource";
+  | "dataSource"
+  | "support";
 
 function DataSourceTab() {
   const router = useRouter();
@@ -545,6 +547,15 @@ function SettingsContent() {
           >
             Notifications
           </Button>
+          <Button
+            variant={tab === "support" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("support")}
+            className={cn(tab === "support" && "shadow")}
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Support
+          </Button>
         </div>
       )}
       {tab === "roles" && !isSetupMode && (
@@ -642,12 +653,11 @@ function SettingsContent() {
           <ChatGroupSettings />
         </div>
       )}
+      {tab === "support" && !isSetupMode && <SupportTab />}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
     </section>
   );
 }
-
-// Inline wrapper to keep the existing notifications design with its own subtabs
 
 function NotificationsSettingsTabs() {
   const [activeTab, setActiveTab] = useState<

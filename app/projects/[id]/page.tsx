@@ -15,6 +15,7 @@ import {
   saveAsTemplate,
 } from "@/lib/utils";
 import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { ProjectMilestones } from "@/components/projects/ProjectMilestones";
 import { ProjectComments } from "@/components/projects/ProjectComments";
 import { ProjectDependencies } from "@/components/projects/ProjectDependencies";
@@ -544,7 +545,9 @@ export default function ProjectDetailsPage() {
                   </div>
                   <div
                     className="text-sm text-foreground/90 prose prose-sm max-w-none leading-relaxed pl-3"
-                    dangerouslySetInnerHTML={{ __html: project.description }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtml(project.description),
+                    }}
                   />
                 </Card>
               )}
