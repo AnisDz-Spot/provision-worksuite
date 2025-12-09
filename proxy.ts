@@ -22,6 +22,7 @@ export async function proxy(request: NextRequest) {
     "/api/check-license",
     "/api/support/email",
     "/api/chat-groups", // Temporary: allow in demo mode
+    "/api/auth/register-status", // Allow checking registration status without auth
   ];
 
   // Allow public API routes
