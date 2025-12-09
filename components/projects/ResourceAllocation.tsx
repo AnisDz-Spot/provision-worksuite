@@ -90,9 +90,8 @@ export function ResourceAllocation({
           };
         });
 
-        if (newMembers.length > 0) {
-          setTeamMembers(newMembers);
-        }
+        // In live mode, we overwrite mock data even if empty
+        setTeamMembers(newMembers);
       } catch (e) {
         console.error("Failed to load resource data", e);
       }

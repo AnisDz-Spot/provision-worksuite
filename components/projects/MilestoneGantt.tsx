@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import {
   Target,
@@ -83,11 +83,70 @@ const defaultMilestones: Milestone[] = [
 ];
 
 export function MilestoneGantt({
-  milestones = defaultMilestones,
+  milestones: initialMilestones,
 }: MilestoneGanttProps) {
+  const [milestones, setMilestones] = useState<Milestone[]>(
+    initialMilestones || []
+  );
+  const [loading, setLoading] = useState(!initialMilestones);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   );
+
+  useEffect(() => {
+    // If props provided, use them
+    if (initialMilestones) {
+      setMilestones(initialMilestones);
+      setLoading(false);
+      return;
+    }
+
+    async function loadData() {
+      const { shouldUseMockData } = await import("@/lib/dataSource");
+      if (shouldUseMockData()) {
+        setMilestones(defaultMilestones);
+        setLoading(false);
+        return;
+      }
+
+      // Live mode
+      try {
+        const { loadProjects, loadTasks } = await import("@/lib/data");
+        const [projects, tasks] = await Promise.all([
+          loadProjects(),
+          loadTasks(),
+        ]);
+
+        const liveMilestones: Milestone[] = projects
+          .filter((p) => p.deadline)
+          .map((p) => {
+            const pTasks = tasks.filter((t) => t.projectId === p.id);
+            return {
+              id: `m_${p.id}`,
+              title: "Project Deadline",
+              projectId: p.id,
+              projectName: p.name,
+              dueDate: p.deadline,
+              status: p.status === "Completed" ? "completed" : "in-progress",
+              progress: p.progress || 0,
+              tasks: pTasks.map((t) => ({
+                id: t.id,
+                title: t.title,
+                completed: t.status === "Done" || t.status === "Completed",
+              })),
+            };
+          });
+
+        setMilestones(liveMilestones);
+      } catch (e) {
+        console.error("Failed to load milestone data", e);
+        setMilestones([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [initialMilestones]);
 
   const { projectGroups, timeRange } = useMemo(() => {
     // Group milestones by project

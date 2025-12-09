@@ -201,7 +201,8 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
           resolution: b.resolution,
           category: b.category,
         }));
-        setBlockers(dbBlockers.length > 0 ? dbBlockers : BLOCKERS);
+        // In live mode, do NOT fallback to mock data if empty
+        setBlockers(dbBlockers);
       }
     } catch (e) {
       console.error("Failed to load blockers from DB:", e);

@@ -31,23 +31,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, currentUser, pathname, router]);
 
-  // All hooks must be called before any return!
+  // Sync DB status from server to prevent redirect loop in Live mode
+  const [isSyncing, setIsSyncing] = React.useState(true);
+
   React.useEffect(() => {
-    // Sync DB status from server to prevent redirect loop in Live mode
     if (isAuthenticated) {
       import("@/lib/setup").then(({ getDatabaseStatus, markSetupComplete }) => {
-        getDatabaseStatus().then((status) => {
-          if (status.configured) {
-            // Server says DB is configured, so update our local state
-            // We assume profile is completed if they are authenticated and valid
-            const currentSetup = localStorage.getItem("pv:setupStatus");
-            const profileDone = currentSetup
-              ? JSON.parse(currentSetup).profileCompleted
-              : true;
-            markSetupComplete(true, profileDone);
-          }
-        });
+        getDatabaseStatus()
+          .then((status) => {
+            if (status.configured) {
+              // Server says DB is configured, so update our local state
+              const currentSetup = localStorage.getItem("pv:setupStatus");
+              const profileDone = currentSetup
+                ? JSON.parse(currentSetup).profileCompleted
+                : true;
+              markSetupComplete(true, profileDone);
+            }
+            setIsSyncing(false);
+          })
+          .catch(() => setIsSyncing(false));
       });
+    } else {
+      setIsSyncing(false);
     }
 
     if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
@@ -56,7 +61,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setShowModeModal(true);
       } else {
         setMode(pref);
-        // Hide modal if mode is set
         setShowModeModal(false);
       }
     }
@@ -66,7 +70,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setDataModePreference(selected);
     setMode(selected);
     setShowModeModal(false);
-    // If switching to mock, clear DB config
     if (selected === "mock") {
       localStorage.removeItem("pv:dbConfig");
     }
@@ -90,7 +93,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Legacy mode selection modal removed. Only new design remains. */}
       <div className="flex min-h-screen w-full overflow-hidden">
         <Sidebar canNavigate={sidebarCanNavigate} />
-        <MainContent canNavigate={canNavigate}>{children}</MainContent>
+        <MainContent
+          canNavigate={canNavigate}
+          isSyncing={isSyncing}
+          mode={mode}
+        >
+          {children}
+        </MainContent>
       </div>
     </>
   );
@@ -99,9 +108,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function MainContent({
   children,
   canNavigate,
+  isSyncing,
+  mode,
 }: {
   children: React.ReactNode;
   canNavigate?: boolean;
+  isSyncing: boolean;
+  mode: string | null;
 }) {
   const { collapsed } = useSidebar();
   const { currentUser, isAuthenticated, isLoading } = useAuth();
@@ -117,11 +130,9 @@ function MainContent({
 
   // Only force DB setup page in live mode if DB is not configured
   React.useEffect(() => {
-    // Determine mode from localStorage (sync with layout logic)
-    const mode =
-      typeof window !== "undefined"
-        ? localStorage.getItem("pv:dataMode")
-        : null;
+    // If checking sync, do NOT redirect yet
+    if (isSyncing) return;
+
     if (
       !isLoading &&
       isAuthenticated &&
@@ -132,7 +143,15 @@ function MainContent({
         router.push("/settings/database");
       }
     }
-  }, [isLoading, isAuthenticated, canNavigate, pathname, router]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    canNavigate,
+    pathname,
+    router,
+    isSyncing,
+    mode,
+  ]);
 
   // Show loading while checking auth status
   if (isLoading) {
