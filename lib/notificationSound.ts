@@ -1,7 +1,7 @@
 // Notification sound utility
 // Play a sound when a new notification arrives
 
-let audio: HTMLAudioElement | null = null;
+const audio: HTMLAudioElement | null = null;
 
 export function playNotificationSound() {
   if (typeof window === "undefined") return;

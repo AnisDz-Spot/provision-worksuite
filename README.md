@@ -7,11 +7,16 @@ A modern, production-ready project management platform built with Next.js 16, Re
 - **Dashboard**: Analytics widgets, project stats, recent activity, and performance metrics
 - **Project Management**: Create, track, and manage projects with milestones and budgets
 - **Task Management**: Kanban board with drag-and-drop, task assignments, and time tracking
+- **Recurring Tasks**: Schedule daily, weekly, or monthly recurring tasks with RRULE support
 - **Team Collaboration**: User management, role-based access, and activity feeds
 - **Calendar**: Event scheduling and deadline tracking
+- **Authentication**: Email/password, OAuth (Google, GitHub, Microsoft), 2FA support
+- **Account Linking**: Link multiple OAuth providers to a single account
+- **Export**: PDF, Excel, and CSV export for reports and invoices
 - **Dark/Light Theme**: Automatic theme detection with manual override
 - **Responsive Design**: Mobile-first, works seamlessly on all devices
 - **Database Storage**: PostgreSQL (Neon) for data, Vercel Blob for file uploads
+- **Auto Migration**: Database schema auto-syncs on deploy (Docker/Vercel)
 
 ## Tech Stack
 
@@ -38,7 +43,13 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ### Database Setup
 
-The app uses Vercel Postgres (Neon) and Vercel Blob storage. Database schema is in `lib/db/schema.sql`.
+The app uses Prisma ORM with PostgreSQL (Neon) and Vercel Blob storage.
+
+**Database schema is automatically synchronized:**
+
+- **Vercel**: Migration runs during `npm run build`
+- **Docker**: Migration runs on container startup
+- **Demo mode**: Works without database (uses JSON files)
 
 **Environment Variables** (automatically set by Vercel):
 
@@ -207,14 +218,12 @@ This section explains how purchasers can install or host the app.
    - Go to **Storage** tab → Create **Blob** storage
    - Environment variables are automatically configured!
 
-3. **Initialize Database**:
-   - In Vercel dashboard → **Storage** → Click your Postgres database
-   - Go to **Query** tab
-   - Copy entire content from `lib/db/schema.sql` in this repository
-   - Paste and click **Run**
-   - Or, from your terminal, run:
+3. **Database Initialization** (Automatic):
+   - Database schema is **automatically synchronized** during build
+   - No manual Prisma commands needed!
+   - For manual sync (if needed):
      ```bash
-     psql <your-db-url> -f lib/db/schema.sql
+     npm run db:push
      ```
 
 4. **First-Time Setup** (One-time only):
@@ -292,7 +301,7 @@ You can change database credentials anytime through **Settings → Database** wi
 ### First-Run Checklist
 
 - Can reach the site URL.
-- Database tables exist after running `lib/db/schema.sql`.
+- Database tables are created automatically (check Docker logs or build output).
 - File uploads work (check a test upload).
 - Create an account via Register page and login successfully.
 
@@ -302,4 +311,4 @@ If you need help deploying, provide:
 
 - Your hosting platform (Vercel/Netlify/Custom)
 - Error messages or logs
-- Confirmation that `lib/db/schema.sql` was executed
+- Confirmation that Prisma migrations were applied successfully

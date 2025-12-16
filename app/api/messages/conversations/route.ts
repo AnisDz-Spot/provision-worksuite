@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  // In demo mode, return empty conversations
+  if (!shouldUseDatabaseData()) {
+    return NextResponse.json({ success: true, data: [] });
+  }
+
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json(

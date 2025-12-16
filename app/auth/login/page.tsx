@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
+import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { shouldUseMockData } from "@/lib/dataSource";
 
 function LoginForm() {
@@ -28,17 +29,52 @@ function LoginForm() {
     }
   }, [searchParams]);
 
+  const [show2FAInput, setShow2FAInput] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const result = await login(email, password);
+    // If we're already showing 2FA, include the code
+    const credentials: any = { email, password };
+    if (show2FAInput) {
+      credentials.code = twoFactorCode.replace(/\s/g, ""); // Remove spaces
+      credentials.useBackupCode = useBackupCode;
 
-    if (result.success) {
-      router.push("/");
-    } else {
-      setError(result.error || "Login failed");
+      if (!credentials.code) {
+        setError("Please enter your authentication code");
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const result = await login(
+        credentials.email,
+        credentials.password,
+        credentials.code,
+        credentials.useBackupCode
+      );
+
+      // Check if server asks for 2FA
+      if (result.requires2FA) {
+        setShow2FAInput(true);
+        setLoading(false);
+        // Don't show success yet, wait for code input
+        return;
+      }
+
+      if (result.success) {
+        // Use full page reload to ensure cookies are fresh
+        window.location.href = "/";
+      } else {
+        setError(result.error || "Login failed");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
     }
 
     setLoading(false);
@@ -135,6 +171,21 @@ function LoginForm() {
           </div>
         )}
 
+        {/* Social Login */}
+        <div className="space-y-4 mb-6">
+          <SocialLoginButtons />
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-300 dark:border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white dark:bg-gray-900 px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Login Form */}
         <div className="space-y-5">
           <div>
@@ -175,6 +226,44 @@ function LoginForm() {
               className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
+
+          {/* 2FA Input (Conditional) */}
+          {show2FAInput && (
+            <div className="pt-2 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="flex items-center justify-between mb-2">
+                <label
+                  htmlFor="2fa-code"
+                  className="block text-base font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Authentication Code
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setUseBackupCode(!useBackupCode)}
+                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                >
+                  {useBackupCode ? "Use Authenticator App" : "Use Backup Code"}
+                </button>
+              </div>
+              <input
+                id="2fa-code"
+                type="text"
+                autoFocus
+                required
+                maxLength={useBackupCode ? undefined : 6}
+                placeholder={useBackupCode ? "XXXX-XXXX" : "000000"}
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
+                className="w-full px-4 py-3 text-center text-lg tracking-widest font-mono border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+              <p className="mt-2 text-xs text-center text-gray-500">
+                {useBackupCode
+                  ? "Enter one of your saved backup codes."
+                  : "Enter the code from your authenticator app."}
+              </p>
+            </div>
+          )}
 
           <Button
             onClick={handleLogin}
@@ -274,4 +363,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
 

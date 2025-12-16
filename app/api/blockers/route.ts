@@ -6,10 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   if (!shouldUseDatabaseData()) {
-    return NextResponse.json(
-      { success: false, error: "Database mode disabled" },
-      { status: 400 }
-    );
+    // In demo mode, return empty data instead of error
+    return NextResponse.json({
+      success: true,
+      data: [],
+      source: "demo",
+    });
   }
   try {
     const { searchParams } = new URL(request.url);

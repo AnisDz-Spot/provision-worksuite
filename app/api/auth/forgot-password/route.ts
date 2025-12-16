@@ -62,14 +62,14 @@ export async function POST(request: NextRequest) {
     // But only actually send email if user exists
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
-      select: { userId: true, email: true },
+      select: { uid: true, email: true },
     });
 
     if (user) {
       // Invalidate any existing tokens for this user
       await prisma.passwordResetToken.updateMany({
         where: {
-          userId: user.userId,
+          userId: user.uid,
           usedAt: null,
         },
         data: {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       // Save token to database
       await prisma.passwordResetToken.create({
         data: {
-          userId: user.userId,
+          userId: user.uid,
           token,
           expiresAt,
         },

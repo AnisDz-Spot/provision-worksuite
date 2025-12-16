@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // In demo mode, return empty users
+  if (!shouldUseDatabaseData()) {
+    return NextResponse.json({ success: true, data: [], source: "demo" });
+  }
+
   try {
     // SECURITY: Require authentication to list users
     const currentUser = await getAuthenticatedUser();
@@ -18,25 +24,34 @@ export async function GET() {
 
     const users = await prisma.user.findMany({
       select: {
-        userId: true,
+        uid: true,
         email: true,
-        fullName: true,
+        name: true,
         avatarUrl: true,
-        systemRole: true,
+        role: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
     // Map to match frontend expectations (if needed)
-    const mappedUsers = users.map((user) => ({
-      uid: user.userId,
-      email: user.email,
-      name: user.fullName,
-      avatar_url: user.avatarUrl,
-      role: user.systemRole,
-      created_at: user.createdAt,
-    }));
+    const mappedUsers = users.map(
+      (user: {
+        uid: string;
+        email: string;
+        name: string;
+        avatarUrl: string | null;
+        role: string;
+        createdAt: Date;
+      }) => ({
+        uid: user.uid,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatarUrl,
+        role: user.role,
+        created_at: user.createdAt,
+      })
+    );
 
     log.info({ count: users.length }, "Fetched all users");
 
@@ -101,19 +116,15 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         email,
-        fullName: name,
-        systemRole: role,
+        name,
+        role,
         avatarUrl: avatar_url,
         passwordHash: password_hash || "",
-        phoneNumber: phone,
-        // Note: bio, addressLine1, etc. don't exist in the Prisma schema
-        // If needed, add them to the schema first
-        employmentType: "full-time", // default
-        timezone: "UTC", // default
+        phone,
       },
     });
 
-    log.info({ email, userId: user.userId }, "User created");
+    log.info({ email, userId: user.uid }, "User created");
 
     return NextResponse.json({ success: true, user });
   } catch (error) {

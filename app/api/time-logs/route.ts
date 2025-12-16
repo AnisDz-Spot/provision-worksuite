@@ -4,6 +4,17 @@ import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
+interface TimeLogResult {
+  id: number;
+  taskId: string;
+  projectId: string;
+  hours: number;
+  note: string | null;
+  loggedBy: string;
+  loggedAt: Date;
+  task?: { uid: string; title: string };
+}
+
 export async function GET() {
   try {
     const timeLogs = await prisma.timeLog.findMany({
@@ -14,18 +25,12 @@ export async function GET() {
             title: true,
           },
         },
-        project: {
-          select: {
-            uid: true,
-            name: true,
-          },
-        },
       },
       orderBy: { loggedAt: "desc" },
     });
 
     // Map to match frontend expectations
-    const mappedLogs = timeLogs.map((tl) => ({
+    const mappedLogs = (timeLogs as TimeLogResult[]).map((tl) => ({
       id: tl.id,
       task_id: tl.taskId,
       project_id: tl.projectId,
@@ -69,7 +74,6 @@ export async function POST(req: Request) {
       },
       include: {
         task: true,
-        project: true,
       },
     });
 

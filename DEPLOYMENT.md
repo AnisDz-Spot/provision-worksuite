@@ -54,14 +54,24 @@ In your Vercel project dashboard:
    - Click "Create"
    - ✅ `BLOB_READ_WRITE_TOKEN` is **automatically added**
 
-### 4. Initialize Database Schema
+### 4. Database Schema (Automatic)
 
-1. In Vercel dashboard → **Storage** → Click your Postgres database
-2. Click **"Query"** tab
-3. Copy the entire content from `lib/db/schema.sql` in your code
-4. Paste into query editor
-5. Click **"Run"** to execute
-6. ✅ Tables created: `users`, `projects`, `tasks`, `time_logs`
+The database schema is automatically created when the container starts:
+
+1. On first startup, the app:
+   - Waits for database to be ready
+   - Runs `prisma db push` to create all tables
+   - Starts the Next.js server
+
+2. ✅ **No manual commands needed!**
+
+3. You'll see in Docker logs:
+   ```
+   ProVision WorkSuite - Starting...
+   Waiting for database connection...
+   ✓ Database schema synchronized!
+   Starting Next.js server...
+   ```
 
 ### 5. Test Deployment
 

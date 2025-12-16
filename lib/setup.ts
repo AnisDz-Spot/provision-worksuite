@@ -22,8 +22,9 @@ export function getDatabaseStatus(): Promise<{ configured: boolean }> {
   }
 
   // Call API endpoint to check status (server-side validation only)
-  return fetch("/api/db-status")
+  return fetch("/api/setup/check-system")
     .then((res) => res.json())
+    .then((data) => ({ configured: !!data.dbConfigured }))
     .catch(() => ({ configured: false }));
 }
 

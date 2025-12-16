@@ -14,6 +14,7 @@ import {
   CommandPalette,
   useCommandPalette,
 } from "@/components/search/CommandPalette";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 const routeLabels: { [key: string]: string } = {
   "/": "Dashboard",
@@ -57,11 +58,11 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
       }
       // Send presence heartbeat only when DB is configured
       if (!shouldUseDatabaseData()) return;
+
       try {
         const status = localStorage.getItem("pv:presenceStatus") || "available";
-        fetch("/api/presence/heartbeat", {
+        fetchWithCsrf("/api/presence/heartbeat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: currentUser.id, status }),
         }).catch(() => {});
       } catch {}

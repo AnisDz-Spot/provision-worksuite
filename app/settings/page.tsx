@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { isDatabaseConfigured } from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 import { SupportTab } from "@/components/settings/SupportTab";
+import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import {
   saveDatabaseConfig,
   getDatabaseStatus,
@@ -35,7 +36,11 @@ type TabKey =
   | "profile"
   | "user"
   | "workspace"
+  | "profile"
+  | "user"
+  | "workspace"
   | "appearance"
+  | "security"
   | "roles"
   | "chat"
   | "email"
@@ -508,6 +513,15 @@ function SettingsContent() {
             Appearance
           </Button>
           <Button
+            variant={tab === "security" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("security")}
+            className={cn(tab === "security" && "shadow")}
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Security
+          </Button>
+          <Button
             variant={tab === "roles" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleSetTab("roles")}
@@ -598,6 +612,9 @@ function SettingsContent() {
           </div>
         </div>
       )}
+
+      {tab === "security" && !isSetupMode && <SecuritySettings />}
+
       {tab === "blockers" && !isSetupMode && (
         <div className="max-w-3xl space-y-6">
           <div className="space-y-2">
@@ -767,3 +784,5 @@ export default function SettingsPage() {
     </Suspense>
   );
 }
+
+

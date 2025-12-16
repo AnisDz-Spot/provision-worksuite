@@ -20,12 +20,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = React.useState<string | null>(null);
   const [showModeModal, setShowModeModal] = React.useState(false);
 
-  // Redirect global admin to onboarding on first login or when onboarding is not done and mode is not mock
+  // Auto-detect demo mode and set flags FIRST, before any redirects
   React.useEffect(() => {
     if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
+      const pref = localStorage.getItem("pv:dataMode");
       const onboardingDone = localStorage.getItem("pv:onboardingDone");
+
+      // If no mode set yet and no database, auto-set to mock and skip onboarding
+      if (!pref && !isDatabaseConfigured()) {
+        setDataModePreference("mock");
+        localStorage.setItem("pv:onboardingDone", "true");
+      }
+
+      // Now check if redirect needed (after setting flags above)
       const mode = localStorage.getItem("pv:dataMode");
-      if (pathname !== "/onboarding" && !onboardingDone && mode !== "mock") {
+      const onboardingComplete = localStorage.getItem("pv:onboardingDone");
+
+      // Only redirect to onboarding if database is configured but onboarding not done
+      // In demo mode (no database), allow full app access without onboarding
+      if (
+        pathname !== "/onboarding" &&
+        !onboardingComplete &&
+        mode !== "mock" &&
+        isDatabaseConfigured()
+      ) {
         router.push("/onboarding");
       }
     }
@@ -46,10 +64,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ? JSON.parse(currentSetup).profileCompleted
                 : true;
               markSetupComplete(true, profileDone);
+            } else {
+              // Server says DB is NOT configured, ensure our local state reflects this
+              markSetupComplete(false, false);
             }
             setIsSyncing(false);
           })
-          .catch(() => setIsSyncing(false));
+          .catch(() => {
+            // If API fails, assume no database
+            markSetupComplete(false, false);
+            setIsSyncing(false);
+          });
       });
     } else {
       setIsSyncing(false);
@@ -57,10 +82,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
       const pref = localStorage.getItem("pv:dataMode");
-      if (!pref) {
+
+      // Just handle the modal display here, mode is already set in first useEffect
+      if (!pref && isDatabaseConfigured()) {
+        // Database exists and mode not chosen, show modal
         setShowModeModal(true);
       } else {
-        setMode(pref);
+        if (pref) {
+          setMode(pref);
+        }
         setShowModeModal(false);
       }
     }
@@ -76,8 +106,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   // Restrict navigation until mode is chosen and, for live, DB is configured
+  // Restrict navigation until mode is chosen and, for live, DB is configured
   const canNavigate =
-    mode === "mock" || (mode === "real" && isDatabaseConfigured());
+    mode === "mock" ||
+    (mode === "real" && isDatabaseConfigured()) ||
+    currentUser?.email === "admin@provision.com";
 
   // Show auth pages without any layout (after all hooks)
   if (pathname.startsWith("/auth")) {
@@ -182,7 +215,7 @@ function MainContent({
       <Navbar canNavigate={canNavigate} />
       <main className="flex-1 bg-background text-foreground">{children}</main>
       <ScrollToTop />
-      {currentUser && <TeamChat currentUser={currentUser.name} />}
+      {currentUser && <TeamChat currentUser={currentUser.id} />}
     </div>
   );
 }

@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lint reports (generated files)
+eslint-report.json
+lint-report.txt
+*.log
+
+# bundle analysis
+.next/analyze/
+

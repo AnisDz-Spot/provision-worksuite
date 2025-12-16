@@ -10,6 +10,8 @@ import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { useToast } from "@/components/ui/Toast";
 import usersData from "@/data/users.json";
 import categoriesData from "@/data/categories.json";
+import { log } from "@/lib/logger";
+import Image from "next/image";
 
 type Project = {
   id: string;
@@ -79,7 +81,7 @@ export default function ProjectEditPage() {
       showToast("Project saved successfully", "success");
       router.push(`/projects/${projectId}`);
     } catch (error) {
-      console.error("Failed to save project:", error);
+      log.error({ err: error }, "Failed to save project");
       showToast("Failed to save project", "error");
     }
   };
@@ -196,10 +198,11 @@ export default function ProjectEditPage() {
               </div>
               {project.cover && (
                 <div className="mt-3 rounded-lg border border-border overflow-hidden bg-muted relative group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={project.cover}
                     alt="Project cover preview"
+                    width={800}
+                    height={192}
                     className="w-full h-48 object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
@@ -652,13 +655,14 @@ export default function ProjectEditPage() {
                   key={idx}
                   className="flex items-center gap-2 bg-accent px-2 py-1 rounded-md"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={
                       m.avatarUrl ||
                       `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
                     }
                     alt={m.name}
+                    width={20}
+                    height={20}
                     className="w-5 h-5 rounded-full"
                   />
                   <span className="text-xs">{m.name}</span>

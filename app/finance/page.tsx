@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
+import { log } from "@/lib/logger";
 
 type Project = {
   id: string;
@@ -130,7 +131,7 @@ export default function FinancePage() {
           }))
         );
       })
-      .catch(console.error);
+      .catch((err) => log.error({ err }, "Failed to load projects"));
 
     // Expenses
     fetch("/api/expenses")
@@ -419,7 +420,7 @@ export default function FinancePage() {
         const data = JSON.parse(ev.target?.result as string);
         if (Array.isArray(data)) setExpenses(data);
       } catch (err) {
-        console.error("Invalid JSON", err);
+        log.error({ err }, "Invalid JSON for expenses import");
       }
     };
     reader.readAsText(file);
@@ -462,7 +463,7 @@ export default function FinancePage() {
         const data = JSON.parse(ev.target?.result as string);
         if (Array.isArray(data)) setTimeLogs(data);
       } catch (err) {
-        console.error("Invalid JSON", err);
+        log.error({ err }, "Invalid JSON for time logs import");
       }
     };
     reader.readAsText(file);

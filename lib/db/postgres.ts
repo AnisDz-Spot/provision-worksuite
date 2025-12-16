@@ -1,221 +1,297 @@
 import prisma from "@/lib/prisma";
 import { isValidEmail, isValidUUID, sanitizeString } from "../validation";
-import { Prisma } from "@prisma/client";
 
-// Re-export types from Prisma or define compatible ones if needed
-// For now, we keep manual types to avoid breaking UI components that rely on them
-// But ideally, we should infer from Prisma.
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
 
+// User type - matches new schema (removed legacy HR/financial fields)
 export type User = {
-  userId: string;
+  id: number;
+  uid: string;
   email: string;
-  passwordHash: string;
-  fullName: string;
-  avatarUrl?: string; // Prisma returns null, mapped to undefined/null
-  isActive: boolean;
-  systemRole: string;
-  jobTitle?: string;
-  department?: string;
-  timezone: string;
-  themePreference?: string;
-  phoneNumber?: string;
-  slackHandle?: string;
-  hourlyCostRate: number;
-  hourlyBillableRate: number;
-  isBillable: boolean;
-  employmentType: string;
-  defaultWorkingHoursPerDay: number;
-  hireDate?: string; // string for API, Date from Prisma
-  terminationDate?: string;
+  name: string;
+  avatarUrl?: string;
+  role: string;
+  roleId?: string;
+  passwordHash?: string;
+  phone?: string;
+  bio?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
 
-// Helper: Prisma types match mostly, but decimals need handling if they come as Decimal.js objects
-// Using 'any' for result casting briefly to match legacy return types if needed,
-// or better: let's map properly.
+// Project type - updated with new fields, removed owner/progress
+export type Project = {
+  id: number;
+  uid: string;
+  name: string;
+  description?: string;
+  status: string;
+  startDate?: string;
+  deadline?: string;
+  budget?: number;
+  priority?: string;
+  userId: number;
+  // New fields
+  completedAt?: string;
+  clientName?: string;
+  tags: string[];
+  visibility: string;
+  archivedAt?: string;
+  color?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// Task type - updated with new fields
+export type Task = {
+  id: number;
+  uid: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  due?: string;
+  estimateHours?: number;
+  loggedHours?: number;
+  // New fields
+  assigneeId?: number;
+  labels: string[];
+  boardColumn: string;
+  order: number;
+  parentTaskId?: string;
+  attachments?: Record<string, unknown>;
+  completedAt?: string;
+  startedAt?: string;
+  blockedBy?: string;
+  watchers: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// ProjectMember type
+export type ProjectMember = {
+  id: string;
+  projectId: number;
+  userId: number;
+  role: string; // owner, admin, member, viewer
+  joinedAt: Date;
+};
+
+// Milestone type
+export type Milestone = {
+  id: string;
+  projectId: number;
+  name: string;
+  description?: string;
+  dueDate?: string;
+  status: string;
+  order: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// Comment type (with threading)
+export type Comment = {
+  id: string;
+  content: string;
+  taskId?: string;
+  projectId?: number;
+  userId: number;
+  parentCommentId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// Notification type
+export type Notification = {
+  id: string;
+  userId: number;
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt?: Date;
+};
+
+// Activity type
+export type Activity = {
+  id: string;
+  userId: number;
+  entityType: string;
+  entityId: string;
+  action: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: Date;
+};
+
+// File type
+export type FileRecord = {
+  id: string;
+  filename: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  projectId?: number;
+  taskId?: string;
+  uploadedBy: number;
+  createdAt?: Date;
+};
+
+// CalendarEvent type
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  description?: string;
+  startTime: Date;
+  endTime: Date;
+  location?: string;
+  attendees: string[];
+  projectId?: number;
+  taskId?: string;
+  createdById: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// TimeLog type
+export type TimeLog = {
+  id: number;
+  taskId: string;
+  projectId: string;
+  hours: number;
+  note?: string;
+  loggedBy: string;
+  loggedAt: Date;
+};
+
+// =============================================================================
+// USER OPERATIONS
+// =============================================================================
 
 export async function createUser(
-  user: Omit<User, "userId" | "createdAt" | "updatedAt">
+  user: Omit<User, "id" | "uid" | "createdAt" | "updatedAt">
 ) {
-  // Validate email format
   if (!isValidEmail(user.email)) {
     throw new Error("Invalid email format");
   }
 
-  // Sanitize string inputs
-  const sanitizedFullName = sanitizeString(user.fullName, 100);
+  const sanitizedName = sanitizeString(user.name, 100);
   const sanitizedEmail = sanitizeString(user.email, 255);
 
   const newUser = await prisma.user.create({
     data: {
       email: sanitizedEmail,
-      passwordHash: user.passwordHash,
-      fullName: sanitizedFullName,
+      name: sanitizedName,
       avatarUrl: user.avatarUrl,
-      isActive: user.isActive,
-      systemRole: user.systemRole,
-      jobTitle: user.jobTitle,
-      department: user.department,
-      timezone: user.timezone,
-      themePreference: user.themePreference || "light",
-      phoneNumber: user.phoneNumber,
-      slackHandle: user.slackHandle,
-      hourlyCostRate: new Prisma.Decimal(user.hourlyCostRate),
-      hourlyBillableRate: new Prisma.Decimal(user.hourlyBillableRate),
-      isBillable: user.isBillable,
-      employmentType: user.employmentType,
-      defaultWorkingHoursPerDay: new Prisma.Decimal(
-        user.defaultWorkingHoursPerDay
-      ),
-      hireDate: user.hireDate ? new Date(user.hireDate) : null,
-      terminationDate: user.terminationDate
-        ? new Date(user.terminationDate)
-        : null,
+      role: user.role || "member",
+      roleId: user.roleId,
+      passwordHash: user.passwordHash,
+      phone: user.phone,
+      bio: user.bio,
+      addressLine1: user.addressLine1,
+      addressLine2: user.addressLine2,
+      city: user.city,
+      state: user.state,
+      country: user.country,
+      postalCode: user.postalCode,
     },
   });
 
   return newUser;
 }
 
-export async function updateUser(userId: string, updates: Partial<User>) {
-  // Validate UUID format
-  if (!isValidUUID(userId)) {
-    throw new Error("Invalid user ID format");
-  }
-
-  // NEVER allow direct password hash updates
+export async function updateUser(uid: string, updates: Partial<User>) {
   const { passwordHash, ...safeUpdates } = updates;
 
-  // Validate email if being updated
   if (safeUpdates.email && !isValidEmail(safeUpdates.email)) {
     throw new Error("Invalid email format");
   }
 
-  // Whitelist filtering is less critical with Prisma types but good for safety
-  // We can construct the update object dynamically
-
-  const data: Prisma.UserUpdateInput = {};
+  const data: Record<string, unknown> = {};
 
   if (safeUpdates.email) data.email = sanitizeString(safeUpdates.email, 255);
-  if (safeUpdates.fullName)
-    data.fullName = sanitizeString(safeUpdates.fullName, 100);
+  if (safeUpdates.name) data.name = sanitizeString(safeUpdates.name, 100);
   if (safeUpdates.avatarUrl !== undefined)
     data.avatarUrl = safeUpdates.avatarUrl;
-  if (safeUpdates.isActive !== undefined) data.isActive = safeUpdates.isActive;
-  if (safeUpdates.systemRole !== undefined)
-    data.systemRole = safeUpdates.systemRole;
-  if (safeUpdates.jobTitle !== undefined) data.jobTitle = safeUpdates.jobTitle;
-  if (safeUpdates.department !== undefined)
-    data.department = safeUpdates.department;
-  if (safeUpdates.timezone !== undefined) data.timezone = safeUpdates.timezone;
-  if (safeUpdates.themePreference !== undefined)
-    data.themePreference = safeUpdates.themePreference;
-  if (safeUpdates.phoneNumber !== undefined)
-    data.phoneNumber = safeUpdates.phoneNumber;
-  if (safeUpdates.slackHandle !== undefined)
-    data.slackHandle = safeUpdates.slackHandle;
-  if (safeUpdates.hourlyCostRate !== undefined)
-    data.hourlyCostRate = new Prisma.Decimal(safeUpdates.hourlyCostRate);
-  if (safeUpdates.hourlyBillableRate !== undefined)
-    data.hourlyBillableRate = new Prisma.Decimal(
-      safeUpdates.hourlyBillableRate
-    );
-  if (safeUpdates.isBillable !== undefined)
-    data.isBillable = safeUpdates.isBillable;
-  if (safeUpdates.employmentType !== undefined)
-    data.employmentType = safeUpdates.employmentType;
-  if (safeUpdates.defaultWorkingHoursPerDay !== undefined)
-    data.defaultWorkingHoursPerDay = new Prisma.Decimal(
-      safeUpdates.defaultWorkingHoursPerDay
-    );
-  if (safeUpdates.hireDate !== undefined)
-    data.hireDate = safeUpdates.hireDate
-      ? new Date(safeUpdates.hireDate)
-      : null;
-  if (safeUpdates.terminationDate !== undefined)
-    data.terminationDate = safeUpdates.terminationDate
-      ? new Date(safeUpdates.terminationDate)
-      : null;
+  if (safeUpdates.role !== undefined) data.role = safeUpdates.role;
+  if (safeUpdates.roleId !== undefined) data.roleId = safeUpdates.roleId;
+  if (safeUpdates.phone !== undefined) data.phone = safeUpdates.phone;
+  if (safeUpdates.bio !== undefined) data.bio = safeUpdates.bio;
+  if (safeUpdates.addressLine1 !== undefined)
+    data.addressLine1 = safeUpdates.addressLine1;
+  if (safeUpdates.addressLine2 !== undefined)
+    data.addressLine2 = safeUpdates.addressLine2;
+  if (safeUpdates.city !== undefined) data.city = safeUpdates.city;
+  if (safeUpdates.state !== undefined) data.state = safeUpdates.state;
+  if (safeUpdates.country !== undefined) data.country = safeUpdates.country;
+  if (safeUpdates.postalCode !== undefined)
+    data.postalCode = safeUpdates.postalCode;
 
   const updatedUser = await prisma.user.update({
-    where: { userId },
+    where: { uid },
     data,
   });
 
   return updatedUser;
 }
 
-export async function getUserById(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { userId },
+export async function getUserById(uid: string) {
+  return await prisma.user.findUnique({
+    where: { uid },
   });
-  return user;
+}
+
+export async function getUserByEmail(email: string) {
+  return await prisma.user.findUnique({
+    where: { email },
+  });
 }
 
 export async function getAllUsers() {
-  const users = await prisma.user.findMany({
+  return await prisma.user.findMany({
     orderBy: { updatedAt: "desc" },
   });
-  return users;
 }
 
-export async function deleteUser(userId: string) {
+export async function deleteUser(uid: string) {
   await prisma.user.delete({
-    where: { userId },
+    where: { uid },
   });
 }
 
-export type Project = {
-  id: string; // Prisma uses Int for id, but legacy type says string? Schema says Int.
-  // Wait, legacy type says: id: string. Schema says: id Int @id @default(autoincrement())
-  // The 'uid' is the public string ID.
-  // We need to match the return type expected by the app.
-  // If the app expects 'id' as string, it might be using the 'uid' actually?
-  // Checking schema.prisma: Project.id is Int. Project.uid is String.
-  // Legacy postgres.ts type definition: id: string.
-  // It's possible legacy code was mapping something or just wrong types.
-  // Let's assume we return what Prisma returns.
-  // However, for compatibility, if the UI uses 'id' as the unique string, it might mean 'uid'.
-  // Let's stick to Prisma return types and cast if necessary or update type definition.
-  // Updating Type Definition to match Reality implies we should output what we have.
-  uid: string;
-  name: string;
-  description?: string;
-  status: string;
-  owner: string;
-  startDate?: string;
-  deadline?: string;
-  budget?: number;
-  progress: number;
-  priority?: string;
-  userId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-
-// ============================================================================
-// PROJECTS
-// ============================================================================
+// =============================================================================
+// PROJECT OPERATIONS
+// =============================================================================
 
 export async function createProject(
   project: Omit<Project, "id" | "uid" | "createdAt" | "updatedAt">
 ) {
-  const uid = `proj_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
   const newProject = await prisma.project.create({
     data: {
-      uid,
       name: project.name,
       description: project.description,
-      status: project.status,
-      owner: project.owner,
+      status: project.status || "active",
       startDate: project.startDate ? new Date(project.startDate) : null,
       deadline: project.deadline ? new Date(project.deadline) : null,
-      budget: project.budget ? new Prisma.Decimal(project.budget) : null,
-      progress: project.progress,
+      budget: project.budget,
       priority: project.priority,
       userId: project.userId,
+      completedAt: project.completedAt ? new Date(project.completedAt) : null,
+      clientName: project.clientName,
+      tags: project.tags || [],
+      visibility: project.visibility || "private",
+      archivedAt: project.archivedAt ? new Date(project.archivedAt) : null,
+      color: project.color,
     },
   });
 
@@ -223,39 +299,58 @@ export async function createProject(
 }
 
 export async function getProjectById(uid: string) {
-  const project = await prisma.project.findUnique({
+  return await prisma.project.findUnique({
     where: { uid },
+    include: {
+      members: true,
+      milestones: true,
+    },
   });
-  return project;
 }
 
-export async function getAllProjects(userId?: string) {
+export async function getAllProjects(userId?: number) {
   if (userId) {
     return await prisma.project.findMany({
-      where: { userId },
+      where: {
+        OR: [{ userId }, { members: { some: { userId } } }],
+        archivedAt: null,
+      },
       orderBy: { updatedAt: "desc" },
     });
   }
   return await prisma.project.findMany({
+    where: { archivedAt: null },
     orderBy: { updatedAt: "desc" },
   });
 }
 
 export async function updateProject(uid: string, updates: Partial<Project>) {
-  const data: Prisma.ProjectUpdateInput = {};
+  const data: Record<string, unknown> = {};
 
   if (updates.name) data.name = updates.name;
   if (updates.description !== undefined) data.description = updates.description;
   if (updates.status) data.status = updates.status;
-  if (updates.progress !== undefined) data.progress = updates.progress;
   if (updates.priority !== undefined) data.priority = updates.priority;
-  // Add other fields if needed
+  if (updates.startDate !== undefined)
+    data.startDate = updates.startDate ? new Date(updates.startDate) : null;
+  if (updates.deadline !== undefined)
+    data.deadline = updates.deadline ? new Date(updates.deadline) : null;
+  if (updates.budget !== undefined) data.budget = updates.budget;
+  if (updates.completedAt !== undefined)
+    data.completedAt = updates.completedAt
+      ? new Date(updates.completedAt)
+      : null;
+  if (updates.clientName !== undefined) data.clientName = updates.clientName;
+  if (updates.tags !== undefined) data.tags = updates.tags;
+  if (updates.visibility !== undefined) data.visibility = updates.visibility;
+  if (updates.archivedAt !== undefined)
+    data.archivedAt = updates.archivedAt ? new Date(updates.archivedAt) : null;
+  if (updates.color !== undefined) data.color = updates.color;
 
-  const updated = await prisma.project.update({
+  return await prisma.project.update({
     where: { uid },
     data,
   });
-  return updated;
 }
 
 export async function deleteProject(uid: string) {
@@ -264,73 +359,192 @@ export async function deleteProject(uid: string) {
   });
 }
 
-// ============================================================================
-// TASKS
-// ============================================================================
+export async function archiveProject(uid: string) {
+  return await prisma.project.update({
+    where: { uid },
+    data: { archivedAt: new Date() },
+  });
+}
 
-export type Task = {
-  id: string; // Again, Schema Int vs Type String. Fixing types to match expectations or Prisma.
-  uid: string;
-  projectId: string;
-  title: string;
-  description?: string;
-  status: string;
-  priority: string;
-  assignee?: string;
-  due?: string;
-  estimateHours?: number;
-  loggedHours?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-};
+// =============================================================================
+// PROJECT MEMBER OPERATIONS
+// =============================================================================
+
+export async function addProjectMember(
+  projectId: number,
+  userId: number,
+  role: string = "member"
+) {
+  return await prisma.projectMember.create({
+    data: {
+      projectId,
+      userId,
+      role,
+    },
+  });
+}
+
+export async function removeProjectMember(projectId: number, userId: number) {
+  return await prisma.projectMember.delete({
+    where: {
+      projectId_userId: { projectId, userId },
+    },
+  });
+}
+
+export async function getProjectMembers(projectId: number) {
+  return await prisma.projectMember.findMany({
+    where: { projectId },
+    include: { user: true },
+  });
+}
+
+export async function updateProjectMemberRole(
+  projectId: number,
+  userId: number,
+  role: string
+) {
+  return await prisma.projectMember.update({
+    where: {
+      projectId_userId: { projectId, userId },
+    },
+    data: { role },
+  });
+}
+
+// =============================================================================
+// MILESTONE OPERATIONS
+// =============================================================================
+
+export async function createMilestone(
+  milestone: Omit<Milestone, "id" | "createdAt" | "updatedAt">
+) {
+  return await prisma.milestone.create({
+    data: {
+      projectId: milestone.projectId,
+      name: milestone.name,
+      description: milestone.description,
+      dueDate: milestone.dueDate ? new Date(milestone.dueDate) : null,
+      status: milestone.status || "pending",
+      order: milestone.order || 0,
+    },
+  });
+}
+
+export async function getMilestonesByProject(projectId: number) {
+  return await prisma.milestone.findMany({
+    where: { projectId },
+    orderBy: { order: "asc" },
+  });
+}
+
+export async function updateMilestone(id: string, updates: Partial<Milestone>) {
+  const data: Record<string, unknown> = {};
+
+  if (updates.name) data.name = updates.name;
+  if (updates.description !== undefined) data.description = updates.description;
+  if (updates.dueDate !== undefined)
+    data.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+  if (updates.status !== undefined) data.status = updates.status;
+  if (updates.order !== undefined) data.order = updates.order;
+
+  return await prisma.milestone.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteMilestone(id: string) {
+  await prisma.milestone.delete({
+    where: { id },
+  });
+}
+
+// =============================================================================
+// TASK OPERATIONS
+// =============================================================================
 
 export async function createTask(
   task: Omit<Task, "id" | "uid" | "createdAt" | "updatedAt">
 ) {
-  const uid = `task_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-
-  const newTask = await prisma.task.create({
+  return await prisma.task.create({
     data: {
-      uid,
       projectId: task.projectId,
       title: task.title,
       description: task.description,
-      status: task.status,
-      priority: task.priority,
-      assignee: task.assignee,
+      status: task.status || "todo",
+      priority: task.priority || "medium",
       due: task.due ? new Date(task.due) : null,
-      estimateHours: task.estimateHours
-        ? new Prisma.Decimal(task.estimateHours)
-        : null,
-      loggedHours: new Prisma.Decimal(task.loggedHours || 0),
+      estimateHours: task.estimateHours,
+      loggedHours: task.loggedHours || 0,
+      assigneeId: task.assigneeId,
+      labels: task.labels || [],
+      boardColumn: task.boardColumn || "todo",
+      order: task.order || 0,
+      parentTaskId: task.parentTaskId,
+      attachments: task.attachments,
+      completedAt: task.completedAt ? new Date(task.completedAt) : null,
+      startedAt: task.startedAt ? new Date(task.startedAt) : null,
+      blockedBy: task.blockedBy,
+      watchers: task.watchers || [],
     },
   });
-
-  return newTask;
 }
 
 export async function getTasksByProject(projectId: string) {
   return await prisma.task.findMany({
     where: { projectId },
-    orderBy: { createdAt: "desc" },
+    include: { assignee: true },
+    orderBy: [{ boardColumn: "asc" }, { order: "asc" }],
   });
 }
 
 export async function getAllTasks() {
   return await prisma.task.findMany({
+    include: { assignee: true },
     orderBy: { createdAt: "desc" },
   });
 }
 
+export async function getTaskByUid(uid: string) {
+  return await prisma.task.findUnique({
+    where: { uid },
+    include: {
+      assignee: true,
+      subtasks: true,
+      comments: true,
+      files: true,
+    },
+  });
+}
+
 export async function updateTask(uid: string, updates: Partial<Task>) {
-  const data: Prisma.TaskUpdateInput = {};
+  const data: Record<string, unknown> = {};
+
   if (updates.title) data.title = updates.title;
   if (updates.description !== undefined) data.description = updates.description;
   if (updates.status) data.status = updates.status;
   if (updates.priority) data.priority = updates.priority;
-  if (updates.assignee !== undefined) data.assignee = updates.assignee;
-  if (updates.loggedHours !== undefined)
-    data.loggedHours = new Prisma.Decimal(updates.loggedHours);
+  if (updates.due !== undefined)
+    data.due = updates.due ? new Date(updates.due) : null;
+  if (updates.estimateHours !== undefined)
+    data.estimateHours = updates.estimateHours;
+  if (updates.loggedHours !== undefined) data.loggedHours = updates.loggedHours;
+  if (updates.assigneeId !== undefined) data.assigneeId = updates.assigneeId;
+  if (updates.labels !== undefined) data.labels = updates.labels;
+  if (updates.boardColumn !== undefined) data.boardColumn = updates.boardColumn;
+  if (updates.order !== undefined) data.order = updates.order;
+  if (updates.parentTaskId !== undefined)
+    data.parentTaskId = updates.parentTaskId;
+  if (updates.attachments !== undefined) data.attachments = updates.attachments;
+  if (updates.completedAt !== undefined)
+    data.completedAt = updates.completedAt
+      ? new Date(updates.completedAt)
+      : null;
+  if (updates.startedAt !== undefined)
+    data.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
+  if (updates.blockedBy !== undefined) data.blockedBy = updates.blockedBy;
+  if (updates.watchers !== undefined) data.watchers = updates.watchers;
 
   return await prisma.task.update({
     where: { uid },
@@ -344,22 +558,291 @@ export async function deleteTask(uid: string) {
   });
 }
 
-// ============================================================================
-// TIME LOGS
-// ============================================================================
+export async function reorderTasks(
+  taskOrders: { uid: string; order: number; boardColumn?: string }[]
+) {
+  const updates = taskOrders.map((t) =>
+    prisma.task.update({
+      where: { uid: t.uid },
+      data: { order: t.order, boardColumn: t.boardColumn },
+    })
+  );
+  return await prisma.$transaction(updates);
+}
 
-export async function addTimeLog(timeLog: {
-  taskId: string;
-  projectId: string;
-  hours: number;
-  note?: string;
-  loggedBy: string;
-}) {
+// =============================================================================
+// COMMENT OPERATIONS
+// =============================================================================
+
+export async function createComment(
+  comment: Omit<Comment, "id" | "createdAt" | "updatedAt">
+) {
+  return await prisma.comment.create({
+    data: {
+      content: comment.content,
+      taskId: comment.taskId,
+      projectId: comment.projectId,
+      userId: comment.userId,
+      parentCommentId: comment.parentCommentId,
+    },
+  });
+}
+
+export async function getCommentsByTask(taskId: string) {
+  return await prisma.comment.findMany({
+    where: { taskId, parentCommentId: null },
+    include: {
+      user: true,
+      replies: {
+        include: { user: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function getCommentsByProject(projectId: number) {
+  return await prisma.comment.findMany({
+    where: { projectId, parentCommentId: null },
+    include: {
+      user: true,
+      replies: {
+        include: { user: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+export async function updateComment(id: string, content: string) {
+  return await prisma.comment.update({
+    where: { id },
+    data: { content },
+  });
+}
+
+export async function deleteComment(id: string) {
+  await prisma.comment.delete({
+    where: { id },
+  });
+}
+
+// =============================================================================
+// NOTIFICATION OPERATIONS
+// =============================================================================
+
+export async function createNotification(
+  notification: Omit<Notification, "id" | "createdAt">
+) {
+  return await prisma.notification.create({
+    data: {
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      link: notification.link,
+      isRead: notification.isRead || false,
+    },
+  });
+}
+
+export async function getNotificationsByUser(
+  userId: number,
+  unreadOnly = false
+) {
+  return await prisma.notification.findMany({
+    where: {
+      userId,
+      ...(unreadOnly ? { isRead: false } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+}
+
+export async function markNotificationAsRead(id: string) {
+  return await prisma.notification.update({
+    where: { id },
+    data: { isRead: true },
+  });
+}
+
+export async function markAllNotificationsAsRead(userId: number) {
+  return await prisma.notification.updateMany({
+    where: { userId, isRead: false },
+    data: { isRead: true },
+  });
+}
+
+export async function deleteNotification(id: string) {
+  await prisma.notification.delete({
+    where: { id },
+  });
+}
+
+// =============================================================================
+// ACTIVITY OPERATIONS
+// =============================================================================
+
+export async function createActivity(
+  activity: Omit<Activity, "id" | "createdAt">
+) {
+  return await prisma.activity.create({
+    data: {
+      userId: activity.userId,
+      entityType: activity.entityType,
+      entityId: activity.entityId,
+      action: activity.action,
+      metadata: activity.metadata,
+    },
+  });
+}
+
+export async function getActivitiesByEntity(
+  entityType: string,
+  entityId: string
+) {
+  return await prisma.activity.findMany({
+    where: { entityType, entityId },
+    include: { user: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+}
+
+export async function getRecentActivities(limit = 50) {
+  return await prisma.activity.findMany({
+    include: { user: true },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+// =============================================================================
+// FILE OPERATIONS
+// =============================================================================
+
+export async function createFile(file: Omit<FileRecord, "id" | "createdAt">) {
+  return await prisma.file.create({
+    data: {
+      filename: file.filename,
+      fileUrl: file.fileUrl,
+      fileSize: file.fileSize,
+      mimeType: file.mimeType,
+      projectId: file.projectId,
+      taskId: file.taskId,
+      uploadedBy: file.uploadedBy,
+    },
+  });
+}
+
+export async function getFilesByProject(projectId: number) {
+  return await prisma.file.findMany({
+    where: { projectId },
+    include: { uploader: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getFilesByTask(taskId: string) {
+  return await prisma.file.findMany({
+    where: { taskId },
+    include: { uploader: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function deleteFile(id: string) {
+  await prisma.file.delete({
+    where: { id },
+  });
+}
+
+// =============================================================================
+// CALENDAR EVENT OPERATIONS
+// =============================================================================
+
+export async function createCalendarEvent(
+  event: Omit<CalendarEvent, "id" | "createdAt" | "updatedAt">
+) {
+  return await prisma.calendarEvent.create({
+    data: {
+      title: event.title,
+      description: event.description,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      attendees: event.attendees || [],
+      projectId: event.projectId,
+      taskId: event.taskId,
+      createdById: event.createdById,
+    },
+  });
+}
+
+export async function getCalendarEventsByDateRange(
+  startDate: Date,
+  endDate: Date,
+  userId?: number
+) {
+  const where: Record<string, unknown> = {
+    startTime: { gte: startDate },
+    endTime: { lte: endDate },
+  };
+
+  if (userId) {
+    where.OR = [
+      { createdById: userId },
+      { attendees: { has: userId.toString() } },
+    ];
+  }
+
+  return await prisma.calendarEvent.findMany({
+    where,
+    include: { project: true, task: true, createdBy: true },
+    orderBy: { startTime: "asc" },
+  });
+}
+
+export async function updateCalendarEvent(
+  id: string,
+  updates: Partial<CalendarEvent>
+) {
+  const data: Record<string, unknown> = {};
+
+  if (updates.title) data.title = updates.title;
+  if (updates.description !== undefined) data.description = updates.description;
+  if (updates.startTime) data.startTime = updates.startTime;
+  if (updates.endTime) data.endTime = updates.endTime;
+  if (updates.location !== undefined) data.location = updates.location;
+  if (updates.attendees !== undefined) data.attendees = updates.attendees;
+  if (updates.projectId !== undefined) data.projectId = updates.projectId;
+  if (updates.taskId !== undefined) data.taskId = updates.taskId;
+
+  return await prisma.calendarEvent.update({
+    where: { id },
+    data,
+  });
+}
+
+export async function deleteCalendarEvent(id: string) {
+  await prisma.calendarEvent.delete({
+    where: { id },
+  });
+}
+
+// =============================================================================
+// TIME LOG OPERATIONS
+// =============================================================================
+
+export async function addTimeLog(timeLog: Omit<TimeLog, "id" | "loggedAt">) {
   return await prisma.timeLog.create({
     data: {
       taskId: timeLog.taskId,
       projectId: timeLog.projectId,
-      hours: new Prisma.Decimal(timeLog.hours),
+      hours: timeLog.hours,
       note: timeLog.note,
       loggedBy: timeLog.loggedBy,
     },
@@ -378,4 +861,25 @@ export async function getTimeLogsByProject(projectId: string) {
     where: { projectId },
     orderBy: { loggedAt: "desc" },
   });
+}
+
+// =============================================================================
+// HELPER: Calculate Project Progress
+// =============================================================================
+
+export async function calculateProjectProgress(
+  projectId: string
+): Promise<number> {
+  const tasks = await prisma.task.findMany({
+    where: { projectId },
+    select: { status: true },
+  });
+
+  if (tasks.length === 0) return 0;
+
+  const completedTasks = tasks.filter(
+    (t: { status: string }) => t.status === "done" || t.status === "completed"
+  ).length;
+
+  return Math.round((completedTasks / tasks.length) * 100);
 }

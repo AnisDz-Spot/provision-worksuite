@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Database, CheckCircle2 } from "lucide-react";
 import { DatabaseConfigForm } from "@/components/setup/DatabaseConfigForm";
 import { useAuth } from "@/components/auth/AuthContext";
+import { log } from "@/lib/logger";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -23,6 +24,19 @@ export default function OnboardingPage() {
   }, [isAuthenticated]);
 
   async function checkSetupStatus() {
+    // Check if we are in demo mode
+    const mode = localStorage.getItem("pv:dataMode");
+    const onboardingDone = localStorage.getItem("pv:onboardingDone");
+
+    if (mode === "mock") {
+      // In demo mode, we shouldn't be here. Mark done and go home.
+      if (!onboardingDone) {
+        localStorage.setItem("pv:onboardingDone", "true");
+      }
+      router.replace("/");
+      return;
+    }
+
     try {
       const res = await fetch("/api/setup/check-system");
       const data = await res.json();
@@ -40,7 +54,7 @@ export default function OnboardingPage() {
         return;
       }
     } catch (e) {
-      console.error("Setup check failed:", e);
+      log.error({ err: e }, "Setup check failed");
     } finally {
       setChecking(false);
     }
@@ -132,13 +146,13 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
       <div className="max-w-2xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-center">
+        <div className="bg-linear-to-r from-indigo-600 to-purple-600 p-6 text-center">
           <Database className="w-12 h-12 text-white mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-white mb-1">
             Database Configuration
           </h1>
           <p className="text-indigo-100 text-sm">
-            Configure your database connection to get started
+            Configure your database to get started
           </p>
         </div>
 

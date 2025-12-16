@@ -39,6 +39,21 @@ BLOB_READ_WRITE_TOKEN=xxx
 docker-compose up -d
 ```
 
+The container will **automatically**:
+
+1. Wait for the database to be ready
+2. Run `prisma db push` to create/sync all tables
+3. Start the Next.js server
+
+You'll see in Docker logs:
+
+```
+ProVision WorkSuite - Starting...
+Waiting for database connection...
+✓ Database schema synchronized!
+Starting Next.js server...
+```
+
 ### Persistent Data (Local Mode)
 
 If using `NEXT_PUBLIC_STORAGE_PROVIDER=local`:

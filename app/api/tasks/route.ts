@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { randomUUID } from "crypto";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // In demo mode, return empty tasks
+  if (!shouldUseDatabaseData()) {
+    return NextResponse.json({ success: true, data: [], source: "demo" });
+  }
+
   // SECURITY: Require authentication to view tasks
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -17,6 +22,8 @@ export async function GET() {
   }
 
   try {
+    const currentUserId = parseInt(currentUser.uid) || 0;
+
     // Build where clause based on role
     const whereClause =
       currentUser.role === "admin" || currentUser.role === "global-admin"
@@ -24,8 +31,10 @@ export async function GET() {
         : {
             // Regular users see tasks from their projects or assigned to them
             OR: [
-              { project: { userId: currentUser.uid } },
-              { assignee: currentUser.uid },
+              { project: { userId: currentUserId } },
+              { project: { members: { some: { userId: currentUserId } } } },
+              { assigneeId: currentUserId },
+              { watchers: { has: currentUser.uid } },
             ],
           };
 
@@ -38,8 +47,19 @@ export async function GET() {
             name: true,
           },
         },
+        assignee: {
+          select: {
+            uid: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { boardColumn: "asc" },
+        { order: "asc" },
+        { createdAt: "desc" },
+      ],
     });
 
     log.info({ count: tasks.length, userId: currentUser.uid }, "Fetched tasks");
@@ -81,9 +101,14 @@ export async function POST(req: Request) {
       description,
       status,
       priority,
-      assignee,
+      assigneeId,
       due,
       estimateHours,
+      labels,
+      boardColumn,
+      order,
+      parentTaskId,
+      watchers,
     } = body;
 
     if (!projectId || !title) {
@@ -93,10 +118,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // SECURITY: Verify user owns the project or is admin
+    const currentUserId = parseInt(currentUser.uid) || 0;
+
+    // SECURITY: Verify user owns the project, is a member, or is admin
     const project = await prisma.project.findUnique({
       where: { uid: projectId },
-      select: { userId: true },
+      select: {
+        userId: true,
+        members: {
+          where: { userId: currentUserId },
+        },
+      },
     });
 
     if (!project) {
@@ -106,42 +138,51 @@ export async function POST(req: Request) {
       );
     }
 
-    if (
-      project.userId !== currentUser.uid &&
-      currentUser.role !== "admin" &&
-      currentUser.role !== "global-admin"
-    ) {
+    const isOwner = project.userId === currentUserId;
+    const isMember = project.members.length > 0;
+    const isAdmin =
+      currentUser.role === "admin" || currentUser.role === "global-admin";
+
+    if (!isOwner && !isMember && !isAdmin) {
       return NextResponse.json(
         {
           success: false,
-          error: "Forbidden: Cannot create tasks for projects you don't own",
+          error:
+            "Forbidden: Cannot create tasks for projects you don't have access to",
         },
         { status: 403 }
       );
     }
 
-    // SECURITY: Generate cryptographically secure UID
-    const uid = `task_${randomUUID()}`;
-
     const task = await prisma.task.create({
       data: {
-        uid,
         projectId,
         title,
         description: description || null,
         status: status || "todo",
         priority: priority || "medium",
-        assignee: assignee || null,
+        assigneeId: assigneeId || null,
         due: due ? new Date(due) : null,
         estimateHours: estimateHours ? parseFloat(estimateHours) : null,
+        labels: labels || [],
+        boardColumn: boardColumn || status || "todo",
+        order: order || 0,
+        parentTaskId: parentTaskId || null,
+        watchers: watchers || [],
       },
       include: {
         project: true,
+        assignee: true,
       },
     });
 
     log.info(
-      { taskId: task.id, taskUid: uid, projectId, userId: currentUser.uid },
+      {
+        taskId: task.id,
+        taskUid: task.uid,
+        projectId,
+        userId: currentUser.uid,
+      },
       "Task created"
     );
 

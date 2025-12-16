@@ -19,6 +19,8 @@ import {
   List,
   MoreVertical,
 } from "lucide-react";
+import { log } from "@/lib/logger";
+import Image from "next/image";
 
 type ActionItem = {
   id: string;
@@ -108,14 +110,14 @@ export default function MeetingsPage() {
     fetch("/data/users.json")
       .then((res) => res.json())
       .then((data) => setTeamMembers(data))
-      .catch((err) => console.error("Failed to load team members:", err));
+      .catch((err) => log.error({ err }, "Failed to load team members"));
     // Load projects
     fetch("/data/projects.json")
       .then((res) => res.json())
       .then((data) =>
         setProjects(Array.isArray(data) ? data : data?.projects || [])
       )
-      .catch((err) => console.error("Failed to load projects:", err));
+      .catch((err) => log.error({ err }, "Failed to load projects"));
   }, []);
 
   // When opening a meeting, seed notes draft
@@ -187,7 +189,7 @@ export default function MeetingsPage() {
       setMeetings(data);
       setFilteredMeetings(data);
     } catch (error) {
-      console.error("Failed to load meetings:", error);
+      log.error({ err: error }, "Failed to load meetings");
     }
   };
 
@@ -381,10 +383,12 @@ export default function MeetingsPage() {
                           .filter((a) => teamMembers.some((m) => m.name === a))
                           .slice(0, 3)
                           .map((name, i) => (
-                            <img
+                            <Image
                               key={i}
                               src={getAvatarUrl(name)}
                               alt={name}
+                              width={24}
+                              height={24}
                               className="w-6 h-6 rounded-full border-2 border-card"
                             />
                           ))}

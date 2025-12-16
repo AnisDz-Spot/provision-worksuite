@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import path from "path";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error serving file:", error);
+    log.error({ err: error }, "Error serving file");
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

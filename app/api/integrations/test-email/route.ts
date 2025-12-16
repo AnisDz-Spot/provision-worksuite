@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { log } from "@/lib/logger";
 
 type EmailConfig = {
   provider: "smtp" | "sendgrid" | "mailgun" | "postmark" | "resend" | "brevo";
@@ -324,7 +325,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Email test error:", error);
+    log.error({ err: error }, "Email test error");
     return NextResponse.json(
       { ok: false, error: error?.message || "Failed to send test email" },
       { status: 500 }

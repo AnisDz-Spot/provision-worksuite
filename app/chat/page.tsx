@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   MessageCircle,
   Send,
@@ -32,6 +33,7 @@ import {
   type ChatMessage,
   type ChatConversation,
 } from "@/lib/utils";
+import { log } from "@/lib/logger";
 
 type FileAttachment = {
   id: string;
@@ -149,9 +151,9 @@ export default function ChatPage() {
         throw new Error("Failed to fetch groups");
       }
     } catch (error) {
-      console.error(
-        "Failed to load chat groups from API, using localStorage:",
-        error
+      log.error(
+        { err: error },
+        "Failed to load chat groups from API, using localStorage"
       );
       // Fallback to localStorage
       try {
@@ -160,7 +162,7 @@ export default function ChatPage() {
           setChatGroups(JSON.parse(stored));
         }
       } catch (localError) {
-        console.error("Failed to load from localStorage:", localError);
+        log.error({ err: localError }, "Failed to load from localStorage");
       }
     } finally {
       setIsLoadingGroups(false);
@@ -460,9 +462,9 @@ export default function ChatPage() {
         });
       }
     } catch (error) {
-      console.error(
-        "Failed to create group via API, trying localStorage:",
-        error
+      log.error(
+        { err: error },
+        "Failed to create group via API, trying localStorage"
       );
 
       // Fallback to localStorage only
@@ -505,7 +507,7 @@ export default function ChatPage() {
           setGroupCreationStatus({ show: false, type: "success", message: "" });
         }, 5000);
       } catch (localError) {
-        console.error("Failed to create group:", localError);
+        log.error({ err: localError }, "Failed to create group");
         setGroupCreationStatus({
           show: true,
           type: "error",
@@ -680,9 +682,11 @@ export default function ChatPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <img
+                          <Image
                             src={member.avatar}
                             alt={member.name}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 rounded-full"
                           />
                           <Circle
@@ -762,13 +766,15 @@ export default function ChatPage() {
                       return (
                         <>
                           <div className="relative">
-                            <img
+                            <Image
                               src={
                                 teamMembers.find((m) => m.name === activeChat)
                                   ?.avatar ||
                                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat}`
                               }
                               alt={activeChat}
+                              width={40}
+                              height={40}
                               className="w-10 h-10 rounded-full"
                             />
                             <Circle

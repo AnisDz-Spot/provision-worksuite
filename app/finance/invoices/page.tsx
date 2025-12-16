@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/finance/SectionHeader";
 import { MetricCard } from "@/components/finance/MetricCard";
+import { exportToPDF, exportToExcel, generateInvoicePDF } from "@/lib/export";
 
 // Assuming types are defined elsewhere or need to be included here for the component to work
 type Project = {
@@ -442,7 +443,63 @@ export default function InvoicesPage() {
             <Button size="sm" onClick={() => setAddOpen(true)}>
               + Add Invoice
             </Button>
-            <Button size="sm" onClick={downloadCSV}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                exportToPDF(
+                  filteredInvoices.map((inv) => ({
+                    ...inv,
+                    project:
+                      projects.find((p) => p.id === inv.projectId)?.name ||
+                      inv.projectId,
+                    date: new Date(inv.date).toLocaleDateString(),
+                    amount: `$${inv.amount.toLocaleString()}`,
+                  })),
+                  [
+                    { header: "Invoice #", key: "id", width: 35 },
+                    { header: "Project", key: "project", width: 40 },
+                    { header: "Date", key: "date", width: 25 },
+                    { header: "Amount", key: "amount", width: 25 },
+                    { header: "Status", key: "status", width: 20 },
+                  ],
+                  {
+                    filename: `invoices-${new Date().toISOString().slice(0, 10)}`,
+                    title: "Invoices Report",
+                  }
+                )
+              }
+            >
+              PDF
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                exportToExcel(
+                  filteredInvoices.map((inv) => ({
+                    ...inv,
+                    project:
+                      projects.find((p) => p.id === inv.projectId)?.name ||
+                      inv.projectId,
+                    date: new Date(inv.date).toISOString().slice(0, 10),
+                  })),
+                  [
+                    { header: "Invoice ID", key: "id" },
+                    { header: "Project", key: "project" },
+                    { header: "Date", key: "date" },
+                    { header: "Amount", key: "amount" },
+                    { header: "Status", key: "status" },
+                  ],
+                  {
+                    filename: `invoices-${new Date().toISOString().slice(0, 10)}`,
+                  }
+                )
+              }
+            >
+              Excel
+            </Button>
+            <Button size="sm" variant="outline" onClick={downloadCSV}>
               CSV
             </Button>
           </div>

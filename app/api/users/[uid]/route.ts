@@ -21,10 +21,10 @@ export async function PATCH(
     const { name, email, avatar_url } = body || {};
 
     // Build update data object
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (typeof name === "string" && name.trim()) {
-      updateData.fullName = name.trim();
+      updateData.name = name.trim();
     }
     if (typeof email === "string" && email.trim()) {
       updateData.email = email.trim();
@@ -42,33 +42,34 @@ export async function PATCH(
 
     // Update user with Prisma
     const user = await prisma.user.update({
-      where: { userId: uid },
+      where: { uid },
       data: updateData,
       select: {
-        userId: true,
+        uid: true,
         email: true,
-        fullName: true,
+        name: true,
         avatarUrl: true,
-        systemRole: true,
+        role: true,
         createdAt: true,
       },
     });
 
     // Map to frontend expectations
     const mappedUser = {
-      uid: user.userId,
+      uid: user.uid,
       email: user.email,
-      name: user.fullName,
+      name: user.name,
       avatar_url: user.avatarUrl,
-      role: user.systemRole,
+      role: user.role,
       created_at: user.createdAt,
     };
 
     log.info({ uid, updates: Object.keys(updateData) }, "User updated");
 
     return NextResponse.json({ success: true, data: mappedUser });
-  } catch (error: any) {
-    if (error.code === "P2025") {
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string };
+    if (prismaError.code === "P2025") {
       return NextResponse.json(
         { success: false, error: "User not found" },
         { status: 404 }

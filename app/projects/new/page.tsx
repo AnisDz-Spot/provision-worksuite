@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useState, useEffect } from "react";
 import usersData from "@/data/users.json";
 import categoriesData from "@/data/categories.json";
+import Image from "next/image";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -586,13 +587,14 @@ export default function NewProjectPage() {
                   key={idx}
                   className="flex items-center gap-2 bg-accent px-2 py-1 rounded-md"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={
                       m.avatarUrl ||
                       `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
                     }
                     alt={m.name}
+                    width={20}
+                    height={20}
                     className="w-5 h-5 rounded-full"
                   />
                   <span className="text-xs">{m.name}</span>

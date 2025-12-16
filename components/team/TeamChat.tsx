@@ -22,15 +22,18 @@ import {
   type ChatConversation,
   type ChatMessage,
 } from "@/lib/utils";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 // DB-backed helpers
 async function dbFetchThread(user1: string, user2: string) {
   try {
     const res = await fetch(
-      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`
+      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`,
+      { credentials: "include" }
     );
     const data = await res.json();
-    if (!res.ok || !data?.success) return [] as ChatMessage[];
+
+    if (!res.ok || !data?.success) throw new Error("API Error");
     return (data.data || []).map((row: any) => ({
       id: String(row.id),
       fromUser: row.from_user,
@@ -40,8 +43,9 @@ async function dbFetchThread(user1: string, user2: string) {
       read: !!row.is_read,
     }));
   } catch (error) {
-    // Silently fail - API might not be available
-    return [] as ChatMessage[];
+    // Fallback to mock data if API fails (e.g. mock mode with no DB)
+    console.warn("Messages API failed, falling back to local data", error);
+    return getChatMessages(user1, user2);
   }
 }
 
@@ -50,20 +54,24 @@ async function dbSendMessage(
   toUser: string,
   message: string
 ) {
-  const res = await fetch("/api/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fromUser, toUser, message }),
-  });
-  return res.ok;
+  try {
+    const res = await fetchWithCsrf("/api/messages", {
+      method: "POST",
+      body: JSON.stringify({ fromUser, toUser, message }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 async function dbMarkRead(currentUser: string, otherUser: string) {
-  await fetch("/api/messages/mark-read", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ currentUser, otherUser }),
-  });
+  try {
+    await fetchWithCsrf("/api/messages/mark-read", {
+      method: "POST",
+      body: JSON.stringify({ currentUser, otherUser }),
+    });
+  } catch {}
 }
 
 async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
@@ -72,10 +80,12 @@ async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
 
   try {
     const res = await fetch(
-      `/api/messages/conversations?user=${encodeURIComponent(user)}`
+      `/api/messages/conversations?user=${encodeURIComponent(user)}`,
+      { credentials: "include" }
     );
     const data = await res.json();
-    if (!res.ok || !data?.success) return [];
+
+    if (!res.ok || !data?.success) throw new Error("API Error");
     return (data.data || []).map((row: any) => ({
       withUser: row.withUser,
       lastMessage: row.lastMessage,
@@ -84,8 +94,9 @@ async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
       isOnline: false,
     }));
   } catch (error) {
-    // Silently fail - API might not be available in mock mode
-    return [];
+    // Fallback to mock data
+    console.warn("Conversations API failed, falling back to local data", error);
+    return getChatConversations(user);
   }
 }
 

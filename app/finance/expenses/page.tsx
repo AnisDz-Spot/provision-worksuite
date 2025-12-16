@@ -12,6 +12,7 @@ import { MetricCard } from "@/components/finance/MetricCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { log } from "@/lib/logger";
 
 // Types
 type Project = { id: string; name: string };
@@ -107,7 +108,7 @@ export default function ExpensesPage() {
       }
       throw new Error("API not configured, falling back.");
     } catch (e) {
-      console.warn("API POST failed, falling back to local state:", e);
+      log.warn({ err: e }, "API POST failed, falling back to local state");
       // Fallback to local state
       setExpenses((prev) => [expenseObj, ...prev]);
       resetState();
@@ -275,7 +276,7 @@ export default function ExpensesPage() {
         const data = JSON.parse(String(reader.result || "[]"));
         setExpenses(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Error importing file:", error);
+        log.error({ err: error }, "Error importing file");
       }
     };
     reader.readAsText(file);

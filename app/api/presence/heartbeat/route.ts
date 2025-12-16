@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // In demo mode, return success without database operation
+  if (!shouldUseDatabaseData()) {
+    return NextResponse.json({
+      success: true,
+      data: { uid: "demo", status: "available", last_seen: new Date() },
+    });
+  }
+
   try {
     const body = await request.json();
     const { uid, status } = body || {};

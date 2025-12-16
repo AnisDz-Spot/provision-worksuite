@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { log } from "@/lib/logger";
 
 type Decision = {
   id: string;
@@ -81,7 +82,7 @@ export default function DecisionsPage() {
       setDecisions(data);
       setFilteredDecisions(data);
     } catch (error) {
-      console.error("Failed to load decisions:", error);
+      log.error({ err: error }, "Failed to load decisions");
     }
   };
 

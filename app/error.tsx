@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { log } from "@/lib/logger";
+import { appConfig } from "@/lib/config/app-config";
+import { captureError } from "@/lib/sentry";
 
 export default function Error({
   error,
@@ -23,11 +26,14 @@ export default function Error({
 
   useEffect(() => {
     // Log error to monitoring service in production
-    if (process.env.NODE_ENV === "production") {
-      console.error("Application error:", error);
-      // TODO: Send to error tracking service (Sentry, DataDog, etc.)
-    } else {
-      console.error("Error occurred:", error);
+    log.error({ err: error, digest: error.digest }, "Application error");
+
+    // Send error to Sentry if enabled
+    if (appConfig.features.enableErrorTracking) {
+      captureError(error, {
+        tags: { digest: error.digest || "unknown" },
+        level: "error",
+      });
     }
   }, [error]);
 
@@ -78,7 +84,7 @@ export default function Error({
   const errorDetails = getErrorDetails();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-linear-to-br from-background via-background to-muted/20">
       <Card className="w-full max-w-2xl p-8 md:p-12 shadow-2xl">
         <div className="text-center space-y-6">
           {/* Icon */}

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { createUser } from "@/lib/db/postgres";
 import { CreateAdminSchema } from "@/lib/schemas";
 import { rateLimitSignup } from "@/lib/ratelimit";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -63,20 +64,13 @@ export async function POST(req: NextRequest) {
     const newUser = await createUser({
       email,
       passwordHash: hashedPassword,
-      fullName,
-      isActive: true, // First user always active
-      systemRole: "admin", // First user is admin
-      isBillable: true,
-      employmentType: "full-time",
-      defaultWorkingHoursPerDay: 8,
-      hourlyCostRate: 0,
-      hourlyBillableRate: 0,
-      timezone: "UTC", // Default
+      name: fullName,
+      role: "admin", // First user is admin
     });
 
     return NextResponse.json({ success: true, user: newUser });
   } catch (error: any) {
-    console.error("Registration error:", error);
+    log.error({ err: error }, "Registration error");
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

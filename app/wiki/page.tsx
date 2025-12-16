@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { log } from "@/lib/logger";
 
 type WikiPage = {
   id: string;
@@ -68,7 +69,7 @@ export default function WikiPage() {
       setPages(data);
       setFilteredPages(data);
     } catch (error) {
-      console.error("Failed to load wiki pages:", error);
+      log.error({ err: error }, "Failed to load wiki pages");
     }
   };
 

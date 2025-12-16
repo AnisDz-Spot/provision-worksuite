@@ -45,14 +45,23 @@ export async function GET(request: Request) {
     });
 
     // Map to match frontend expectations
-    const mappedMessages = messages.map((msg) => ({
-      id: msg.id,
-      from_user: msg.fromUser,
-      to_user: msg.toUser,
-      message: msg.message,
-      created_at: msg.createdAt,
-      is_read: msg.isRead,
-    }));
+    const mappedMessages = messages.map(
+      (msg: {
+        id: number;
+        fromUser: string;
+        toUser: string;
+        message: string;
+        createdAt: Date;
+        isRead: boolean;
+      }) => ({
+        id: msg.id,
+        from_user: msg.fromUser,
+        to_user: msg.toUser,
+        message: msg.message,
+        created_at: msg.createdAt,
+        is_read: msg.isRead,
+      })
+    );
 
     log.info(
       { user1: u1, user2: u2, count: messages.length },

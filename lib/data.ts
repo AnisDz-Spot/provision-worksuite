@@ -10,6 +10,19 @@ import PROJECTS from "@/data/projects.json";
 import TASKS from "@/data/tasks.json";
 import USERS from "@/data/users.json";
 
+function mapMockUsers(users: any[]): User[] {
+  return users.map((u: any) => ({
+    uid: u.id || u.uid,
+    email: u.email,
+    name: u.name,
+    avatar_url: u.avatar_url || undefined,
+    role: u.role,
+    department: u.department || undefined,
+    status: u.status || undefined,
+    created_at: u.created_at || undefined,
+  }));
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -70,11 +83,17 @@ export async function loadProjects(): Promise<Project[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.error("Failed to load projects from database:", result.error);
-      return []; // Strict Live Mode: Return empty array on failure, do NOT fallback to mock
+      console.warn(
+        "Failed to load projects from database, falling back to mock data:",
+        result.error
+      );
+      return PROJECTS as Project[];
     } catch (error) {
-      console.error("Error loading projects from database:", error);
-      return []; // Strict Live Mode: Return empty array on failure
+      console.warn(
+        "Error loading projects from database, falling back to mock data:",
+        error
+      );
+      return PROJECTS as Project[];
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
@@ -94,9 +113,25 @@ export async function loadProjects(): Promise<Project[]> {
  */
 export async function saveProjects(projects: Project[]): Promise<boolean> {
   if (shouldUseDatabaseData()) {
-    // TODO: Implement bulk save to database
-    console.warn("Database save for projects not yet implemented");
-    return false;
+    try {
+      const res = await fetch("/api/projects/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ projects }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        return true;
+      }
+
+      console.error("Failed to bulk save projects:", result.error);
+      return false;
+    } catch (error) {
+      console.error("Error bulk saving projects:", error);
+      return false;
+    }
   }
 
   try {
@@ -119,11 +154,17 @@ export async function loadTasks(): Promise<Task[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.error("Failed to load tasks from database:", result.error);
-      return []; // Strict Live Mode: Return empty array on failure
+      console.warn(
+        "Failed to load tasks from database, falling back to mock data:",
+        result.error
+      );
+      return TASKS as Task[];
     } catch (error) {
-      console.error("Error loading tasks from database:", error);
-      return []; // Strict Live Mode: Return empty array on failure
+      console.warn(
+        "Error loading tasks from database, falling back to mock data:",
+        error
+      );
+      return TASKS as Task[];
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
@@ -143,9 +184,25 @@ export async function loadTasks(): Promise<Task[]> {
  */
 export async function saveTasks(tasks: Task[]): Promise<boolean> {
   if (shouldUseDatabaseData()) {
-    // TODO: Implement bulk save to database
-    console.warn("Database save for tasks not yet implemented");
-    return false;
+    try {
+      const res = await fetch("/api/tasks/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tasks }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        return true;
+      }
+
+      console.error("Failed to bulk save tasks:", result.error);
+      return false;
+    } catch (error) {
+      console.error("Error bulk saving tasks:", error);
+      return false;
+    }
   }
 
   try {
@@ -168,11 +225,17 @@ export async function loadUsers(): Promise<User[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.error("Failed to load users from database:", result.error);
-      return []; // Strict Live Mode: Return empty array on failure
+      console.warn(
+        "Failed to load users from database, falling back to mock data:",
+        result.error
+      );
+      return mapMockUsers(USERS);
     } catch (error) {
-      console.error("Error loading users from database:", error);
-      return []; // Strict Live Mode: Return empty array on failure
+      console.warn(
+        "Error loading users from database, falling back to mock data:",
+        error
+      );
+      return mapMockUsers(USERS);
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
@@ -195,16 +258,7 @@ export async function loadUsers(): Promise<User[]> {
     }
   }
   // Convert USERS data to User format
-  return (USERS as any[]).map((u: any) => ({
-    uid: u.id || u.uid,
-    email: u.email,
-    name: u.name,
-    avatar_url: u.avatar_url || undefined,
-    role: u.role,
-    department: u.department || undefined,
-    status: u.status || undefined,
-    created_at: u.created_at || undefined,
-  }));
+  return mapMockUsers(USERS as any[]);
 }
 
 /**

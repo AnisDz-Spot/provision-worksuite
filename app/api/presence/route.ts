@@ -11,11 +11,13 @@ export async function GET() {
     });
 
     // Map to match frontend expectations
-    const mappedPresences = presences.map((p) => ({
-      uid: p.uid,
-      status: p.status,
-      last_seen: p.lastSeen,
-    }));
+    const mappedPresences = presences.map(
+      (p: { uid: string; status: string; lastSeen: Date }) => ({
+        uid: p.uid,
+        status: p.status,
+        last_seen: p.lastSeen,
+      })
+    );
 
     log.info({ count: presences.length }, "Fetched presence data");
 

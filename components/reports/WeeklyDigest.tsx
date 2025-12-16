@@ -227,6 +227,30 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
           };
         });
 
+        // Fetch blocker data from API (can't use direct DB import in client component)
+        let formattedBlockers: DigestBlocker[] = [];
+        try {
+          const blockersRes = await fetch("/api/blockers");
+          if (blockersRes.ok) {
+            const blockersData = await blockersRes.json();
+            if (blockersData.success && Array.isArray(blockersData.data)) {
+              formattedBlockers = blockersData.data
+                .filter((b: any) => b.status === "open")
+                .slice(0, 5) // Top 5 active blockers
+                .map((b: any) => ({
+                  title: b.title,
+                  severity: b.level,
+                  project:
+                    projectSummaries.find((p) => p.id === b.project_id)?.name ||
+                    "N/A",
+                }));
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load blockers:", error);
+          // Continue with empty blockers array
+        }
+
         setDigestData({
           weekRange: rangeStr,
           summary: {
@@ -249,7 +273,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
             teamUtilization: 0,
           },
           projects: projectSummaries,
-          blockers: [], // TODO: Link to RiskBlockerDashboard data
+          blockers: formattedBlockers,
           achievements: completed > 0 ? [`${completed} tasks completed`] : [],
           upcomingMilestones: projectSummaries
             .filter((p) => p.upcomingDeadline !== "N/A")

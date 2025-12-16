@@ -17,6 +17,7 @@ import {
   Target,
   Clock,
 } from "lucide-react";
+import { log } from "@/lib/logger";
 
 type RetroItem = {
   id: string;
@@ -72,7 +73,7 @@ export default function RetrospectivesPage() {
       const data = await res.json();
       setRetrospectives(data);
     } catch (error) {
-      console.error("Failed to load retrospectives:", error);
+      log.error({ err: error }, "Failed to load retrospectives");
     }
   };
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function GET() {
       dbConfigured: true,
     });
   } catch (error: any) {
-    console.error("System check failed:", error);
+    log.error({ err: error }, "System check failed");
     return NextResponse.json(
       {
         ready: false,

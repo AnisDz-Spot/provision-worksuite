@@ -2,6 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { ArrowLeftIcon, CalendarDays } from "lucide-react";
 import {
   logProjectEvent,
@@ -255,11 +256,12 @@ export default function ProjectDetailsPage() {
 
       <Card>
         <div className="h-56 bg-muted relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {project.cover ? (
-            <img
+            <Image
               src={project.cover}
               alt={project.name}
+              width={1200}
+              height={224}
               className="w-full h-56 object-cover"
             />
           ) : (
@@ -270,10 +272,11 @@ export default function ProjectDetailsPage() {
           {(project as any).client && (
             <div className="absolute top-4 right-4 flex items-center gap-3 bg-card/95 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-lg border border-border">
               {(project as any).clientLogo && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={(project as any).clientLogo}
                   alt={(project as any).client}
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded object-cover"
                 />
               )}
@@ -645,13 +648,14 @@ export default function ProjectDetailsPage() {
                 <div className="space-y-2">
                   {members.slice(0, 8).map((m, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={
                           m.avatarUrl ||
                           `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
                         }
                         alt={m.name}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition-transform"
                         title={m.name}
                         onClick={() =>

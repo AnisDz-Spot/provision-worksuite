@@ -7,6 +7,7 @@ import {
   sanitizeFilename,
   MAX_DOCUMENT_SIZE,
 } from "@/lib/file-validation";
+import { log } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url });
   } catch (error) {
-    console.error("Local upload failed:", error);
+    log.error({ err: error }, "Local upload failed");
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

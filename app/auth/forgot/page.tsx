@@ -1,8 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { sendPasswordResetEmail } from "@/lib/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 
@@ -19,10 +18,14 @@ export default function ForgotPage() {
     setError("");
     setMessage("");
     try {
-      await sendPasswordResetEmail(auth, email);
-      setMessage("Password reset email sent.");
+      const result = await sendPasswordResetEmail(email);
+      if (result.success) {
+        setMessage("Password reset email sent.");
+      } else {
+        setError(result.error || "Failed to send reset email");
+      }
     } catch (err: any) {
-      setError(err.message);
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -63,4 +66,5 @@ export default function ForgotPage() {
     </div>
   );
 }
+
 

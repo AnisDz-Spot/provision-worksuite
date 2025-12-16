@@ -1,6 +1,8 @@
 // app/api/support/email/route.ts - Support Email Handler
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { log } from "@/lib/logger";
+import { appConfig } from "@/lib/config/app-config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Check if SMTP is configured
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.error("SMTP credentials not configured");
+      log.error("SMTP credentials not configured");
       return NextResponse.json(
         {
           error: "Email service not configured. Please contact administrator.",
@@ -24,13 +26,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Attempting to send email to:", to || "anisdzed@gmail.com");
-    console.log("SMTP Config:", {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      user: process.env.SMTP_USER,
-      // Don't log password
-    });
+    log.info(
+      {
+        to: to || appConfig.support.email,
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        user: process.env.SMTP_USER,
+      },
+      "Attempting to send support email"
+    );
 
     // Create nodemailer transporter
     const transporter = nodemailer.createTransport({
@@ -48,9 +52,9 @@ export async function POST(request: NextRequest) {
     // Verify transporter configuration
     try {
       await transporter.verify();
-      console.log("✅ SMTP connection verified successfully");
+      log.info("SMTP connection verified successfully");
     } catch (verifyError: any) {
-      console.error("❌ SMTP verification failed:", verifyError.message);
+      log.error({ err: verifyError }, "SMTP verification failed");
       return NextResponse.json(
         {
           error: "Email service configuration error",
@@ -63,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Send email
     const info = await transporter.sendMail({
       from: process.env.SMTP_USER,
-      to: to || "anisdzed@gmail.com",
+      to: to || appConfig.support.email,
       subject: `[${priority}] Support Request: ${subject}`,
       text: message,
       html: `
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
       `,
     });
 
-    console.log("✅ Email sent successfully:", info.messageId);
+    log.info({ messageId: info.messageId }, "Support email sent successfully");
 
     return NextResponse.json({
       success: true,
@@ -92,7 +96,7 @@ export async function POST(request: NextRequest) {
       messageId: info.messageId,
     });
   } catch (error: any) {
-    console.error("❌ Support email error:", error);
+    log.error({ err: error }, "Support email error");
     return NextResponse.json(
       {
         error: "Failed to send support request",

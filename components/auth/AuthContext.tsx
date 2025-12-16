@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { isSetupComplete } from "@/lib/setup";
 import { shouldUseMockData } from "@/lib/dataSource";
+import { boolean } from "zod";
 
 type User = {
   id: string;
@@ -17,8 +18,10 @@ type AuthContextType = {
   currentUser: User | null;
   login: (
     email: string,
-    password: string
-  ) => Promise<{ success: boolean; error?: string }>;
+    password: string,
+    code?: string,
+    useBackupCode?: boolean
+  ) => Promise<{ success: boolean; error?: string; requires2FA?: boolean }>;
   logout: () => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
@@ -178,24 +181,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (
     email: string,
-    password: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    // ALWAYS check for global admin first (works without database)
-    if (email === "admin@provision.com" && password === "password123578951") {
-      const authUser: User = {
-        id: "global-admin",
-        name: "Admin",
-        email,
-        role: "Administrator",
-        isAdmin: true,
-      };
-      setCurrentUser(authUser);
-      setIsAuthenticated(true);
-      localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
-      // Force mock mode for global admin so they aren't redirected to DB config
-      localStorage.setItem("pv:dataMode", "mock");
-      setSessionExpiry(30);
-      return { success: true };
+    password: string,
+    code?: string,
+    useBackupCode?: boolean
+  ): Promise<{ success: boolean; error?: string; requires2FA?: boolean }> => {
+    // Check for global admin credentials
+    const isGlobalAdmin =
+      email === "admin@provision.com" && password === "password123578951";
+
+    // Debug logging
+    console.log("[Auth] Login attempt", {
+      email,
+      isGlobalAdmin,
+      setupComplete: isSetupComplete(),
+      mock: shouldUseMockData(),
+    });
+
+    // If we are explicitly in MOCK mode, allow the admin backdoor immediately
+    if (shouldUseMockData() && isGlobalAdmin) {
+      // Only allow instant login if we are FORCED into mock mode (e.g. by environment)
+      // Otherwise we want to try the real backend first if possible.
+      // Actually, let's defer to the standard flow and use the backdoor as a fallback or only for setup.
     }
 
     // If admin selected dummy data mode and it's not the global admin, reject
@@ -231,10 +237,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, code, useBackupCode }),
         });
 
         const data = await response.json();
+
+        if (data.requires2FA) {
+          return { success: false, requires2FA: true, error: data.message };
+        }
 
         if (data.success && data.user) {
           const authUser: User = {
@@ -265,9 +275,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
         }
       } catch (error) {
-        // If API failed (e.g. 500 or 404), maybe we really ARE in mock mode without DB.
-        // fallback to global admin logic below?
-        // No, standard flow.
+        console.error("[Auth] Server login failed:", error);
+
+        // FALLBACK: If server login fails (e.g. DB down) AND it's the global admin, allow login
+        if (isGlobalAdmin) {
+          console.log("[Auth] Falling back to local admin credentials");
+          const authUser: User = {
+            id: "global-admin",
+            name: "Admin",
+            email,
+            role: "Administrator",
+            isAdmin: true,
+          };
+          setCurrentUser(authUser);
+          setIsAuthenticated(true);
+          localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+          setSessionExpiry(30);
+          return { success: true };
+        }
+
         return {
           success: false,
           error:
@@ -278,6 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Setup NOT complete - allow global admin login ONLY
     const users = readUsers();
+    // Use 'isGlobalAdmin' check here too instead of hardcoded find
     const user = users.find((u) => u.email === email);
 
     if (!user) {

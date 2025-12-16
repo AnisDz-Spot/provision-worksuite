@@ -20,7 +20,7 @@ export async function getSystemConfig(): Promise<SystemConfig> {
   }
 
   // Default to env vars (fallback/bootstrap)
-  let config: SystemConfig = {
+  const config: SystemConfig = {
     postgresUrl: process.env.POSTGRES_URL || process.env.DATABASE_URL,
     blobToken: process.env.BLOB_READ_WRITE_TOKEN,
     // Determine mode from persistent setting or env

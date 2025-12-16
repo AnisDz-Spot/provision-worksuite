@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { randomUUID } from "crypto";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // In demo mode, return empty projects
+  if (!shouldUseDatabaseData()) {
+    return NextResponse.json({ success: true, data: [], source: "demo" });
+  }
+
   // SECURITY: Require authentication to view projects
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -20,17 +25,40 @@ export async function GET() {
     // Filter projects by user unless admin
     const whereClause =
       currentUser.role === "admin" || currentUser.role === "global-admin"
-        ? {} // Admins see all projects
-        : { userId: currentUser.uid }; // Regular users see only their projects
+        ? { archivedAt: null } // Admins see all non-archived projects
+        : {
+            OR: [
+              { userId: parseInt(currentUser.uid) || 0 },
+              { members: { some: { userId: parseInt(currentUser.uid) || 0 } } },
+            ],
+            archivedAt: null,
+          };
 
     const projects = await prisma.project.findMany({
       where: whereClause,
       include: {
         user: {
           select: {
-            userId: true,
-            fullName: true,
+            uid: true,
+            name: true,
             email: true,
+          },
+        },
+        members: {
+          include: {
+            user: {
+              select: {
+                uid: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            tasks: true,
+            milestones: true,
           },
         },
       },
@@ -90,12 +118,14 @@ export async function POST(req: Request) {
       name,
       description,
       status,
-      owner,
-      userId,
       startDate,
       deadline,
       budget,
       priority,
+      clientName,
+      tags,
+      visibility,
+      color,
     } = body;
 
     if (!name) {
@@ -105,50 +135,43 @@ export async function POST(req: Request) {
       );
     }
 
-    // SECURITY: Use authenticated user's ID, not from request body
-    const projectUserId = userId || currentUser.uid;
-
-    // SECURITY: Only allow creating projects for self unless admin
-    if (
-      projectUserId !== currentUser.uid &&
-      currentUser.role !== "admin" &&
-      currentUser.role !== "global-admin"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden: Cannot create projects for other users",
-        },
-        { status: 403 }
-      );
-    }
-
-    // SECURITY: Generate cryptographically secure UID
-    const uid = `project_${randomUUID()}`;
+    // Use current user's ID for the project
+    const projectUserId = parseInt(currentUser.uid) || 0;
 
     const project = await prisma.project.create({
       data: {
-        uid,
         name,
         description: description || null,
         status: status || "active",
-        owner: owner || name,
         userId: projectUserId,
         startDate: startDate ? new Date(startDate) : null,
         deadline: deadline ? new Date(deadline) : null,
         budget: budget ? parseFloat(budget) : null,
         priority: priority || null,
-        progress: 0,
+        clientName: clientName || null,
+        tags: tags || [],
+        visibility: visibility || "private",
+        color: color || null,
       },
       include: {
         user: true,
+        members: true,
+      },
+    });
+
+    // Also add the creator as an owner in project members
+    await prisma.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: projectUserId,
+        role: "owner",
       },
     });
 
     log.info(
       {
         projectId: project.id,
-        projectUid: uid,
+        projectUid: project.uid,
         userId: currentUser.uid,
         role: currentUser.role,
       },

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 // Type definitions
 interface CreateGroupRequest {
@@ -36,12 +37,12 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(groups);
     } catch (dbError) {
-      console.warn("Database unavailable for chat groups:", dbError);
+      log.warn({ err: dbError }, "Database unavailable for chat groups");
       // Return empty array for demo mode - localStorage will take over
       return NextResponse.json([]);
     }
   } catch (error) {
-    console.error("Failed to fetch chat groups:", error);
+    log.error({ err: error }, "Failed to fetch chat groups");
     return NextResponse.json([]);
   }
 }
@@ -125,11 +126,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`Chat group created: ${group.id} by ${userEmail}`);
+      log.info({ groupId: group.id, userEmail }, "Chat group created");
 
       return NextResponse.json(group, { status: 201 });
     } catch (dbError) {
-      console.warn("Database unavailable for group creation:", dbError);
+      log.warn({ err: dbError }, "Database unavailable for group creation");
       // Return offline mode - frontend will save to localStorage
       return NextResponse.json(
         {
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Failed to create chat group:", error);
+    log.error({ err: error }, "Failed to create chat group");
     return NextResponse.json(
       { error: "Failed to create chat group" },
       { status: 500 }

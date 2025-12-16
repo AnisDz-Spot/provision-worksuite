@@ -40,7 +40,7 @@ export function ProjectWatch() {
     setMounted(true);
     loadSubscriptions();
     loadProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const loadSubscriptions = () => {

@@ -23,6 +23,7 @@ import {
   getTimeEstimateAccuracy,
   calculateRiskScore,
 } from "@/lib/utils";
+import { log } from "@/lib/logger";
 
 type Project = {
   id: string;
@@ -111,7 +112,7 @@ export default function AnalyticsPage() {
 
       toaster.show("success", "Analytics report exported successfully");
     } catch (error) {
-      console.error("Export error:", error);
+      log.error({ err: error }, "Export error");
       toaster.show("error", "Failed to export analytics report");
     }
   };

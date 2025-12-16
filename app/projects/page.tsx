@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { getProjectDependencies } from "@/lib/utils";
+import { log } from "@/lib/logger";
 
 export default function ProjectsPage() {
   const [view, setView] = useState<"grid" | "list" | "gantt">("grid");
@@ -44,7 +45,7 @@ export default function ProjectsPage() {
         const data = await loadProjects();
         setProjects(Array.isArray(data) ? data : []);
       } catch (error) {
-        console.error("Failed to load projects:", error);
+        log.error({ err: error }, "Failed to load projects");
         setProjects([]);
       }
     }
@@ -358,3 +359,5 @@ export default function ProjectsPage() {
     </section>
   );
 }
+
+

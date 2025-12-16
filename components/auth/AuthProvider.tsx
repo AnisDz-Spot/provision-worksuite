@@ -6,11 +6,10 @@ import {
   useState,
   useEffect,
 } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase";
+import { useAuthState, AuthUser } from "@/lib/hooks/useAuth";
 
 interface AuthContextType {
-  user: import("firebase/auth").User | null | undefined;
+  user: AuthUser | null | undefined;
   loading: boolean;
   currentUser: UserProfile | null;
   isAdmin: boolean;
@@ -32,24 +31,26 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
 });
 
-// Mock current user - in production this would come from Firebase/backend
-const MOCK_CURRENT_USER: UserProfile = {
-  id: "u1",
-  name: "Alice",
-  email: "alice@provision.com",
-  role: "Project Manager",
-  isAdmin: true, // Alice is admin
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, loading] = useAuthState(auth);
+  const [user, loading] = useAuthState();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    // In production, fetch user profile from database based on auth user
-    // For now, use mock data
-    setCurrentUser(MOCK_CURRENT_USER);
+    if (user) {
+      // Map authenticated user to UserProfile
+      setCurrentUser({
+        id: user.uid,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        avatar:
+          user.avatarUrl ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
+      });
+    } else {
+      setCurrentUser(null);
+    }
   }, [user]);
 
   return (
@@ -69,4 +70,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
 

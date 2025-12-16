@@ -9,10 +9,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (!shouldUseDatabaseData()) {
-    return NextResponse.json(
-      { success: false, error: "Database mode disabled" },
-      { status: 400 }
-    );
+    // In demo mode, return empty categories
+    return NextResponse.json({ success: true, data: [] });
   }
   try {
     const rows = await getAllBlockerCategories();

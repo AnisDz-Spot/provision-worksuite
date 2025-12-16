@@ -53,13 +53,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, name, email, password, avatarUrl, timezone } =
-      validation.data;
+    const { name, email, password, avatarUrl } = validation.data;
 
     // Check if user already exists using Prisma
     const existing = await prisma.user.findUnique({
       where: { email },
-      select: { userId: true },
+      select: { uid: true },
     });
 
     if (existing) {
@@ -80,38 +79,31 @@ export async function POST(request: NextRequest) {
       data: {
         email,
         passwordHash,
-        fullName: name,
+        name,
         avatarUrl: avatarUrl || null,
-        systemRole: "Administrator",
-        timezone: timezone || "UTC",
-        employmentType: "full-time",
-        isActive: true,
-        isBillable: true,
-        defaultWorkingHoursPerDay: 8.0,
+        role: "admin",
       },
       select: {
-        userId: true,
+        uid: true,
         email: true,
-        fullName: true,
+        name: true,
         avatarUrl: true,
-        systemRole: true,
-        timezone: true,
+        role: true,
       },
     });
 
-    log.info({ email, role: "Administrator" }, "Admin account created");
+    log.info({ email, role: "admin" }, "Admin account created");
 
     // Return success with user data
     return NextResponse.json({
       success: true,
       message: "Admin account created successfully",
       user: {
-        user_id: user.userId,
+        user_id: user.uid,
         email: user.email,
-        name: user.fullName,
+        name: user.name,
         avatarUrl: user.avatarUrl,
-        role: user.systemRole,
-        timezone: user.timezone,
+        role: user.role,
       },
     });
   } catch (error) {
