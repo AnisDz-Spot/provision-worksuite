@@ -327,7 +327,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="fixed inset-0 overflow-y-auto flex items-center justify-center p-4">
       <Suspense
         fallback={
           <div className="w-full max-w-xl mx-auto bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-8 sm:p-10 md:p-12">
@@ -363,5 +363,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-

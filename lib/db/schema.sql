@@ -3,19 +3,23 @@
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
-CREATE TYPE "TaskPriority" AS ENUM ('low', 'medium', 'high', 'urgent');
-
--- CreateEnum
-CREATE TYPE "TaskStatus" AS ENUM ('todo', 'in_progress', 'done', 'blocked');
-
--- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('active', 'completed', 'on_hold', 'cancelled');
-
--- CreateEnum
-CREATE TYPE "InvoiceStatus" AS ENUM ('draft', 'sent', 'paid', 'overdue', 'cancelled');
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'TaskPriority') THEN
+        CREATE TYPE "TaskPriority" AS ENUM ('low', 'medium', 'high', 'urgent');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'TaskStatus') THEN
+        CREATE TYPE "TaskStatus" AS ENUM ('todo', 'in_progress', 'done', 'blocked');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ProjectStatus') THEN
+        CREATE TYPE "ProjectStatus" AS ENUM ('active', 'completed', 'on_hold', 'cancelled');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'InvoiceStatus') THEN
+        CREATE TYPE "InvoiceStatus" AS ENUM ('draft', 'sent', 'paid', 'overdue', 'cancelled');
+    END IF;
+END $$;
 
 -- CreateTable
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
     "id" SERIAL NOT NULL,
     "uid" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -43,7 +47,7 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
-CREATE TABLE "sessions" (
+CREATE TABLE IF NOT EXISTS "sessions" (
     "id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "token" TEXT NOT NULL,
@@ -59,7 +63,7 @@ CREATE TABLE "sessions" (
 );
 
 -- CreateTable
-CREATE TABLE "accounts" (
+CREATE TABLE IF NOT EXISTS "accounts" (
     "id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "type" TEXT NOT NULL,
@@ -78,7 +82,7 @@ CREATE TABLE "accounts" (
 );
 
 -- CreateTable
-CREATE TABLE "roles" (
+CREATE TABLE IF NOT EXISTS "roles" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -91,7 +95,7 @@ CREATE TABLE "roles" (
 );
 
 -- CreateTable
-CREATE TABLE "projects" (
+CREATE TABLE IF NOT EXISTS "projects" (
     "id" SERIAL NOT NULL,
     "uid" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -115,7 +119,7 @@ CREATE TABLE "projects" (
 );
 
 -- CreateTable
-CREATE TABLE "project_members" (
+CREATE TABLE IF NOT EXISTS "project_members" (
     "id" TEXT NOT NULL,
     "project_id" INTEGER NOT NULL,
     "user_id" INTEGER NOT NULL,
@@ -126,7 +130,7 @@ CREATE TABLE "project_members" (
 );
 
 -- CreateTable
-CREATE TABLE "milestones" (
+CREATE TABLE IF NOT EXISTS "milestones" (
     "id" TEXT NOT NULL,
     "project_id" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
@@ -141,7 +145,7 @@ CREATE TABLE "milestones" (
 );
 
 -- CreateTable
-CREATE TABLE "tasks" (
+CREATE TABLE IF NOT EXISTS "tasks" (
     "id" SERIAL NOT NULL,
     "uid" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
@@ -171,7 +175,7 @@ CREATE TABLE "tasks" (
 );
 
 -- CreateTable
-CREATE TABLE "time_logs" (
+CREATE TABLE IF NOT EXISTS "time_logs" (
     "id" SERIAL NOT NULL,
     "task_id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
@@ -184,7 +188,7 @@ CREATE TABLE "time_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "comments" (
+CREATE TABLE IF NOT EXISTS "comments" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -198,7 +202,7 @@ CREATE TABLE "comments" (
 );
 
 -- CreateTable
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
     "id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "type" TEXT NOT NULL,
@@ -212,7 +216,7 @@ CREATE TABLE "notifications" (
 );
 
 -- CreateTable
-CREATE TABLE "activities" (
+CREATE TABLE IF NOT EXISTS "activities" (
     "id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
     "entity_type" TEXT NOT NULL,
@@ -225,7 +229,7 @@ CREATE TABLE "activities" (
 );
 
 -- CreateTable
-CREATE TABLE "files" (
+CREATE TABLE IF NOT EXISTS "files" (
     "id" TEXT NOT NULL,
     "filename" TEXT NOT NULL,
     "file_url" TEXT NOT NULL,
@@ -240,7 +244,7 @@ CREATE TABLE "files" (
 );
 
 -- CreateTable
-CREATE TABLE "calendar_events" (
+CREATE TABLE IF NOT EXISTS "calendar_events" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -258,7 +262,7 @@ CREATE TABLE "calendar_events" (
 );
 
 -- CreateTable
-CREATE TABLE "expenses" (
+CREATE TABLE IF NOT EXISTS "expenses" (
     "id" SERIAL NOT NULL,
     "uid" TEXT NOT NULL,
     "project_id" INTEGER NOT NULL,
@@ -274,7 +278,7 @@ CREATE TABLE "expenses" (
 );
 
 -- CreateTable
-CREATE TABLE "invoices" (
+CREATE TABLE IF NOT EXISTS "invoices" (
     "id" SERIAL NOT NULL,
     "uid" TEXT NOT NULL,
     "project_id" INTEGER NOT NULL,
@@ -292,7 +296,7 @@ CREATE TABLE "invoices" (
 );
 
 -- CreateTable
-CREATE TABLE "blocker_categories" (
+CREATE TABLE IF NOT EXISTS "blocker_categories" (
     "id" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "default_owner_group" TEXT NOT NULL,
@@ -303,7 +307,7 @@ CREATE TABLE "blocker_categories" (
 );
 
 -- CreateTable
-CREATE TABLE "blockers" (
+CREATE TABLE IF NOT EXISTS "blockers" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -324,7 +328,7 @@ CREATE TABLE "blockers" (
 );
 
 -- CreateTable
-CREATE TABLE "messages" (
+CREATE TABLE IF NOT EXISTS "messages" (
     "id" SERIAL NOT NULL,
     "from_user" TEXT NOT NULL,
     "to_user" TEXT NOT NULL,
@@ -336,7 +340,7 @@ CREATE TABLE "messages" (
 );
 
 -- CreateTable
-CREATE TABLE "chat_groups" (
+CREATE TABLE IF NOT EXISTS "chat_groups" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -346,7 +350,7 @@ CREATE TABLE "chat_groups" (
 );
 
 -- CreateTable
-CREATE TABLE "chat_group_members" (
+CREATE TABLE IF NOT EXISTS "chat_group_members" (
     "id" TEXT NOT NULL,
     "chat_group_id" TEXT NOT NULL,
     "user_id" INTEGER NOT NULL,
@@ -356,7 +360,7 @@ CREATE TABLE "chat_group_members" (
 );
 
 -- CreateTable
-CREATE TABLE "presence" (
+CREATE TABLE IF NOT EXISTS "presence" (
     "uid" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "last_seen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -365,7 +369,7 @@ CREATE TABLE "presence" (
 );
 
 -- CreateTable
-CREATE TABLE "password_reset_tokens" (
+CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -377,7 +381,7 @@ CREATE TABLE "password_reset_tokens" (
 );
 
 -- CreateTable
-CREATE TABLE "system_settings" (
+CREATE TABLE IF NOT EXISTS "system_settings" (
     "id" SERIAL NOT NULL,
     "setting_key" TEXT NOT NULL,
     "setting_value" TEXT NOT NULL,
@@ -389,7 +393,7 @@ CREATE TABLE "system_settings" (
 );
 
 -- CreateTable
-CREATE TABLE "recurring_task_templates" (
+CREATE TABLE IF NOT EXISTS "recurring_task_templates" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
@@ -413,220 +417,220 @@ CREATE TABLE "recurring_task_templates" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_uid_key" ON "users"("uid");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_uid_key" ON "users"("uid");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "users_email_idx" ON "users"("email");
+CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "users_role_id_idx" ON "users"("role_id");
+CREATE INDEX IF NOT EXISTS "users_role_id_idx" ON "users"("role_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sessions_token_key" ON "sessions"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "sessions_token_key" ON "sessions"("token");
 
 -- CreateIndex
-CREATE INDEX "sessions_user_id_idx" ON "sessions"("user_id");
+CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions"("user_id");
 
 -- CreateIndex
-CREATE INDEX "sessions_token_idx" ON "sessions"("token");
+CREATE INDEX IF NOT EXISTS "sessions_token_idx" ON "sessions"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "accounts_provider_provider_account_id_key" ON "accounts"("provider", "provider_account_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "accounts_provider_provider_account_id_key" ON "accounts"("provider", "provider_account_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+CREATE UNIQUE INDEX IF NOT EXISTS "roles_name_key" ON "roles"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "projects_uid_key" ON "projects"("uid");
+CREATE UNIQUE INDEX IF NOT EXISTS "projects_uid_key" ON "projects"("uid");
 
 -- CreateIndex
-CREATE INDEX "projects_user_id_idx" ON "projects"("user_id");
+CREATE INDEX IF NOT EXISTS "projects_user_id_idx" ON "projects"("user_id");
 
 -- CreateIndex
-CREATE INDEX "projects_status_idx" ON "projects"("status");
+CREATE INDEX IF NOT EXISTS "projects_status_idx" ON "projects"("status");
 
 -- CreateIndex
-CREATE INDEX "projects_visibility_idx" ON "projects"("visibility");
+CREATE INDEX IF NOT EXISTS "projects_visibility_idx" ON "projects"("visibility");
 
 -- CreateIndex
-CREATE INDEX "projects_archived_at_idx" ON "projects"("archived_at");
+CREATE INDEX IF NOT EXISTS "projects_archived_at_idx" ON "projects"("archived_at");
 
 -- CreateIndex
-CREATE INDEX "project_members_project_id_idx" ON "project_members"("project_id");
+CREATE INDEX IF NOT EXISTS "project_members_project_id_idx" ON "project_members"("project_id");
 
 -- CreateIndex
-CREATE INDEX "project_members_user_id_idx" ON "project_members"("user_id");
+CREATE INDEX IF NOT EXISTS "project_members_user_id_idx" ON "project_members"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "project_members_project_id_user_id_key" ON "project_members"("project_id", "user_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "project_members_project_id_user_id_key" ON "project_members"("project_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "milestones_project_id_idx" ON "milestones"("project_id");
+CREATE INDEX IF NOT EXISTS "milestones_project_id_idx" ON "milestones"("project_id");
 
 -- CreateIndex
-CREATE INDEX "milestones_status_idx" ON "milestones"("status");
+CREATE INDEX IF NOT EXISTS "milestones_status_idx" ON "milestones"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "tasks_uid_key" ON "tasks"("uid");
+CREATE UNIQUE INDEX IF NOT EXISTS "tasks_uid_key" ON "tasks"("uid");
 
 -- CreateIndex
-CREATE INDEX "tasks_project_id_idx" ON "tasks"("project_id");
+CREATE INDEX IF NOT EXISTS "tasks_project_id_idx" ON "tasks"("project_id");
 
 -- CreateIndex
-CREATE INDEX "tasks_assignee_id_idx" ON "tasks"("assignee_id");
+CREATE INDEX IF NOT EXISTS "tasks_assignee_id_idx" ON "tasks"("assignee_id");
 
 -- CreateIndex
-CREATE INDEX "tasks_status_idx" ON "tasks"("status");
+CREATE INDEX IF NOT EXISTS "tasks_status_idx" ON "tasks"("status");
 
 -- CreateIndex
-CREATE INDEX "tasks_priority_idx" ON "tasks"("priority");
+CREATE INDEX IF NOT EXISTS "tasks_priority_idx" ON "tasks"("priority");
 
 -- CreateIndex
-CREATE INDEX "tasks_board_column_idx" ON "tasks"("board_column");
+CREATE INDEX IF NOT EXISTS "tasks_board_column_idx" ON "tasks"("board_column");
 
 -- CreateIndex
-CREATE INDEX "tasks_parent_task_id_idx" ON "tasks"("parent_task_id");
+CREATE INDEX IF NOT EXISTS "tasks_parent_task_id_idx" ON "tasks"("parent_task_id");
 
 -- CreateIndex
-CREATE INDEX "tasks_due_idx" ON "tasks"("due");
+CREATE INDEX IF NOT EXISTS "tasks_due_idx" ON "tasks"("due");
 
 -- CreateIndex
-CREATE INDEX "tasks_created_at_idx" ON "tasks"("created_at");
+CREATE INDEX IF NOT EXISTS "tasks_created_at_idx" ON "tasks"("created_at");
 
 -- CreateIndex
-CREATE INDEX "time_logs_task_id_idx" ON "time_logs"("task_id");
+CREATE INDEX IF NOT EXISTS "time_logs_task_id_idx" ON "time_logs"("task_id");
 
 -- CreateIndex
-CREATE INDEX "time_logs_project_id_idx" ON "time_logs"("project_id");
+CREATE INDEX IF NOT EXISTS "time_logs_project_id_idx" ON "time_logs"("project_id");
 
 -- CreateIndex
-CREATE INDEX "comments_task_id_idx" ON "comments"("task_id");
+CREATE INDEX IF NOT EXISTS "comments_task_id_idx" ON "comments"("task_id");
 
 -- CreateIndex
-CREATE INDEX "comments_project_id_idx" ON "comments"("project_id");
+CREATE INDEX IF NOT EXISTS "comments_project_id_idx" ON "comments"("project_id");
 
 -- CreateIndex
-CREATE INDEX "comments_user_id_idx" ON "comments"("user_id");
+CREATE INDEX IF NOT EXISTS "comments_user_id_idx" ON "comments"("user_id");
 
 -- CreateIndex
-CREATE INDEX "comments_parent_comment_id_idx" ON "comments"("parent_comment_id");
+CREATE INDEX IF NOT EXISTS "comments_parent_comment_id_idx" ON "comments"("parent_comment_id");
 
 -- CreateIndex
-CREATE INDEX "notifications_user_id_idx" ON "notifications"("user_id");
+CREATE INDEX IF NOT EXISTS "notifications_user_id_idx" ON "notifications"("user_id");
 
 -- CreateIndex
-CREATE INDEX "notifications_is_read_idx" ON "notifications"("is_read");
+CREATE INDEX IF NOT EXISTS "notifications_is_read_idx" ON "notifications"("is_read");
 
 -- CreateIndex
-CREATE INDEX "notifications_created_at_idx" ON "notifications"("created_at");
+CREATE INDEX IF NOT EXISTS "notifications_created_at_idx" ON "notifications"("created_at");
 
 -- CreateIndex
-CREATE INDEX "activities_user_id_idx" ON "activities"("user_id");
+CREATE INDEX IF NOT EXISTS "activities_user_id_idx" ON "activities"("user_id");
 
 -- CreateIndex
-CREATE INDEX "activities_entity_type_entity_id_idx" ON "activities"("entity_type", "entity_id");
+CREATE INDEX IF NOT EXISTS "activities_entity_type_entity_id_idx" ON "activities"("entity_type", "entity_id");
 
 -- CreateIndex
-CREATE INDEX "activities_created_at_idx" ON "activities"("created_at");
+CREATE INDEX IF NOT EXISTS "activities_created_at_idx" ON "activities"("created_at");
 
 -- CreateIndex
-CREATE INDEX "files_project_id_idx" ON "files"("project_id");
+CREATE INDEX IF NOT EXISTS "files_project_id_idx" ON "files"("project_id");
 
 -- CreateIndex
-CREATE INDEX "files_task_id_idx" ON "files"("task_id");
+CREATE INDEX IF NOT EXISTS "files_task_id_idx" ON "files"("task_id");
 
 -- CreateIndex
-CREATE INDEX "files_uploaded_by_idx" ON "files"("uploaded_by");
+CREATE INDEX IF NOT EXISTS "files_uploaded_by_idx" ON "files"("uploaded_by");
 
 -- CreateIndex
-CREATE INDEX "calendar_events_project_id_idx" ON "calendar_events"("project_id");
+CREATE INDEX IF NOT EXISTS "calendar_events_project_id_idx" ON "calendar_events"("project_id");
 
 -- CreateIndex
-CREATE INDEX "calendar_events_task_id_idx" ON "calendar_events"("task_id");
+CREATE INDEX IF NOT EXISTS "calendar_events_task_id_idx" ON "calendar_events"("task_id");
 
 -- CreateIndex
-CREATE INDEX "calendar_events_created_by_id_idx" ON "calendar_events"("created_by_id");
+CREATE INDEX IF NOT EXISTS "calendar_events_created_by_id_idx" ON "calendar_events"("created_by_id");
 
 -- CreateIndex
-CREATE INDEX "calendar_events_start_time_idx" ON "calendar_events"("start_time");
+CREATE INDEX IF NOT EXISTS "calendar_events_start_time_idx" ON "calendar_events"("start_time");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "expenses_uid_key" ON "expenses"("uid");
+CREATE UNIQUE INDEX IF NOT EXISTS "expenses_uid_key" ON "expenses"("uid");
 
 -- CreateIndex
-CREATE INDEX "expenses_project_id_idx" ON "expenses"("project_id");
+CREATE INDEX IF NOT EXISTS "expenses_project_id_idx" ON "expenses"("project_id");
 
 -- CreateIndex
-CREATE INDEX "expenses_date_idx" ON "expenses"("date");
+CREATE INDEX IF NOT EXISTS "expenses_date_idx" ON "expenses"("date");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "invoices_uid_key" ON "invoices"("uid");
+CREATE UNIQUE INDEX IF NOT EXISTS "invoices_uid_key" ON "invoices"("uid");
 
 -- CreateIndex
-CREATE INDEX "invoices_project_id_idx" ON "invoices"("project_id");
+CREATE INDEX IF NOT EXISTS "invoices_project_id_idx" ON "invoices"("project_id");
 
 -- CreateIndex
-CREATE INDEX "invoices_status_idx" ON "invoices"("status");
+CREATE INDEX IF NOT EXISTS "invoices_status_idx" ON "invoices"("status");
 
 -- CreateIndex
-CREATE INDEX "invoices_due_date_idx" ON "invoices"("due_date");
+CREATE INDEX IF NOT EXISTS "invoices_due_date_idx" ON "invoices"("due_date");
 
 -- CreateIndex
-CREATE INDEX "blockers_project_id_idx" ON "blockers"("project_id");
+CREATE INDEX IF NOT EXISTS "blockers_project_id_idx" ON "blockers"("project_id");
 
 -- CreateIndex
-CREATE INDEX "blockers_status_idx" ON "blockers"("status");
+CREATE INDEX IF NOT EXISTS "blockers_status_idx" ON "blockers"("status");
 
 -- CreateIndex
-CREATE INDEX "blockers_category_idx" ON "blockers"("category");
+CREATE INDEX IF NOT EXISTS "blockers_category_idx" ON "blockers"("category");
 
 -- CreateIndex
-CREATE INDEX "messages_from_user_idx" ON "messages"("from_user");
+CREATE INDEX IF NOT EXISTS "messages_from_user_idx" ON "messages"("from_user");
 
 -- CreateIndex
-CREATE INDEX "messages_to_user_idx" ON "messages"("to_user");
+CREATE INDEX IF NOT EXISTS "messages_to_user_idx" ON "messages"("to_user");
 
 -- CreateIndex
-CREATE INDEX "chat_group_members_chat_group_id_idx" ON "chat_group_members"("chat_group_id");
+CREATE INDEX IF NOT EXISTS "chat_group_members_chat_group_id_idx" ON "chat_group_members"("chat_group_id");
 
 -- CreateIndex
-CREATE INDEX "chat_group_members_user_id_idx" ON "chat_group_members"("user_id");
+CREATE INDEX IF NOT EXISTS "chat_group_members_user_id_idx" ON "chat_group_members"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "chat_group_members_chat_group_id_user_id_key" ON "chat_group_members"("chat_group_id", "user_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "chat_group_members_chat_group_id_user_id_key" ON "chat_group_members"("chat_group_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "presence_status_idx" ON "presence"("status");
+CREATE INDEX IF NOT EXISTS "presence_status_idx" ON "presence"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens"("user_id");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_user_id_idx" ON "password_reset_tokens"("user_id");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_expires_at_idx" ON "password_reset_tokens"("expires_at");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_expires_at_idx" ON "password_reset_tokens"("expires_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "system_settings_setting_key_key" ON "system_settings"("setting_key");
+CREATE UNIQUE INDEX IF NOT EXISTS "system_settings_setting_key_key" ON "system_settings"("setting_key");
 
 -- CreateIndex
-CREATE INDEX "system_settings_setting_key_idx" ON "system_settings"("setting_key");
+CREATE INDEX IF NOT EXISTS "system_settings_setting_key_idx" ON "system_settings"("setting_key");
 
 -- CreateIndex
-CREATE INDEX "recurring_task_templates_project_id_idx" ON "recurring_task_templates"("project_id");
+CREATE INDEX IF NOT EXISTS "recurring_task_templates_project_id_idx" ON "recurring_task_templates"("project_id");
 
 -- CreateIndex
-CREATE INDEX "recurring_task_templates_next_run_idx" ON "recurring_task_templates"("next_run");
+CREATE INDEX IF NOT EXISTS "recurring_task_templates_next_run_idx" ON "recurring_task_templates"("next_run");
 
 -- CreateIndex
-CREATE INDEX "recurring_task_templates_is_active_idx" ON "recurring_task_templates"("is_active");
+CREATE INDEX IF NOT EXISTS "recurring_task_templates_is_active_idx" ON "recurring_task_templates"("is_active");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;

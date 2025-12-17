@@ -17,7 +17,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, isAuthenticated, isLoading } = useAuth();
-  const [mode, setMode] = React.useState<string | null>(null);
+  const [mode, setMode] = React.useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("pv:dataMode");
+    }
+    return null;
+  });
   const [showModeModal, setShowModeModal] = React.useState(false);
 
   // Auto-detect demo mode and set flags FIRST, before any redirects
