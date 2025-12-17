@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Users, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
 
@@ -39,7 +39,8 @@ export function ResourceAllocation({
     members && members.length > 0 ? members : defaultMembers
   );
 
-  useMemo(() => {
+  useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
       if (shouldUseMockData() && members && members.length > 0) return; // Use props if mock mode or provided
@@ -91,12 +92,18 @@ export function ResourceAllocation({
         });
 
         // In live mode, we overwrite mock data even if empty
-        setTeamMembers(newMembers);
+        if (isMounted) {
+          setTeamMembers(newMembers);
+        }
       } catch (e) {
         console.error("Failed to load resource data", e);
       }
     }
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [members]);
 
   const memberStats = useMemo(() => {

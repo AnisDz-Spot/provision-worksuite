@@ -129,16 +129,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* Legacy mode selection modal removed. Only new design remains. */}
-      <div className="flex min-h-screen w-full overflow-hidden">
-        <Sidebar canNavigate={sidebarCanNavigate} />
-        <MainContent
-          canNavigate={canNavigate}
-          isSyncing={isSyncing}
-          mode={mode}
-        >
-          {children}
-        </MainContent>
-      </div>
+      <MainContent canNavigate={canNavigate} isSyncing={isSyncing} mode={mode}>
+        {children}
+      </MainContent>
     </>
   );
 }
@@ -235,7 +228,7 @@ function MainContent({
 
       <Sidebar canNavigate={canNavigate} />
       <div
-        className={`transition-all duration-300 ${
+        className={`flex flex-col min-h-screen transition-all duration-300 ${
           collapsed ? "ml-16" : "ml-60"
         }`}
       >

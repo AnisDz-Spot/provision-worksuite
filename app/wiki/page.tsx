@@ -133,7 +133,7 @@ export default function WikiPage() {
 
   if (selectedPage && !isModalOpen) {
     return (
-      <section className="p-4 md:p-8 max-w-6xl mx-auto">
+      <section className="p-4 md:p-8">
         <div className="mb-6">
           <Button
             variant="outline"
@@ -201,7 +201,7 @@ export default function WikiPage() {
   }
 
   return (
-    <section className="p-4 md:p-8 max-w-6xl mx-auto">
+    <section className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-blue-500/10 text-blue-600">

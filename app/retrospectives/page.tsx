@@ -144,7 +144,7 @@ export default function RetrospectivesPage() {
   };
 
   return (
-    <section className="p-4 md:p-8 max-w-7xl mx-auto">
+    <section className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-green-500/10 text-green-600">

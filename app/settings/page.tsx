@@ -488,7 +488,7 @@ function SettingsContent() {
   };
 
   return (
-    <section className="p-4 md:p-8 max-w-5xl flex flex-col gap-8">
+    <section className="p-4 md:p-8 flex flex-col gap-8">
       {/* Hide all navigation UI if in setup mode */}
       {isSetupMode && (
         <style>{`.sidebar, .Navbar, .nav, .navigation, .menu, .drawer, .topbar, .appbar, .AppBar, .app-bar, .header, .Header, .footer, .Footer { display: none !important; }`}</style>

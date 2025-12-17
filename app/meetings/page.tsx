@@ -272,7 +272,7 @@ export default function MeetingsPage() {
   };
 
   return (
-    <section className="p-4 md:p-8 max-w-6xl mx-auto">
+    <section className="p-4 md:p-8">
       {/* Toast notifications */}
       {toasts.length > 0 && (
         <div className="fixed top-4 right-4 z-50 space-y-2">

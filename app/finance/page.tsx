@@ -540,7 +540,7 @@ export default function FinancePage() {
   };
 
   return (
-    <section className="py-4 md:p-8 max-w-6xl space-y-6">
+    <section className="py-4 md:p-8 space-y-6">
       {/* Toast notifications */}
       {toasts.length > 0 && (
         <div className="fixed top-4 right-4 z-50 space-y-2">
