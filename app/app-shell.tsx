@@ -215,7 +215,9 @@ function MainContent({
       <Navbar canNavigate={canNavigate} />
       <main className="flex-1 bg-background text-foreground">{children}</main>
       <ScrollToTop />
-      {currentUser && <TeamChat currentUser={currentUser.id} />}
+      {currentUser && pathname !== "/onboarding" && mode === "real" && (
+        <TeamChat currentUser={currentUser.id} />
+      )}
     </div>
   );
 }
