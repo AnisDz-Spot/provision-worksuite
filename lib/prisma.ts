@@ -222,25 +222,33 @@ const getPrismaClient = async () => {
         : ["error"];
 
     if (dbUrl) {
+      // Diagnostic logging (masked)
+      try {
+        const maskedUrl = dbUrl.replace(/:[^:@]+@/, ":****@");
+        console.log(
+          `📡 Initializing Prisma with URL: ${maskedUrl.substring(0, 40)}...`
+        );
+      } catch (e) {}
+
       // Detect database type and create appropriate adapter
       const dbAdapter = await createDatabaseAdapter(dbUrl);
 
       if (dbAdapter) {
         console.log(
-          `✅ Using ${dbAdapter.type.toUpperCase()} database with optimized adapter`
+          `✅ Using ${dbAdapter.type.toUpperCase()} database with ${dbAdapter.adapter ? "optimized adapter" : "standard driver"}`
         );
         ClientState.currentDbType = dbAdapter.type;
 
         ClientState.client = new PrismaClient({
           adapter: dbAdapter.adapter,
+          datasources: { db: { url: dbUrl } },
           log: logOptions as any,
         });
       } else {
         // Fallback to no adapter (Prisma will use default drivers)
-        console.warn(
-          "⚠️ Using Prisma without adapter (may have limited functionality)"
-        );
+        console.warn("⚠️ Using Prisma without adapter (default native engine)");
         ClientState.client = new PrismaClient({
+          datasources: { db: { url: dbUrl } },
           log: logOptions as any,
         });
       }

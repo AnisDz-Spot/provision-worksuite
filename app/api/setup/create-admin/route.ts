@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password with 12 rounds (stronger than default 10)
-    const passwordHash = await bcrypt.hash(password, 12);
+    // Hash password with 10 rounds (standard)
+    const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user with Prisma
     const user = await prisma.user.create({
