@@ -66,23 +66,42 @@ async function createDatabaseAdapter(
             await import("@neondatabase/serverless");
           const { PrismaNeon } = await import("@prisma/adapter-neon");
 
+          // Optimize for serverless - use HTTP fetch where possible
+          neonConfig.useFetch = true;
+
           // Configure Neon for Node.js environments
-          if (typeof window === "undefined") {
+          if (typeof window === "undefined" && !neonConfig.useFetch) {
             neonConfig.webSocketConstructor = ws;
           }
 
-          const pool = new NeonPool({ connectionString });
-          const adapter = new PrismaNeon(pool as any);
+          const pool = new NeonPool({
+            connectionString: connectionString.trim(),
+            connectionTimeoutMillis: 10000,
+            max: 1, // Minimize connections in serverless
+          });
 
+          pool.on("error", (err) => {
+            console.error("🚨 Neon Pool Error:", err.message);
+          });
+
+          const adapter = new PrismaNeon(pool as any);
           return { type: "postgresql", adapter };
         } else {
           // Standard PostgreSQL
           const { Pool } = await import("pg");
           const { PrismaPg } = await import("@prisma/adapter-pg");
 
-          const pool = new Pool({ connectionString });
-          const adapter = new PrismaPg(pool);
+          const pool = new Pool({
+            connectionString: connectionString.trim(),
+            connectionTimeoutMillis: 10000,
+            max: 1,
+          });
 
+          pool.on("error", (err) => {
+            console.error("🚨 Postgres Pool Error:", err.message);
+          });
+
+          const adapter = new PrismaPg(pool);
           return { type: "postgresql", adapter };
         }
       }
