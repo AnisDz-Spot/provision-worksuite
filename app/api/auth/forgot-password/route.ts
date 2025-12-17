@@ -91,16 +91,18 @@ export async function POST(request: NextRequest) {
       });
 
       // Get base URL for reset link
-      const baseUrl =
+      const appUrl =
         process.env.NEXT_PUBLIC_APP_URL ||
         request.headers.get("origin") ||
-        "http://localhost:3000";
+        `https://${request.headers.get("host")}`;
+
+      const resetLink = `${appUrl}/auth/reset-password?token=${token}`;
 
       // Send email
       const emailResult = await sendPasswordResetEmail(
         user.email,
         token,
-        baseUrl
+        resetLink
       );
 
       if (!emailResult.success) {

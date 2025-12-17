@@ -6,7 +6,14 @@ import Discord from "next-auth/providers/discord";
 import prisma from "@/lib/prisma";
 
 // NextAuth v5 configuration
+if (!process.env.AUTH_SECRET) {
+  console.warn(
+    "⚠️ AUTH_SECRET is missing. Run 'node scripts/generate-secrets.js' to generate one."
+  );
+}
+
 const authConfig = {
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({

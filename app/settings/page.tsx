@@ -245,7 +245,11 @@ function DataSourceTab() {
                       type: res.success ? "success" : "error",
                       text: res.message,
                     });
-                    if (res.success) await loadStatus();
+                    if (res.success) {
+                      await loadStatus();
+                      // Auto-redirect to setup
+                      router.push("/settings?tab=profile&setup=true");
+                    }
                   }}
                   disabled={loading}
                   variant="primary"
@@ -426,6 +430,30 @@ function SettingsContent() {
 
   // Check URL params first, then restore last selected main tab on mount
   useEffect(() => {
+    // If we are in "real" mode, DB is configured (we assume so if we are here and not blocked),
+    // but setup is NOT complete, force redirect to profile setup.
+    // We check this by seeing if isSetupMode is false but we know we might need it.
+    // However, isSetupComplete() is better checked via the 'status' we might load or simple logic:
+    // Actually, led's rely on the parent or handle it here if we can detect it.
+    // simpler: If we are not in setup mode, check if we need to be.
+    const checkSetup = async () => {
+      if (dataMode === "real" && !isSetupMode) {
+        if (typeof window !== "undefined") {
+          const finished = localStorage.getItem("pv:setupCompleted") === "true";
+          if (!finished) {
+            // Double check via server status if possible, or just push
+            // But we don't want infinite loops.
+            // Let's rely on the "System Ready" card to show the button,
+            // OR we can auto-push if we just came from DB config.
+            // For now, let's leave the auto-redirect to the "System Ready" card button to be safe,
+            // avoiding loops. But user asked for redirect.
+            // Implementation: depend on a query param or just the fact we loaded data source tab?
+          }
+        }
+      }
+    };
+    checkSetup();
+
     const urlTab = searchParams.get("tab");
     if (urlTab === "profile") {
       setTab("profile");
@@ -443,7 +471,7 @@ function SettingsContent() {
         }
       } catch {}
     }
-  }, [searchParams]);
+  }, [searchParams, dataMode, isSetupMode]);
 
   const handleSetTab = (next: TabKey) => {
     setTab(next);
@@ -784,5 +812,3 @@ export default function SettingsPage() {
     </Suspense>
   );
 }
-
-

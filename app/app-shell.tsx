@@ -11,7 +11,7 @@ import { ScrollToTop } from "@/components/ui/ScrollToTop";
 import { AppLoader } from "@/components/ui/AppLoader";
 import { cn } from "@/lib/utils";
 import { setDataModePreference } from "@/lib/dataSource";
-import { isDatabaseConfigured } from "@/lib/setup";
+import { isDatabaseConfigured, isSetupComplete } from "@/lib/setup";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -210,19 +210,42 @@ function MainContent({
     return null;
   }
 
+  const showSetupBanner =
+    !isLoading &&
+    isAuthenticated &&
+    mode === "real" &&
+    !isSetupComplete() &&
+    pathname !== "/onboarding" &&
+    !pathname.includes("setup=true");
+
   return (
-    <div
-      className={cn(
-        "flex-1 flex flex-col min-h-screen transition-all duration-300",
-        collapsed ? "ml-16" : "ml-60"
+    <div className="min-h-screen bg-background font-sans antialiased">
+      {/* Persistent Setup Banner */}
+      {showSetupBanner && (
+        <div className="bg-amber-600 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-2">
+          <span>⚠️ Your account setup is incomplete.</span>
+          <button
+            onClick={() => router.push("/settings?tab=profile&setup=true")}
+            className="underline hover:text-amber-100"
+          >
+            Complete Setup Now
+          </button>
+        </div>
       )}
-    >
-      <Navbar canNavigate={canNavigate} />
-      <main className="flex-1 bg-background text-foreground">{children}</main>
-      <ScrollToTop />
-      {currentUser && pathname !== "/onboarding" && mode === "real" && (
-        <TeamChat currentUser={currentUser.id} />
-      )}
+
+      <Sidebar canNavigate={canNavigate} />
+      <div
+        className={`transition-all duration-300 ${
+          collapsed ? "ml-16" : "ml-60"
+        }`}
+      >
+        <Navbar canNavigate={canNavigate} />
+        <main className="flex-1 bg-background text-foreground">{children}</main>
+        <ScrollToTop />
+        {currentUser && pathname !== "/onboarding" && mode === "real" && (
+          <TeamChat currentUser={currentUser.id} />
+        )}
+      </div>
     </div>
   );
 }
