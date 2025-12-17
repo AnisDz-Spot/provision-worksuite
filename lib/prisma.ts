@@ -241,14 +241,14 @@ const getPrismaClient = async () => {
 
         ClientState.client = new PrismaClient({
           adapter: dbAdapter.adapter,
-          datasources: { db: { url: dbUrl } },
+          datasourceUrl: dbUrl,
           log: logOptions as any,
         });
       } else {
         // Fallback to no adapter (Prisma will use default drivers)
         console.warn("⚠️ Using Prisma without adapter (default native engine)");
         ClientState.client = new PrismaClient({
-          datasources: { db: { url: dbUrl } },
+          datasourceUrl: dbUrl,
           log: logOptions as any,
         });
       }
