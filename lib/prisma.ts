@@ -85,15 +85,17 @@ async function createDatabaseAdapter(
 
           // Basic setup for Neon - keep it standard unless explicitly needed
           if (typeof window === "undefined") {
+            // Restore WS constructor for Node environment
             neonConfig.webSocketConstructor = ws;
-            // 🔑 IMPORTANT: Pipeline connection can cause "terminated unexpectedly" with some poolers
+
+            // 🚀 STABILITY: Pipeline connection can cause "terminated unexpectedly" with some poolers
             neonConfig.pipelineConnect = false;
           }
 
           const pool = new NeonPool({
             connectionString: finalConnectionString,
             connectionTimeoutMillis: 15000,
-            max: 1, // 🔑 REDUCED: One connection at a time in serverless
+            max: 2, // 🔑 Slightly increased for better concurrent handling
           });
 
           pool.on("error", (err: Error) => {
