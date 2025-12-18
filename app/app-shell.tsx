@@ -80,10 +80,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               const profileDone = currentSetup
                 ? JSON.parse(currentSetup).profileCompleted
                 : true;
-              markSetupComplete(true, profileDone);
+              markSetupComplete(true, profileDone, status.hasTables);
+
+              // 🛡️ CRITICAL REDIRECTION: If configured but has no tables, force to onboarding
+              if (
+                !status.hasTables &&
+                pathname !== "/onboarding" &&
+                pathname !== "/settings/database"
+              ) {
+                router.push("/onboarding");
+              }
             } else {
               // Server says DB is NOT configured, ensure our local state reflects this
-              markSetupComplete(false, false);
+              markSetupComplete(false, false, false);
             }
             setIsSyncing(false);
           })
@@ -197,8 +206,8 @@ function MainContent({
     mode,
   ]);
 
-  // Show loading while checking auth status
-  if (isLoading) {
+  // Show loading while checking auth status OR syncing database status
+  if (isLoading || isSyncing) {
     return <AppLoader />;
   }
 
@@ -211,7 +220,8 @@ function MainContent({
   if (
     canNavigate === false &&
     pathname !== "/settings/database" &&
-    pathname !== "/onboarding"
+    pathname !== "/onboarding" &&
+    pathname !== "/setup/account"
   ) {
     return null;
   }

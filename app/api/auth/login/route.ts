@@ -297,8 +297,25 @@ export async function POST(request: NextRequest) {
     response.cookies.set(cookieOptions);
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     log.error({ err: error }, "Login error");
+
+    // Check for Prisma "Table does not exist" error
+    if (
+      error.code === "P2021" ||
+      (error.message && error.message.includes("does not exist"))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Database schema is not initialized. Please go to Onboarding to setup your database tables.",
+          setupRequired: true,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
