@@ -5,6 +5,74 @@ import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ uid: string }> }
+) {
+  const { uid } = await context.params;
+  if (!uid) {
+    return NextResponse.json(
+      { success: false, error: "Missing user id" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        uid: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        phone: true,
+        bio: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        country: true,
+        postalCode: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatarUrl,
+        role: user.role,
+        phone: user.phone,
+        bio: user.bio,
+        addressLine1: user.addressLine1,
+        addressLine2: user.addressLine2,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postalCode,
+        created_at: user.createdAt,
+      },
+    });
+  } catch (error: unknown) {
+    log.error({ err: error, uid }, "Fetch user error");
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch user profile" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ uid: string }> }

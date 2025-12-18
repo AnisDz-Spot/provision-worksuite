@@ -269,6 +269,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser(authUser);
           setIsAuthenticated(true);
           localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+
+          // 🛡️ SEED SETTINGS: Populate pv:user-settings if it's default/empty to prevent "Alex Admin"
+          try {
+            const rawSettings = localStorage.getItem("pv:user-settings");
+            const needsSeed =
+              !rawSettings || rawSettings.includes("Alex Admin");
+            if (needsSeed) {
+              localStorage.setItem(
+                "pv:user-settings",
+                JSON.stringify({
+                  fullName: authUser.name,
+                  email: authUser.email,
+                  role: authUser.role,
+                  phone: "",
+                  bio: "",
+                  addressLine1: "",
+                  addressLine2: "",
+                  city: "",
+                  state: "",
+                  country: "",
+                  postalCode: "",
+                })
+              );
+            }
+          } catch (e) {
+            console.warn("Failed to seed user settings", e);
+          }
+
           // If we successfully logged in via DB but client thought we were in implicit mock mode,
           // update client state to "real" to prevent future confusion.
           if (!setupComplete) {
