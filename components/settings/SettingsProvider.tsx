@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   ReactNode,
 } from "react";
 import {
@@ -21,7 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 interface SettingsContextValue {
   user: UserSettingsData;
   workspace: WorkspaceSettingsData;
-  updateUser: (data: UserSettingsData) => void;
+  updateUser: (data: UserSettingsData, options?: { silent?: boolean }) => void;
   updateWorkspace: (data: WorkspaceSettingsData) => void;
 }
 
@@ -87,25 +88,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, [workspace.primaryColor]);
 
-  function updateUser(data: UserSettingsData) {
-    setUser(data);
-    saveUserSettings(data);
-    showToast("Profile saved", "success");
-  }
-
-  function updateWorkspace(data: WorkspaceSettingsData) {
-    setWorkspace(data);
-    const res: WorkspaceSaveResult = saveWorkspaceSettings(data);
-    if (res.saved) {
-      if (res.truncatedLogo) {
-        showToast(res.error || "Logo omitted due to size", "warning");
-      } else {
-        showToast("Workspace settings saved", "success");
+  const updateUser = useCallback(
+    (data: UserSettingsData, options?: { silent?: boolean }) => {
+      setUser(data);
+      saveUserSettings(data);
+      if (!options?.silent) {
+        showToast("Profile saved", "success");
       }
-    } else {
-      showToast(res.error || "Failed to save workspace settings", "error");
-    }
-  }
+    },
+    [showToast]
+  );
+
+  const updateWorkspace = useCallback(
+    (data: WorkspaceSettingsData) => {
+      setWorkspace(data);
+      const res: WorkspaceSaveResult = saveWorkspaceSettings(data);
+      if (res.saved) {
+        if (res.truncatedLogo) {
+          showToast(res.error || "Logo omitted due to size", "warning");
+        } else {
+          showToast("Workspace settings saved", "success");
+        }
+      } else {
+        showToast(res.error || "Failed to save workspace settings", "error");
+      }
+    },
+    [showToast]
+  );
 
   return (
     <SettingsContext.Provider

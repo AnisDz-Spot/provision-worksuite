@@ -100,7 +100,7 @@ export function UserProfileSettings() {
             };
             setForm(updatedForm);
             // Also sync the settings context so other components (navbar) update
-            updateUser(updatedForm);
+            updateUser(updatedForm, { silent: true });
           }
         } catch (e) {
           console.error("Failed to sync profile with database", e);

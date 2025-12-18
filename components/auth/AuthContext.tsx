@@ -263,6 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             name: data.user.name,
             email: data.user.email,
             role: data.user.role,
+            avatarUrl: data.user.avatar_url,
             isAdmin: data.user.role === "Administrator",
           };
 
@@ -281,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 JSON.stringify({
                   fullName: authUser.name,
                   email: authUser.email,
+                  avatarDataUrl: authUser.avatarUrl,
                   role: authUser.role,
                   phone: "",
                   bio: "",
