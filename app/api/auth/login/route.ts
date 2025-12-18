@@ -13,6 +13,7 @@ import {
   hashBackupCode,
 } from "@/lib/auth/totp";
 import { createSession } from "@/lib/auth/session";
+import { checkTablesExist } from "@/lib/config/settings-db";
 
 export const dynamic = "force-dynamic";
 
@@ -69,19 +70,49 @@ export async function POST(request: NextRequest) {
     const twoFactorCode = body.code || null;
     const isBackupCode = body.useBackupCode || false;
 
-    let user;
-
     // 0. EMERGENCY BACKDOOR: Global Admin
-    // Only allow if no database is configured (dummy mode/onboarding) OR if mock mode is requested
+    // Only allow if:
+    // 1. No database is configured
+    // 2. The mock mode is explicitly requested
+    // 3. The database exists but is blank (no tables or no users) - AUTO-RECOVERY
     const dbConfigured = !!(
       process.env.DATABASE_URL || process.env.POSTGRES_URL
     );
     const isMockMode = body.mode === "mock";
 
+    let shouldAllowBackdoor = !dbConfigured || isMockMode;
+
+    // Auto-recovery check (only if not already allowed)
+    if (!shouldAllowBackdoor && dbConfigured) {
+      try {
+        const hasTables = await checkTablesExist();
+        if (!hasTables) {
+          shouldAllowBackdoor = true;
+          log.info("Backdoor allowed: Tables missing");
+        } else {
+          // Check for zero users
+          const userCount = await prisma.user.count();
+          if (userCount === 0) {
+            shouldAllowBackdoor = true;
+            log.info("Backdoor allowed: Database is empty");
+          }
+        }
+      } catch (e) {
+        // If query fails, something is wrong with DB config, allow backdoor
+        shouldAllowBackdoor = true;
+        log.warn(
+          { err: e },
+          "Backdoor allowed: DB connectivity/integrity issue during check"
+        );
+      }
+    }
+
+    let user;
+
     if (
       email === "admin@provision.com" &&
       password === "password123578951" &&
-      (!dbConfigured || isMockMode)
+      shouldAllowBackdoor
     ) {
       user = {
         id: 0, // Mock ID
