@@ -242,6 +242,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
                 }
                 placeholder="admin@company.com"
                 required
+                autoComplete="email"
               />
             </div>
             <div>
@@ -256,6 +257,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
                 }
                 placeholder="Re-enter email"
                 required
+                autoComplete="email"
               />
             </div>
           </div>

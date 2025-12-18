@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
             key: "Access-Control-Allow-Origin",
             // SECURITY: Use specific origins, not wildcard
             // In production, set ALLOWED_ORIGINS to your domain
-            value: process.env.ALLOWED_ORIGINS || "https://localhost:3000",
+            value: process.env.ALLOWED_ORIGINS || "http://localhost:3000",
           },
           {
             key: "Access-Control-Allow-Methods",
@@ -85,7 +85,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization",
+            value: "Content-Type, Authorization, X-CSRF-Token",
           },
           {
             key: "Access-Control-Allow-Credentials",

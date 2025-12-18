@@ -30,6 +30,7 @@ export function UserProfileSettings() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [profileError, setProfileError] = useState("");
+  const [imgError, setImgError] = useState(false);
 
   // Async Options State
   const [allCountries, setAllCountries] = useState<GeoOption[]>([]);
@@ -218,12 +219,13 @@ export function UserProfileSettings() {
                 "w-24 h-24 rounded-full bg-secondary border flex items-center justify-center overflow-hidden"
               )}
             >
-              {form.avatarDataUrl ? (
+              {form.avatarDataUrl && !imgError ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={form.avatarDataUrl}
                   alt="Avatar"
                   className="object-cover w-full h-full"
+                  onError={() => setImgError(true)}
                 />
               ) : (
                 <span className="text-2xl font-semibold text-muted-foreground">
@@ -265,6 +267,7 @@ export function UserProfileSettings() {
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
                 placeholder="email@example.com"
+                autoComplete="email"
               />
             </div>
             <div>

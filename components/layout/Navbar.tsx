@@ -34,6 +34,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
   const { user, workspace } = useSettings();
   const { currentUser, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const { isOpen, setIsOpen } = useCommandPalette();
   const segments = pathname?.split("/").filter(Boolean) || [];
@@ -154,12 +155,13 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
               }}
               className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             >
-              {currentUser?.avatarUrl ? (
+              {currentUser?.avatarUrl && !imgError ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={currentUser.avatarUrl}
                   alt="Avatar"
                   className="w-8 h-8 rounded-full object-cover border"
+                  onError={() => setImgError(true)}
                 />
               ) : currentUser?.name ? (
                 <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
