@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { useAuth, updateUserCredentials } from "@/components/auth/AuthContext";
+import { fetchWithCsrf } from "@/lib/csrf";
 
 export function UserCredentialsSettings() {
   const { currentUser } = useAuth();
@@ -45,7 +46,7 @@ export function UserCredentialsSettings() {
       const mode = localStorage.getItem("pv:dataMode");
       if (mode === "real") {
         // Persistence logic for Real mode
-        const res = await fetch(`/api/users/${currentUser.id}`, {
+        const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

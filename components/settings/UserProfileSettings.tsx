@@ -22,6 +22,7 @@ import {
   type GeoOption,
 } from "@/app/actions/geo";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { fetchWithCsrf } from "@/lib/csrf";
 
 export function UserProfileSettings() {
   const { user, updateUser } = useSettings();
@@ -176,7 +177,7 @@ export function UserProfileSettings() {
         // Note: Role is not updated here to prevent privilege escalation
         if (avatarUrlToSet) payload.avatar_url = avatarUrlToSet;
 
-        const resp = await fetch(`/api/users/${currentUser.id}`, {
+        const resp = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

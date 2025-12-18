@@ -94,7 +94,11 @@ export function markSetupComplete(
   try {
     localStorage.setItem(
       "pv:setupStatus",
-      JSON.stringify({ databaseConfigured, profileCompleted, hasTables })
+      JSON.stringify({
+        databaseConfigured: !!databaseConfigured,
+        profileCompleted: !!profileCompleted,
+        hasTables: !!hasTables,
+      })
     );
   } catch {
     console.error("Failed to save setup status");

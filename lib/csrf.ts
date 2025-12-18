@@ -123,3 +123,40 @@ export async function getOrCreateCsrfToken(): Promise<string> {
 
   return token;
 }
+
+/**
+ * Client-side fetch wrapper that automatically includes the CSRF token
+ */
+export async function fetchWithCsrf(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  // Methods that require CSRF validation
+  const method = options.method?.toUpperCase() || "GET";
+  const needsCsrf = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+  if (!needsCsrf) {
+    return fetch(url, options);
+  }
+
+  // Get token from cookie (client-side only)
+  let token = "";
+  if (typeof document !== "undefined") {
+    const cookies = document.cookie.split(";");
+    const csrfCookie = cookies
+      .find((c) => c.trim().startsWith(`${CSRF_COOKIE_NAME}=`))
+      ?.split("=")[1];
+    token = csrfCookie || "";
+  }
+
+  // Add token to headers
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set(CSRF_HEADER_NAME, token);
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}

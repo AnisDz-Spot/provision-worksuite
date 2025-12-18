@@ -82,9 +82,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               // Server says DB is configured, so update our local state
               const currentSetup = localStorage.getItem("pv:setupStatus");
               const profileDone = currentSetup
-                ? JSON.parse(currentSetup).profileCompleted
+                ? !!JSON.parse(currentSetup).profileCompleted
                 : true;
-              markSetupComplete(true, profileDone, status.hasTables);
+              markSetupComplete(true, profileDone, !!status.hasTables);
 
               // 🛡️ CRITICAL REDIRECTION: If configured but has no tables, force to onboarding
               if (
@@ -235,7 +235,8 @@ function MainContent({
     !isSetupComplete() &&
     pathname !== "/onboarding" &&
     pathname !== "/setup/account" &&
-    !pathname.includes("setup=true");
+    !pathname.includes("setup=true") &&
+    pathname !== "/settings/database";
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
