@@ -177,7 +177,8 @@ function MainContent({
       !isLoading &&
       isAuthenticated &&
       mode === "real" &&
-      canNavigate === false
+      canNavigate === false &&
+      !isSetupComplete()
     ) {
       if (pathname !== "/settings/database") {
         router.push("/settings/database");

@@ -71,8 +71,17 @@ export async function POST(request: NextRequest) {
 
     let user;
 
-    // 0. EMERGENCY BACKDOOR: Global Admin (Bypass Database)
-    if (email === "admin@provision.com" && password === "password123578951") {
+    // 0. EMERGENCY BACKDOOR: Global Admin
+    // Only allow if no database is configured (dummy mode/onboarding)
+    const dbConfigured = !!(
+      process.env.DATABASE_URL || process.env.POSTGRES_URL
+    );
+
+    if (
+      email === "admin@provision.com" &&
+      password === "password123578951" &&
+      !dbConfigured
+    ) {
       user = {
         id: 0, // Mock ID
         uid: "global-admin",

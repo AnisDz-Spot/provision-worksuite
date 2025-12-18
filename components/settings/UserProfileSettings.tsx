@@ -75,6 +75,41 @@ export function UserProfileSettings() {
     }
   }, [user, dirty]);
 
+  // 🚀 SYNC: Fetch real user data from database on mount if using real mode
+  useEffect(() => {
+    if (shouldUseDatabaseData() && currentUser?.id) {
+      const fetchProfile = async () => {
+        try {
+          const res = await fetch(`/api/users/${currentUser.id}`);
+          const data = await res.json();
+          if (data?.success && data?.user) {
+            const dbUser = data.user;
+            const updatedForm: UserSettingsData = {
+              fullName: dbUser.name || "",
+              email: dbUser.email || "",
+              phone: dbUser.phone || "",
+              bio: dbUser.bio || "",
+              addressLine1: dbUser.addressLine1 || "",
+              addressLine2: dbUser.addressLine2 || "",
+              city: dbUser.city || "",
+              state: dbUser.state || "",
+              country: dbUser.country || "",
+              postalCode: dbUser.postalCode || "",
+              role: dbUser.role || "Member",
+              avatarDataUrl: dbUser.avatar_url || "",
+            };
+            setForm(updatedForm);
+            // Also sync the settings context so other components (navbar) update
+            updateUser(updatedForm);
+          }
+        } catch (e) {
+          console.error("Failed to sync profile with database", e);
+        }
+      };
+      fetchProfile();
+    }
+  }, [currentUser?.id, updateUser]); // Only fetch when ID is available
+
   function update<K extends keyof UserSettingsData>(
     key: K,
     value: UserSettingsData[K]

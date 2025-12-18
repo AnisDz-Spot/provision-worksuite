@@ -115,22 +115,37 @@ function DataSourceTab() {
   }
 
   const handleDataModeChange = async (mode: "real" | "mock") => {
+    if (
+      !confirm(
+        `Switch to ${mode === "real" ? "Live" : "Demo"} mode? You will be logged out to apply changes.`
+      )
+    ) {
+      return;
+    }
+
     setDataMode(mode);
     setMessage(null);
 
-    // Clear session to force re-login
+    // 1. Clear Server-side session
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout API failed", e);
+    }
+
+    // 2. Clear Client-side session and set preferences
     localStorage.removeItem("pv:currentUser");
     localStorage.removeItem("pv:session");
     localStorage.setItem("pv:dataMode", mode);
+    setDataModePreference(mode);
 
     if (mode === "mock") {
       // Seed data if missing
       const { seedLocalData } = await import("@/lib/seedData");
       seedLocalData();
-      router.push("/");
+      window.location.href = "/auth/login?mode=demo";
     } else {
-      await loadStatus();
-      router.push("/settings?tab=dataSource");
+      window.location.href = "/auth/login?mode=live";
     }
   };
 

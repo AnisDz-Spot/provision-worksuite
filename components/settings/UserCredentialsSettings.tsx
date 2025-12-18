@@ -17,7 +17,7 @@ export function UserCredentialsSettings() {
   const [credentialsSuccess, setCredentialsSuccess] = useState("");
   const [savingCredentials, setSavingCredentials] = useState(false);
 
-  function handleUpdateCredentials(e: React.FormEvent) {
+  async function handleUpdateCredentials(e: React.FormEvent) {
     e.preventDefault();
     setCredentialsError("");
     setCredentialsSuccess("");
@@ -41,23 +41,47 @@ export function UserCredentialsSettings() {
 
     setSavingCredentials(true);
 
-    const success = updateUserCredentials(
-      currentUser.id,
-      newEmail || undefined,
-      newPassword || undefined
-    );
+    try {
+      const mode = localStorage.getItem("pv:dataMode");
+      if (mode === "real") {
+        // Persistence logic for Real mode
+        const res = await fetch(`/api/users/${currentUser.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: newEmail || undefined,
+            password: newPassword || undefined,
+          }),
+        });
 
-    if (success) {
-      setCredentialsSuccess("Credentials updated successfully");
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(
+            data.error || "Failed to update credentials in database"
+          );
+        }
+
+        setCredentialsSuccess("Credentials updated successfully in database");
+      } else {
+        // Fallback for Mock mode
+        const success = updateUserCredentials(
+          currentUser.id,
+          newEmail || undefined,
+          newPassword || undefined
+        );
+        if (!success) throw new Error("Local update failed");
+        setCredentialsSuccess("Credentials updated successfully (Demo Mode)");
+      }
+
       setNewEmail("");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } else {
-      setCredentialsError("Failed to update credentials");
+    } catch (err: any) {
+      setCredentialsError(err.message || "Failed to update credentials");
+    } finally {
+      setSavingCredentials(false);
     }
-
-    setSavingCredentials(false);
   }
 
   return (
