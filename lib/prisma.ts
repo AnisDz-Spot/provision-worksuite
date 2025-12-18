@@ -60,7 +60,7 @@ async function createDatabaseAdapter(
           lowerUrl.includes("neon.tech") || lowerUrl.includes("-pooler.");
 
         // Generic SSL Detection for PostgreSQL
-        // Many cloud providers (RDS, DO, Supabase) require SSL
+        // Many cloud providers (RDS, DO, Supabase, Neon) require SSL
         const hasSslParam = lowerUrl.includes("sslmode=");
         const needsSsl =
           isNeon ||
@@ -74,55 +74,25 @@ async function createDatabaseAdapter(
           const separator = url.includes("?") ? "&" : "?";
           finalConnectionString = `${url}${separator}sslmode=require`;
           console.log(
-            "🔒 Adding sslmode=require to connection string for cloud provider"
+            "🔒 Enforcing sslmode=require for cloud database provider"
           );
         }
 
-        if (isNeon) {
-          const { Pool: NeonPool, neonConfig } =
-            await import("@neondatabase/serverless");
-          const { PrismaNeon } = await import("@prisma/adapter-neon");
+        // 🚀 STABILITY: Always prefer standard pg (TCP) in Node.js environments.
+        // The standard pg driver is significantly more stable than WebSockets
+        // when running in traditional serverless functions (Node.js).
+        const runtime = process.env.NEXT_RUNTIME;
 
-          // Basic setup for Neon - keep it standard unless explicitly needed
-          if (typeof window === "undefined") {
-            // 🚀 STABILITY: Environment-aware WebSocket
-            // Only assign the WS library if the global WebSocket is missing (e.g., standard Node.js)
-            // Vercel Edge and newer runtimes have native WebSockets which are more reliable.
-            if (typeof (globalThis as any).WebSocket === "undefined") {
-              neonConfig.webSocketConstructor = ws;
-            }
-
-            // 🚀 STABILITY: Pipeline connection can cause "terminated unexpectedly" with some poolers
-            neonConfig.pipelineConnect = false;
-          }
-
-          const pool = new NeonPool({
-            connectionString: finalConnectionString,
-            connectionTimeoutMillis: 30000, // 🕒 Increased to 30s
-            idleTimeoutMillis: 30000, // 🕒 Keep connection alive longer
-            max: 1, // 🔑 STRICT: One connection per instance
-          });
-
-          pool.on("error", (err: Error) => {
-            console.error("🚨 Neon Pool Error:", err.message);
-          });
-
-          const adapter = new PrismaNeon(pool as any);
-          return { type: "postgresql", adapter };
-        } else {
-          // Standard PostgreSQL / Other cloud providers
+        if (runtime !== "edge") {
+          // Standard PostgreSQL / Cloud providers using TCP
           const { Pool } = await import("pg");
           const { PrismaPg } = await import("@prisma/adapter-pg");
 
           const pool = new Pool({
             connectionString: finalConnectionString,
-            connectionTimeoutMillis: 30000, // 🕒 Increased to 30s
+            connectionTimeoutMillis: 30000,
             max: 1, // 🔑 STRICT: Serverless best practice
-            // Only add SSL object if explicitly needed and not in URL
-            ssl:
-              !hasSslParam && needsSsl
-                ? { rejectUnauthorized: false }
-                : undefined,
+            ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
           });
 
           pool.on("error", (err: Error) => {
@@ -130,6 +100,22 @@ async function createDatabaseAdapter(
           });
 
           const adapter = new PrismaPg(pool);
+          return { type: "postgresql", adapter };
+        } else {
+          // Edge Runtime Fallback: Use Neon Serverless (WebSockets)
+          const { Pool: NeonPool, neonConfig } =
+            await import("@neondatabase/serverless");
+          const { PrismaNeon } = await import("@prisma/adapter-neon");
+
+          neonConfig.pipelineConnect = false;
+
+          const pool = new NeonPool({
+            connectionString: finalConnectionString,
+            connectionTimeoutMillis: 30000,
+            max: 1,
+          });
+
+          const adapter = new PrismaNeon(pool as any);
           return { type: "postgresql", adapter };
         }
       }
