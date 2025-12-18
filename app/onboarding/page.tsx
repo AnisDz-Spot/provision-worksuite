@@ -44,9 +44,9 @@ export default function OnboardingPage() {
       if (data.ready && data.dbConfigured) {
         // Already configured
         if (isAuthenticated) {
-          // If already logged in, mark onboarding as done and go to root
+          // If already logged in, mark onboarding as done and go to account setup if profile pending
           localStorage.setItem("pv:onboardingDone", "true");
-          router.replace("/");
+          router.replace("/settings?tab=profile&setup=true"); // 🔑 MODIFIED: Direct to account setup
         } else {
           // Otherwise go to registration
           router.replace("/auth/register?flow=onboarding");

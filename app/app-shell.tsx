@@ -47,7 +47,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         pathname !== "/onboarding" &&
         !onboardingComplete &&
         mode !== "mock" &&
-        isDatabaseConfigured()
+        isDatabaseConfigured() &&
+        !pathname.includes("setup=true") // 🔑 ADDED: Allow access to setup page
       ) {
         router.push("/onboarding");
       }
