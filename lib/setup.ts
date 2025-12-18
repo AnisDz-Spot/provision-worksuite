@@ -102,6 +102,30 @@ export function markSetupComplete(
 }
 
 /**
+ * Mark database as configured (client-side state only)
+ */
+export function markDatabaseConfigured(configured: boolean) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const setupStatus = localStorage.getItem("pv:setupStatus");
+    const currentStatus = setupStatus
+      ? JSON.parse(setupStatus)
+      : { profileCompleted: false, hasTables: false };
+
+    localStorage.setItem(
+      "pv:setupStatus",
+      JSON.stringify({
+        ...currentStatus,
+        databaseConfigured: configured,
+      })
+    );
+  } catch {
+    console.error("Failed to mark database as configured");
+  }
+}
+
+/**
  * Get setup status
  */
 export function getSetupStatus() {
