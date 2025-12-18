@@ -59,11 +59,7 @@ export const authConfig = {
 const { handlers } = NextAuth(authConfig);
 
 // Wrapper to catch missing secret errors
-const handleAuth = async (
-  req: Request,
-  context: any,
-  method: "GET" | "POST"
-) => {
+const handleAuth = async (req: any, context: any, method: "GET" | "POST") => {
   if (!process.env.AUTH_SECRET) {
     return NextResponse.json(
       { error: "AUTH_SECRET is not configured on the server." },
@@ -73,7 +69,6 @@ const handleAuth = async (
   return method === "GET" ? handlers.GET(req) : handlers.POST(req);
 };
 
-export const GET = (req: Request, context: any) =>
-  handleAuth(req, context, "GET");
-export const POST = (req: Request, context: any) =>
+export const GET = (req: any, context: any) => handleAuth(req, context, "GET");
+export const POST = (req: any, context: any) =>
   handleAuth(req, context, "POST");
