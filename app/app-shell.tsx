@@ -23,28 +23,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { currentUser, isAuthenticated, isLoading } = useAuth();
   const [isClient, setIsClient] = React.useState(false);
   const [mode, setMode] = React.useState<string | null>(null);
+  const [showModeModal, setShowModeModal] = React.useState(false);
+  const [isSyncing, setIsSyncing] = React.useState(true);
 
   React.useEffect(() => {
     setIsClient(true);
-    const saved = localStorage.getItem("pv:dataMode");
-    if (saved) {
-      setMode(saved);
-    } else if (isDatabaseConfigured()) {
-      setMode("real");
-    }
   }, []);
-
-  const [showModeModal, setShowModeModal] = React.useState(false);
 
   // Auto-detect demo mode and set flags FIRST, before any redirects
   React.useEffect(() => {
+    // 🛡️ CRITICAL: Wait for sync before making automatic decisions
+    if (isSyncing) return;
+
     if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
       const pref = localStorage.getItem("pv:dataMode");
       const onboardingDone = localStorage.getItem("pv:onboardingDone");
 
       // If no mode set yet and no database, auto-set to mock and skip onboarding
       if (!pref && !isDatabaseConfigured()) {
+        console.log(
+          "[AppShell] No database found after sync, auto-setting to mock"
+        );
         setDataModePreference("mock");
+        setMode("mock"); // 🔑 Update local state too
         localStorage.setItem("pv:onboardingDone", "true");
       }
 
@@ -68,10 +69,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [isLoading, isAuthenticated, currentUser, pathname, router]);
+  }, [isLoading, isAuthenticated, currentUser, pathname, router, isSyncing]);
 
   // Sync DB status from server to prevent redirect loop in Live mode
-  const [isSyncing, setIsSyncing] = React.useState(true);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -86,6 +86,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   !!status.adminExists
                 : !!status.adminExists;
               markSetupComplete(true, profileDone, !!status.hasTables);
+
+              // 🔑 SYNC LOCAL STATE: If we found a DB, ensure we are in a valid mode
+              const pref = localStorage.getItem("pv:dataMode");
+              if (!pref || pref === "mock") {
+                // If no preference OR it was automatically set to "mock" because DB wasn't ready,
+                // we should stick with "real" now that we KNOW there's a DB.
+                setDataModePreference("real");
+                setMode("real");
+              } else if (pref) {
+                setMode(pref);
+              }
 
               // 🛡️ CRITICAL REDIRECTION: If configured but has no tables, force to onboarding
               if (
