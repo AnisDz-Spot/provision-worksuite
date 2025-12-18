@@ -8,9 +8,9 @@ import { useSidebar } from "@/components/layout/SidebarContext";
 import { useAuth } from "@/components/auth/AuthContext";
 import { TeamChat } from "@/components/team/TeamChat";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
-import { AppLoader } from "@/components/ui/AppLoader";
-import { cn } from "@/lib/utils";
 import { setDataModePreference } from "@/lib/dataSource";
+import { AppLoader } from "@/components/ui/AppLoader";
+import { PageLoader } from "@/components/ui/PageLoader";
 import {
   isDatabaseConfigured,
   isSetupComplete,
@@ -224,7 +224,7 @@ function MainContent({
 
   // Show loading while checking auth status
   if (isLoading) {
-    return <AppLoader />;
+    return <PageLoader />;
   }
 
   // Don't render main app until authenticated
@@ -274,11 +274,7 @@ function MainContent({
       >
         <Navbar canNavigate={canNavigate} />
         <main className="flex-1 bg-background text-foreground relative">
-          {isSyncing || isNavBlocked ? (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <AppLoader />
-            </div>
-          ) : null}
+          {isSyncing || isNavBlocked ? <PageLoader /> : null}
           {children}
         </main>
         <ScrollToTop />
