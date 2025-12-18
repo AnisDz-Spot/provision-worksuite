@@ -35,15 +35,22 @@ export function ResourceAllocation({
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
     "all"
   );
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(
-    members && members.length > 0 ? members : defaultMembers
-  );
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
-      if (shouldUseMockData() && members && members.length > 0) return; // Use props if mock mode or provided
+
+      // Initial state based on mode
+      if (shouldUseMockData()) {
+        if (members && members.length > 0) {
+          setTeamMembers(members);
+        } else {
+          setTeamMembers(defaultMembers);
+        }
+        return;
+      }
 
       // In real mode, load users and tasks
       const { loadUsers, loadTasks, loadProjects } = await import("@/lib/data");

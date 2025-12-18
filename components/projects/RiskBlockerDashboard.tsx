@@ -149,7 +149,7 @@ const BLOCKERS: Blocker[] = [
 ];
 
 export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
-  const [blockers, setBlockers] = useState<Blocker[]>(BLOCKERS);
+  const [blockers, setBlockers] = useState<Blocker[]>([]);
   const [filter, setFilter] = useState<{
     level?: RiskLevel;
     status?: BlockerStatus;
@@ -172,7 +172,16 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   React.useEffect(() => {
     loadCategoryConfigs().then(setRuntimeCategories);
     loadRiskLevels().then(setRiskLevels);
-    loadBlockersFromDB();
+
+    async function init() {
+      const { shouldUseMockData } = await import("@/lib/dataSource");
+      if (shouldUseMockData()) {
+        setBlockers(BLOCKERS);
+      } else {
+        loadBlockersFromDB();
+      }
+    }
+    init();
   }, []);
 
   const loadBlockersFromDB = async () => {

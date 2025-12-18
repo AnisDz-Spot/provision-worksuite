@@ -83,17 +83,9 @@ export async function loadProjects(): Promise<Project[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.warn(
-        "Failed to load projects from database, falling back to mock data:",
-        result.error
-      );
-      return PROJECTS as Project[];
+      return [];
     } catch (error) {
-      console.warn(
-        "Error loading projects from database, falling back to mock data:",
-        error
-      );
-      return PROJECTS as Project[];
+      return [];
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
@@ -154,17 +146,9 @@ export async function loadTasks(): Promise<Task[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.warn(
-        "Failed to load tasks from database, falling back to mock data:",
-        result.error
-      );
-      return TASKS as Task[];
+      return [];
     } catch (error) {
-      console.warn(
-        "Error loading tasks from database, falling back to mock data:",
-        error
-      );
-      return TASKS as Task[];
+      return [];
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
@@ -225,17 +209,9 @@ export async function loadUsers(): Promise<User[]> {
       if (result.success) {
         return result.data || [];
       }
-      console.warn(
-        "Failed to load users from database, falling back to mock data:",
-        result.error
-      );
-      return mapMockUsers(USERS);
+      return [];
     } catch (error) {
-      console.warn(
-        "Error loading users from database, falling back to mock data:",
-        error
-      );
-      return mapMockUsers(USERS);
+      return [];
     }
   }
   // Fallback behavior only if explicitly NOT in database mode
