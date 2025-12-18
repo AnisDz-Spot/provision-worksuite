@@ -31,7 +31,16 @@ export async function GET() {
     // 3. Check if tables exist
     const hasTables = await checkTablesExist();
 
-    // 4. Check optional Storage
+    // 4. Check if at least one admin exists
+    let adminExists = false;
+    if (hasTables) {
+      const adminCount = await prisma.user.count({
+        where: { role: "Administrator" },
+      });
+      adminExists = adminCount > 0;
+    }
+
+    // 5. Check optional Storage
     const storageProvider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
 
     return NextResponse.json({
@@ -39,6 +48,7 @@ export async function GET() {
       provider: storageProvider || "vercel-blob (default)",
       dbConfigured: true,
       hasTables: !!hasTables,
+      adminExists,
     });
   } catch (error: any) {
     log.error({ err: error }, "System check failed");

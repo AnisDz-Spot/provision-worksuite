@@ -19,9 +19,14 @@ export function isDatabaseConfiguredServer(): boolean {
 export function getDatabaseStatus(): Promise<{
   configured: boolean;
   hasTables: boolean;
+  adminExists: boolean;
 }> {
   if (typeof window === "undefined") {
-    return Promise.resolve({ configured: false, hasTables: false });
+    return Promise.resolve({
+      configured: false,
+      hasTables: false,
+      adminExists: false,
+    });
   }
 
   // Call API endpoint to check status (server-side validation only)
@@ -30,8 +35,9 @@ export function getDatabaseStatus(): Promise<{
     .then((data) => ({
       configured: !!data.dbConfigured,
       hasTables: !!data.hasTables,
+      adminExists: !!data.adminExists,
     }))
-    .catch(() => ({ configured: false, hasTables: false }));
+    .catch(() => ({ configured: false, hasTables: false, adminExists: false }));
 }
 
 export function isDatabaseConfigured(): boolean {
