@@ -21,15 +21,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, isAuthenticated, isLoading } = useAuth();
-  const [mode, setMode] = React.useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("pv:dataMode");
-      if (saved) return saved;
-      // Default to "real" if database is configured and we're authenticated (prevent black screen)
-      if (isDatabaseConfigured()) return "real";
+  const [isClient, setIsClient] = React.useState(false);
+  const [mode, setMode] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setIsClient(true);
+    const saved = localStorage.getItem("pv:dataMode");
+    if (saved) {
+      setMode(saved);
+    } else if (isDatabaseConfigured()) {
+      setMode("real");
     }
-    return null;
-  });
+  }, []);
+
   const [showModeModal, setShowModeModal] = React.useState(false);
 
   // Auto-detect demo mode and set flags FIRST, before any redirects
@@ -206,8 +210,8 @@ function MainContent({
     mode,
   ]);
 
-  // Show loading while checking auth status OR syncing database status
-  if (isLoading || isSyncing) {
+  // Show loading while checking auth status
+  if (isLoading) {
     return <AppLoader />;
   }
 
@@ -216,15 +220,13 @@ function MainContent({
     return <AppLoader />;
   }
 
-  // If navigation is not allowed, block main content (except DB setup and onboarding)
-  if (
+  // If navigation is NOT allowed (e.g. forced onboarding), still show the sidebar/navbar
+  // but block the inner content.
+  const isNavBlocked =
     canNavigate === false &&
     pathname !== "/settings/database" &&
     pathname !== "/onboarding" &&
-    pathname !== "/setup/account"
-  ) {
-    return null;
-  }
+    pathname !== "/setup/account";
 
   const showSetupBanner =
     !isLoading &&
@@ -232,6 +234,7 @@ function MainContent({
     mode === "real" &&
     !isSetupComplete() &&
     pathname !== "/onboarding" &&
+    pathname !== "/setup/account" &&
     !pathname.includes("setup=true");
 
   return (
@@ -256,7 +259,14 @@ function MainContent({
         }`}
       >
         <Navbar canNavigate={canNavigate} />
-        <main className="flex-1 bg-background text-foreground">{children}</main>
+        <main className="flex-1 bg-background text-foreground relative">
+          {isSyncing || isNavBlocked ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <AppLoader />
+            </div>
+          ) : null}
+          {children}
+        </main>
         <ScrollToTop />
         {currentUser && pathname !== "/onboarding" && mode === "real" && (
           <TeamChat currentUser={currentUser.id} />

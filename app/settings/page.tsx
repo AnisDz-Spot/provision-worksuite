@@ -308,12 +308,13 @@ function DataSourceTab() {
 
                   {/* Show continue button if setup is incomplete */}
                   {!status.isSetupComplete && (
-                    <div className="mt-2">
+                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
                       <Button
                         variant="primary"
                         onClick={() => router.push("/setup/account")}
+                        className="w-full sm:w-auto"
                       >
-                        Continue to Profile Setup →
+                        Complete Setup Now →
                       </Button>
                     </div>
                   )}
