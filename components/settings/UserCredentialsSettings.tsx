@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { useAuth, updateUserCredentials } from "@/components/auth/AuthContext";
-import { fetchWithCsrf } from "@/lib/csrf";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export function UserCredentialsSettings() {
   const { currentUser } = useAuth();

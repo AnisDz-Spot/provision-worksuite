@@ -22,7 +22,7 @@ import {
   type GeoOption,
 } from "@/app/actions/geo";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
-import { fetchWithCsrf } from "@/lib/csrf";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export function UserProfileSettings() {
   const { user, updateUser } = useSettings();
