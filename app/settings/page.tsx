@@ -18,7 +18,7 @@ import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
-import { isDatabaseConfigured } from "@/lib/setup";
+import { isDatabaseConfigured, markSetupComplete } from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
@@ -86,6 +86,9 @@ function DataSourceTab() {
 
   useEffect(() => {
     if (status) {
+      // Sync local setup status to allow Account Setup access
+      markSetupComplete(status.hasTables, status.isSetupComplete);
+
       // Open form by default only if we are missing BOTH env vars AND custom config
       const isMissingEverything =
         !status.hasEnvironmentVars && !status.hasDatabaseConfig;
