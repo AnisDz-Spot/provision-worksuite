@@ -109,6 +109,14 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         // Clear demo/setup state
         localStorage.removeItem("pv:currentUser");
         localStorage.removeItem("pv:session");
+        localStorage.setItem("pv:onboardingDone", "true");
+
+        // Force server-side logout before redirecting
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch (e) {
+          console.error("Post-setup logout failed:", e);
+        }
 
         if (onComplete) onComplete();
         router.push("/auth/login?setup=complete");

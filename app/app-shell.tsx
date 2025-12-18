@@ -23,7 +23,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { currentUser, isAuthenticated, isLoading } = useAuth();
   const [mode, setMode] = React.useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("pv:dataMode");
+      const saved = localStorage.getItem("pv:dataMode");
+      if (saved) return saved;
+      // Default to "real" if database is configured and we're authenticated (prevent black screen)
+      if (isDatabaseConfigured()) return "real";
     }
     return null;
   });
@@ -228,7 +231,7 @@ function MainContent({
         <div className="bg-amber-600 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-2">
           <span>⚠️ Your account setup is incomplete.</span>
           <button
-            onClick={() => router.push("/settings?tab=profile&setup=true")}
+            onClick={() => router.push("/setup/account")}
             className="underline hover:text-amber-100"
           >
             Complete Setup Now
