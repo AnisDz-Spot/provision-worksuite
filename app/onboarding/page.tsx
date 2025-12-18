@@ -48,9 +48,9 @@ export default function OnboardingPage() {
         // Already configured AND has tables
         if (isAuthenticated) {
           localStorage.setItem("pv:onboardingDone", "true");
-          router.replace("/settings?tab=profile&setup=true");
+          router.replace("/setup/account");
         } else {
-          router.replace("/auth/register?flow=onboarding");
+          router.replace("/setup/account");
         }
         return;
       }
@@ -81,9 +81,9 @@ export default function OnboardingPage() {
         localStorage.setItem("pv:dataMode", "live");
 
         setStep("success");
-        // Redirect to registration after short delay
+        // Redirect to account setup after short delay
         setTimeout(() => {
-          router.push("/auth/register?flow=onboarding");
+          router.push("/setup/account");
         }, 2000);
       } else {
         throw new Error(result.message || "Schema initialization failed");
@@ -130,9 +130,9 @@ export default function OnboardingPage() {
 
       setStep("success");
 
-      // Redirect to registration after a short delay
+      // Redirect to account setup after a short delay
       setTimeout(() => {
-        router.push("/auth/register?flow=onboarding");
+        router.push("/setup/account");
       }, 2000);
     } catch (err: any) {
       setError(err.message || "Failed to save configuration");

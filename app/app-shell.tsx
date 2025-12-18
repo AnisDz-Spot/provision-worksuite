@@ -47,12 +47,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (
         pathname !== "/onboarding" &&
+        pathname !== "/setup/account" && // Don't redirect if already on setup page
         !onboardingComplete &&
         mode !== "mock" &&
         isDatabaseConfigured() &&
         (!pathname.includes("setup=true") || !hasDatabaseTables()) // 🔑 REQUIRE tables for setup=true
       ) {
-        router.push("/onboarding");
+        // If tables exist but onboarding not done, go to setup account
+        if (hasDatabaseTables()) {
+          router.push("/setup/account");
+        } else {
+          router.push("/onboarding");
+        }
       }
     }
   }, [isLoading, isAuthenticated, currentUser, pathname, router]);

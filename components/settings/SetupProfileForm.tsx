@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 
 interface SetupProfileFormProps {
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
 export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
@@ -25,41 +25,6 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [timer, setTimer] = useState(180); // 3 minutes
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [expired, setExpired] = useState(false);
-
-  // Timer countdown effect
-  useEffect(() => {
-    if (timer <= 0) {
-      setExpired(true);
-      // Cleanup: remove DB config, license, restore global admin, dummy mode, seed mock data
-      localStorage.removeItem("pv:dbConfig");
-      localStorage.removeItem("pv:licenseActivated");
-      localStorage.setItem("pv:dataMode", "mock");
-      // Restore global admin session (simulate by setting demo user/session)
-      localStorage.setItem(
-        "pv:currentUser",
-        JSON.stringify({
-          email: "admin@provision.com",
-          role: "admin",
-          demo: true,
-        })
-      );
-      localStorage.setItem("pv:session", "demo-session");
-      // Seed mock data
-      import("@/lib/seedData").then(({ seedLocalData }) => seedLocalData());
-      // Redirect to data source selection after short delay
-      setTimeout(() => {
-        router.replace("/settings?tab=dataSource&timeout=1");
-      }, 1000);
-      return;
-    }
-    timerRef.current = setTimeout(() => setTimer((t) => t - 1), 1000);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [timer, router]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -141,28 +106,12 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
             completedAt: new Date().toISOString(),
           })
         );
-        // Remove global admin session and all mock/demo data except theme, settings, etc.
-        Object.keys(localStorage).forEach((key) => {
-          if (
-            key.startsWith("pv:") &&
-            ![
-              "pv:dbConfig",
-              "pv:licenseActivated",
-              "pv:dataMode",
-              "pv:setupStatus",
-              "pv:theme",
-              "pv:settingsTab",
-              "pv:notificationsSubTab",
-            ].includes(key)
-          ) {
-            localStorage.removeItem(key);
-          }
-        });
-        // Remove global admin session
+        // Clear demo/setup state
         localStorage.removeItem("pv:currentUser");
         localStorage.removeItem("pv:session");
-        onComplete();
-        router.push("/");
+
+        if (onComplete) onComplete();
+        router.push("/auth/login?setup=complete");
       } else {
         const errorMsg = data.error || "Failed to create admin account";
         const details = data.details || "";
@@ -194,30 +143,6 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
 
   return (
     <Card className="max-w-2xl relative overflow-hidden">
-      {/* Timer Banner */}
-      <div
-        className={`absolute top-0 right-0 p-4 ${
-          timer < 60 ? "animate-pulse" : ""
-        }`}
-      >
-        <div
-          className={`text-2xl font-bold font-mono px-4 py-2 rounded-lg border shadow-sm ${
-            timer < 60
-              ? "bg-red-100 text-red-600 border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-800"
-              : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-          }`}
-        >
-          {expired ? (
-            "TIMEOUT"
-          ) : (
-            <>
-              ⏳ {Math.floor(timer / 60)}:
-              {(timer % 60).toString().padStart(2, "0")}
-            </>
-          )}
-        </div>
-      </div>
-
       <CardHeader>
         <CardTitle>Create Your Admin Account</CardTitle>
         <p className="text-sm text-muted-foreground mt-2 max-w-[80%]">
@@ -366,7 +291,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
+            <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm whitespace-pre-line">
               {error}
             </div>
           )}
@@ -387,8 +312,7 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
 
           <div className="text-xs text-muted-foreground bg-accent/20 p-3 rounded">
             ⚠️ <strong>Important:</strong> After completing this step, use your
-            new email and password to log in. The temporary{" "}
-            <code>anis@provision.com</code> login will be disabled.
+            new email and password to log in.
           </div>
         </form>
       </CardContent>

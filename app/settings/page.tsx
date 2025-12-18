@@ -56,7 +56,6 @@ type TabKey =
 function DataSourceTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isSetupMode = searchParams.get("setup") === "true";
   const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
     if (typeof window === "undefined") return "real";
     const val = localStorage.getItem("pv:dataMode");
@@ -259,7 +258,7 @@ function DataSourceTab() {
                     if (res.success) {
                       await loadStatus();
                       // Auto-redirect to setup
-                      router.push("/settings?tab=profile&setup=true");
+                      router.push("/setup/account");
                     }
                   }}
                   disabled={loading}
@@ -292,14 +291,12 @@ function DataSourceTab() {
                     </div>
                   </div>
 
-                  {/* Show continue button if in setup mode OR setup is incomplete */}
-                  {(isSetupMode || !status.isSetupComplete) && (
+                  {/* Show continue button if setup is incomplete */}
+                  {!status.isSetupComplete && (
                     <div className="mt-2">
                       <Button
                         variant="primary"
-                        onClick={() =>
-                          router.push("/settings?tab=profile&setup=true")
-                        }
+                        onClick={() => router.push("/setup/account")}
                       >
                         Continue to Profile Setup →
                       </Button>
@@ -449,7 +446,7 @@ function SettingsContent() {
     // Actually, led's rely on the parent or handle it here if we can detect it.
     // simpler: If we are not in setup mode, check if we need to be.
     const checkSetup = async () => {
-      if (dataMode === "real" && isSetupMode) {
+      if (dataMode === "real") {
         if (typeof window !== "undefined") {
           if (!hasDatabaseTables()) {
             router.push("/settings?tab=dataSource");
@@ -494,22 +491,14 @@ function SettingsContent() {
 
   return (
     <section className="p-4 md:p-8 flex flex-col gap-8">
-      {/* Hide all navigation UI if in setup mode */}
-      {isSetupMode && (
-        <style>{`.sidebar, .Navbar, .nav, .navigation, .menu, .drawer, .topbar, .appbar, .AppBar, .app-bar, .header, .Header, .footer, .Footer { display: none !important; }`}</style>
-      )}
       <div>
-        <h1 className="text-3xl font-bold mb-2">
-          {isSetupMode ? "Complete Your Profile" : "Settings"}
-        </h1>
+        <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground text-sm">
-          {isSetupMode
-            ? "Set up your admin account to continue. All fields are required."
-            : "Manage your profile and workspace configuration."}
+          Manage your profile and workspace configuration.
         </p>
       </div>
-      {/* Hide navigation tabs if in setup mode */}
-      {!isSetupMode && (
+      {/* Navigation tabs */}
+      {true && (
         <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
           <Button
             variant={
@@ -618,12 +607,7 @@ function SettingsContent() {
         </div>
       )}
 
-      {(tab === "profile" || tab === "user") &&
-        (isSetupMode ? (
-          <SetupProfileForm onComplete={() => {}} />
-        ) : (
-          <UserSettingsForm />
-        ))}
+      {(tab === "profile" || tab === "user") && <UserSettingsForm />}
       {tab === "workspace" && !isSetupMode && <WorkspaceSettingsForm />}
       {tab === "dataSource" && !isSetupMode && <DataSourceTab />}
 
