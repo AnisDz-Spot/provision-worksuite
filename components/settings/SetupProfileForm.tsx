@@ -77,8 +77,27 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(""); // Clear previous errors
+
     let avatarUrl = form.avatarUrl;
     try {
+      // 0. Pre-check database connectivity to avoid "ghost" avatar uploads
+      const checkRes = await fetch("/api/setup/check-system");
+      const checkData = await checkRes.json();
+      if (
+        !checkData.ready ||
+        (!checkData.dbConfigured && !checkData.hasTables)
+      ) {
+        const checkError =
+          checkData.error ||
+          "Database is not reachable. Please check your connection settings.";
+        setError(`Connection check failed: ${checkError}`);
+        setLoading(false);
+        // Scroll to error
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       if (avatarFile) {
         setUploadingAvatar(true);
         const formData = new FormData();

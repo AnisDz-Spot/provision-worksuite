@@ -16,22 +16,24 @@ export function isDatabaseConfiguredServer(): boolean {
  * Client-side check for database configuration status
  * This should call an API endpoint rather than checking localStorage for credentials
  */
-export function getDatabaseStatus(): Promise<{ configured: boolean }> {
+export function getDatabaseStatus(): Promise<{
+  configured: boolean;
+  hasTables: boolean;
+}> {
   if (typeof window === "undefined") {
-    return Promise.resolve({ configured: false });
+    return Promise.resolve({ configured: false, hasTables: false });
   }
 
   // Call API endpoint to check status (server-side validation only)
   return fetch("/api/setup/check-system")
     .then((res) => res.json())
-    .then((data) => ({ configured: !!data.dbConfigured }))
-    .catch(() => ({ configured: false }));
+    .then((data) => ({
+      configured: !!data.dbConfigured,
+      hasTables: !!data.hasTables,
+    }))
+    .catch(() => ({ configured: false, hasTables: false }));
 }
 
-/**
- * Client-side check if database is configured
- * Checks localStorage for database configuration flag (not credentials)
- */
 export function isDatabaseConfigured(): boolean {
   if (typeof window === "undefined") return false;
 
@@ -40,7 +42,25 @@ export function isDatabaseConfigured(): boolean {
     if (!setupStatus) return false;
 
     const status = JSON.parse(setupStatus);
+    // Connection is configured if databaseConfigured is true
     return !!status.databaseConfigured;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Client-side check if database tables exist
+ */
+export function hasDatabaseTables(): boolean {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const setupStatus = localStorage.getItem("pv:setupStatus");
+    if (!setupStatus) return false;
+
+    const status = JSON.parse(setupStatus);
+    return !!status.hasTables;
   } catch {
     return false;
   }
@@ -64,19 +84,17 @@ export function isSetupComplete(): boolean {
   }
 }
 
-/**
- * Mark setup as complete (client-side state only)
- */
 export function markSetupComplete(
   databaseConfigured: boolean,
-  profileCompleted: boolean
+  profileCompleted: boolean,
+  hasTables: boolean = false
 ) {
   if (typeof window === "undefined") return;
 
   try {
     localStorage.setItem(
       "pv:setupStatus",
-      JSON.stringify({ databaseConfigured, profileCompleted })
+      JSON.stringify({ databaseConfigured, profileCompleted, hasTables })
     );
   } catch {
     console.error("Failed to save setup status");

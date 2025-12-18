@@ -93,11 +93,7 @@ async function createDatabaseAdapter(
           const pool = new NeonPool({
             connectionString: finalConnectionString,
             connectionTimeoutMillis: 15000,
-            max: 2, // 🔑 INCREASED
-            ssl:
-              !hasSslParam && needsSsl
-                ? { rejectUnauthorized: false }
-                : undefined,
+            max: 1, // 🔑 REDUCED: One connection at a time in serverless
           });
 
           pool.on("error", (err: Error) => {

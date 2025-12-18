@@ -41,17 +41,23 @@ export default function OnboardingPage() {
       const res = await fetch("/api/setup/check-system");
       const data = await res.json();
 
-      if (data.ready && data.dbConfigured) {
-        // Already configured
+      if (data.ready && data.dbConfigured && data.hasTables) {
+        // Already configured AND has tables
         if (isAuthenticated) {
-          // If already logged in, mark onboarding as done and go to account setup if profile pending
           localStorage.setItem("pv:onboardingDone", "true");
-          router.replace("/settings?tab=profile&setup=true"); // 🔑 MODIFIED: Direct to account setup
+          router.replace("/settings?tab=profile&setup=true");
         } else {
-          // Otherwise go to registration
           router.replace("/auth/register?flow=onboarding");
         }
         return;
+      }
+
+      // If DB is configured but no tables, we stay here so user sees the "Initialize" state if we add it,
+      // or at least we don't redirect to a broken setup page.
+      if (data.ready && data.dbConfigured && !data.hasTables) {
+        console.log(
+          "📡 DB Configured but tables missing. Waiting for initialization."
+        );
       }
     } catch (e) {
       log.error({ err: e }, "Setup check failed");

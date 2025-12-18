@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { checkTablesExist } from "@/lib/config/settings-db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,20 +21,24 @@ export async function GET() {
           error:
             "Database environment variable is missing. Configure your database connection.",
         },
-        { status: 200 } // Return 200 so UI can handle it gracefully as "not ready"
+        { status: 200 }
       );
     }
 
     // 2. Check Database Connectivity
     await prisma.$connect();
 
-    // 3. Check optional Storage (just existence)
+    // 3. Check if tables exist
+    const hasTables = await checkTablesExist();
+
+    // 4. Check optional Storage
     const storageProvider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
 
     return NextResponse.json({
       ready: true,
       provider: storageProvider || "vercel-blob (default)",
       dbConfigured: true,
+      hasTables: !!hasTables,
     });
   } catch (error: any) {
     log.error({ err: error }, "System check failed");
@@ -41,6 +46,7 @@ export async function GET() {
       {
         ready: false,
         error: `Database connection failed: ${error.message}`,
+        hasTables: false,
       },
       { status: 200 }
     );

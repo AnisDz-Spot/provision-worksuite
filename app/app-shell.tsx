@@ -11,7 +11,11 @@ import { ScrollToTop } from "@/components/ui/ScrollToTop";
 import { AppLoader } from "@/components/ui/AppLoader";
 import { cn } from "@/lib/utils";
 import { setDataModePreference } from "@/lib/dataSource";
-import { isDatabaseConfigured, isSetupComplete } from "@/lib/setup";
+import {
+  isDatabaseConfigured,
+  isSetupComplete,
+  hasDatabaseTables,
+} from "@/lib/setup";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -41,19 +45,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const mode = localStorage.getItem("pv:dataMode");
       const onboardingComplete = localStorage.getItem("pv:onboardingDone");
 
-      // Only redirect to onboarding if database is configured but onboarding not done
-      // In demo mode (no database), allow full app access without onboarding
-      const currentSetup = localStorage.getItem("pv:setupStatus");
-      const hasTables = currentSetup
-        ? JSON.parse(currentSetup).databaseConfigured
-        : false;
-
       if (
         pathname !== "/onboarding" &&
         !onboardingComplete &&
         mode !== "mock" &&
         isDatabaseConfigured() &&
-        (!pathname.includes("setup=true") || !hasTables) // 🔑 REQUIRE tables for setup=true
+        (!pathname.includes("setup=true") || !hasDatabaseTables()) // 🔑 REQUIRE tables for setup=true
       ) {
         router.push("/onboarding");
       }

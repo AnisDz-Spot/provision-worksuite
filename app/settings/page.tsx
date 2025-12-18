@@ -18,7 +18,11 @@ import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
-import { isDatabaseConfigured, markSetupComplete } from "@/lib/setup";
+import {
+  isDatabaseConfigured,
+  markSetupComplete,
+  hasDatabaseTables,
+} from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
@@ -87,7 +91,11 @@ function DataSourceTab() {
   useEffect(() => {
     if (status) {
       // Sync local setup status to allow Account Setup access
-      markSetupComplete(status.hasTables, status.isSetupComplete);
+      markSetupComplete(
+        status.hasDatabaseConfig || status.hasEnvironmentVars,
+        status.isSetupComplete,
+        status.hasTables
+      );
 
       // Open form by default only if we are missing BOTH env vars AND custom config
       const isMissingEverything =
@@ -443,11 +451,7 @@ function SettingsContent() {
     const checkSetup = async () => {
       if (dataMode === "real" && isSetupMode) {
         if (typeof window !== "undefined") {
-          const currentSetup = localStorage.getItem("pv:setupStatus");
-          const hasTables = currentSetup
-            ? JSON.parse(currentSetup).databaseConfigured
-            : false;
-          if (!hasTables) {
+          if (!hasDatabaseTables()) {
             router.push("/settings?tab=dataSource");
           }
         }
