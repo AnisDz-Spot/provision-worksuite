@@ -4,15 +4,16 @@ import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import Discord from "next-auth/providers/discord";
 import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
 
 // NextAuth v5 configuration
 if (!process.env.AUTH_SECRET) {
-  console.warn(
-    "⚠️ AUTH_SECRET is missing. Run 'node scripts/generate-secrets.js' to generate one."
+  console.error(
+    "🚨 CRITICAL: AUTH_SECRET is missing from environment variables!"
   );
 }
 
-const authConfig = {
+export const authConfig = {
   trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -56,4 +57,23 @@ const authConfig = {
 
 // NextAuth v5 exports handlers object with GET and POST
 const { handlers } = NextAuth(authConfig);
-export const { GET, POST } = handlers;
+
+// Wrapper to catch missing secret errors
+const handleAuth = async (
+  req: Request,
+  context: any,
+  method: "GET" | "POST"
+) => {
+  if (!process.env.AUTH_SECRET) {
+    return NextResponse.json(
+      { error: "AUTH_SECRET is not configured on the server." },
+      { status: 500 }
+    );
+  }
+  return method === "GET" ? handlers.GET(req) : handlers.POST(req);
+};
+
+export const GET = (req: Request, context: any) =>
+  handleAuth(req, context, "GET");
+export const POST = (req: Request, context: any) =>
+  handleAuth(req, context, "POST");

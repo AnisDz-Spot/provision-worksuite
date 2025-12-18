@@ -277,10 +277,24 @@ const getPrismaClient = async () => {
         );
         ClientState.currentDbType = dbAdapter.type;
 
-        ClientState.client = new PrismaClient({
-          adapter: dbAdapter.adapter,
-          log: logOptions as any,
-        });
+        try {
+          ClientState.client = new PrismaClient({
+            adapter: dbAdapter.adapter,
+            log: logOptions as any,
+          });
+          // Test connection immediately to catch errors early in some environments
+          if (process.env.NODE_ENV === "production") {
+            ClientState.client.$connect().catch((e: any) => {
+              console.error("🚨 Initial Prisma Connect Failed:", e.message);
+            });
+          }
+        } catch (initErr: any) {
+          console.error(
+            "🚨 Prisma Client initialization failed:",
+            initErr.message
+          );
+          throw initErr;
+        }
       } else {
         // Fallback to no adapter (Prisma will use default drivers)
         console.warn("⚠️ Using Prisma without adapter (default native engine)");
