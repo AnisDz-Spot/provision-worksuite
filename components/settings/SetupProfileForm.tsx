@@ -145,7 +145,12 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         onComplete();
         router.push("/");
       } else {
-        setError(data.error || "Failed to create admin account");
+        const errorMsg = data.error || "Failed to create admin account";
+        const details = data.details || "";
+        const hint = data.hint || "";
+        setError(
+          `${errorMsg}${hint ? `\nHint: ${hint}` : ""}${details ? `\nDetails: ${details}` : ""}`
+        );
       }
     } catch (err) {
       console.error("Setup error:", err);
