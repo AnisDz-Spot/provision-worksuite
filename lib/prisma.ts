@@ -85,8 +85,12 @@ async function createDatabaseAdapter(
 
           // Basic setup for Neon - keep it standard unless explicitly needed
           if (typeof window === "undefined") {
-            // Restore WS constructor for Node environment
-            neonConfig.webSocketConstructor = ws;
+            // 🚀 STABILITY: Environment-aware WebSocket
+            // Only assign the WS library if the global WebSocket is missing (e.g., standard Node.js)
+            // Vercel Edge and newer runtimes have native WebSockets which are more reliable.
+            if (typeof (globalThis as any).WebSocket === "undefined") {
+              neonConfig.webSocketConstructor = ws;
+            }
 
             // 🚀 STABILITY: Pipeline connection can cause "terminated unexpectedly" with some poolers
             neonConfig.pipelineConnect = false;
@@ -94,8 +98,9 @@ async function createDatabaseAdapter(
 
           const pool = new NeonPool({
             connectionString: finalConnectionString,
-            connectionTimeoutMillis: 15000,
-            max: 2, // 🔑 Slightly increased for better concurrent handling
+            connectionTimeoutMillis: 30000, // 🕒 Increased to 30s
+            idleTimeoutMillis: 30000, // 🕒 Keep connection alive longer
+            max: 1, // 🔑 STRICT: One connection per instance
           });
 
           pool.on("error", (err: Error) => {
@@ -111,8 +116,8 @@ async function createDatabaseAdapter(
 
           const pool = new Pool({
             connectionString: finalConnectionString,
-            connectionTimeoutMillis: 15000,
-            max: 2, // Slightly more for standard PG if not on serverless hobby tier
+            connectionTimeoutMillis: 30000, // 🕒 Increased to 30s
+            max: 1, // 🔑 STRICT: Serverless best practice
             // Only add SSL object if explicitly needed and not in URL
             ssl:
               !hasSslParam && needsSsl
@@ -288,7 +293,24 @@ const getPrismaClient = async () => {
           });
           // Test connection immediately to catch errors early in some environments
           if (process.env.NODE_ENV === "production") {
-            ClientState.client.$connect().catch((e: any) => {
+            // 🚀 STABILITY: Retry logic for initial connection
+            const connectWithRetry = async (retries = 3, delay = 2000) => {
+              for (let i = 0; i < retries; i++) {
+                try {
+                  await ClientState.client.$connect();
+                  console.log("✅ Database connected successfully");
+                  return;
+                } catch (e: any) {
+                  if (i === retries - 1) throw e;
+                  console.warn(
+                    `⚠️ Connection attempt ${i + 1} failed, retrying in ${delay / 1000}s...`
+                  );
+                  await new Promise((resolve) => setTimeout(resolve, delay));
+                }
+              }
+            };
+
+            connectWithRetry().catch((e: any) => {
               console.error("🚨 Initial Prisma Connect Failed:", e.message);
             });
           }
