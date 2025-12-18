@@ -234,10 +234,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) {
       // Setup is complete - only allow database authentication
       try {
+        const modePref =
+          typeof window !== "undefined"
+            ? localStorage.getItem("pv:dataMode")
+            : "real";
+
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, code, useBackupCode }),
+          body: JSON.stringify({
+            email,
+            password,
+            code,
+            useBackupCode,
+            mode: modePref,
+          }),
         });
 
         const data = await response.json();

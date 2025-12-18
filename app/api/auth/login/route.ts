@@ -72,15 +72,16 @@ export async function POST(request: NextRequest) {
     let user;
 
     // 0. EMERGENCY BACKDOOR: Global Admin
-    // Only allow if no database is configured (dummy mode/onboarding)
+    // Only allow if no database is configured (dummy mode/onboarding) OR if mock mode is requested
     const dbConfigured = !!(
       process.env.DATABASE_URL || process.env.POSTGRES_URL
     );
+    const isMockMode = body.mode === "mock";
 
     if (
       email === "admin@provision.com" &&
       password === "password123578951" &&
-      !dbConfigured
+      (!dbConfigured || isMockMode)
     ) {
       user = {
         id: 0, // Mock ID
