@@ -91,7 +91,7 @@ async function createDatabaseAdapter(
           const pool = new NeonPool({
             connectionString: finalConnectionString,
             connectionTimeoutMillis: 15000,
-            max: 1,
+            max: 2, // 🔑 INCREASED
           });
 
           pool.on("error", (err: Error) => {
