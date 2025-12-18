@@ -419,6 +419,7 @@ function DataSourceTab() {
 }
 
 function SettingsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
   const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
@@ -437,17 +438,14 @@ function SettingsContent() {
     // Actually, led's rely on the parent or handle it here if we can detect it.
     // simpler: If we are not in setup mode, check if we need to be.
     const checkSetup = async () => {
-      if (dataMode === "real" && !isSetupMode) {
+      if (dataMode === "real" && isSetupMode) {
         if (typeof window !== "undefined") {
-          const finished = localStorage.getItem("pv:setupCompleted") === "true";
-          if (!finished) {
-            // Double check via server status if possible, or just push
-            // But we don't want infinite loops.
-            // Let's rely on the "System Ready" card to show the button,
-            // OR we can auto-push if we just came from DB config.
-            // For now, let's leave the auto-redirect to the "System Ready" card button to be safe,
-            // avoiding loops. But user asked for redirect.
-            // Implementation: depend on a query param or just the fact we loaded data source tab?
+          const currentSetup = localStorage.getItem("pv:setupStatus");
+          const hasTables = currentSetup
+            ? JSON.parse(currentSetup).databaseConfigured
+            : false;
+          if (!hasTables) {
+            router.push("/settings?tab=dataSource");
           }
         }
       }

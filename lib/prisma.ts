@@ -86,12 +86,18 @@ async function createDatabaseAdapter(
           // Basic setup for Neon - keep it standard unless explicitly needed
           if (typeof window === "undefined") {
             neonConfig.webSocketConstructor = ws;
+            // 🔑 IMPORTANT: Pipeline connection can cause "terminated unexpectedly" with some poolers
+            neonConfig.pipelineConnect = false;
           }
 
           const pool = new NeonPool({
             connectionString: finalConnectionString,
             connectionTimeoutMillis: 15000,
             max: 2, // 🔑 INCREASED
+            ssl:
+              !hasSslParam && needsSsl
+                ? { rejectUnauthorized: false }
+                : undefined,
           });
 
           pool.on("error", (err: Error) => {

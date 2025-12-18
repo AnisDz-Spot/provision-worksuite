@@ -43,12 +43,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       // Only redirect to onboarding if database is configured but onboarding not done
       // In demo mode (no database), allow full app access without onboarding
+      const currentSetup = localStorage.getItem("pv:setupStatus");
+      const hasTables = currentSetup
+        ? JSON.parse(currentSetup).databaseConfigured
+        : false;
+
       if (
         pathname !== "/onboarding" &&
         !onboardingComplete &&
         mode !== "mock" &&
         isDatabaseConfigured() &&
-        !pathname.includes("setup=true") // 🔑 ADDED: Allow access to setup page
+        (!pathname.includes("setup=true") || !hasTables) // 🔑 REQUIRE tables for setup=true
       ) {
         router.push("/onboarding");
       }
