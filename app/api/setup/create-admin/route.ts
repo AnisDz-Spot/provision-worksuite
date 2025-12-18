@@ -55,6 +55,26 @@ export async function POST(request: NextRequest) {
 
     const { name, email, password, avatarUrl } = validation.data;
 
+    // 🔑 ADDED: Connectivity Check
+    // This helps identify if the DB is reachable BEFORE attempting heavy operations
+    try {
+      await prisma.$connect();
+      // Optional: Quick query to verify schema
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (connErr) {
+      log.error({ err: connErr }, "Database connection failed during setup");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Database connection failed. Please check your connection string and SSL settings.",
+          details: connErr instanceof Error ? connErr.message : String(connErr),
+          hint: "The connection was terminated unexpectedly or SSL is required.",
+        },
+        { status: 503 }
+      );
+    }
+
     // Check if user already exists using Prisma
     const existing = await prisma.user.findUnique({
       where: { email },

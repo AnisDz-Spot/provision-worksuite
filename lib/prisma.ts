@@ -54,30 +54,44 @@ async function createDatabaseAdapter(
   try {
     switch (dbType) {
       case "postgresql": {
-        // Use Neon serverless adapter for PostgreSQL
-        // Falls back to standard pg adapter if Neon-specific features aren't needed
+        const url = connectionString.trim();
+        const lowerUrl = url.toLowerCase();
         const isNeon =
-          connectionString.includes("neon.tech") ||
-          connectionString.includes("neon.") ||
-          connectionString.includes("-pooler.");
+          lowerUrl.includes("neon.tech") || lowerUrl.includes("-pooler.");
+
+        // Generic SSL Detection for PostgreSQL
+        // Many cloud providers (RDS, DO, Supabase) require SSL
+        const hasSslParam = lowerUrl.includes("sslmode=");
+        const needsSsl =
+          isNeon ||
+          lowerUrl.includes("supabase.co") ||
+          lowerUrl.includes("amazonaws.com") ||
+          lowerUrl.includes("aivencloud.com") ||
+          lowerUrl.includes("digitalocean.com");
+
+        let finalConnectionString = url;
+        if (!hasSslParam && needsSsl) {
+          const separator = url.includes("?") ? "&" : "?";
+          finalConnectionString = `${url}${separator}sslmode=require`;
+          console.log(
+            "🔒 Adding sslmode=require to connection string for cloud provider"
+          );
+        }
 
         if (isNeon) {
           const { Pool: NeonPool, neonConfig } =
             await import("@neondatabase/serverless");
           const { PrismaNeon } = await import("@prisma/adapter-neon");
 
-          // Optimize for serverless
-          neonConfig.pipelineConnect = "password";
-
-          // Configure Neon for Node.js environments
+          // Basic setup for Neon - keep it standard unless explicitly needed
           if (typeof window === "undefined") {
             neonConfig.webSocketConstructor = ws;
           }
 
           const pool = new NeonPool({
-            connectionString: connectionString.trim(),
-            connectionTimeoutMillis: 10000,
-            max: 1, // Minimize connections in serverless
+            connectionString: finalConnectionString,
+            connectionTimeoutMillis: 15000,
+            max: 1,
           });
 
           pool.on("error", (err: Error) => {
@@ -87,14 +101,19 @@ async function createDatabaseAdapter(
           const adapter = new PrismaNeon(pool as any);
           return { type: "postgresql", adapter };
         } else {
-          // Standard PostgreSQL
+          // Standard PostgreSQL / Other cloud providers
           const { Pool } = await import("pg");
           const { PrismaPg } = await import("@prisma/adapter-pg");
 
           const pool = new Pool({
-            connectionString: connectionString.trim(),
-            connectionTimeoutMillis: 10000,
-            max: 1,
+            connectionString: finalConnectionString,
+            connectionTimeoutMillis: 15000,
+            max: 2, // Slightly more for standard PG if not on serverless hobby tier
+            // Only add SSL object if explicitly needed and not in URL
+            ssl:
+              !hasSslParam && needsSsl
+                ? { rejectUnauthorized: false }
+                : undefined,
           });
 
           pool.on("error", (err: Error) => {
