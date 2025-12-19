@@ -131,57 +131,27 @@ export function ProjectGrid() {
     try {
       const { loadProjects: fetchProjects } = await import("@/lib/data");
       const data = await fetchProjects();
-      const seed: Project[] =
-        Array.isArray(data) && data.length > 0
-          ? (data as Project[])
-          : [
-              {
-                id: "p1",
-                name: "Project Alpha",
-                owner: "Alice",
-                status: "Active",
-                deadline: "2025-12-11",
-                priority: "high",
-                starred: true,
-                members: [
-                  { name: "Alice" },
-                  { name: "Bob" },
-                  { name: "Carol" },
-                  { name: "David" },
-                  { name: "Eve" },
-                  { name: "Frank" },
-                ],
-                cover: "",
-                tags: ["design", "web"],
-                category: "Web Development",
-              },
-              {
-                id: "p2",
-                name: "Project Beta",
-                owner: "Bob",
-                status: "Completed",
-                deadline: "2025-10-22",
-                priority: "medium",
-                members: [{ name: "Bob" }, { name: "Alice" }],
-                cover: "",
-                tags: ["ops"],
-                category: "Internal Ops",
-              },
-              {
-                id: "p3",
-                name: "Project Gamma",
-                owner: "Carol",
-                status: "Paused",
-                deadline: "2026-01-19",
-                priority: "low",
-                starred: false,
-                members: [{ name: "Carol" }],
-                cover: "",
-                tags: [],
-                category: "Marketing",
-              },
-            ];
-      setProjects(seed);
+      // FIX: Do not fallback to mock data if array is empty.
+      // loadProjects() in lib/data already handles the mock/real switch logic.
+      // If it returns [], it means we really have 0 projects (or DB failed),
+      // but if we are in "Real" mode, we should show 0 projects.
+
+      const { shouldUseMockData } = await import("@/lib/dataSource");
+      const isMock = shouldUseMockData();
+
+      if (Array.isArray(data) && data.length > 0) {
+        setProjects(data as Project[]);
+      } else if (isMock) {
+        // Only if we are EXPLICITLY in mock mode and get empty data, maybe then use internal seed?
+        // But lib/data usually returns mock data if in mock mode.
+        // If lib/data returned [], it might mean even mock data is empty or filtered?
+        // Let's trust lib/data. If it returns [], we show [].
+        // However, the original code had a huge hardcoded block here.
+        // We will remove it to respect the source of truth.
+        setProjects([]);
+      } else {
+        setProjects([]);
+      }
     } catch (err) {
       console.error("Failed to load projects:", err);
       setProjects([]);

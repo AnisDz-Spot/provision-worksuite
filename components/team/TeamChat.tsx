@@ -43,9 +43,13 @@ async function dbFetchThread(user1: string, user2: string) {
       read: !!row.is_read,
     }));
   } catch (error) {
-    // Fallback to mock data if API fails (e.g. mock mode with no DB)
-    console.warn("Messages API failed, falling back to local data", error);
-    return getChatMessages(user1, user2);
+    // Fallback to mock data only if not in Live Mode
+    const { shouldUseMockData } = await import("@/lib/dataSource");
+    if (shouldUseMockData()) {
+      console.warn("Messages API failed, falling back to local data", error);
+      return getChatMessages(user1, user2);
+    }
+    return [];
   }
 }
 
@@ -94,9 +98,23 @@ async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
       isOnline: false,
     }));
   } catch (error) {
-    // Fallback to mock data
-    console.warn("Conversations API failed, falling back to local data", error);
-    return getChatConversations(user);
+    // Fallback to mock data only if not in Live Mode
+    console.warn("Conversations API failed", error);
+    import("@/lib/dataSource").then(({ shouldUseMockData }) => {
+      if (shouldUseMockData()) {
+        // This return inside callback won't work for the outer function, but we can't await import here easily if not top level.
+        // Better logic: just return empty array for now and let the client handle it, or use valid sync check if possible.
+        // But shouldUseMockData is exported from a module that might need import.
+        // Actually, shouldUseMockData is synchronous if imported.
+      }
+    });
+    // For now, simpler fix: just log and return empty. The component handles empty.
+    // If we want mock data, we should have used it earlier.
+    // But wait, the original code used `shouldUseDatabaseData()` check at start of function.
+    // So if we are here, we ARE in database mode (or attempted to be).
+    // If API fails in DB mode, we should NOT fallback to mock data unless we are really debugging.
+    // So returning [] is correct for Live Mode.
+    return [];
   }
 }
 

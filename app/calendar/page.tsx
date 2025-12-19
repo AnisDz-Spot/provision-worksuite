@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 type Note = {
+  id?: string;
   text: string;
   color: string;
   type: "note" | "event" | "reminder";
@@ -49,17 +50,46 @@ export default function CalendarPage() {
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
+  // Load notes
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) setNotes(JSON.parse(raw));
-    } catch {}
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/calendar/events")
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.success && json.data) {
+              const newNotes: Record<string, any[]> = {};
+              json.data.forEach((evt: any) => {
+                const date = evt.startTime.split("T")[0]; // YYYY-MM-DD
+                let meta = { type: "note", color: "#3b82f6" };
+                try {
+                  if (evt.description && evt.description.startsWith("{")) {
+                    meta = JSON.parse(evt.description);
+                  }
+                } catch {}
+
+                if (!newNotes[date]) newNotes[date] = [];
+                newNotes[date].push({
+                  id: evt.id,
+                  text: evt.title,
+                  color: meta.color,
+                  type: meta.type,
+                });
+              });
+              setNotes(newNotes);
+            }
+          })
+          .catch((err) => console.error(err));
+      } else {
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (raw) setNotes(JSON.parse(raw));
+        } catch {}
+      }
+    });
   }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(notes));
-    } catch {}
-  }, [notes]);
+
+  // Save/Delete logic moved to handler functions, removed auto-save useEffect
 
   const monthGrid = useMemo(() => {
     const start = startOfMonth(current);
@@ -97,19 +127,72 @@ export default function CalendarPage() {
       setOpen(false);
       return;
     }
-    setNotes((prev) => {
-      const dayNotes = prev[selectedISO] ? [...prev[selectedISO]] : [];
-      dayNotes.push({
-        text: draftText.trim(),
-        color: draftColor,
-        type: draftType,
-      });
-      return { ...prev, [selectedISO]: dayNotes };
+
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/calendar/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: draftText.trim(),
+            date: selectedISO,
+            type: draftType,
+            color: draftColor,
+          }),
+        })
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.success && json.data) {
+              const evt = json.data;
+              setNotes((prev) => {
+                const dayNotes = prev[selectedISO!]
+                  ? [...prev[selectedISO!]]
+                  : [];
+                dayNotes.push({
+                  id: evt.id,
+                  text: evt.title,
+                  color: draftColor,
+                  type: draftType,
+                });
+                return { ...prev, [selectedISO!]: dayNotes };
+              });
+            }
+          });
+      } else {
+        // Mock fallback
+        setNotes((prev) => {
+          const dayNotes = prev[selectedISO!] ? [...prev[selectedISO!]] : [];
+          dayNotes.push({
+            text: draftText.trim(),
+            color: draftColor,
+            type: draftType,
+          });
+          return { ...prev, [selectedISO!]: dayNotes };
+        });
+      }
     });
     setOpen(false);
   }
 
   function deleteNote(iso: string, idx: number) {
+    const note = notes[iso][idx];
+
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData() && note.id) {
+        fetch(`/api/calendar/events?id=${note.id}`, { method: "DELETE" }).then(
+          (res) => {
+            if (res.ok) {
+              removeNoteFromState(iso, idx);
+            }
+          }
+        );
+      } else {
+        removeNoteFromState(iso, idx);
+      }
+    });
+  }
+
+  function removeNoteFromState(iso: string, idx: number) {
     setNotes((prev) => {
       const dayNotes = prev[iso] ? [...prev[iso]] : [];
       dayNotes.splice(idx, 1);

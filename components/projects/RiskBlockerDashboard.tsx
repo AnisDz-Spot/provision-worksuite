@@ -236,7 +236,28 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       (b) => b.level === "critical" && b.status !== "resolved"
     ).length;
     const resolved = blockers.filter((b) => b.status === "resolved").length;
-    const avgResolutionTime = 4.2; // Mock - calculate from resolved blockers
+
+    // Calculate average resolution time dynamically
+    let totalDays = 0;
+    let resolvedCount = 0;
+
+    blockers.forEach((b) => {
+      if (b.status === "resolved" && b.resolvedDate && b.reportedDate) {
+        const start = new Date(b.reportedDate).getTime();
+        const end = new Date(b.resolvedDate).getTime();
+        const diff = end - start;
+        const days = diff / (1000 * 60 * 60 * 24);
+        if (days >= 0) {
+          totalDays += days;
+          resolvedCount++;
+        }
+      }
+    });
+
+    const avgResolutionTime =
+      resolvedCount > 0
+        ? parseFloat((totalDays / resolvedCount).toFixed(1))
+        : 0;
 
     return { open, inProgress, critical, resolved, avgResolutionTime };
   }, [blockers]);

@@ -134,9 +134,18 @@ export default function FinancePage() {
       .catch((err) => log.error({ err }, "Failed to load projects"));
 
     // Expenses
-    fetch("/api/expenses")
-      .then((r) => r.json())
-      .then((res) => {
+    const fetchExpenses = async () => {
+      try {
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        const isMock = shouldUseMockData();
+
+        if (isMock) {
+          throw new Error("Use mock data");
+        }
+
+        const r = await fetch("/api/expenses");
+        const res = await r.json();
+
         if (res?.success && res.data) {
           const dbExpenses = res.data.map((e: any) => ({
             id: String(e.id),
@@ -148,20 +157,34 @@ export default function FinancePage() {
           }));
           setExpenses(dbExpenses);
         } else {
-          throw new Error("DB not configured");
+          // If DB call succeeds but no data, or structure mismatch
+          setExpenses([]);
         }
-      })
-      .catch(() => {
-        fetch("/data/expenses.json")
-          .then((r) => r.json())
-          .then(setExpenses)
-          .catch(() => setExpenses([]));
-      });
+      } catch (error) {
+        // Fallback to mock only if explicitly in mock mode or if requested
+        import("@/lib/dataSource").then(({ shouldUseMockData }) => {
+          if (shouldUseMockData()) {
+            fetch("/data/expenses.json")
+              .then((r) => r.json())
+              .then(setExpenses)
+              .catch(() => setExpenses([]));
+          } else {
+            setExpenses([]);
+          }
+        });
+      }
+    };
+    fetchExpenses();
 
     // Time logs
-    fetch("/api/time-logs")
-      .then((r) => r.json())
-      .then((res) => {
+    const fetchTimeLogs = async () => {
+      try {
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        if (shouldUseMockData()) throw new Error("Use mock data");
+
+        const r = await fetch("/api/time-logs");
+        const res = await r.json();
+
         if (res?.success && res.data) {
           const dbLogs = res.data.map((log: any) => ({
             id: String(log.id),
@@ -171,20 +194,32 @@ export default function FinancePage() {
           }));
           setTimeLogs(dbLogs);
         } else {
-          throw new Error("DB not configured");
+          setTimeLogs([]);
         }
-      })
-      .catch(() => {
-        fetch("/data/timelogs.json")
-          .then((r) => r.json())
-          .then(setTimeLogs)
-          .catch(() => setTimeLogs([]));
-      });
+      } catch (error) {
+        import("@/lib/dataSource").then(({ shouldUseMockData }) => {
+          if (shouldUseMockData()) {
+            fetch("/data/timelogs.json")
+              .then((r) => r.json())
+              .then(setTimeLogs)
+              .catch(() => setTimeLogs([]));
+          } else {
+            setTimeLogs([]);
+          }
+        });
+      }
+    };
+    fetchTimeLogs();
 
     // Invoices
-    fetch("/api/invoices")
-      .then((r) => r.json())
-      .then((res) => {
+    const fetchInvoices = async () => {
+      try {
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        if (shouldUseMockData()) throw new Error("Use mock data");
+
+        const r = await fetch("/api/invoices");
+        const res = await r.json();
+
         if (res?.success && res.data) {
           const dbInvoices = res.data.map((inv: any) => ({
             id: String(inv.id),
@@ -198,15 +233,22 @@ export default function FinancePage() {
           }));
           setInvoices(dbInvoices);
         } else {
-          throw new Error("DB not configured");
+          setInvoices([]);
         }
-      })
-      .catch(() => {
-        fetch("/data/invoices.json")
-          .then((r) => r.json())
-          .then(setInvoices)
-          .catch(() => setInvoices([]));
-      });
+      } catch (error) {
+        import("@/lib/dataSource").then(({ shouldUseMockData }) => {
+          if (shouldUseMockData()) {
+            fetch("/data/invoices.json")
+              .then((r) => r.json())
+              .then(setInvoices)
+              .catch(() => setInvoices([]));
+          } else {
+            setInvoices([]);
+          }
+        });
+      }
+    };
+    fetchInvoices();
   }, []);
 
   // Initialize expense filters from URL or localStorage

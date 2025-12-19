@@ -182,7 +182,8 @@ export function SprintPlanning() {
       completed: completedPoints,
       inProgress: inProgressPoints,
       remaining: totalPoints - completedPoints - inProgressPoints,
-      velocity: Math.round((completedPoints / totalPoints) * 100),
+      velocity:
+        totalPoints > 0 ? Math.round((completedPoints / totalPoints) * 100) : 0,
     };
   }, [sprint.tasks]);
 

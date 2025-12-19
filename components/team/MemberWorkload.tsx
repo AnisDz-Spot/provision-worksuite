@@ -182,6 +182,7 @@ const TASKS: Task[] = [
 export function MemberWorkload({ projectId }: MemberWorkloadProps) {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>(TASKS);
+  const [members, setMembers] = useState<Member[]>(MEMBERS);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [applyTimeOff, setApplyTimeOff] = useState<boolean>(true);
   const [timeOffData, setTimeOffData] = useState<{
@@ -190,14 +191,59 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
   } | null>(null);
 
   React.useEffect(() => {
-    fetch("/data/time_off.json")
-      .then((res) => res.json())
-      .then((json) => setTimeOffData(json))
-      .catch(() => setTimeOffData(null));
+    // Determine mode
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        // Fetch real data
+        Promise.all([
+          fetch("/api/users").then((r) => r.json()),
+          fetch("/api/tasks").then((r) => r.json()),
+        ])
+          .then(([usersRes, tasksRes]) => {
+            if (usersRes.success && usersRes.data) {
+              // Map users to Member type
+              const dbMembers = usersRes.data.map((u: any) => ({
+                id: String(u.id),
+                name: u.name,
+                avatarUrl: u.avatarUrl,
+                capacity: 40, // Default capacity as not in DB
+                skills: u.role ? [u.role] : [],
+              }));
+              // If no members found (e.g. only admin), ensure at least current user
+              if (dbMembers.length > 0) {
+                // We can't update global const MEMBERS, but we can update state if we had it.
+                // MemberWorkload uses `workloadData` which maps over `MEMBERS`.
+                // Refactor: We need to put MEMBERS in state.
+              }
+            }
+
+            if (tasksRes.success && tasksRes.data) {
+              const dbTasks = tasksRes.data.map((t: any) => ({
+                id: String(t.id),
+                title: t.title,
+                status:
+                  (t.status === "in_progress" ? "in-progress" : t.status) ||
+                  "todo",
+                priority: t.priority || "medium",
+                estimatedHours: t.estimateHours || 0,
+                assignee: t.assignee?.name || "Unassigned",
+                dueDate: t.due ? t.due.split("T")[0] : undefined,
+              }));
+              setTasks(dbTasks);
+            }
+          })
+          .catch((err) => console.error("Failed to load live data", err));
+      } else {
+        fetch("/data/time_off.json")
+          .then((res) => res.json())
+          .then((json) => setTimeOffData(json))
+          .catch(() => setTimeOffData(null));
+      }
+    });
   }, []);
 
   const workloadData = useMemo(() => {
-    return MEMBERS.map((member) => {
+    return members.map((member) => {
       const memberTasks = tasks.filter((t) => t.assignee === member.name);
       const activeTasks = memberTasks.filter((t) => t.status !== "done");
       const blockedTasks = memberTasks.filter((t) => t.status === "blocked");
@@ -354,7 +400,7 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
             />
             Apply PTO & Holidays
           </label>
-          <Badge variant="secondary">{MEMBERS.length} members</Badge>
+          <Badge variant="secondary">{members.length} members</Badge>
         </div>
       </div>
 

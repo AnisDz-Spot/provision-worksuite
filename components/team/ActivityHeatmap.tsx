@@ -83,9 +83,8 @@ export function ActivityHeatmap({ days = 30 }: ActivityHeatmapProps) {
               ))}
             </div>
 
-            {/* Heatmap rows */}
             {dayLabels.map((dayLabel, dayIdx) => (
-              <div key={dayIdx} className="flex items-center mb-1">
+              <div key={dayIdx} className="flex items-center mb-1 gap-1">
                 <div className="w-12 text-xs text-muted-foreground shrink-0">
                   {dayLabel}
                 </div>
