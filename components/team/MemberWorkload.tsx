@@ -211,9 +211,7 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
               }));
               // If no members found (e.g. only admin), ensure at least current user
               if (dbMembers.length > 0) {
-                // We can't update global const MEMBERS, but we can update state if we had it.
-                // MemberWorkload uses `workloadData` which maps over `MEMBERS`.
-                // Refactor: We need to put MEMBERS in state.
+                setMembers(dbMembers);
               }
             }
 
@@ -319,7 +317,7 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
         effectiveCapacity,
       };
     });
-  }, [tasks, applyTimeOff, timeOffData]);
+  }, [members, tasks, applyTimeOff, timeOffData]);
 
   const overloadedMembers = workloadData.filter(
     (w) => w.status === "overloaded"
@@ -424,7 +422,7 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
         <div className="p-3 rounded-lg border">
           <div className="text-xs text-muted-foreground mb-1">Total Tasks</div>
           <div className="text-2xl font-bold">
-            {TASKS.filter((t) => t.status !== "done").length}
+            {tasks.filter((t) => t.status !== "done").length}
           </div>
         </div>
         <div className="p-3 rounded-lg border">

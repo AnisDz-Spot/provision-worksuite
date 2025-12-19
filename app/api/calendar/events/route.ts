@@ -59,6 +59,19 @@ export async function POST(req: Request) {
     );
   }
 
+  // Check for Global Admin (string ID) trying to write to DB (requires Int ID)
+  const userId = parseInt(currentUser.uid);
+  if (isNaN(userId)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Demo accounts cannot save to the database. Please create a real account.",
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const { title, description, startTime, endTime, type, color, isAllDay } =
@@ -73,7 +86,7 @@ export async function POST(req: Request) {
         type: type || "event",
         color: color || "#3b82f6",
         isAllDay: isAllDay || false,
-        createdById: parseInt(currentUser.uid),
+        createdById: userId,
       },
     });
 

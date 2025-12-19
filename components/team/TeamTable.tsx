@@ -122,18 +122,33 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     async function fetchUsers() {
       try {
         const { loadUsers } = await import("@/lib/data");
-        const users = await loadUsers();
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+        let users = [];
+
+        if (shouldUseDatabaseData()) {
+          // Direct API fetch for live mode to ensure fresh data
+          const res = await fetch("/api/users");
+          const json = await res.json();
+          if (json.success) {
+            users = json.data;
+          }
+        } else {
+          // Legacy mock loader
+          users = await loadUsers();
+        }
 
         const teamMembers = users.map((u: any) => ({
           id: u.uid || u.id,
           name: u.name,
-          role: u.role,
+          role: u.role || "Member",
           email: u.email,
           phone: ENRICH[u.uid || u.id]?.phone || "+1 (555) 000-0000",
           address: ENRICH[u.uid || u.id]?.address || "-",
           socials: ENRICH[u.uid || u.id]?.socials || {},
           avatar:
             u.avatar_url ||
+            u.avatarUrl ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
         }));
 
