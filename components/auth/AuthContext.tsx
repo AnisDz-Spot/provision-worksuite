@@ -237,6 +237,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const data = await response.json();
 
+        if (response.status === 503 || data.setupRequired) {
+          // Database schema missing - redirect to onboarding
+          if (typeof window !== "undefined") {
+            window.location.href = "/onboarding?error=schema_missing";
+          }
+          return {
+            success: false,
+            error: data.error || "Database setup required.",
+          };
+        }
+
         if (data.requires2FA) {
           return { success: false, requires2FA: true, error: data.message };
         }

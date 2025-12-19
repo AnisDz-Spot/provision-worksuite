@@ -305,14 +305,14 @@ export async function POST(request: NextRequest) {
       error.code === "P2021" ||
       (error.message && error.message.includes("does not exist"))
     ) {
+      // 503 Service Unavailable is more appropriate than 500 for missing schema
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Database schema is not initialized. Please go to Onboarding to setup your database tables.",
+          error: "Database not initialized. Please run setup.",
           setupRequired: true,
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
 

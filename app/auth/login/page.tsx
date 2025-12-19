@@ -187,7 +187,7 @@ function LoginForm() {
         </div>
 
         {/* Login Form */}
-        <div className="space-y-5">
+        <form className="space-y-5" onSubmit={handleLogin}>
           <div>
             <label
               htmlFor="email"
@@ -203,7 +203,6 @@ function LoginForm() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
               className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
@@ -222,7 +221,6 @@ function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
               className="w-full px-4 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
@@ -254,7 +252,6 @@ function LoginForm() {
                 placeholder={useBackupCode ? "XXXX-XXXX" : "000000"}
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin(e)}
                 className="w-full px-4 py-3 text-center text-lg tracking-widest font-mono border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
               <p className="mt-2 text-xs text-center text-gray-500">
@@ -266,7 +263,7 @@ function LoginForm() {
           )}
 
           <Button
-            onClick={handleLogin}
+            type="submit"
             disabled={loading}
             className="w-full mt-8 py-3 text-base bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -297,7 +294,7 @@ function LoginForm() {
               "Sign in"
             )}
           </Button>
-        </div>
+        </form>
 
         {/* Footer */}
         <div className="mt-6 text-center">
