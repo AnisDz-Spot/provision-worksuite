@@ -319,7 +319,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Login failed. Please check your database configuration.",
+        error: "Login failed (Internal Error).",
+        details: error?.message || "Unknown error",
+        debug:
+          process.env.NODE_ENV === "development" ? error?.stack : undefined,
       },
       { status: 500 }
     );

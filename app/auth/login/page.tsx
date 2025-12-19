@@ -200,6 +200,7 @@ function LoginForm() {
               type="email"
               autoFocus
               required
+              autoComplete="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -218,6 +219,7 @@ function LoginForm() {
               id="password"
               type="password"
               required
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
