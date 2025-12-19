@@ -29,40 +29,18 @@ type TeamMember = {
   address: string;
   socials: Socials;
   avatar: string;
+  // Extended fields
+  rawAddress?: {
+    addressLine1?: string;
+    city?: string;
+    country?: string;
+  };
+  bio?: string;
 };
 
-const ENRICH: Record<string, Partial<TeamMember>> = {
-  u1: {
-    phone: "+1 (555) 010-1010",
-    address: "NY, USA",
-    socials: { linkedin: "alice" },
-  },
-  u2: {
-    phone: "+213 555 123 456",
-    address: "Algeria",
-    socials: { github: "anisdzed" },
-  },
-  u3: {
-    phone: "+1 (555) 010-2020",
-    address: "SF, USA",
-    socials: { github: "bob-dev" },
-  },
-  u4: {
-    phone: "+44 20 7946 0123",
-    address: "London, UK",
-    socials: { twitter: "carol_design" },
-  },
-  u5: {
-    phone: "+971 4 123 4567",
-    address: "Dubai, UAE",
-    socials: { linkedin: "david-b" },
-  },
-  u6: {
-    phone: "+61 2 9012 3456",
-    address: "Sydney, AU",
-    socials: { github: "eveops" },
-  },
-};
+// ENRICH constant removed as we now fetch real data
+// If keeping for fallback, ensure it doesn't override real empty values if not desired.
+// For now, removing to force real data usage.
 
 const roleColors: Record<string, string> = {
   "Project Manager":
@@ -95,18 +73,26 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  // Menu positioning state
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+
   const [editOpen, setEditOpen] = useState(false);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [membersData, setMembersData] = useState<TeamMember[]>([]);
   const [memberActivities, setMemberActivities] = useState<Map<string, any>>(
     new Map()
   );
+
+  // Add/Edit Form State
   const [addOpen, setAddOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [draftRole, setDraftRole] = useState("");
   const [draftEmail, setDraftEmail] = useState("");
   const [draftPhone, setDraftPhone] = useState("");
   const [draftAddress, setDraftAddress] = useState("");
+  const [draftCity, setDraftCity] = useState("");
+  const [draftCountry, setDraftCountry] = useState("");
+  const [draftBio, setDraftBio] = useState("");
   const [draftPassword, setDraftPassword] = useState("");
 
   const initialMembers: TeamMember[] = useMemo(() => {
@@ -143,9 +129,11 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           name: u.name,
           role: u.role || "Member",
           email: u.email,
-          phone: ENRICH[u.uid || u.id]?.phone || "+1 (555) 000-0000",
-          address: ENRICH[u.uid || u.id]?.address || "-",
-          socials: ENRICH[u.uid || u.id]?.socials || {},
+          phone: u.phone || "+1 (555) 000-0000",
+          address: u.address || "-",
+          rawAddress: u.rawAddress || {},
+          bio: u.bio || "",
+          socials: u.socials || {},
           avatar:
             u.avatar_url ||
             u.avatarUrl ||
@@ -161,17 +149,46 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     fetchUsers();
   }, []);
 
-  // Load member activities
+  // Load member activities (REAL PRESENCE)
   React.useEffect(() => {
-    const loadActivities = () => {
-      const activities = new Map();
-      membersData.forEach((m) => {
-        activities.set(m.name, getMemberActivity(m.name));
-      });
-      setMemberActivities(activities);
-    };
-    loadActivities();
-    const interval = setInterval(loadActivities, 10000); // Update every 10s
+    async function fetchPresence() {
+      try {
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+        if (!shouldUseDatabaseData()) {
+          // Fallback to mock if using mock data
+          const activities = new Map();
+          membersData.forEach((m) => {
+            activities.set(m.name, getMemberActivity(m.name));
+          });
+          setMemberActivities(activities);
+          return;
+        }
+
+        const res = await fetch("/api/presence");
+        const json = await res.json();
+        if (json.success) {
+          const activityMap = new Map();
+          // Map presence by UID (preferred) or Name if fallback needed
+          // Using simple status interpretation
+          json.data.forEach((p: any) => {
+            // Check if online (seen in last 5 mins)
+            const lastSeen = new Date(p.last_seen);
+            const now = new Date();
+            const diffMins = (now.getTime() - lastSeen.getTime()) / 60000;
+            const isOnline = diffMins < 5; // 5 minute threshold
+            const status = isOnline ? p.status || "online" : "offline";
+
+            activityMap.set(p.uid, { currentStatus: status, lastSeen });
+          });
+          setMemberActivities(activityMap);
+        }
+      } catch (e) {
+        console.error("Failed to fetch presence", e);
+      }
+    }
+
+    fetchPresence();
+    const interval = setInterval(fetchPresence, 15000); // Poll every 15s
     return () => clearInterval(interval);
   }, [membersData]);
 
@@ -200,8 +217,19 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     return matchQ && matchR;
   });
 
-  function toggleMenu(id: string) {
-    setMenuOpen(menuOpen === id ? null : id);
+  function toggleMenu(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if (menuOpen === id) {
+      setMenuOpen(null);
+    } else {
+      // Calculate position based on button click
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + window.scrollY + 5,
+        left: rect.right - 160 + window.scrollX, // -160 for approx width
+      });
+      setMenuOpen(id);
+    }
   }
 
   function openEdit(member: TeamMember) {
@@ -210,30 +238,73 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     setDraftRole(member.role);
     setDraftEmail(member.email);
     setDraftPhone(member.phone);
-    setDraftAddress(member.address);
+    setDraftAddress(member.rawAddress?.addressLine1 || member.address);
+    setDraftCity(member.rawAddress?.city || "");
+    setDraftCountry(member.rawAddress?.country || "");
+    setDraftBio(member.bio || "");
+
     setEditOpen(true);
     setMenuOpen(null);
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editMemberId) return;
-    setMembersData((prev) =>
-      prev.map((m) =>
-        m.id === editMemberId
-          ? {
-              ...m,
-              name: draftName.trim() || m.name,
-              role: draftRole.trim() || m.role,
-              email: draftEmail.trim() || m.email,
-              phone: draftPhone.trim() || m.phone,
-              address: draftAddress.trim() || m.address,
-              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(draftName || m.name)}`,
-            }
-          : m
-      )
-    );
-    setEditOpen(false);
-    setEditMemberId(null);
+
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+      const updatedData = {
+        name: draftName.trim(),
+        role: draftRole.trim(),
+        email: draftEmail.trim(),
+        phone: draftPhone.trim(),
+        addressLine1: draftAddress.trim(),
+        city: draftCity.trim(),
+        country: draftCountry.trim(),
+        bio: draftBio.trim(),
+      };
+
+      if (shouldUseDatabaseData()) {
+        // Updated via API
+        const res = await fetch(`/api/users/${editMemberId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedData),
+        });
+        if (!res.ok) throw new Error("Failed to update");
+        const json = await res.json();
+        // Could merge json.user here, but let's do optimistic update for speed
+      }
+
+      setMembersData((prev) =>
+        prev.map((m) =>
+          m.id === editMemberId
+            ? {
+                ...m,
+                ...updatedData,
+                address:
+                  [updatedData.city, updatedData.country]
+                    .filter(Boolean)
+                    .join(", ") ||
+                  updatedData.addressLine1 ||
+                  m.address,
+                rawAddress: {
+                  addressLine1: updatedData.addressLine1,
+                  city: updatedData.city,
+                  country: updatedData.country,
+                },
+                bio: updatedData.bio,
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
+              }
+            : m
+        )
+      );
+      setEditOpen(false);
+      setEditMemberId(null);
+    } catch (e) {
+      console.error("Save failed", e);
+      // Add toast notification later
+    }
   }
 
   function addMember() {
@@ -369,9 +440,9 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                         alt={m.name}
                         className="w-10 h-10 rounded-full bg-accent ring-2 ring-accent/30"
                       />
-                      {memberActivities.get(m.name) && (
+                      {memberActivities.get(m.id) && (
                         <div
-                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${getStatusColor(memberActivities.get(m.name)?.currentStatus)}`}
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${getStatusColor(memberActivities.get(m.id)?.currentStatus)}`}
                         />
                       )}
                     </div>
@@ -379,7 +450,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       <span className="font-medium text-sm block">
                         {m.name}
                       </span>
-                      {memberActivities.get(m.name)?.currentStatus ===
+                      {memberActivities.get(m.id)?.currentStatus ===
                         "online" && (
                         <span className="text-xs text-green-600 dark:text-green-400">
                           Active now
@@ -497,8 +568,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             : "hover:bg-secondary text-muted-foreground"
                         }`}
                         title={
-                          memberActivities.get(m.name)?.currentStatus ===
-                          "online"
+                          memberActivities.get(m.id)?.currentStatus === "online"
                             ? "Start chat (online)"
                             : "Start chat"
                         }
@@ -510,17 +580,18 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       <button
                         className="p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer"
                         title="More options"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleMenu(m.id);
-                        }}
+                        onClick={(e) => toggleMenu(e, m.id)}
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
                     )}
 
+                    {/* Fixed Position Menu - outside overflow container */}
                     {menuOpen === m.id && isAdmin && (
-                      <div className="absolute right-0 top-10 z-10 bg-popover border rounded-lg shadow-md min-w-40 text-sm animate-fadeIn">
+                      <div
+                        className="fixed z-50 bg-popover border rounded-lg shadow-md min-w-40 text-sm animate-fadeIn"
+                        style={{ top: menuPos.top, left: menuPos.left }}
+                      >
                         <button
                           onClick={() => openEdit(m)}
                           className="w-full text-left px-3 py-2 hover:bg-accent cursor-pointer"
@@ -542,6 +613,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Remove previous inline menu (deleted by replacement overlap) */}
 
       {/* Empty State */}
       {filtered.length === 0 && (
@@ -682,7 +755,31 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 <Input
                   value={draftAddress}
                   onChange={(e) => setDraftAddress(e.target.value)}
-                  placeholder="City, Country"
+                  placeholder="Street Address"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">City</label>
+                <Input
+                  value={draftCity}
+                  onChange={(e) => setDraftCity(e.target.value)}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Country</label>
+                <Input
+                  value={draftCountry}
+                  onChange={(e) => setDraftCountry(e.target.value)}
+                  placeholder="Country"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-medium">Bio</label>
+                <Input
+                  value={draftBio}
+                  onChange={(e) => setDraftBio(e.target.value)}
+                  placeholder="Short bio"
                 />
               </div>
             </div>

@@ -30,6 +30,10 @@ export async function GET() {
         avatarUrl: true,
         role: true,
         createdAt: true,
+        phone: true,
+        addressLine1: true,
+        city: true,
+        country: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -43,14 +47,34 @@ export async function GET() {
         avatarUrl: string | null;
         role: string;
         createdAt: Date;
-      }) => ({
-        uid: user.uid,
-        email: user.email,
-        name: user.name,
-        avatar_url: user.avatarUrl,
-        role: user.role,
-        created_at: user.createdAt,
-      })
+        phone: string | null;
+        addressLine1: string | null;
+        city: string | null;
+        country: string | null;
+      }) => {
+        // Construct basic address string
+        const addressParts = [user.city, user.country].filter(Boolean);
+        const addressStr =
+          addressParts.length > 0
+            ? addressParts.join(", ")
+            : user.addressLine1 || "-";
+
+        return {
+          uid: user.uid,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatarUrl,
+          role: user.role,
+          created_at: user.createdAt,
+          phone: user.phone,
+          address: addressStr, // Backwards compatibility for TeamTable
+          rawAddress: {
+            addressLine1: user.addressLine1,
+            city: user.city,
+            country: user.country,
+          },
+        };
+      }
     );
 
     log.info({ count: users.length }, "Fetched all users");
