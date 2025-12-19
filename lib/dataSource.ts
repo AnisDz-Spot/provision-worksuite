@@ -1,6 +1,6 @@
 // Data source utilities - determines whether to use database or mock data
 
-import { isDatabaseConfigured } from "./setup";
+import { isDatabaseConfigured, isDatabaseConfiguredServer } from "./setup";
 
 // Optional admin override stored in localStorage: 'real' | 'mock'
 function readDataModePreference(): "real" | "mock" | null {
@@ -22,6 +22,11 @@ export function setDataModePreference(mode: "real" | "mock") {
 }
 
 export function shouldUseDatabaseData(): boolean {
+  // Server-side: check environment variables
+  if (typeof window === "undefined") {
+    return isDatabaseConfiguredServer();
+  }
+
   const pref = readDataModePreference();
   if (pref === "mock") return false;
   if (pref === "real") return true;
