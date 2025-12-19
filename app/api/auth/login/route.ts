@@ -285,12 +285,14 @@ export async function POST(request: NextRequest) {
       value: token,
       httpOnly: true,
       secure: isProduction,
-      maxAge: 7 * 24 * 60 * 60, // 7 days for better stability
+      maxAge: 7 * 24 * 60 * 60, // 7 days
       path: "/",
       sameSite: "lax" as const,
     };
 
-    log.info({ cookieOptions, isProduction }, "Setting auth-token cookie");
+    console.log(
+      `[Login] Setting auth-token. Production: ${isProduction}, Secure: ${cookieOptions.secure}`
+    );
 
     response.cookies.set(cookieOptions);
 

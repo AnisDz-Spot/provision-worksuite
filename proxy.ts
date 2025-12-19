@@ -12,7 +12,6 @@ import {
 /**
  * Middleware to protect API routes with authentication and CSRF
  * Public routes are allowed, all others require valid JWT token
- * State-changing requests require CSRF validation
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -21,12 +20,12 @@ export async function proxy(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = [
     "/api/auth/login",
-    "/api/auth/callback", // NextAuth OAuth callbacks
-    "/api/auth/signin", // NextAuth signin
-    "/api/auth/signout", // NextAuth signout
-    "/api/auth/session", // NextAuth session check
-    "/api/auth/providers", // NextAuth providers list
-    "/api/auth/csrf", // NextAuth CSRF token
+    "/api/auth/callback",
+    "/api/auth/signin",
+    "/api/auth/signout",
+    "/api/auth/session",
+    "/api/auth/providers",
+    "/api/auth/csrf",
     "/api/setup/create-admin",
     "/api/setup/check-system",
     "/api/setup/config",
@@ -36,8 +35,9 @@ export async function proxy(request: NextRequest) {
     "/api/db-status",
     "/api/check-license",
     "/api/support/email",
-    "/api/auth/register", // Registration doesn't require auth
-    "/api/debug", // Allow all debug endpoints
+    "/api/auth/register",
+    "/api/debug",
+    "/api/auth/register-status", // Ensure this is public
   ];
 
   // Allow public API routes
@@ -47,24 +47,17 @@ export async function proxy(request: NextRequest) {
 
   // Protected API routes - require authentication
   if (pathname.startsWith("/api/")) {
-    // Check for auth token in cookies
     const allCookies = request.cookies.getAll();
-    console.log(
-      `[Proxy] All cookies: ${allCookies.map((c) => c.name).join(", ")}`
-    );
-
     const token = request.cookies.get("auth-token")?.value;
 
-    console.log(`[Proxy] Request to ${pathname} method ${method}`);
-    console.log(`[Proxy] Token present: ${!!token}`);
-
-    if (token) {
-      // Log token prefix for debugging
-      console.log(`[Proxy] Token starts with: ${token.substring(0, 10)}...`);
-    }
+    console.log(`[Proxy] ${method} ${pathname}`);
+    console.log(
+      `[Proxy] Cookies found: ${allCookies.map((c) => c.name).join(", ")}`
+    );
+    console.log(`[Proxy] auth-token present: ${!!token}`);
 
     if (!token) {
-      console.log("[Proxy] No token found, blocking request");
+      console.log(`[Proxy] 401 Unauthorized: No token found for ${pathname}`);
       return NextResponse.json(
         { error: "Unauthorized - No token provided" },
         { status: 401 }
@@ -73,7 +66,9 @@ export async function proxy(request: NextRequest) {
 
     const user = await verifyToken(token);
     if (!user) {
-      console.log("[Proxy] Token verification failed");
+      console.log(
+        `[Proxy] 401 Unauthorized: Token verification failed for ${pathname}`
+      );
       return NextResponse.json(
         { error: "Unauthorized - Invalid token" },
         { status: 401 }
@@ -83,6 +78,9 @@ export async function proxy(request: NextRequest) {
     // CSRF validation for state-changing requests
     if (requiresCsrfValidation(method) && !isCsrfExempt(pathname)) {
       if (!validateCsrfToken(request)) {
+        console.log(
+          `[Proxy] 403 Forbidden: CSRF validation failed for ${pathname}`
+        );
         return NextResponse.json(
           { error: "Forbidden - Invalid CSRF token" },
           { status: 403 }
@@ -96,7 +94,6 @@ export async function proxy(request: NextRequest) {
     requestHeaders.set("x-user-email", user.email);
     requestHeaders.set("x-user-role", user.role);
 
-    // Ensure CSRF token cookie exists for authenticated users
     const response = NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -111,7 +108,6 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Non-API routes pass through
   return NextResponse.next();
 }
 

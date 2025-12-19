@@ -48,7 +48,8 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
     const secret = new TextEncoder().encode(getJwtSecret());
     const { payload } = await jwtVerify(token, secret);
     return payload as unknown as AuthUser;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("[Auth] Token verification failed:", error?.message || error);
     return null;
   }
 }
@@ -72,7 +73,7 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
 
   const payload = await verifyToken(token);
   if (!payload) {
-    console.log("[Auth] Token verification failed");
+    console.log("[Auth] Token verification failed (invalid payload)");
     return null;
   }
 
