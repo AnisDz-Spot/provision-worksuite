@@ -13,20 +13,19 @@ import {
   ShieldCheck,
   LockKeyhole,
 } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthContext";
 
 export default function RolesSettings() {
+  const { isAdmin: isAuthAdmin } = useAuth();
   const [roles, setRoles] = React.useState<RoleConfig[]>(DEFAULT_ROLES);
   const [saving, setSaving] = React.useState(false);
-  const [isAdmin, setIsAdmin] = React.useState<boolean>(true);
   const { show } = useToaster();
+
+  // Use the isAdmin from AuthContext if available, otherwise fallback to local check
+  const isAdmin = isAuthAdmin;
 
   React.useEffect(() => {
     loadRoles().then(setRoles);
-    // Simple admin gate: check local preference (placeholder until real auth)
-    try {
-      const v = localStorage.getItem("pv:isAdmin");
-      setIsAdmin(v === "true" || v === null); // default to true for demo
-    } catch {}
   }, []);
 
   const updateRole = (idx: number, patch: Partial<RoleConfig>) => {
@@ -137,10 +136,7 @@ export default function RolesSettings() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {roles.map((role, idx) => (
-          <div
-            key={role.id}
-            className="rounded-xl border bg-card p-4 shadow-sm"
-          >
+          <div key={idx} className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div
                 className="px-2 py-1 rounded-full text-xs font-medium"

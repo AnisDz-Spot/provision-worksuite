@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { isSetupComplete } from "@/lib/setup";
-import { shouldUseMockData } from "@/lib/dataSource";
+import { shouldUseMockData, shouldUseDatabaseData } from "@/lib/dataSource";
 import { boolean } from "zod";
 
 type User = {
@@ -47,7 +47,9 @@ async function readUsersFromStorage(): Promise<User[]> {
         email: u.email,
         role: u.role || "Member",
         password: "", // Don't expose passwords
-        isAdmin: u.role === "Administrator",
+        isAdmin:
+          u.role?.toLowerCase() === "administrator" ||
+          u.role?.toLowerCase() === "admin",
       }));
 
       return users;
@@ -234,10 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) {
       // Setup is complete - only allow database authentication
       try {
-        const modePref =
-          typeof window !== "undefined"
-            ? localStorage.getItem("pv:dataMode")
-            : "real";
+        const modePref = shouldUseDatabaseData() ? "real" : "mock";
 
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -264,7 +263,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: data.user.email,
             role: data.user.role,
             avatarUrl: data.user.avatar_url,
-            isAdmin: data.user.role === "Administrator",
+            isAdmin:
+              data.user.role?.toLowerCase() === "administrator" ||
+              data.user.role?.toLowerCase() === "admin",
           };
 
           setCurrentUser(authUser);
@@ -299,11 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn("Failed to seed user settings", e);
           }
 
-          // If we successfully logged in via DB but client thought we were in implicit mock mode,
-          // update client state to "real" to prevent future confusion.
-          if (!setupComplete) {
-            localStorage.setItem("pv:dataMode", "real");
-          }
+          // If we successfully logged in via DB, update session expiry.
           setSessionExpiry(30);
 
           return { success: true };

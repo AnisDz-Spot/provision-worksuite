@@ -32,7 +32,7 @@ export async function createSession(user: SessionUser): Promise<{
 
   // Set the cookie (Next.js 13+ App Router)
   const cookieStore = await cookies();
-  cookieStore.set("token", token, {
+  cookieStore.set("auth-token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -71,7 +71,7 @@ export async function refreshSessionIfNeeded(
 
       // Update cookie
       const cookieStore = await cookies();
-      cookieStore.set("token", newToken, {
+      cookieStore.set("auth-token", newToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -93,7 +93,7 @@ export async function refreshSessionIfNeeded(
  */
 export async function invalidateSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete("token");
+  cookieStore.delete("auth-token");
 }
 
 /**
@@ -101,7 +101,7 @@ export async function invalidateSession(): Promise<void> {
  */
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
+  const token = cookieStore.get("auth-token")?.value;
 
   if (!token) return null;
 

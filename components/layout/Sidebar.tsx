@@ -103,7 +103,8 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
       <button
         onClick={() => setCollapsed(!collapsed)}
         className={cn(
-          "flex items-center justify-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full"
+          "flex items-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full",
+          collapsed && "justify-center"
         )}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -125,7 +126,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
         <nav
           className={cn(
             "flex flex-col mt-4 pb-2",
-            collapsed ? "gap-6 px-3" : "gap-4 px-2"
+            collapsed ? "gap-3 px-3" : "gap-4 px-2"
           )}
         >
           {canNavigate ? (

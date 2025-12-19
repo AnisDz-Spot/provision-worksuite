@@ -134,13 +134,15 @@ const getApiRatelimit = (): Ratelimit | null => {
   return apiRatelimit;
 };
 
-// Log once at startup
-if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
-  console.log("✅ Using Upstash Redis for rate limiting");
-} else {
-  console.warn(
-    "⚠️ Using in-memory rate limiting (not suitable for production with multiple servers)"
-  );
+// Log once at startup (Server-side only)
+if (typeof window === "undefined") {
+  if (upstashConfigured && process.env.USE_IN_MEMORY_RATELIMIT !== "true") {
+    console.log("✅ Using Upstash Redis for rate limiting");
+  } else {
+    console.warn(
+      "⚠️ Using in-memory rate limiting (not suitable for production with multiple servers)"
+    );
+  }
 }
 
 /**

@@ -102,7 +102,18 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
-  serverExternalPackages: ["pino", "pino-pretty"],
+  serverExternalPackages: [
+    "pino",
+    "pino-pretty",
+    "mssql",
+    "@prisma/adapter-mssql",
+    "better-sqlite3",
+    "@prisma/adapter-sqlite",
+    "mysql2",
+    "@prisma/adapter-mysql",
+    "pg",
+    "@prisma/adapter-pg",
+  ],
 };
 
 export default nextConfig;

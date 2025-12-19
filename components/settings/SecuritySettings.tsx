@@ -36,6 +36,15 @@ export function SecuritySettings() {
 
   const { showToast } = useToast();
 
+  // Password Change states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwords, setPasswords] = useState({
+    current: "",
+    new: "",
+    confirm: "",
+  });
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+
   const fetchUserStatus = useCallback(async () => {
     try {
       setLoading(true);
@@ -65,6 +74,43 @@ export function SecuritySettings() {
   useEffect(() => {
     fetchUserStatus();
   }, [fetchUserStatus]);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwords.new !== passwords.confirm) {
+      showToast("New passwords do not match", "error");
+      return;
+    }
+
+    if (passwords.new.length < 8) {
+      showToast("Password must be at least 8 characters", "error");
+      return;
+    }
+
+    setPasswordUpdating(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: passwords.current,
+          newPassword: passwords.new,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update password");
+
+      showToast("Password updated successfully", "success");
+      setShowPasswordModal(false);
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch (error: any) {
+      showToast(error.message, "error");
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
 
   const handleDisable2FA = async () => {
     if (
@@ -253,7 +299,12 @@ export function SecuritySettings() {
               Update your password to keep your account secure.
             </p>
             <div className="pt-4">
-              <Button variant="outline">Update Password</Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Update Password
+              </Button>
             </div>
           </div>
         </div>
@@ -407,6 +458,80 @@ export function SecuritySettings() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* MODAL: Change Password */}
+      <Modal
+        open={showPasswordModal}
+        onOpenChange={setShowPasswordModal}
+        size="sm"
+      >
+        <form onSubmit={handleUpdatePassword} className="space-y-4">
+          <h3 className="text-lg font-semibold">Change Password</h3>
+          <p className="text-sm text-muted-foreground">
+            Enter your current password and a new one to update.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Current Password</label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={passwords.current}
+              onChange={(e) =>
+                setPasswords((p) => ({ ...p, current: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">New Password</label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={passwords.new}
+              onChange={(e) =>
+                setPasswords((p) => ({ ...p, new: e.target.value }))
+              }
+              required
+              minLength={8}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Confirm New Password</label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={passwords.confirm}
+              onChange={(e) =>
+                setPasswords((p) => ({ ...p, confirm: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowPasswordModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={passwordUpdating}
+              disabled={
+                !passwords.current || !passwords.new || !passwords.confirm
+              }
+            >
+              Update Password
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

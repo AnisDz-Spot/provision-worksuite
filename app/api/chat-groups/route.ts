@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { getAuthenticatedUser } from "@/lib/auth";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 // Type definitions
 interface CreateGroupRequest {
@@ -17,17 +19,23 @@ const isValidEmail = (email: string): boolean => {
 
 export async function GET(request: NextRequest) {
   try {
-    // For demo mode: use a default user email
-    const userEmail = "demo@example.com";
+    // In demo mode, return empty or mock from localStorage handles it
+    if (!shouldUseDatabaseData()) {
+      return NextResponse.json([]);
+    }
+
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userEmail = user.email;
 
     // Try to fetch groups, catch DB errors
     try {
       const groups = await prisma.chatGroup.findMany({
         where: {
-          OR: [
-            { createdBy: { equals: userEmail } },
-            { members: { has: userEmail } },
-          ],
+          OR: [{ createdBy: userEmail }, { members: { has: userEmail } }],
         },
         orderBy: {
           createdAt: "desc",
@@ -38,7 +46,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(groups);
     } catch (dbError) {
       log.warn({ err: dbError }, "Database unavailable for chat groups");
-      // Return empty array for demo mode - localStorage will take over
       return NextResponse.json([]);
     }
   } catch (error) {
@@ -49,9 +56,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // For demo mode: use a default user with admin role
-    const userEmail = "demo@example.com";
-    const userRole = "admin";
+    if (!shouldUseDatabaseData()) {
+      return NextResponse.json(
+        { error: "Database mode required for creating groups" },
+        { status: 403 }
+      );
+    }
+
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userEmail = user.email;
 
     const body = (await request.json()) as CreateGroupRequest;
     const { name, description, members = [], isPrivate = false } = body;
@@ -64,6 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ... (rest of validation)
     if (name.trim().length > 100) {
       return NextResponse.json(
         { error: "Group name must be 100 characters or less" },
@@ -130,20 +148,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(group, { status: 201 });
     } catch (dbError) {
-      log.warn({ err: dbError }, "Database unavailable for group creation");
-      // Return offline mode - frontend will save to localStorage
+      log.error({ err: dbError }, "Database error during group creation");
       return NextResponse.json(
-        {
-          error: "Service temporarily unavailable",
-          offline: true,
-          fallback: {
-            name: name.trim(),
-            description: description?.trim(),
-            members: uniqueMembers,
-            isPrivate,
-          },
-        },
-        { status: 503 }
+        { error: "Failed to create group in database" },
+        { status: 500 }
       );
     }
   } catch (error) {

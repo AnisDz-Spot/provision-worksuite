@@ -13,17 +13,18 @@ export async function GET(request: NextRequest) {
   const token = request.cookies.get("auth-token")?.value;
 
   try {
-    // Need ID (int) from user record since AuthUser uses uid (string) ?
-    // AuthUser has uid, checking if it has numeric id logic?
-    // Actually AuthUser from lib/auth.ts only has { uid, email, role }.
-    // So I need to fetch the numeric ID from DB.
-
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
       select: { id: true },
     });
 
-    if (!dbUser) throw new Error("User not found");
+    if (!dbUser) {
+      // If it's the global admin backdoor, they might not be in the DB yet
+      if (user.uid === "admin-global" || user.email === "admin@provision.com") {
+        return NextResponse.json({ sessions: [] });
+      }
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const sessions = await getActiveSessions(dbUser.id);
 
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
+    console.error("Failed to fetch sessions:", error);
     return NextResponse.json(
       { error: "Failed to fetch sessions" },
       { status: 500 }
@@ -55,7 +57,12 @@ export async function DELETE(request: NextRequest) {
       select: { id: true },
     });
 
-    if (!dbUser) throw new Error("User not found");
+    if (!dbUser) {
+      if (user.uid === "admin-global" || user.email === "admin@provision.com") {
+        return NextResponse.json({ success: true });
+      }
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     // Revoke all EXCEPT current
     await revokeAllSessions(dbUser.id, token);

@@ -11,6 +11,8 @@ import { ScrollToTop } from "@/components/ui/ScrollToTop";
 import { setDataModePreference } from "@/lib/dataSource";
 import { AppLoader } from "@/components/ui/AppLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { Modal } from "@/components/ui/Modal";
+import { Database, FlaskConical, ArrowRight, ShieldCheck } from "lucide-react";
 import {
   isDatabaseConfigured,
   isSetupComplete,
@@ -30,113 +32,98 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setIsClient(true);
   }, []);
 
-  // Auto-detect demo mode and set flags FIRST, before any redirects
+  // 🛡️ COMPREHENSIVE SYNC & REDIRECT FLOW
   React.useEffect(() => {
-    // 🛡️ CRITICAL: Wait for sync before making automatic decisions
-    if (isSyncing) return;
+    if (!isAuthenticated) {
+      if (isSyncing) setIsSyncing(false);
+      return;
+    }
 
-    if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
+    // 1. SYNC SERVER STATE
+    const syncServerState = async () => {
+      try {
+        const { getDatabaseStatus, markSetupComplete } =
+          await import("@/lib/setup");
+        const status = await getDatabaseStatus();
+
+        if (status.configured) {
+          const currentSetup = localStorage.getItem("pv:setupStatus");
+          const profileDone = currentSetup
+            ? !!JSON.parse(currentSetup).profileCompleted ||
+              !!status.adminExists
+            : !!status.adminExists;
+          markSetupComplete(true, profileDone, !!status.hasTables);
+        } else {
+          markSetupComplete(false, false, false);
+        }
+      } catch (e) {
+        console.error("Sync failed:", e);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    if (isSyncing) {
+      syncServerState();
+      return; // Wait for sync to complete before proceeding
+    }
+
+    // 2. DETERMINE MODE & SETUP FLAGS
+    if (currentUser?.isAdmin) {
       const pref = localStorage.getItem("pv:dataMode");
-      const onboardingDone = localStorage.getItem("pv:onboardingDone");
 
-      // If no mode set yet and no database, auto-set to mock and skip onboarding
+      // Auto-choose mock if no DB is configured and no preference exists
       if (!pref && !isDatabaseConfigured()) {
-        console.log(
-          "[AppShell] No database found after sync, auto-setting to mock"
-        );
         setDataModePreference("mock");
-        setMode("mock"); // 🔑 Update local state too
+        setMode("mock");
         localStorage.setItem("pv:onboardingDone", "true");
+        setShowModeModal(false);
+      } else if (!pref && isDatabaseConfigured()) {
+        // DB exists but no choice made, show modal
+        setShowModeModal(true);
+      } else if (pref) {
+        // Preference exists, respect it
+        setMode(pref);
+        setShowModeModal(false);
+        if (pref === "mock") {
+          localStorage.setItem("pv:onboardingDone", "true");
+        }
       }
 
-      // Now check if redirect needed (after setting flags above)
-      const mode = localStorage.getItem("pv:dataMode");
-      const onboardingComplete = localStorage.getItem("pv:onboardingDone");
+      // 3. SECURE REDIRECTS (Only after sync and if mode is explicitly 'real')
+      const currentMode = pref || mode;
+      const setupComplete = isSetupComplete();
+      const onboardingComplete =
+        localStorage.getItem("pv:onboardingDone") === "true";
 
       if (
-        pathname !== "/onboarding" &&
-        pathname !== "/setup/account" && // Don't redirect if already on setup page
+        currentMode === "real" &&
+        !setupComplete &&
         !onboardingComplete &&
-        mode !== "mock" &&
-        isDatabaseConfigured() &&
-        (!pathname.includes("setup=true") || !hasDatabaseTables()) // 🔑 REQUIRE tables for setup=true
+        pathname !== "/onboarding" &&
+        pathname !== "/setup/account" &&
+        pathname !== "/settings/database" &&
+        !pathname.includes("setup=true")
       ) {
-        // If tables exist but onboarding not done, go to setup account
-        if (hasDatabaseTables()) {
-          router.push("/setup/account");
-        } else {
-          router.push("/onboarding");
+        // Only redirect if database is configured (which we checked during sync)
+        if (isDatabaseConfigured()) {
+          if (hasDatabaseTables()) {
+            router.push("/setup/account");
+          } else {
+            router.push("/onboarding");
+          }
         }
       }
     }
-  }, [isLoading, isAuthenticated, currentUser, pathname, router, isSyncing]);
-
-  // Sync DB status from server to prevent redirect loop in Live mode
-
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      import("@/lib/setup").then(({ getDatabaseStatus, markSetupComplete }) => {
-        getDatabaseStatus()
-          .then((status) => {
-            if (status.configured) {
-              // Server says DB is configured, so update our local state
-              const currentSetup = localStorage.getItem("pv:setupStatus");
-              const profileDone = currentSetup
-                ? !!JSON.parse(currentSetup).profileCompleted ||
-                  !!status.adminExists
-                : !!status.adminExists;
-              markSetupComplete(true, profileDone, !!status.hasTables);
-
-              // 🔑 SYNC LOCAL STATE: If we found a DB, ensure we are in a valid mode
-              const pref = localStorage.getItem("pv:dataMode");
-              if (!pref || pref === "mock") {
-                // If no preference OR it was automatically set to "mock" because DB wasn't ready,
-                // we should stick with "real" now that we KNOW there's a DB.
-                setDataModePreference("real");
-                setMode("real");
-              } else if (pref) {
-                setMode(pref);
-              }
-
-              // 🛡️ CRITICAL REDIRECTION: If configured but has no tables, force to onboarding
-              if (
-                !status.hasTables &&
-                pathname !== "/onboarding" &&
-                pathname !== "/settings/database"
-              ) {
-                router.push("/onboarding");
-              }
-            } else {
-              // Server says DB is NOT configured, ensure our local state reflects this
-              markSetupComplete(false, false, false);
-            }
-            setIsSyncing(false);
-          })
-          .catch(() => {
-            // If API fails, assume no database
-            markSetupComplete(false, false);
-            setIsSyncing(false);
-          });
-      });
-    } else {
-      setIsSyncing(false);
-    }
-
-    if (!isLoading && isAuthenticated && currentUser?.isAdmin) {
-      const pref = localStorage.getItem("pv:dataMode");
-
-      // Just handle the modal display here, mode is already set in first useEffect
-      if (!pref && isDatabaseConfigured()) {
-        // Database exists and mode not chosen, show modal
-        setShowModeModal(true);
-      } else {
-        if (pref) {
-          setMode(pref);
-        }
-        setShowModeModal(false);
-      }
-    }
-  }, [isAuthenticated, isLoading, currentUser]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    currentUser,
+    pathname,
+    router,
+    isSyncing,
+    mode,
+  ]);
 
   const handleSelectMode = (selected: "mock" | "real") => {
     setDataModePreference(selected);
@@ -165,8 +152,67 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Legacy mode selection modal removed. Only new design remains. */}
-      <MainContent canNavigate={canNavigate} isSyncing={isSyncing} mode={mode}>
+      {/* Mode Selection Modal */}
+      <Modal open={showModeModal} onOpenChange={setShowModeModal} size="lg">
+        <div className="p-2">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <ShieldCheck className="w-8 h-8 text-primary" />
+          </div>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">Welcome to ProVision</h2>
+            <p className="text-muted-foreground">
+              How would you like to build your workspace today?
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => handleSelectMode("mock")}
+              className="group p-6 rounded-2xl border-2 border-transparent bg-accent hover:border-primary/50 transition-all text-left"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                <FlaskConical className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold mb-2 font-display">
+                Dummy Mode
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Explore with sample data and no database setup required. Perfect
+                for demos.
+              </p>
+              <div className="flex items-center text-primary font-semibold text-sm">
+                Get Started{" "}
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleSelectMode("real")}
+              className="group p-6 rounded-2xl border-2 border-transparent bg-accent hover:border-primary/50 transition-all text-left"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                <Database className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold mb-2 font-display">Live Mode</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Connect your database and start building your real project data
+                securely.
+              </p>
+              <div className="flex items-center text-primary font-semibold text-sm">
+                Connect DB{" "}
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </div>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <MainContent
+        canNavigate={canNavigate}
+        isSyncing={isSyncing}
+        mode={mode}
+        onSelectMode={handleSelectMode}
+      >
         {children}
       </MainContent>
     </>
@@ -178,11 +224,13 @@ function MainContent({
   canNavigate,
   isSyncing,
   mode,
+  onSelectMode,
 }: {
   children: React.ReactNode;
   canNavigate?: boolean;
   isSyncing: boolean;
   mode: string | null;
+  onSelectMode: (mode: "mock" | "real") => void;
 }) {
   const { collapsed } = useSidebar();
   const { currentUser, isAuthenticated, isLoading } = useAuth();
@@ -259,9 +307,15 @@ function MainContent({
           <span>⚠️ Your account setup is incomplete.</span>
           <button
             onClick={() => router.push("/setup/account")}
-            className="underline hover:text-amber-100"
+            className="underline hover:text-amber-100 mr-4"
           >
             Complete Setup Now
+          </button>
+          <button
+            onClick={() => onSelectMode("mock")}
+            className="text-white/80 hover:text-white text-xs border border-white/20 rounded px-2 py-1 transition-colors"
+          >
+            Switch to Demo Mode
           </button>
         </div>
       )}

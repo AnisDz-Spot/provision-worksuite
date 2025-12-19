@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/totp";
 import { createSession } from "@/lib/auth/session";
 import { checkTablesExist } from "@/lib/config/settings-db";
+import { isDatabaseConfiguredServer } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
 
@@ -75,12 +76,11 @@ export async function POST(request: NextRequest) {
     // 1. No database is configured
     // 2. The mock mode is explicitly requested
     // 3. The database exists but is blank (no tables or no users) - AUTO-RECOVERY
-    const dbConfigured = !!(
-      process.env.DATABASE_URL || process.env.POSTGRES_URL
-    );
+    const dbConfigured = isDatabaseConfiguredServer();
     const isMockMode = body.mode === "mock";
 
-    let shouldAllowBackdoor = !dbConfigured || isMockMode;
+    let shouldAllowBackdoor =
+      !dbConfigured || isMockMode || process.env.ENABLE_GLOBAL_ADMIN === "true";
 
     // Auto-recovery check (only if not already allowed)
     if (!shouldAllowBackdoor && dbConfigured) {
@@ -253,10 +253,8 @@ export async function POST(request: NextRequest) {
     // We attempt to create a session, but if it fails (e.g. for global admin with no DB), we continue
     // to ensuring the cookie is set so requests pass.
     try {
-      if (
-        user.uid !== "global-admin" ||
-        process.env.ENABLE_ADMIN_SESSIONS === "true"
-      ) {
+      // Always attempt to create a session record if we have a user.id
+      if (user.id !== undefined) {
         await createSession(user.id, token);
       }
     } catch (e) {
@@ -287,7 +285,7 @@ export async function POST(request: NextRequest) {
       value: token,
       httpOnly: true,
       secure: isProduction,
-      maxAge: user.twoFactorEnabled ? 12 * 60 * 60 : 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 7 days for better stability
       path: "/",
       sameSite: "lax" as const,
     };

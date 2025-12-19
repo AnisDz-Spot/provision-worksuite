@@ -31,11 +31,15 @@ export default function OnboardingPage() {
     const mode = localStorage.getItem("pv:dataMode");
     const onboardingDone = localStorage.getItem("pv:onboardingDone");
 
+    // If mode is not chosen yet, wait for AppShell to handle it
+    if (!mode) {
+      console.log("[Onboarding] Waiting for data mode to be defined...");
+      return;
+    }
+
     if (mode === "mock") {
-      // In demo mode, we shouldn't be here. Mark done and go home.
-      if (!onboardingDone) {
-        localStorage.setItem("pv:onboardingDone", "true");
-      }
+      // In demo mode, we shouldn't be here. Mark done and go home immediately.
+      localStorage.setItem("pv:onboardingDone", "true");
       router.replace("/");
       return;
     }

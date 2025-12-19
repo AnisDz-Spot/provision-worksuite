@@ -56,10 +56,10 @@ type TabKey =
 function DataSourceTab() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
-    if (typeof window === "undefined") return "real";
+  const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
+    if (typeof window === "undefined") return null;
     const val = localStorage.getItem("pv:dataMode");
-    return val === "mock" ? "mock" : "real";
+    return val === "mock" || val === "real" ? val : null;
   });
 
   const [status, setStatus] = useState<any>(null);
@@ -446,10 +446,10 @@ function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
-  const [dataMode, setDataMode] = useState<"real" | "mock">(() => {
-    if (typeof window === "undefined") return "real";
+  const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
+    if (typeof window === "undefined") return null;
     const val = localStorage.getItem("pv:dataMode");
-    return val === "mock" ? "mock" : "real";
+    return val === "mock" || val === "real" ? val : null;
   });
   const isSetupMode = searchParams.get("setup") === "true";
 

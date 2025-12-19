@@ -41,13 +41,14 @@ export function ResourceAllocation({
     let isMounted = true;
     async function loadData() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
-
       // Initial state based on mode
       if (shouldUseMockData()) {
-        if (members && members.length > 0) {
-          setTeamMembers(members);
-        } else {
-          setTeamMembers(defaultMembers);
+        if (isMounted) {
+          if (members && members.length > 0) {
+            setTeamMembers(members);
+          } else {
+            setTeamMembers(defaultMembers);
+          }
         }
         return;
       }

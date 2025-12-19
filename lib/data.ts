@@ -92,10 +92,11 @@ export async function loadProjects(): Promise<Project[]> {
   const stored = localStorage.getItem("pv:projects");
   if (stored) {
     try {
-      return JSON.parse(stored) as Project[];
-    } catch {
-      return PROJECTS as Project[];
-    }
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as Project[];
+      }
+    } catch {}
   }
   return PROJECTS as Project[];
 }
@@ -155,10 +156,11 @@ export async function loadTasks(): Promise<Task[]> {
   const stored = localStorage.getItem("pv:tasks");
   if (stored) {
     try {
-      return JSON.parse(stored) as Task[];
-    } catch {
-      return TASKS as Task[];
-    }
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as Task[];
+      }
+    } catch {}
   }
   return TASKS as Task[];
 }
@@ -218,20 +220,11 @@ export async function loadUsers(): Promise<User[]> {
   const stored = localStorage.getItem("pv:users");
   if (stored) {
     try {
-      return JSON.parse(stored) as User[];
-    } catch {
-      // Convert USERS data to User format
-      return (USERS as any[]).map((u: any) => ({
-        uid: u.id || u.uid,
-        email: u.email,
-        name: u.name,
-        avatar_url: u.avatar_url || undefined,
-        role: u.role,
-        department: u.department || undefined,
-        status: u.status || undefined,
-        created_at: u.created_at || undefined,
-      }));
-    }
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as User[];
+      }
+    } catch {}
   }
   // Convert USERS data to User format
   return mapMockUsers(USERS as any[]);

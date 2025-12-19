@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 export type Notification = {
   id: string;
@@ -62,8 +63,8 @@ export function NotificationCenter({
       const stored = localStorage.getItem("pv:notifications");
       if (stored) {
         setNotifications(JSON.parse(stored));
-      } else {
-        // Initialize with sample notifications
+      } else if (shouldUseMockData()) {
+        // Initialize with sample notifications only in mock mode
         const initial: Notification[] = [
           {
             id: "n1",
@@ -99,6 +100,9 @@ export function NotificationCenter({
         ];
         setNotifications(initial);
         localStorage.setItem("pv:notifications", JSON.stringify(initial));
+      } else {
+        // In live mode, initialize with empty array if nothing stored
+        setNotifications([]);
       }
     } catch (error) {
       console.error("Error loading notifications:", error);

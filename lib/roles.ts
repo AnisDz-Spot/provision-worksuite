@@ -62,12 +62,17 @@ export async function loadRoles(): Promise<RoleConfig[]> {
       const res = await fetch("/api/roles");
       const json = await res.json();
       if (json?.success && Array.isArray(json.data)) {
+        if (json.data.length === 0) {
+          // If DB is empty, seed with defaults and return them
+          await saveRoles(DEFAULT_ROLES);
+          return DEFAULT_ROLES;
+        }
         // Map DB fields to RoleConfig
         return json.data.map((r: any) => ({
           id: r.id,
           name: r.name,
           description: r.description || undefined,
-          colorHex: r.color_hex || undefined,
+          colorHex: r.color_hex || r.colorHex || undefined,
           order: r.order ?? 0,
         }));
       }

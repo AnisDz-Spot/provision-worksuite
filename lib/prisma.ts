@@ -85,8 +85,10 @@ async function createDatabaseAdapter(
 
         if (runtime !== "edge") {
           // Standard PostgreSQL / Cloud providers using TCP
-          const { Pool } = await import("pg");
-          const { PrismaPg } = await import("@prisma/adapter-pg");
+          const { Pool } = await import(/* webpackIgnore: true */ "pg");
+          const { PrismaPg } = await import(
+            /* webpackIgnore: true */ "@prisma/adapter-pg"
+          );
 
           const pool = new Pool({
             connectionString: finalConnectionString,
@@ -103,9 +105,12 @@ async function createDatabaseAdapter(
           return { type: "postgresql", adapter };
         } else {
           // Edge Runtime Fallback: Use Neon Serverless (WebSockets)
-          const { Pool: NeonPool, neonConfig } =
-            await import("@neondatabase/serverless");
-          const { PrismaNeon } = await import("@prisma/adapter-neon");
+          const { Pool: NeonPool, neonConfig } = await import(
+            /* webpackIgnore: true */ "@neondatabase/serverless"
+          );
+          const { PrismaNeon } = await import(
+            /* webpackIgnore: true */ "@prisma/adapter-neon"
+          );
 
           neonConfig.pipelineConnect = false;
 
@@ -124,9 +129,13 @@ async function createDatabaseAdapter(
         // MySQL adapter (optional - install with: npm install mysql2 @prisma/adapter-mysql)
         try {
           // @ts-ignore - Optional dependency
-          const mysql = await import("mysql2/promise");
+          const mysql = await import(
+            /* webpackIgnore: true */ "mysql2/promise" as any
+          );
           // @ts-ignore - Optional dependency
-          const { PrismaMySql } = await import("@prisma/adapter-mysql");
+          const { PrismaMySql } = await import(
+            /* webpackIgnore: true */ "@prisma/adapter-mysql" as any
+          );
 
           const pool = mysql.createPool({ uri: connectionString });
           const adapter = new PrismaMySql(pool);
@@ -144,9 +153,13 @@ async function createDatabaseAdapter(
         // SQLite adapter (optional - install with: npm install better-sqlite3 @prisma/adapter-sqlite)
         try {
           // @ts-ignore - Optional dependency
-          const Database = await import("better-sqlite3");
+          const Database = await import(
+            /* webpackIgnore: true */ "better-sqlite3" as any
+          );
           // @ts-ignore - Optional dependency
-          const { PrismaSqlite } = await import("@prisma/adapter-sqlite");
+          const { PrismaSqlite } = await import(
+            /* webpackIgnore: true */ "@prisma/adapter-sqlite" as any
+          );
 
           const db = new Database.default(
             connectionString.replace("file:", "")
@@ -166,11 +179,13 @@ async function createDatabaseAdapter(
         // MS SQL Server adapter (optional - install with: npm install mssql @prisma/adapter-mssql)
         try {
           // @ts-ignore - Optional dependency
-          const sql = await import("mssql");
+          const mssql = await import(/* webpackIgnore: true */ "mssql" as any);
           // @ts-ignore - Optional dependency
-          const { PrismaMsSql } = await import("@prisma/adapter-mssql");
+          const { PrismaMsSql } = await import(
+            /* webpackIgnore: true */ "@prisma/adapter-mssql" as any
+          );
 
-          const pool = new sql.ConnectionPool(connectionString);
+          const pool = new mssql.ConnectionPool(connectionString);
           await pool.connect();
           const adapter = new PrismaMsSql(pool);
 

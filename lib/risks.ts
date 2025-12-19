@@ -3,7 +3,8 @@ export type RiskLevelId = "critical" | "high" | "medium" | "low" | string;
 export type RiskLevelConfig = {
   id: RiskLevelId;
   label: string;
-  colorClasses: string; // tailwind classes for text/bg/border
+  colorClasses: string; // tailwind classes for text/bg/border (legacy/fallback)
+  colorHex?: string; // hex color for badges
   order: number; // for sorting
 };
 
@@ -14,24 +15,28 @@ export const DEFAULT_RISK_LEVELS: RiskLevelConfig[] = [
     id: "critical",
     label: "Critical",
     colorClasses: "text-red-600 bg-red-500/10 border-red-500/20",
+    colorHex: "#EF4444",
     order: 10,
   },
   {
     id: "high",
     label: "High",
     colorClasses: "text-orange-600 bg-orange-500/10 border-orange-500/20",
+    colorHex: "#F97316",
     order: 20,
   },
   {
     id: "medium",
     label: "Medium",
     colorClasses: "text-amber-600 bg-amber-500/10 border-amber-500/20",
+    colorHex: "#F59E0B",
     order: 30,
   },
   {
     id: "low",
     label: "Low",
     colorClasses: "text-blue-600 bg-blue-500/10 border-blue-500/20",
+    colorHex: "#3B82F6",
     order: 40,
   },
 ];

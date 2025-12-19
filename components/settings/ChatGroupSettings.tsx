@@ -13,12 +13,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthContext";
+import { loadUsers } from "@/lib/data";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 type ChatGroup = {
   id: string;
   name: string;
   description?: string;
-  members: string[];
+  members: string[]; // array of emails
   createdBy: string;
   createdAt: string;
   isPrivate: boolean;
@@ -31,92 +34,143 @@ type TeamMember = {
   role: string;
 };
 
-// Mock team members for demo
-const MOCK_TEAM_MEMBERS: TeamMember[] = [
-  {
-    id: "1",
-    name: "Alice Johnson",
-    email: "alice@example.com",
-    role: "project_manager",
-  },
-  { id: "2", name: "Bob Smith", email: "bob@example.com", role: "member" },
-  { id: "3", name: "Carol Davis", email: "carol@example.com", role: "member" },
-  { id: "4", name: "David Lee", email: "david@example.com", role: "admin" },
-  {
-    id: "5",
-    name: "Eve Wilson",
-    email: "eve@example.com",
-    role: "project_manager",
-  },
-  { id: "6", name: "Frank Miller", email: "frank@example.com", role: "admin" },
-];
-
 export function ChatGroupSettings() {
+  const { currentUser, isAdmin } = useAuth();
   const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [newGroup, setNewGroup] = useState({
     name: "",
     description: "",
     members: [] as string[],
     isPrivate: false,
   });
-  const [currentUserRole] = useState<string>("admin"); // In real app, get from auth context
 
-  // Only admins and project managers can manage chat groups
+  // Users with admin or project_manager role can manage groups
   const canManageGroups =
-    currentUserRole === "admin" || currentUserRole === "project_manager";
+    isAdmin ||
+    currentUser?.role === "project_manager" ||
+    currentUser?.role === "Admin";
 
   useEffect(() => {
-    loadGroups();
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([loadGroups(), loadTeamMembers()]);
+      setLoading(false);
+    };
+    fetchData();
   }, []);
 
-  const loadGroups = () => {
+  const loadTeamMembers = async () => {
     try {
-      const stored = localStorage.getItem("pv:chatGroups");
-      if (stored) {
-        setGroups(JSON.parse(stored));
+      const users = await loadUsers();
+      const members: TeamMember[] = users.map((u) => ({
+        id: u.uid,
+        name: u.name,
+        email: u.email,
+        role: u.role || "member",
+      }));
+      setTeamMembers(members);
+    } catch (error) {
+      console.error("Failed to load team members:", error);
+    }
+  };
+
+  const loadGroups = async () => {
+    try {
+      if (shouldUseMockData()) {
+        const stored = localStorage.getItem("pv:chatGroups");
+        if (stored) {
+          setGroups(JSON.parse(stored));
+        }
+        return;
+      }
+
+      const res = await fetch("/api/chat-groups");
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(data);
       }
     } catch (error) {
       console.error("Failed to load chat groups:", error);
     }
   };
 
-  const saveGroups = (updatedGroups: ChatGroup[]) => {
+  const saveGroups = async (updatedGroups: ChatGroup[]) => {
     setGroups(updatedGroups);
-    localStorage.setItem("pv:chatGroups", JSON.stringify(updatedGroups));
+    if (shouldUseMockData()) {
+      localStorage.setItem("pv:chatGroups", JSON.stringify(updatedGroups));
+    }
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!newGroup.name.trim()) return;
 
-    const group: ChatGroup = {
-      id: `group_${Date.now()}`,
+    const groupPayload = {
       name: newGroup.name.trim(),
       description: newGroup.description.trim() || undefined,
-      members: newGroup.members,
-      createdBy: "Current User", // In real app, use actual user
-      createdAt: new Date().toISOString(),
+      members: newGroup.members, // these are emails now
       isPrivate: newGroup.isPrivate,
     };
 
-    saveGroups([...groups, group]);
+    if (shouldUseMockData()) {
+      const group: ChatGroup = {
+        id: `mock_${Date.now()}`,
+        ...groupPayload,
+        createdBy: currentUser?.name || "Demo User",
+        createdAt: new Date().toISOString(),
+      };
+      saveGroups([...groups, group]);
+    } else {
+      try {
+        const res = await fetch("/api/chat-groups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(groupPayload),
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setGroups((prev) => [...prev, created]);
+        } else {
+          const err = await res.json();
+          alert(err.error || "Failed to create group");
+        }
+      } catch (error) {
+        console.error("Error creating group:", error);
+        alert("Failed to create group");
+      }
+    }
+
     setNewGroup({ name: "", description: "", members: [], isPrivate: false });
     setIsCreating(false);
   };
 
-  const handleDeleteGroup = (id: string) => {
-    if (confirm("Are you sure you want to delete this chat group?")) {
+  const handleDeleteGroup = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this chat group?")) return;
+
+    if (shouldUseMockData()) {
       saveGroups(groups.filter((g) => g.id !== id));
+    } else {
+      try {
+        const res = await fetch(`/api/chat-groups/${id}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setGroups((prev) => prev.filter((g) => g.id !== id));
+        }
+      } catch (error) {
+        console.error("Error deleting group:", error);
+      }
     }
   };
 
-  const toggleMember = (memberId: string) => {
+  const toggleMember = (email: string) => {
     setNewGroup((prev) => ({
       ...prev,
-      members: prev.members.includes(memberId)
-        ? prev.members.filter((m) => m !== memberId)
-        : [...prev.members, memberId],
+      members: prev.members.includes(email)
+        ? prev.members.filter((m) => m !== email)
+        : [...prev.members, email],
     }));
   };
 
@@ -215,13 +269,13 @@ export function ChatGroupSettings() {
                 Add Members
               </label>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-lg bg-background">
-                {MOCK_TEAM_MEMBERS.map((member) => (
+                {teamMembers.map((member) => (
                   <button
                     key={member.id}
-                    onClick={() => toggleMember(member.id)}
+                    onClick={() => toggleMember(member.email)}
                     className={cn(
                       "flex items-center gap-2 p-2 rounded-lg text-left text-sm transition-colors",
-                      newGroup.members.includes(member.id)
+                      newGroup.members.includes(member.email)
                         ? "bg-primary/10 border-primary border"
                         : "hover:bg-accent"
                     )}
@@ -235,11 +289,11 @@ export function ChatGroupSettings() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{member.name}</p>
                       <p className="text-xs text-muted-foreground capitalize">
-                        {member.role.replace("_", " ")}
+                        {member.role?.replace("_", " ")}
                       </p>
                     </div>
-                    {newGroup.members.includes(member.id) && (
-                      <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                    {newGroup.members.includes(member.email) && (
+                      <Check className="w-4 h-4 text-primary shrink-0" />
                     )}
                   </button>
                 ))}

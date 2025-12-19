@@ -36,9 +36,6 @@ export async function proxy(request: NextRequest) {
     "/api/db-status",
     "/api/check-license",
     "/api/support/email",
-    "/api/chat-groups", // Temporary: allow in demo mode
-    "/api/auth/register-status", // Allow checking registration status without auth
-    "/api/auth/register", // Registration doesn't require auth
     "/api/auth/register", // Registration doesn't require auth
     "/api/debug", // Allow all debug endpoints
   ];
@@ -60,6 +57,11 @@ export async function proxy(request: NextRequest) {
 
     console.log(`[Proxy] Request to ${pathname} method ${method}`);
     console.log(`[Proxy] Token present: ${!!token}`);
+
+    if (token) {
+      // Log token prefix for debugging
+      console.log(`[Proxy] Token starts with: ${token.substring(0, 10)}...`);
+    }
 
     if (!token) {
       console.log("[Proxy] No token found, blocking request");

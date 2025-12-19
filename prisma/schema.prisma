@@ -79,16 +79,15 @@ model User {
   sessions Session[]
 
   // Relations
-  projects             Project[]
-  projectMemberships   ProjectMember[]
-  comments             Comment[]
-  notifications        Notification[]
-  activities           Activity[]
-  uploadedFiles        File[]
-  createdEvents        CalendarEvent[]
-  assignedTasks        Task[]            @relation("TaskAssignee")
-  chatGroupMemberships ChatGroupMember[]
-  accounts             Account[]
+  projects           Project[]
+  projectMemberships ProjectMember[]
+  comments           Comment[]
+  notifications      Notification[]
+  activities         Activity[]
+  uploadedFiles      File[]
+  createdEvents      CalendarEvent[]
+  assignedTasks      Task[]          @relation("TaskAssignee")
+  accounts           Account[]
 
   @@index([email])
   @@index([roleId])
@@ -545,31 +544,16 @@ model Message {
 }
 
 model ChatGroup {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations - Many-to-many through junction table
-  members ChatGroupMember[]
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  members     String[] @default([]) // Array of user emails
+  isPrivate   Boolean  @default(false) @map("is_private")
+  createdBy   String   @map("created_by") // Creator email
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("chat_groups")
-}
-
-model ChatGroupMember {
-  id          String   @id @default(uuid())
-  chatGroupId String   @map("chat_group_id")
-  userId      Int      @map("user_id")
-  joinedAt    DateTime @default(now()) @map("joined_at")
-
-  // Relations
-  chatGroup ChatGroup @relation(fields: [chatGroupId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([chatGroupId, userId])
-  @@index([chatGroupId])
-  @@index([userId])
-  @@map("chat_group_members")
 }
 
 model Presence {
