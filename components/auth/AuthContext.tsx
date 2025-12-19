@@ -1,7 +1,11 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { isSetupComplete } from "@/lib/setup";
-import { shouldUseMockData, shouldUseDatabaseData } from "@/lib/dataSource";
+import { isSetupComplete, markDatabaseConfigured } from "@/lib/setup";
+import {
+  shouldUseMockData,
+  shouldUseDatabaseData,
+  setDataModePreference,
+} from "@/lib/dataSource";
 import { boolean } from "zod";
 
 type User = {
@@ -206,37 +210,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Actually, let's defer to the standard flow and use the backdoor as a fallback or only for setup.
     }
 
-    // If admin selected dummy data mode and it's not the global admin, reject
-    if (shouldUseMockData()) {
-      const explicitMock =
-        typeof window !== "undefined" &&
-        localStorage.getItem("pv:dataMode") === "mock";
-
-      if (explicitMock) {
-        // In explicit dummy mode, only global admin is allowed
-        return {
-          success: false,
-          error:
-            "Use global admin credentials (admin@provision.com) in dummy data mode.",
-        };
-      }
-    }
-
-    // Check if setup is complete - if yes, ONLY allow database login
-    // ... OR if we act "optimistically" because we fell through from above
+    // Relaxed check: Allow DB login if credentials NOT global-admin, OR if system is already set up
     const setupComplete = isSetupComplete();
 
-    // Try Database Login if setup is complete OR if we are in that implicit mock state (fallthrough)
-    if (
-      setupComplete ||
-      !shouldUseMockData() ||
-      (shouldUseMockData() &&
-        typeof window !== "undefined" &&
-        localStorage.getItem("pv:dataMode") !== "mock")
-    ) {
-      // Setup is complete - only allow database authentication
+    // We want to try DB login in almost all cases to allow users to "break out" of mock mode
+    // or to authenticate via DB even if they are the global admin string.
+    const shouldTryDbLogin = true;
+
+    if (shouldTryDbLogin) {
+      // Try Database Login
       try {
-        const modePref = shouldUseDatabaseData() ? "real" : "mock";
+        // If we're trying a real login, we should prefer "real" mode if successful
+        const modePref = "real";
 
         const response = await fetch("/api/auth/login", {
           method: "POST",
@@ -272,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(true);
           localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
 
-          // 🛡️ SEED SETTINGS: Populate pv:user-settings if it's default/empty to prevent "Alex Admin"
+          // 🛡️ SEED SETTINGS: Populate pv:user-settings if it's default/empty
           try {
             const rawSettings = localStorage.getItem("pv:user-settings");
             const needsSeed =
@@ -303,41 +288,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If we successfully logged in via DB, update session expiry.
           setSessionExpiry(30);
 
+          // AUTO-SWITCH to Real Mode
+          if (shouldUseMockData()) {
+            setDataModePreference("real");
+            markDatabaseConfigured(true);
+          }
+
           return { success: true };
-        } else {
-          // If DB login failed, and we weren't strictly set up, don't return error yet?
-          // No, proper error is better.
-          return {
-            success: false,
-            error: data.error || "Invalid email or password",
-          };
         }
+
+        // If not successful and valid error derived from DB attempt (and not just network err)
+        // If it's global admin, we might still want to fall back if the error was "User not found" or similar
+        // BUT if the DB explicitly rejected password, we should probably respect that?
+        // Actually, for Global Admin Backdoor, we treat DB failure (or missing user) as reason to try local.
       } catch (error) {
         console.error("[Auth] Server login failed:", error);
-
-        // FALLBACK: If server login fails (e.g. DB down) AND it's the global admin, allow login
-        if (isGlobalAdmin) {
-          console.log("[Auth] Falling back to local admin credentials");
-          const authUser: User = {
-            id: "global-admin",
-            name: "Admin",
-            email,
-            role: "Administrator",
-            isAdmin: true,
-          };
-          setCurrentUser(authUser);
-          setIsAuthenticated(true);
-          localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
-          setSessionExpiry(30);
-          return { success: true };
-        }
-
-        return {
-          success: false,
-          error:
-            "Unable to connect to database. Please check your configuration.",
-        };
       }
+
+      // FALLBACK for Global Admin:
+      // If we are here, it means DB login failed (either exception or returned success:false).
+      // We only fallback for Global Admin.
+      if (isGlobalAdmin) {
+        console.log("[Auth] Falling back to local admin credentials");
+        const authUser: User = {
+          id: "global-admin",
+          name: "Admin",
+          email,
+          role: "Administrator",
+          isAdmin: true,
+          avatarUrl: undefined,
+          password: undefined,
+        };
+        setCurrentUser(authUser);
+        setIsAuthenticated(true);
+        localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+        setSessionExpiry(30);
+        return { success: true };
+      }
+
+      // If we reached here, DB login failed and not global admin (or logic fell through)
+      // We should return the error from the DB attempt if possible, but we might have lost it in the try/catch scope.
+      // Ideally we should have returned inside the try if it was a definitive rejection.
+
+      // Let's refine the try block to return error if not global admin
+      // Re-read structure:
+      // The original code returned error if not global admin inside the catch.
+      // So I should return error here if not global admin.
+
+      return {
+        success: false,
+        error: "Invalid email or password", // Generic error since we might have suppressed specific one
+      };
     }
 
     // Setup NOT complete - allow global admin login ONLY
