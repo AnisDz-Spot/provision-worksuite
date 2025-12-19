@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
-import { useMemo, useState } from "react";
-import { useAuth } from "@/components/auth/AuthContext";
-import { addUser } from "@/components/auth/AuthContext";
+import { useMemo, useState, useEffect } from "react";
+import { useAuth, addUser } from "@/components/auth/AuthContext";
 import { Input } from "@/components/ui/Input";
 import {
   Mail,
@@ -17,6 +16,13 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
+import {
+  getCountries,
+  getStates,
+  getCities,
+  type GeoOption,
+} from "@/app/actions/geo";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 type Socials = { linkedin?: string; github?: string; twitter?: string };
 
@@ -32,8 +38,11 @@ type TeamMember = {
   // Extended fields
   rawAddress?: {
     addressLine1?: string;
+    addressLine2?: string;
     city?: string;
+    state?: string;
     country?: string;
+    postalCode?: string;
   };
   bio?: string;
 };
@@ -90,10 +99,47 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [draftEmail, setDraftEmail] = useState("");
   const [draftPhone, setDraftPhone] = useState("");
   const [draftAddress, setDraftAddress] = useState("");
+  const [draftAddress2, setDraftAddress2] = useState("");
   const [draftCity, setDraftCity] = useState("");
   const [draftCountry, setDraftCountry] = useState("");
+  const [draftState, setDraftState] = useState("");
+  const [draftPostal, setDraftPostal] = useState("");
   const [draftBio, setDraftBio] = useState("");
   const [draftPassword, setDraftPassword] = useState("");
+
+  // Geo State
+  const [allCountries, setAllCountries] = useState<GeoOption[]>([]);
+  const [allStates, setAllStates] = useState<GeoOption[]>([]);
+  const [allCities, setAllCities] = useState<GeoOption[]>([]);
+
+  // Load Countries
+  useEffect(() => {
+    getCountries().then(setAllCountries);
+  }, []);
+
+  const currentCountryIso = useMemo(() => {
+    return allCountries.find((c) => c.label === draftCountry)?.value;
+  }, [allCountries, draftCountry]);
+
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllStates([]);
+      return;
+    }
+    getStates(currentCountryIso).then(setAllStates);
+  }, [currentCountryIso]);
+
+  const currentStateIso = useMemo(() => {
+    return allStates.find((s) => s.label === draftState)?.value;
+  }, [allStates, draftState]);
+
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllCities([]);
+      return;
+    }
+    getCities(currentCountryIso, currentStateIso).then(setAllCities);
+  }, [currentCountryIso, currentStateIso]);
 
   const initialMembers: TeamMember[] = useMemo(() => {
     // Load users from auth system
@@ -238,9 +284,12 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     setDraftRole(member.role);
     setDraftEmail(member.email);
     setDraftPhone(member.phone);
-    setDraftAddress(member.rawAddress?.addressLine1 || member.address);
+    setDraftAddress(member.rawAddress?.addressLine1 || "");
+    setDraftAddress2(member.rawAddress?.addressLine2 || "");
     setDraftCity(member.rawAddress?.city || "");
+    setDraftState(member.rawAddress?.state || "");
     setDraftCountry(member.rawAddress?.country || "");
+    setDraftPostal(member.rawAddress?.postalCode || "");
     setDraftBio(member.bio || "");
 
     setEditOpen(true);
@@ -259,8 +308,11 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
         email: draftEmail.trim(),
         phone: draftPhone.trim(),
         addressLine1: draftAddress.trim(),
+        addressLine2: draftAddress2.trim(),
         city: draftCity.trim(),
+        state: draftState.trim(),
         country: draftCountry.trim(),
+        postalCode: draftPostal.trim(),
         bio: draftBio.trim(),
       };
 
@@ -290,8 +342,11 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   m.address,
                 rawAddress: {
                   addressLine1: updatedData.addressLine1,
+                  addressLine2: updatedData.addressLine2,
                   city: updatedData.city,
+                  state: updatedData.state,
                   country: updatedData.country,
+                  postalCode: updatedData.postalCode,
                 },
                 bio: updatedData.bio,
                 avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
@@ -307,35 +362,118 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     }
   }
 
-  function addMember() {
+  async function addMember() {
     if (!draftName.trim() || !draftEmail.trim() || !draftPassword.trim())
       return;
 
-    // Add user to auth system
-    const newUser = addUser({
-      name: draftName.trim(),
-      email: draftEmail.trim(),
-      role: draftRole.trim() || "Team Member",
-      password: draftPassword.trim(),
-    });
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
 
-    const newMember: TeamMember = {
-      id: newUser.id,
-      name: newUser.name,
-      role: newUser.role,
-      email: newUser.email,
-      phone: draftPhone.trim() || "+1 (555) 000-0000",
-      address: draftAddress.trim() || "-",
-      socials: {},
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(draftName.trim())}`,
-    };
-    setMembersData((prev) => [...prev, newMember]);
-    setAddOpen(false);
+      const payload = {
+        name: draftName.trim(),
+        email: draftEmail.trim(),
+        role: draftRole.trim() || "Member",
+        password: draftPassword.trim(),
+        phone: draftPhone.trim(),
+        bio: draftBio.trim(),
+        addressLine1: draftAddress.trim(),
+        addressLine2: draftAddress2.trim(),
+        city: draftCity.trim(),
+        state: draftState.trim(),
+        country: draftCountry.trim(),
+        postalCode: draftPostal.trim(),
+      };
+
+      let newMember: TeamMember;
+
+      if (shouldUseDatabaseData()) {
+        const res = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            password_hash: payload.password, // The API handles hashing
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to create user");
+        const json = await res.json();
+        const u = json.user;
+        newMember = {
+          id: u.uid || u.id,
+          name: u.name,
+          role: u.role,
+          email: u.email,
+          phone: u.phone || "+1 (555) 000-0000",
+          address:
+            [u.city, u.country].filter(Boolean).join(", ") ||
+            u.addressLine1 ||
+            "-",
+          rawAddress: {
+            addressLine1: u.addressLine1,
+            addressLine2: u.addressLine2,
+            city: u.city,
+            state: u.state,
+            country: u.country,
+            postalCode: u.postalCode,
+          },
+          bio: u.bio,
+          socials: {},
+          avatar:
+            u.avatarUrl ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+        };
+      } else {
+        // Fallback legacy (local state only)
+        const newUser = addUser({
+          name: payload.name,
+          email: payload.email,
+          role: payload.role,
+          password: payload.password,
+        });
+
+        newMember = {
+          id: newUser.id,
+          name: newUser.name,
+          role: newUser.role,
+          email: newUser.email,
+          phone: payload.phone || "+1 (555) 000-0000",
+          address:
+            [payload.city, payload.country].filter(Boolean).join(", ") ||
+            payload.addressLine1 ||
+            "-",
+          rawAddress: {
+            addressLine1: payload.addressLine1,
+            addressLine2: payload.addressLine2,
+            city: payload.city,
+            state: payload.state,
+            country: payload.country,
+            postalCode: payload.postalCode,
+          },
+          socials: {},
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(newUser.name)}`,
+        };
+      }
+
+      setMembersData((prev) => [...prev, newMember]);
+      setAddOpen(false);
+      resetDrafts();
+    } catch (e) {
+      console.error("Add failed", e);
+    }
+  }
+
+  function resetDrafts() {
     setDraftName("");
     setDraftRole("");
     setDraftEmail("");
     setDraftPhone("");
     setDraftAddress("");
+    setDraftAddress2("");
+    setDraftCity("");
+    setDraftState("");
+    setDraftCountry("");
+    setDraftPostal("");
+    setDraftBio("");
     setDraftPassword("");
   }
 
@@ -647,10 +785,18 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Role</label>
-                <Input
+                <select
                   value={draftRole}
                   onChange={(e) => setDraftRole(e.target.value)}
-                />
+                  className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Select Role</option>
+                  {Object.keys(roleColors).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Email</label>
@@ -667,10 +813,76 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address</label>
+                <label className="text-xs font-medium">Address Line 1</label>
                 <Input
                   value={draftAddress}
                   onChange={(e) => setDraftAddress(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-medium">Address Line 2</label>
+                <Input
+                  value={draftAddress2}
+                  onChange={(e) => setDraftAddress2(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Country</label>
+                <SearchableSelect
+                  options={allCountries}
+                  value={currentCountryIso || ""}
+                  onChange={(iso) => {
+                    const country = allCountries.find((c) => c.value === iso);
+                    if (country) {
+                      setDraftCountry(country.label);
+                      setDraftState("");
+                      setDraftCity("");
+                    }
+                  }}
+                  placeholder="Select Country..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">State</label>
+                <SearchableSelect
+                  options={allStates}
+                  value={currentStateIso || ""}
+                  onChange={(iso) => {
+                    const state = allStates.find((s) => s.value === iso);
+                    if (state) {
+                      setDraftState(state.label);
+                      setDraftCity("");
+                    }
+                  }}
+                  placeholder="Select State..."
+                  disabled={!currentCountryIso}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">City</label>
+                <SearchableSelect
+                  options={allCities}
+                  value={draftCity}
+                  onChange={(val) => setDraftCity(val)}
+                  placeholder="Select City..."
+                  disabled={!currentCountryIso}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Postal Code</label>
+                <Input
+                  value={draftPostal}
+                  onChange={(e) => setDraftPostal(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-medium">Bio</label>
+                <textarea
+                  value={draftBio}
+                  onChange={(e) => setDraftBio(e.target.value)}
+                  placeholder="Short bio"
+                  rows={2}
+                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
@@ -719,11 +931,18 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Role</label>
-                <Input
+                <select
                   value={draftRole}
                   onChange={(e) => setDraftRole(e.target.value)}
-                  placeholder="e.g. Developer"
-                />
+                  className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Select Role</option>
+                  {Object.keys(roleColors).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Email *</label>
@@ -751,35 +970,79 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address</label>
+                <label className="text-xs font-medium">Address Line 1</label>
                 <Input
                   value={draftAddress}
                   onChange={(e) => setDraftAddress(e.target.value)}
-                  placeholder="Street Address"
+                  placeholder="Street"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">City</label>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-medium">Address Line 2</label>
                 <Input
-                  value={draftCity}
-                  onChange={(e) => setDraftCity(e.target.value)}
-                  placeholder="City"
+                  value={draftAddress2}
+                  onChange={(e) => setDraftAddress2(e.target.value)}
+                  placeholder="Apt, Suite, etc."
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium">Country</label>
+                <SearchableSelect
+                  options={allCountries}
+                  value={currentCountryIso || ""}
+                  onChange={(iso) => {
+                    const country = allCountries.find((c) => c.value === iso);
+                    if (country) {
+                      setDraftCountry(country.label);
+                      setDraftState("");
+                      setDraftCity("");
+                    }
+                  }}
+                  placeholder="Select Country..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">State</label>
+                <SearchableSelect
+                  options={allStates}
+                  value={currentStateIso || ""}
+                  onChange={(iso) => {
+                    const state = allStates.find((s) => s.value === iso);
+                    if (state) {
+                      setDraftState(state.label);
+                      setDraftCity("");
+                    }
+                  }}
+                  placeholder="Select State..."
+                  disabled={!currentCountryIso}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">City</label>
+                <SearchableSelect
+                  options={allCities}
+                  value={draftCity}
+                  onChange={(val) => setDraftCity(val)}
+                  placeholder="Select City..."
+                  disabled={!currentCountryIso}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Postal Code</label>
                 <Input
-                  value={draftCountry}
-                  onChange={(e) => setDraftCountry(e.target.value)}
-                  placeholder="Country"
+                  value={draftPostal}
+                  onChange={(e) => setDraftPostal(e.target.value)}
+                  placeholder="Zip"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-xs font-medium">Bio</label>
-                <Input
+                <textarea
                   value={draftBio}
                   onChange={(e) => setDraftBio(e.target.value)}
                   placeholder="Short bio"
+                  rows={2}
+                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>

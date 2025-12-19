@@ -118,7 +118,21 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, email, role, avatar_url, password_hash, phone } = body;
+    const {
+      name,
+      email,
+      role,
+      avatar_url,
+      password_hash,
+      phone,
+      bio,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      country,
+      postalCode,
+    } = body;
 
     if (!name || !email || !role) {
       return NextResponse.json(
@@ -145,6 +159,13 @@ export async function POST(req: Request) {
         avatarUrl: avatar_url,
         passwordHash: password_hash || "",
         phone,
+        bio,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        country,
+        postalCode,
       },
     });
 
