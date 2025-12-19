@@ -85,10 +85,9 @@ async function createDatabaseAdapter(
 
         if (runtime !== "edge") {
           // Standard PostgreSQL / Cloud providers using TCP
-          const { Pool } = await import(/* webpackIgnore: true */ "pg");
-          const { PrismaPg } = await import(
-            /* webpackIgnore: true */ "@prisma/adapter-pg"
-          );
+          // Remove webpackIgnore to allow Next.js to properly manage these external deps
+          const { Pool } = await import("pg");
+          const { PrismaPg } = await import("@prisma/adapter-pg");
 
           const pool = new Pool({
             connectionString: finalConnectionString,
