@@ -114,24 +114,46 @@ export default function FinancePage() {
   }>({ projectId: "", from: "", to: "" });
 
   useEffect(() => {
-    fetch("/data/projects.json")
-      .then((r) => r.json())
-      .then((data) => {
-        const list: Project[] = Array.isArray(data)
-          ? data
-          : data?.projects || [];
-        // seed with optional financial fields if missing
-        setProjects(
-          list.map((p) => ({
-            ...p,
-            budget: p.budget ?? 50000,
-            hourlyRate: p.hourlyRate ?? 50,
-            revenue: p.revenue ?? 75000,
-            alertThresholds: p.alertThresholds ?? [80, 90, 100],
-          }))
-        );
-      })
-      .catch((err) => log.error({ err }, "Failed to load projects"));
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/projects")
+          .then((r) => r.json())
+          .then((res) => {
+            if (res.success && res.data) {
+              const list = res.data.map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                budget: 50000,
+                hourlyRate: 50,
+                revenue: 75000,
+                alertThresholds: [80, 90, 100],
+              }));
+              setProjects(list);
+            } else {
+              setProjects([]);
+            }
+          })
+          .catch((err) => console.error("Failed to load projects", err));
+      } else {
+        fetch("/data/projects.json")
+          .then((r) => r.json())
+          .then((data) => {
+            const list: Project[] = Array.isArray(data)
+              ? data
+              : data?.projects || [];
+            setProjects(
+              list.map((p) => ({
+                ...p,
+                budget: p.budget ?? 50000,
+                hourlyRate: p.hourlyRate ?? 50,
+                revenue: p.revenue ?? 75000,
+                alertThresholds: p.alertThresholds ?? [80, 90, 100],
+              }))
+            );
+          })
+          .catch((err) => log.error({ err }, "Failed to load projects"));
+      }
+    });
 
     // Expenses
     const fetchExpenses = async () => {

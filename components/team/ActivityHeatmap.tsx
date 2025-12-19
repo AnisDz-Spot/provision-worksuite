@@ -13,8 +13,32 @@ export function ActivityHeatmap({ days = 30 }: ActivityHeatmapProps) {
   const [data, setData] = React.useState<ActivityHeatmapData[]>([]);
 
   React.useEffect(() => {
-    const heatmapData = getActivityHeatmap(days);
-    setData(heatmapData);
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/time-logs")
+          .then((r) => r.json())
+          .then((res) => {
+            const logs =
+              res.success && res.data
+                ? res.data.map((l: any) => ({
+                    taskId: l.task_id,
+                    hours: parseFloat(l.hours),
+                    loggedAt: new Date(l.date).getTime(),
+                  }))
+                : [];
+            import("@/lib/utils/team-utilities").then(
+              ({ calculateActivityHeatmap }) => {
+                const heatmapData = calculateActivityHeatmap(logs, days);
+                setData(heatmapData);
+              }
+            );
+          })
+          .catch((err) => console.error("Failed to load heatmap data", err));
+      } else {
+        const heatmapData = getActivityHeatmap(days);
+        setData(heatmapData);
+      }
+    });
   }, [days]);
 
   const maxActivity = Math.max(...data.map((d) => d.activity), 1);

@@ -46,32 +46,48 @@ type FileAttachment = {
 export default function ChatPage() {
   const [mounted, setMounted] = useState(false);
   const [currentUser] = useState("You");
-  const [teamMembers] = useState([
-    {
-      name: "Alice Johnson",
-      email: "alice.johnson@company.com",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-      role: "project_manager",
-    },
-    {
-      name: "Bob Smith",
-      email: "bob.smith@company.com",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
-      role: "member",
-    },
-    {
-      name: "Carol Davis",
-      email: "carol.davis@company.com",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carol",
-      role: "admin",
-    },
-    {
-      name: "David Lee",
-      email: "david.lee@company.com",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-      role: "member",
-    },
-  ]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+
+  // Initialize current user from auth context or similar if available, else standard "You"
+  // But we need to fetch real members
+  useEffect(() => {
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/users")
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.success && json.data) {
+              const mapped = json.data.map((u: any) => ({
+                name: u.name,
+                email: u.email,
+                avatar:
+                  u.avatar_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+                role: u.role,
+              }));
+              setTeamMembers(mapped);
+            }
+          })
+          .catch((err) => console.error("Failed to load chat members", err));
+      } else {
+        // Mock fallback
+        setTeamMembers([
+          {
+            name: "Alice Johnson",
+            email: "alice@example.com",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
+            role: "project_manager",
+          },
+          {
+            name: "Bob Smith",
+            email: "bob@example.com",
+            avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
+            role: "member",
+          },
+        ]);
+      }
+    });
+  }, []);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const activeChatRef = useRef<string | null>(null); // For polling ref

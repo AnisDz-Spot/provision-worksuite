@@ -12,7 +12,7 @@ import {
   ActivityFeed,
   type ActivityItem,
 } from "@/components/team/ActivityFeed";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { readProjects, readTasks } from "@/lib/utils";
 
 export default function TeamPage() {
@@ -38,39 +38,98 @@ export default function TeamPage() {
   }, []);
 
   // Generate sample activity data from tasks and projects
-  const activities = useMemo((): ActivityItem[] => {
-    const projects = readProjects();
-    const tasks = readTasks();
-    const sampleActivities: ActivityItem[] = [];
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
-    // Sample activity generation (in production, this would come from a real activity log)
-    tasks.slice(0, 20).forEach((task, idx) => {
-      const project = projects.find((p) => p.id === task.projectId);
-      sampleActivities.push({
-        id: `activity_${task.id}`,
-        type: task.status === "done" ? "task_completed" : "task_created",
-        user: task.assignee || "Unknown",
-        userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee}`,
-        action: task.status === "done" ? "completed" : "created",
-        target: task.title,
-        projectName: project?.name,
-        timestamp: Date.now() - idx * 3600000, // Spread over hours
-      });
+  useEffect(() => {
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        Promise.all([
+          fetch("/api/projects").then((r) => r.json()),
+          fetch("/api/tasks").then((r) => r.json()),
+        ])
+          .then(([projRes, taskRes]) => {
+            const projects =
+              projRes.success && projRes.data ? projRes.data : [];
+            const tasks = taskRes.success && taskRes.data ? taskRes.data : [];
+
+            const liveActivities: ActivityItem[] = [];
+
+            // Generate activities from real tasks
+            tasks.slice(0, 20).forEach((task: any, idx: number) => {
+              const project = projects.find(
+                (p: any) => p.id === task.project_id
+              );
+              liveActivities.push({
+                id: `activity_${task.id}`,
+                type:
+                  task.status === "done" ? "task_completed" : "task_created",
+                user: task.assignee?.name || "Unknown",
+                userAvatar:
+                  task.assignee?.avatar_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee?.name || "Unknown"}`,
+                action: task.status === "done" ? "completed" : "created",
+                target: task.title,
+                projectName: project?.name,
+                timestamp: new Date(
+                  task.updated_at || task.created_at
+                ).getTime(),
+              });
+            });
+
+            // Generate activities from real projects
+            projects.slice(0, 5).forEach((project: any, idx: number) => {
+              liveActivities.push({
+                id: `activity_project_${project.id}`,
+                type: "project_created",
+                user: "Admin", // or creator if available
+                userAvatar:
+                  "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
+                action: "created project",
+                target: project.name,
+                timestamp: new Date(project.created_at).getTime(),
+              });
+            });
+
+            setActivities(
+              liveActivities.sort((a, b) => b.timestamp - a.timestamp)
+            );
+          })
+          .catch((err) => console.error("Failed to load team activities", err));
+      } else {
+        // Fallback to local storage logic
+        const projects = readProjects();
+        const tasks = readTasks();
+        const sampleActivities: ActivityItem[] = [];
+
+        tasks.slice(0, 20).forEach((task, idx) => {
+          const project = projects.find((p) => p.id === task.projectId);
+          sampleActivities.push({
+            id: `activity_${task.id}`,
+            type: task.status === "done" ? "task_completed" : "task_created",
+            user: task.assignee || "Unknown",
+            userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee}`,
+            action: task.status === "done" ? "completed" : "created",
+            target: task.title,
+            projectName: project?.name,
+            timestamp: Date.now() - idx * 3600000,
+          });
+        });
+
+        projects.slice(0, 5).forEach((project, idx) => {
+          sampleActivities.push({
+            id: `activity_project_${project.id}`,
+            type: "project_created",
+            user: "Admin",
+            userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
+            action: "created project",
+            target: project.name,
+            timestamp: Date.now() - (tasks.length + idx) * 3600000,
+          });
+        });
+
+        setActivities(sampleActivities);
+      }
     });
-
-    projects.slice(0, 5).forEach((project, idx) => {
-      sampleActivities.push({
-        id: `activity_project_${project.id}`,
-        type: "project_created",
-        user: "Admin",
-        userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
-        action: "created project",
-        target: project.name,
-        timestamp: Date.now() - (tasks.length + idx) * 3600000,
-      });
-    });
-
-    return sampleActivities;
   }, []);
 
   return (
@@ -189,6 +248,3 @@ export default function TeamPage() {
     </section>
   );
 }
-
-
-

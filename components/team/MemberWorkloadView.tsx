@@ -13,8 +13,53 @@ export function MemberWorkloadView({ projectId }: MemberWorkloadViewProps) {
   const [workloads, setWorkloads] = React.useState<MemberWorkload[]>([]);
 
   React.useEffect(() => {
-    const stats = getMemberWorkloadStats(projectId);
-    setWorkloads(stats);
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        Promise.all([
+          fetch("/api/tasks").then((r) => r.json()),
+          fetch("/api/time-logs").then((r) => r.json()),
+        ])
+          .then(([tasksRes, logsRes]) => {
+            const tasks =
+              tasksRes.success && tasksRes.data ? tasksRes.data : [];
+            const logs =
+              logsRes.success && logsRes.data
+                ? logsRes.data.map((l: any) => ({
+                    taskId: l.task_id,
+                    hours: parseFloat(l.hours),
+                    loggedAt: new Date(l.date).getTime(),
+                  }))
+                : [];
+
+            // Map API tasks to TaskItem
+            const mappedTasks = tasks.map((t: any) => ({
+              id: t.id,
+              projectId: t.project_id,
+              title: t.title,
+              status: t.status,
+              assignee: t.assignee_id
+                ? t.assignee?.name || "Unknown"
+                : "Unassigned", // API returns assignee relation
+              due: t.due_date
+                ? new Date(t.due_date).toISOString().slice(0, 10)
+                : undefined,
+              priority: t.priority,
+              estimateHours: t.estimated_hours || 0,
+            }));
+
+            import("@/lib/utils/team-utilities").then(
+              ({ calculateWorkloadStats }) => {
+                const stats = calculateWorkloadStats(mappedTasks, logs);
+                setWorkloads(stats);
+              }
+            );
+          })
+          .catch((err) => console.error("Failed to load workload stats", err));
+      } else {
+        const stats = getMemberWorkloadStats(projectId);
+        setWorkloads(stats);
+      }
+    });
   }, [projectId]);
 
   if (workloads.length === 0) {

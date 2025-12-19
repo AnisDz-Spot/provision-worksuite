@@ -27,9 +27,10 @@ export type MemberWorkload = {
   workloadPercent: number; // relative to team
 };
 
-export function getMemberWorkloadStats(projectId?: string): MemberWorkload[] {
-  const tasks = projectId ? getTasksByProject(projectId) : readTasks();
-  const logs = readTimeLogs();
+export function calculateWorkloadStats(
+  tasks: TaskItem[],
+  logs: any[]
+): MemberWorkload[] {
   const today = new Date().toISOString().slice(0, 10);
 
   // Group tasks by assignee
@@ -102,6 +103,12 @@ export function getMemberWorkloadStats(projectId?: string): MemberWorkload[] {
   return workloads.sort((a, b) => b.totalTasks - a.totalTasks);
 }
 
+export function getMemberWorkloadStats(projectId?: string): MemberWorkload[] {
+  const tasks = projectId ? getTasksByProject(projectId) : readTasks();
+  const logs = readTimeLogs();
+  return calculateWorkloadStats(tasks, logs);
+}
+
 // Individual Contribution Stats
 export type ContributionStats = {
   memberName: string;
@@ -113,13 +120,14 @@ export type ContributionStats = {
   recentActivity: Array<{ date: string; hours: number; tasks: number }>;
 };
 
-export function getContributionStats(
+export function calculateContributionStats(
   memberName: string,
+  allTasks: TaskItem[],
+  allLogs: any[],
   days = 30
 ): ContributionStats {
-  const allTasks = readTasks();
   const memberTasks = allTasks.filter((t) => t.assignee === memberName);
-  const memberLogs = readTimeLogs().filter((log: any) => {
+  const memberLogs = allLogs.filter((log: any) => {
     const task = allTasks.find((t) => t.id === log.taskId);
     return task?.assignee === memberName;
   });
@@ -174,6 +182,15 @@ export function getContributionStats(
   };
 }
 
+export function getContributionStats(
+  memberName: string,
+  days = 30
+): ContributionStats {
+  const allTasks = readTasks();
+  const allLogs = readTimeLogs();
+  return calculateContributionStats(memberName, allTasks, allLogs, days);
+}
+
 // Activity Heatmap Data
 export type ActivityHeatmapData = {
   hour: number; // 0-23
@@ -182,13 +199,16 @@ export type ActivityHeatmapData = {
   hours: number; // total hours logged
 };
 
-export function getActivityHeatmap(days = 30): ActivityHeatmapData[] {
+export function calculateActivityHeatmap(
+  logs: any[],
+  days = 30
+): ActivityHeatmapData[] {
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  const logs = readTimeLogs().filter((log: any) => log.loggedAt >= cutoff);
+  const recentLogs = logs.filter((log: any) => log.loggedAt >= cutoff);
 
   const heatmap = new Map<string, { activity: number; hours: number }>();
 
-  logs.forEach((log: any) => {
+  recentLogs.forEach((log: any) => {
     const date = new Date(log.loggedAt);
     const day = date.getDay(); // 0-6
     const hour = date.getHours(); // 0-23
@@ -217,6 +237,16 @@ export function getActivityHeatmap(days = 30): ActivityHeatmapData[] {
   }
 
   return data;
+}
+
+export function getActivityHeatmap(days = 30): ActivityHeatmapData[] {
+  const logs = readTimeLogs(); // Assumes logs have loggedAt property or similar
+  // readTimeLogs in this file returns { taskId, hours } but assumes fetching from localStorage which might have more fields if saved that way?
+  // profound check: readTimeLogs in top of file returns `any[]`.
+  // In getMemberWorkloadStats, it uses `log.taskId`.
+  // In getContributionStats, it uses `log.loggedAt`.
+  // So `readTimeLogs` returns objects with `loggedAt` property.
+  return calculateActivityHeatmap(logs, days);
 }
 
 // Member Availability

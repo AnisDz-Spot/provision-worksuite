@@ -24,8 +24,59 @@ export function IndividualContributionStats() {
 
   React.useEffect(() => {
     if (selectedMember) {
-      const contributionStats = getContributionStats(selectedMember, 30);
-      setStats(contributionStats);
+      import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+        if (shouldUseDatabaseData()) {
+          Promise.all([
+            fetch("/api/tasks").then((r) => r.json()),
+            fetch("/api/time-logs").then((r) => r.json()),
+          ])
+            .then(([tasksRes, logsRes]) => {
+              const tasks =
+                tasksRes.success && tasksRes.data ? tasksRes.data : [];
+              const logs =
+                logsRes.success && logsRes.data
+                  ? logsRes.data.map((l: any) => ({
+                      taskId: l.task_id,
+                      hours: parseFloat(l.hours),
+                      loggedAt: new Date(l.date).getTime(),
+                    }))
+                  : [];
+
+              const mappedTasks = tasks.map((t: any) => ({
+                id: t.id,
+                projectId: t.project_id,
+                title: t.title,
+                status: t.status,
+                assignee: t.assignee_id
+                  ? t.assignee?.name || "Unknown"
+                  : "Unassigned",
+                due: t.due_date
+                  ? new Date(t.due_date).toISOString().slice(0, 10)
+                  : undefined,
+                priority: t.priority,
+                estimateHours: t.estimated_hours || 0,
+              }));
+
+              import("@/lib/utils/team-utilities").then(
+                ({ calculateContributionStats }) => {
+                  const contributionStats = calculateContributionStats(
+                    selectedMember,
+                    mappedTasks,
+                    logs,
+                    30
+                  );
+                  setStats(contributionStats);
+                }
+              );
+            })
+            .catch((err) =>
+              console.error("Failed to load contribution stats", err)
+            );
+        } else {
+          const contributionStats = getContributionStats(selectedMember, 30);
+          setStats(contributionStats);
+        }
+      });
     }
   }, [selectedMember]);
 

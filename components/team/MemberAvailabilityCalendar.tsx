@@ -48,18 +48,26 @@ export function MemberAvailabilityCalendar() {
   }, [selectedMember, currentDate]);
 
   const loadAvailability = () => {
-    if (!selectedMember) return;
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const startDate = new Date(year, month, 1).toISOString().slice(0, 10);
-    const endDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        // Live mode: No API for availability yet, so show empty/nothing instead of mock data
+        // Or if we had an API, we would fetch here.
+        setAvailability([]);
+      } else {
+        if (!selectedMember) return;
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const startDate = new Date(year, month, 1).toISOString().slice(0, 10);
+        const endDate = new Date(year, month + 1, 0).toISOString().slice(0, 10);
 
-    const memberAvailability = getMemberAvailability(
-      selectedMember,
-      startDate,
-      endDate
-    );
-    setAvailability(memberAvailability);
+        const memberAvailability = getMemberAvailability(
+          selectedMember,
+          startDate,
+          endDate
+        );
+        setAvailability(memberAvailability);
+      }
+    });
   };
 
   const getDaysInMonth = (date: Date) => {
