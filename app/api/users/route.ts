@@ -110,9 +110,18 @@ export async function POST(req: Request) {
     }
 
     // Only admins can create new users
-    if (currentUser.role !== "admin" && currentUser.role !== "global-admin") {
+    const allowedRoles = [
+      "admin",
+      "global-admin",
+      "Administrator",
+      "Project Manager",
+    ];
+    if (!allowedRoles.includes(currentUser.role)) {
       return NextResponse.json(
-        { success: false, error: "Forbidden: Admin access required" },
+        {
+          success: false,
+          error: `Forbidden: ${currentUser.role} role not permitted to create users`,
+        },
         { status: 403 }
       );
     }

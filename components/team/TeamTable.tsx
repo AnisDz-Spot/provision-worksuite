@@ -2,6 +2,7 @@
 import * as React from "react";
 import { useMemo, useState, useEffect } from "react";
 import { useAuth, addUser } from "@/components/auth/AuthContext";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { Input } from "@/components/ui/Input";
 import {
   Mail,
@@ -318,12 +319,12 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
 
       if (shouldUseDatabaseData()) {
         // Updated via API
-        const res = await fetch(`/api/users/${editMemberId}`, {
+        const res = await fetchWithCsrf(`/api/users/${editMemberId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedData),
         });
-        if (!res.ok) throw new Error("Failed to update");
+        if (!res.ok) throw new Error("Update failed");
         const json = await res.json();
         // Could merge json.user here, but let's do optimistic update for speed
       }
@@ -368,6 +369,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
 
     try {
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      const { fetchWithCsrf } = await import("@/lib/csrf-client");
 
       const payload = {
         name: draftName.trim(),
@@ -387,7 +389,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       let newMember: TeamMember;
 
       if (shouldUseDatabaseData()) {
-        const res = await fetch("/api/users", {
+        const res = await fetchWithCsrf("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -700,8 +702,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       <button
                         onClick={() => onChatClick(m.name)}
                         className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                          memberActivities.get(m.name)?.currentStatus ===
-                          "online"
+                          memberActivities.get(m.id)?.currentStatus === "online"
                             ? "hover:bg-green-500/10 text-green-600 dark:text-green-400"
                             : "hover:bg-secondary text-muted-foreground"
                         }`}
@@ -773,117 +774,119 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
             onClick={() => setEditOpen(false)}
           />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl space-y-6">
-            <h3 className="text-lg font-semibold">Edit Member</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Name</label>
-                <Input
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Role</label>
-                <select
-                  value={draftRole}
-                  onChange={(e) => setDraftRole(e.target.value)}
-                  className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select Role</option>
-                  {Object.keys(roleColors).map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Email</label>
-                <Input
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Phone</label>
-                <Input
-                  value={draftPhone}
-                  onChange={(e) => setDraftPhone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address Line 1</label>
-                <Input
-                  value={draftAddress}
-                  onChange={(e) => setDraftAddress(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address Line 2</label>
-                <Input
-                  value={draftAddress2}
-                  onChange={(e) => setDraftAddress2(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Country</label>
-                <SearchableSelect
-                  options={allCountries}
-                  value={currentCountryIso || ""}
-                  onChange={(iso) => {
-                    const country = allCountries.find((c) => c.value === iso);
-                    if (country) {
-                      setDraftCountry(country.label);
-                      setDraftState("");
-                      setDraftCity("");
-                    }
-                  }}
-                  placeholder="Select Country..."
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">State</label>
-                <SearchableSelect
-                  options={allStates}
-                  value={currentStateIso || ""}
-                  onChange={(iso) => {
-                    const state = allStates.find((s) => s.value === iso);
-                    if (state) {
-                      setDraftState(state.label);
-                      setDraftCity("");
-                    }
-                  }}
-                  placeholder="Select State..."
-                  disabled={!currentCountryIso}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">City</label>
-                <SearchableSelect
-                  options={allCities}
-                  value={draftCity}
-                  onChange={(val) => setDraftCity(val)}
-                  placeholder="Select City..."
-                  disabled={!currentCountryIso}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Postal Code</label>
-                <Input
-                  value={draftPostal}
-                  onChange={(e) => setDraftPostal(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Bio</label>
-                <textarea
-                  value={draftBio}
-                  onChange={(e) => setDraftBio(e.target.value)}
-                  placeholder="Short bio"
-                  rows={2}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
+            <h3 className="text-lg font-semibold mb-6">Edit Member</h3>
+            <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Name</label>
+                  <Input
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Role</label>
+                  <select
+                    value={draftRole}
+                    onChange={(e) => setDraftRole(e.target.value)}
+                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select Role</option>
+                    {Object.keys(roleColors).map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Email</label>
+                  <Input
+                    value={draftEmail}
+                    onChange={(e) => setDraftEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Phone</label>
+                  <Input
+                    value={draftPhone}
+                    onChange={(e) => setDraftPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Address Line 1</label>
+                  <Input
+                    value={draftAddress}
+                    onChange={(e) => setDraftAddress(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Address Line 2</label>
+                  <Input
+                    value={draftAddress2}
+                    onChange={(e) => setDraftAddress2(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Country</label>
+                  <SearchableSelect
+                    options={allCountries}
+                    value={currentCountryIso || ""}
+                    onChange={(iso) => {
+                      const country = allCountries.find((c) => c.value === iso);
+                      if (country) {
+                        setDraftCountry(country.label);
+                        setDraftState("");
+                        setDraftCity("");
+                      }
+                    }}
+                    placeholder="Select Country..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">State</label>
+                  <SearchableSelect
+                    options={allStates}
+                    value={currentStateIso || ""}
+                    onChange={(iso) => {
+                      const state = allStates.find((s) => s.value === iso);
+                      if (state) {
+                        setDraftState(state.label);
+                        setDraftCity("");
+                      }
+                    }}
+                    placeholder="Select State..."
+                    disabled={!currentCountryIso}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">City</label>
+                  <SearchableSelect
+                    options={allCities}
+                    value={draftCity}
+                    onChange={(val) => setDraftCity(val)}
+                    placeholder="Select City..."
+                    disabled={!currentCountryIso}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Postal Code</label>
+                  <Input
+                    value={draftPostal}
+                    onChange={(e) => setDraftPostal(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Bio</label>
+                  <textarea
+                    value={draftBio}
+                    onChange={(e) => setDraftBio(e.target.value)}
+                    placeholder="Short bio"
+                    rows={2}
+                    className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3">
@@ -918,143 +921,141 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
               setDraftAddress("");
             }}
           />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl space-y-6">
-            <h3 className="text-lg font-semibold">Add New Member</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Name *</label>
-                <Input
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  placeholder="Full name"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Role</label>
-                <select
-                  value={draftRole}
-                  onChange={(e) => setDraftRole(e.target.value)}
-                  className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Select Role</option>
-                  {Object.keys(roleColors).map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Email *</label>
-                <Input
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                  placeholder="email@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Password *</label>
-                <Input
-                  type="password"
-                  value={draftPassword}
-                  onChange={(e) => setDraftPassword(e.target.value)}
-                  placeholder="Initial password"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Phone</label>
-                <Input
-                  value={draftPhone}
-                  onChange={(e) => setDraftPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address Line 1</label>
-                <Input
-                  value={draftAddress}
-                  onChange={(e) => setDraftAddress(e.target.value)}
-                  placeholder="Street"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address Line 2</label>
-                <Input
-                  value={draftAddress2}
-                  onChange={(e) => setDraftAddress2(e.target.value)}
-                  placeholder="Apt, Suite, etc."
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Country</label>
-                <SearchableSelect
-                  options={allCountries}
-                  value={currentCountryIso || ""}
-                  onChange={(iso) => {
-                    const country = allCountries.find((c) => c.value === iso);
-                    if (country) {
-                      setDraftCountry(country.label);
-                      setDraftState("");
-                      setDraftCity("");
-                    }
-                  }}
-                  placeholder="Select Country..."
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">State</label>
-                <SearchableSelect
-                  options={allStates}
-                  value={currentStateIso || ""}
-                  onChange={(iso) => {
-                    const state = allStates.find((s) => s.value === iso);
-                    if (state) {
-                      setDraftState(state.label);
-                      setDraftCity("");
-                    }
-                  }}
-                  placeholder="Select State..."
-                  disabled={!currentCountryIso}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">City</label>
-                <SearchableSelect
-                  options={allCities}
-                  value={draftCity}
-                  onChange={(val) => setDraftCity(val)}
-                  placeholder="Select City..."
-                  disabled={!currentCountryIso}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Postal Code</label>
-                <Input
-                  value={draftPostal}
-                  onChange={(e) => setDraftPostal(e.target.value)}
-                  placeholder="Zip"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Bio</label>
-                <textarea
-                  value={draftBio}
-                  onChange={(e) => setDraftBio(e.target.value)}
-                  placeholder="Short bio"
-                  rows={2}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
+            <h3 className="text-lg font-semibold mb-6">Add New Member</h3>
+            <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Name *</label>
+                  <Input
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Role</label>
+                  <select
+                    value={draftRole}
+                    onChange={(e) => setDraftRole(e.target.value)}
+                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select Role</option>
+                    {Object.keys(roleColors).map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Email *</label>
+                  <Input
+                    value={draftEmail}
+                    onChange={(e) => setDraftEmail(e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Password *</label>
+                  <Input
+                    type="password"
+                    value={draftPassword}
+                    onChange={(e) => setDraftPassword(e.target.value)}
+                    placeholder="Initial password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Phone</label>
+                  <Input
+                    value={draftPhone}
+                    onChange={(e) => setDraftPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Address Line 1</label>
+                  <Input
+                    value={draftAddress}
+                    onChange={(e) => setDraftAddress(e.target.value)}
+                    placeholder="Street"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Address Line 2</label>
+                  <Input
+                    value={draftAddress2}
+                    onChange={(e) => setDraftAddress2(e.target.value)}
+                    placeholder="Apt, Suite, etc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Country</label>
+                  <SearchableSelect
+                    options={allCountries}
+                    value={currentCountryIso || ""}
+                    onChange={(iso) => {
+                      const country = allCountries.find((c) => c.value === iso);
+                      if (country) {
+                        setDraftCountry(country.label);
+                        setDraftState("");
+                        setDraftCity("");
+                      }
+                    }}
+                    placeholder="Select Country..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">State</label>
+                  <SearchableSelect
+                    options={allStates}
+                    value={currentStateIso || ""}
+                    onChange={(iso) => {
+                      const state = allStates.find((s) => s.value === iso);
+                      if (state) {
+                        setDraftState(state.label);
+                        setDraftCity("");
+                      }
+                    }}
+                    placeholder="Select State..."
+                    disabled={!currentCountryIso}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">City</label>
+                  <SearchableSelect
+                    options={allCities}
+                    value={draftCity}
+                    onChange={(val) => setDraftCity(val)}
+                    placeholder="Select City..."
+                    disabled={!currentCountryIso}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Postal Code</label>
+                  <Input
+                    value={draftPostal}
+                    onChange={(e) => setDraftPostal(e.target.value)}
+                    placeholder="Zip"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-medium">Bio</label>
+                  <textarea
+                    value={draftBio}
+                    onChange={(e) => setDraftBio(e.target.value)}
+                    placeholder="Short bio"
+                    rows={2}
+                    className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-6 border-t mt-auto">
               <button
                 onClick={() => {
                   setAddOpen(false);
-                  setDraftName("");
-                  setDraftRole("");
-                  setDraftEmail("");
-                  setDraftPhone("");
-                  setDraftAddress("");
+                  resetDrafts();
                 }}
                 className="px-4 py-2 rounded-md border text-sm hover:bg-accent cursor-pointer"
               >
