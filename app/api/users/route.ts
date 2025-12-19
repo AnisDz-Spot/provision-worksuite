@@ -31,9 +31,13 @@ export async function GET() {
         role: true,
         createdAt: true,
         phone: true,
+        bio: true,
         addressLine1: true,
+        addressLine2: true,
         city: true,
+        state: true,
         country: true,
+        postalCode: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -48,9 +52,13 @@ export async function GET() {
         role: string;
         createdAt: Date;
         phone: string | null;
+        bio: string | null;
         addressLine1: string | null;
+        addressLine2: string | null;
         city: string | null;
+        state: string | null;
         country: string | null;
+        postalCode: string | null;
       }) => {
         // Construct basic address string
         const addressParts = [user.city, user.country].filter(Boolean);
@@ -67,11 +75,15 @@ export async function GET() {
           role: user.role,
           created_at: user.createdAt,
           phone: user.phone,
+          bio: user.bio,
           address: addressStr, // Backwards compatibility for TeamTable
           rawAddress: {
             addressLine1: user.addressLine1,
+            addressLine2: user.addressLine2,
             city: user.city,
+            state: user.state,
             country: user.country,
+            postalCode: user.postalCode,
           },
         };
       }
@@ -113,6 +125,7 @@ export async function POST(req: Request) {
     const allowedRoles = [
       "admin",
       "global-admin",
+      "Admin",
       "Administrator",
       "Project Manager",
     ];

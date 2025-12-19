@@ -377,7 +377,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const authUser: User = {
       ...user,
-      isAdmin: user.role === "Administrator" || user.role === "Project Manager",
+      isAdmin:
+        user.role?.toLowerCase() === "administrator" ||
+        user.role?.toLowerCase() === "admin" ||
+        user.role === "Project Manager",
     };
 
     // Don't store password in session
@@ -439,7 +442,10 @@ export function addUser(user: Omit<User, "id" | "isAdmin">): User {
   const newUser: User = {
     ...user,
     id: `u${Date.now()}`,
-    isAdmin: user.role === "Project Manager",
+    isAdmin:
+      user.role?.toLowerCase() === "administrator" ||
+      user.role?.toLowerCase() === "admin" ||
+      user.role === "Project Manager",
   };
   users.push(newUser);
   writeUsers(users);

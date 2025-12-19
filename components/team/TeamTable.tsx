@@ -71,6 +71,7 @@ const roleColors: Record<string, string> = {
     "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   DevOps:
     "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  Admin: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
 type TeamTableProps = {
@@ -79,7 +80,7 @@ type TeamTableProps = {
 };
 
 export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentUser } = useAuth();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -238,6 +239,15 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     const interval = setInterval(fetchPresence, 15000); // Poll every 15s
     return () => clearInterval(interval);
   }, [membersData]);
+
+  // Perform 90-day cleanup once on mount for admins
+  React.useEffect(() => {
+    if (isAdmin) {
+      fetchWithCsrf("/api/maintenance/cleanup", { method: "POST" }).catch((e) =>
+        console.error("Maintenance failed", e)
+      );
+    }
+  }, [isAdmin]);
 
   // Expose add function to parent
   React.useEffect(() => {
@@ -698,7 +708,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 {/* Actions Column */}
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2 relative">
-                    {onChatClick && (
+                    {onChatClick && currentUser?.id !== m.id && (
                       <button
                         onClick={() => onChatClick(m.name)}
                         className={`p-2 rounded-lg transition-colors cursor-pointer ${

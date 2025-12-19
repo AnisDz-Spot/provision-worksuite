@@ -541,6 +541,7 @@ model Message {
 
   @@index([fromUser])
   @@index([toUser])
+  @@index([createdAt])
   @@map("messages")
 }
 

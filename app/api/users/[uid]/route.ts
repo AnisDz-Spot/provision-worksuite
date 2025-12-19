@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import bcrypt from "bcryptjs";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,34 @@ export async function PATCH(
   }
 
   try {
+    const currentUser = await getAuthenticatedUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Only admins or the user themselves can update
+    const isAdmin = [
+      "admin",
+      "global-admin",
+      "Admin",
+      "Administrator",
+      "Project Manager",
+    ].includes(currentUser.role);
+    const isSelf = currentUser.uid === uid;
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Forbidden: You do not have permission to update this user",
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       name,
