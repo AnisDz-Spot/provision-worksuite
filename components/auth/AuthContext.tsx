@@ -1,6 +1,11 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { isSetupComplete, markDatabaseConfigured } from "@/lib/setup";
+import {
+  isSetupComplete,
+  markDatabaseConfigured,
+  markSetupComplete,
+  getSetupStatus,
+} from "@/lib/setup";
 import {
   shouldUseMockData,
   shouldUseDatabaseData,
@@ -299,10 +304,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If we successfully logged in via DB, update session expiry.
           setSessionExpiry(30);
 
-          // AUTO-SWITCH to Real Mode
-          if (shouldUseMockData()) {
-            setDataModePreference("real");
-            markDatabaseConfigured(true);
+          // AUTO-SWITCH to Real Mode & VALIDATE SETUP
+          // We unconditionally force this because if DB login works, we are by definition in valid "Real" mode
+          setDataModePreference("real");
+          markSetupComplete(true, true, true);
+
+          // Also set cookie for Server Components / future usage
+          if (typeof document !== "undefined") {
+            document.cookie =
+              "pv-data-mode=real; path=/; max-age=31536000; SameSite=Lax";
           }
 
           return { success: true };
