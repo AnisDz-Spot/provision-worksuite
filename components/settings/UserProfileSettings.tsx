@@ -149,10 +149,13 @@ export function UserProfileSettings() {
               "file",
               new File([blob], "avatar.png", { type: blob.type || "image/png" })
             );
-            const upload = await fetch("/api/test-blob", {
-              method: "POST",
-              body: fd,
-            });
+            const upload = await fetch(
+              `/api/setup/upload-avatar?filename=${encodeURIComponent("avatar.png")}`,
+              {
+                method: "POST",
+                body: fd,
+              }
+            );
             const upData = await upload.json();
             if (upData?.success && upData?.url) {
               avatarUrlToSet = upData.url as string;
