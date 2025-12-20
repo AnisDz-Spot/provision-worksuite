@@ -17,6 +17,7 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [setupComplete, setSetupComplete] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [adminExists, setAdminExists] = useState<boolean | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -27,6 +28,18 @@ function LoginForm() {
       setSetupComplete(true);
       window.history.replaceState({}, "", "/auth/login");
     }
+
+    // Check if admin exists to hide demo banner
+    const checkSystem = async () => {
+      try {
+        const { getDatabaseStatus } = await import("@/lib/setup");
+        const status = await getDatabaseStatus();
+        setAdminExists(status.adminExists);
+      } catch {
+        setAdminExists(false);
+      }
+    };
+    checkSystem();
   }, [searchParams]);
 
   const [show2FAInput, setShow2FAInput] = useState(false);
@@ -99,7 +112,7 @@ function LoginForm() {
         </div>
 
         {/* Demo Mode Alert */}
-        {mounted && shouldUseMockData() && (
+        {mounted && shouldUseMockData() && adminExists === false && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -309,7 +322,7 @@ function LoginForm() {
         </div>
 
         {/* Setup Credentials */}
-        {mounted && !shouldUseMockData() && (
+        {mounted && !shouldUseMockData() && adminExists === false && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
               First-time setup credentials

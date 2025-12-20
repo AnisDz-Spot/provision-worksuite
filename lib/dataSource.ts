@@ -42,11 +42,7 @@ export function shouldUseDatabaseData(): boolean {
 }
 
 export function shouldUseMockData(): boolean {
-  const pref = readDataModePreference();
-  if (pref === "mock") return true;
-  if (pref === "real") return false;
-  // Default: Use mock data until explicitly chosen otherwise
-  return true;
+  return !shouldUseDatabaseData();
 }
 
 // Helper to get data source indicator for debugging
