@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://firebasestorage.googleapis.com https://*.googleapis.com",
+              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
