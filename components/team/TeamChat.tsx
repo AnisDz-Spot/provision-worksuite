@@ -12,6 +12,7 @@ import {
   Minimize2,
   Maximize2,
   Trash2,
+  Smile,
 } from "lucide-react";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import {
@@ -42,6 +43,7 @@ type ChatWindowProps = {
   onClose: () => void;
   isMinimized: boolean;
   onToggleMinimize: () => void;
+  conversations?: ChatConversation[];
 };
 
 function ChatWindow({
@@ -50,12 +52,19 @@ function ChatWindow({
   onClose,
   isMinimized,
   onToggleMinimize,
+  conversations = [],
 }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [activity, setActivity] = useState(getMemberActivity(targetUser));
-  const [targetName, setTargetName] = useState(targetUser);
-  const [targetAvatar, setTargetAvatar] = useState<string | null>(null);
+  const [targetName, setTargetName] = useState(() => {
+    const conv = conversations.find((c) => c.withUser === targetUser);
+    return conv?.withUserName || targetUser;
+  });
+  const [targetAvatar, setTargetAvatar] = useState(() => {
+    const conv = conversations.find((c) => c.withUser === targetUser);
+    return conv?.withUserAvatar || "";
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -88,12 +97,10 @@ function ChatWindow({
     }
   }, [currentUser, targetUser]);
 
+  // Fetch target user details to resolve UUID to name
   useEffect(() => {
-    loadMessages();
     if (shouldUseDatabaseData()) {
-      dbMarkRead(currentUser, targetUser);
-      // Fetch target user details
-      fetch(`/api/users/${targetUser}`)
+      fetch(`/api/users/${targetUser}`, { cache: "no-store" })
         .then((res) => res.json())
         .then((json) => {
           if (json.success && json.data) {
@@ -101,6 +108,13 @@ function ChatWindow({
             setTargetAvatar(json.data.avatar_url || json.data.avatarUrl);
           }
         });
+    }
+  }, [targetUser]);
+
+  useEffect(() => {
+    loadMessages();
+    if (shouldUseDatabaseData()) {
+      dbMarkRead(currentUser, targetUser);
     } else {
       markMessagesAsRead(currentUser, targetUser);
     }
@@ -108,7 +122,7 @@ function ChatWindow({
     const interval = setInterval(() => {
       loadMessages();
       if (shouldUseDatabaseData()) {
-        fetch("/api/presence")
+        fetch("/api/presence", { cache: "no-store" })
           .then((res) => res.json())
           .then((json) => {
             if (json.success && json.data) {
@@ -176,21 +190,22 @@ function ChatWindow({
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
+    const msg = newMessage.trim();
+    setNewMessage(""); // Clear early for better UX
     if (shouldUseDatabaseData()) {
-      const success = await dbSendMessage(
-        currentUser,
-        targetUser,
-        newMessage.trim()
-      );
+      const success = await dbSendMessage(currentUser, targetUser, msg);
       if (success) {
-        setNewMessage("");
         await loadMessages();
       }
     } else {
-      sendChatMessage(currentUser, targetUser, newMessage.trim());
-      setNewMessage("");
+      sendChatMessage(currentUser, targetUser, msg);
       await loadMessages();
     }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
+    setShowEmojiPicker(false);
   };
 
   const getStatusColor = (status?: string) => {
@@ -207,6 +222,8 @@ function ChatWindow({
         return "bg-gray-400";
     }
   };
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   return (
     <div className="fixed bottom-4 right-4 w-96 z-50 shadow-2xl rounded-lg overflow-hidden border border-border bg-card">
@@ -351,22 +368,64 @@ function ChatWindow({
           </div>
 
           {/* Input */}
-          <div className="p-3 border-t border-border bg-card">
+          <div className="p-3 border-t border-border bg-card relative">
             {activity?.currentStatus !== "online" && (
               <p className="text-xs text-muted-foreground text-center py-1 mb-2">
-                {targetUser} is offline. Your message will be delivered when
+                {targetName} is offline. Your message will be delivered when
                 they return.
               </p>
             )}
-            <div className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Type a message..."
-                className="flex-1"
-              />
-              <Button onClick={handleSend} size="sm">
+
+            {showEmojiPicker && (
+              <div className="absolute bottom-full right-0 mb-2 p-2 bg-card border border-border rounded-lg shadow-xl grid grid-cols-6 gap-1 z-50 animate-in slide-in-from-bottom-2 duration-200">
+                {[
+                  "😊",
+                  "😂",
+                  "🤣",
+                  "❤️",
+                  "👍",
+                  "👎",
+                  "🎉",
+                  "🔥",
+                  "✅",
+                  "❌",
+                  "💯",
+                  "🤔",
+                  "😍",
+                  "😢",
+                  "😠",
+                  "🙏",
+                  "👏",
+                  "✨",
+                ].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleEmojiSelect(emoji)}
+                    className="p-1.5 hover:bg-accent rounded text-xl transition-colors"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 relative">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSend()}
+                  placeholder="Type a message..."
+                  className="w-full pr-10"
+                />
+                <button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-accent transition-colors ${showEmojiPicker ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+              </div>
+              <Button onClick={handleSend} size="sm" className="h-10 px-4">
                 <Send className="w-4 h-4" />
               </Button>
             </div>
@@ -587,6 +646,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
         <ChatWindow
           currentUser={currentUser}
           targetUser={activeChat}
+          conversations={conversations}
           onClose={() => {
             setActiveChat(null);
             loadConversations();

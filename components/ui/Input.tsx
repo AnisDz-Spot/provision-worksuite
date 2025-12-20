@@ -12,7 +12,7 @@ export interface InputProps extends Omit<
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = "text", size = "md", error, ...props }, ref) => {
     return (
-      <div>
+      <div className={cn("w-full", className)}>
         <input
           type={type}
           className={cn(
@@ -21,8 +21,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             size === "lg" && "text-lg py-3",
             error
               ? "border-destructive ring-destructive"
-              : "border-border focus:ring-ring",
-            className
+              : "border-border focus:ring-ring"
           )}
           ref={ref}
           {...props}
@@ -33,6 +32,3 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }
 );
 Input.displayName = "Input";
-
-
-

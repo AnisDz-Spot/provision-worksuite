@@ -15,7 +15,7 @@ export async function GET() {
       (p: { uid: string; status: string; lastSeen: Date }) => ({
         uid: p.uid,
         status: p.status,
-        last_seen: p.lastSeen,
+        lastSeen: p.lastSeen,
       })
     );
 

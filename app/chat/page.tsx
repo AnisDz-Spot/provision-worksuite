@@ -390,6 +390,7 @@ export default function ChatPage() {
       const isOnline =
         (p.status === "online" || p.status === "available") &&
         lastSeen >= threshold;
+
       if (isOnline) return "online";
       if (lastSeen >= Date.now() - 30 * 60 * 1000) return "away";
       return "offline";
@@ -411,11 +412,14 @@ export default function ChatPage() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "online":
+      case "available":
         return "bg-green-500";
       case "away":
         return "bg-yellow-500";
+      case "busy":
+        return "bg-orange-500";
       default:
         return "bg-gray-400";
     }
@@ -1074,7 +1078,6 @@ export default function ChatPage() {
                   <div className="relative flex-1">
                     <Input
                       id="chat-message-input"
-                      name="message"
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={(e) =>

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (!shouldUseDatabaseData()) {
     return NextResponse.json({
       success: true,
-      data: { uid: "demo", status: "available", last_seen: new Date() },
+      data: { uid: "demo", status: "available", lastSeen: new Date() },
     });
   }
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const mapped = {
       uid: presence.uid,
       status: presence.status,
-      last_seen: presence.lastSeen,
+      lastSeen: presence.lastSeen,
     };
 
     log.debug({ uid, status: stat }, "Presence heartbeat");
