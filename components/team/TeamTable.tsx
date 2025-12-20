@@ -608,6 +608,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
         return "bg-green-500";
       case "away":
         return "bg-yellow-500";
+      case "busy":
+        return "bg-orange-500";
+      case "offline":
+        return "bg-red-500";
       default:
         return "bg-gray-400";
     }
