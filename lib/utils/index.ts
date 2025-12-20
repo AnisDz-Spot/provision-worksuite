@@ -15,6 +15,7 @@ export * from "./templates";
 export * from "./analytics";
 export * from "./team-utilities";
 export * from "./dashboard-utilities";
+export * from "./chat-db-utilities";
 
 // All functions successfully migrated to focused modules!
 // The original lib/utils.ts can now be safely removed.

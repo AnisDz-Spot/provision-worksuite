@@ -23,16 +23,16 @@ import {
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import {
-  getMemberActivity,
-  getActiveChatUser,
-  setActiveChatUser,
-  sendChatMessage,
-  getChatMessages,
-  getChatConversations,
-  markMessagesAsRead,
+  dbFetchThread,
+  dbSendMessage,
+  dbMarkRead,
+  dbDeleteThread,
+  dbFetchConversations,
   type ChatMessage,
   type ChatConversation,
 } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthContext";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { log } from "@/lib/logger";
 
 type FileAttachment = {
@@ -45,7 +45,9 @@ type FileAttachment = {
 
 export default function ChatPage() {
   const [mounted, setMounted] = useState(false);
-  const [currentUser] = useState("You");
+  const { currentUser: authUser } = useAuth();
+  const currentUser = authUser?.id || "You";
+  const currentUserName = authUser?.name || "You";
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
 
   // Initialize current user from auth context or similar if available, else standard "You"
@@ -58,6 +60,7 @@ export default function ChatPage() {
           .then((json) => {
             if (json.success && json.data) {
               const mapped = json.data.map((u: any) => ({
+                uid: u.uid,
                 name: u.name,
                 email: u.email,
                 avatar:
@@ -125,6 +128,27 @@ export default function ChatPage() {
   // Chat groups state
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [presenceData, setPresenceData] = useState<any[]>([]);
+
+  const loadPresence = async () => {
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await fetch("/api/presence");
+        const json = await res.json();
+        if (json.success) setPresenceData(json.data);
+      } catch (err) {
+        console.error("Failed to load presence", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (mounted) {
+      loadPresence();
+      const interval = setInterval(loadPresence, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [mounted]);
 
   const loadChatGroups = async () => {
     setIsLoadingGroups(true);
@@ -211,25 +235,30 @@ export default function ChatPage() {
     loadConversations();
     loadChatGroups(); // Load groups on mount
 
-    // Load persisted active chat
-    const persistedChat = getActiveChatUser();
-    if (persistedChat) {
-      setActiveChat(persistedChat);
-      activeChatRef.current = persistedChat;
+    // Load persisted active chat from localStorage (as ID/UID)
+    if (typeof window !== "undefined") {
+      const persistedChat = localStorage.getItem("pv:activeChatUser");
+      if (persistedChat) {
+        setActiveChat(persistedChat);
+        activeChatRef.current = persistedChat;
+      }
     }
 
     const interval = setInterval(() => {
       loadConversations();
       loadChatGroups(); // Refresh groups
+
       // Check for active chat changes from other tabs/components
-      const currentStored = getActiveChatUser();
-      if (currentStored !== activeChatRef.current) {
-        setActiveChat(currentStored);
-        activeChatRef.current = currentStored;
+      if (typeof window !== "undefined") {
+        const currentStored = localStorage.getItem("pv:activeChatUser");
+        if (currentStored !== activeChatRef.current) {
+          setActiveChat(currentStored);
+          activeChatRef.current = currentStored || null;
+        }
       }
     }, 10000); // Poll every 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (activeChat) {
@@ -243,29 +272,58 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const loadConversations = () => {
-    const convs = getChatConversations(currentUser);
-    setConversations(convs);
+  const loadConversations = async () => {
+    if (shouldUseDatabaseData()) {
+      const convs = await dbFetchConversations(currentUser);
+      setConversations(convs);
+    } else {
+      const { getChatConversations } =
+        await import("@/lib/utils/team-utilities");
+      const convs = getChatConversations(currentUser);
+      setConversations(convs);
+    }
   };
 
-  const loadMessages = (otherUser: string) => {
-    const msgs = getChatMessages(currentUser, otherUser);
-    setMessages(msgs);
-    markMessagesAsRead(currentUser, otherUser);
-    loadConversations();
+  const loadMessages = async (otherUser: string) => {
+    if (shouldUseDatabaseData()) {
+      const msgs = await dbFetchThread(currentUser, otherUser);
+      setMessages(msgs);
+      await dbMarkRead(currentUser, otherUser);
+      // We don't need to await the second loadConversations, can do it periodically or after markRead
+      loadConversations();
+    } else {
+      const { getChatMessages, markMessagesAsRead } =
+        await import("@/lib/utils/team-utilities");
+      const msgs = getChatMessages(currentUser, otherUser);
+      setMessages(msgs);
+      markMessagesAsRead(currentUser, otherUser);
+      loadConversations();
+    }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() && attachments.length === 0) return;
     if (!activeChat) return;
 
-    if (inputMessage.trim()) {
-      sendChatMessage(currentUser, activeChat, inputMessage.trim());
-    }
-
-    for (const attachment of attachments) {
-      const fileMessage = `📎 ${attachment.name}`;
-      sendChatMessage(currentUser, activeChat, fileMessage, attachment);
+    if (shouldUseDatabaseData()) {
+      if (inputMessage.trim()) {
+        await dbSendMessage(currentUser, activeChat, inputMessage.trim());
+      }
+      // Attachments are still simulated in local state for now, but
+      // in a real app they would be uploaded to /api/uploads
+      for (const attachment of attachments) {
+        const fileMessage = `📎 ${attachment.name}`;
+        await dbSendMessage(currentUser, activeChat, fileMessage);
+      }
+    } else {
+      const { sendChatMessage } = await import("@/lib/utils/team-utilities");
+      if (inputMessage.trim()) {
+        sendChatMessage(currentUser, activeChat, inputMessage.trim());
+      }
+      for (const attachment of attachments) {
+        const fileMessage = `📎 ${attachment.name}`;
+        sendChatMessage(currentUser, activeChat, fileMessage, attachment);
+      }
     }
 
     setInputMessage("");
@@ -296,11 +354,22 @@ export default function ChatPage() {
     setAttachments(attachments.filter((a) => a.id !== id));
   };
 
-  const handleClearChat = () => {
-    if (activeChat && confirm(`Clear all messages with ${activeChat}?`)) {
-      localStorage.removeItem(
-        `pv:chat:${[currentUser, activeChat].sort().join(":")}`
-      );
+  const handleClearChat = async () => {
+    const partner =
+      teamMembers.find((m) => m.name === activeChat)?.name || activeChat;
+    if (activeChat && confirm(`Clear all messages with ${partner}?`)) {
+      if (shouldUseDatabaseData()) {
+        // In DB mode, we need the partner's UID.
+        // We assume teamMembers contains the mapping if needed,
+        // but often activeChat IS the UID in DB mode.
+        const partnerUid =
+          teamMembers.find((m) => m.name === activeChat)?.uid || activeChat;
+        await dbDeleteThread(currentUser, partnerUid);
+      } else {
+        localStorage.removeItem(
+          `pv:chat:${[currentUser, activeChat].sort().join(":")}`
+        );
+      }
       setMessages([]);
       loadConversations();
       setShowActionMenu(false);
@@ -312,20 +381,44 @@ export default function ChatPage() {
     setShowEmojiPicker(false);
   };
 
-  const handleStartChat = (memberName: string) => {
-    setActiveChat(memberName);
-    activeChatRef.current = memberName;
-    setActiveChatUser(memberName);
+  const handleStartChat = (memberNameOrUid: string) => {
+    setActiveChat(memberNameOrUid);
+    activeChatRef.current = memberNameOrUid;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pv:activeChatUser", memberNameOrUid);
+    }
     setShowMobileSidebar(false);
-    loadMessages(memberName);
+    loadMessages(memberNameOrUid);
   };
 
-  const getOnlineStatus = (memberName: string) => {
-    const activity = getMemberActivity(memberName);
-    if (!activity) return "offline";
-    const timeSinceActive = Date.now() - activity.lastActive;
-    if (timeSinceActive < 5 * 60 * 1000) return "online";
-    if (timeSinceActive < 30 * 60 * 1000) return "away";
+  const getOnlineStatus = (memberNameOrUid: string) => {
+    if (shouldUseDatabaseData()) {
+      const p = presenceData.find(
+        (item) => item.uid === memberNameOrUid || item.name === memberNameOrUid
+      );
+      if (!p) return "offline";
+      const threshold = Date.now() - 5 * 60 * 1000;
+      const lastSeen = new Date(p.lastSeen).getTime();
+      const isOnline =
+        (p.status === "online" || p.status === "available") &&
+        lastSeen >= threshold;
+      if (isOnline) return "online";
+      if (lastSeen >= Date.now() - 30 * 60 * 1000) return "away";
+      return "offline";
+    }
+
+    // Mock fallback
+    try {
+      const stored = localStorage.getItem("pv:memberActivity");
+      if (stored) {
+        const activities = JSON.parse(stored);
+        const activity = activities[memberNameOrUid];
+        if (!activity) return "offline";
+        const timeSinceActive = Date.now() - activity.lastActive;
+        if (timeSinceActive < 5 * 60 * 1000) return "online";
+        if (timeSinceActive < 30 * 60 * 1000) return "away";
+      }
+    } catch {}
     return "offline";
   };
 
@@ -684,16 +777,19 @@ export default function ChatPage() {
                 )}
                 {filteredMembers.map((member) => {
                   const conv = conversations.find(
-                    (c) => c.withUser === member.name
+                    (c) =>
+                      c.withUser === member.uid || c.withUser === member.name
                   );
-                  const status = getOnlineStatus(member.name);
+                  const status = getOnlineStatus(member.uid);
 
                   return (
                     <button
-                      key={member.name}
-                      onClick={() => handleStartChat(member.name)}
+                      key={member.uid || member.name}
+                      onClick={() => handleStartChat(member.uid || member.name)}
                       className={`w-full p-4 hover:bg-accent/50 transition-colors border-b border-border text-left ${
-                        activeChat === member.name ? "bg-accent" : ""
+                        activeChat === member.uid || activeChat === member.name
+                          ? "bg-accent"
+                          : ""
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -784,8 +880,11 @@ export default function ChatPage() {
                           <div className="relative">
                             <Image
                               src={
-                                teamMembers.find((m) => m.name === activeChat)
-                                  ?.avatar ||
+                                teamMembers.find(
+                                  (m) =>
+                                    m.uid === activeChat ||
+                                    m.name === activeChat
+                                )?.avatar ||
                                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat}`
                               }
                               alt={activeChat}
@@ -799,8 +898,13 @@ export default function ChatPage() {
                             />
                           </div>
                           <div>
-                            <h3 className="font-semibold">{activeChat}</h3>
-                            <p className="text-xs text-muted-foreground capitalize">
+                            <h3 className="font-semibold">
+                              {teamMembers.find(
+                                (m) =>
+                                  m.uid === activeChat || m.name === activeChat
+                              )?.name || activeChat}
+                            </h3>
+                            <p className="text-xs text-muted-foreground uppercase">
                               {getOnlineStatus(activeChat)}
                             </p>
                           </div>

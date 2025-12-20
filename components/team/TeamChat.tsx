@@ -26,112 +26,15 @@ import {
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { playMessageTone } from "@/lib/notificationSound";
 
-// DB-backed helpers
-async function dbFetchThread(user1: string, user2: string) {
-  try {
-    const res = await fetch(
-      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`,
-      { credentials: "include" }
-    );
-    const data = await res.json();
-
-    if (!res.ok || !data?.success) throw new Error("API Error");
-    return (data.data || []).map((row: any) => ({
-      id: String(row.id),
-      fromUser: row.from_user,
-      toUser: row.to_user,
-      message: row.message,
-      timestamp: new Date(row.created_at).getTime(),
-      read: !!row.is_read,
-    }));
-  } catch (error) {
-    // Fallback to mock data only if not in Live Mode
-    const { shouldUseMockData } = await import("@/lib/dataSource");
-    if (shouldUseMockData()) {
-      console.warn("Messages API failed, falling back to local data", error);
-      return getChatMessages(user1, user2);
-    }
-    return [];
-  }
-}
-
-async function dbSendMessage(
-  fromUser: string,
-  toUser: string,
-  message: string
-) {
-  try {
-    const res = await fetchWithCsrf("/api/messages", {
-      method: "POST",
-      body: JSON.stringify({ fromUser, toUser, message }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function dbMarkRead(currentUser: string, otherUser: string) {
-  try {
-    await fetchWithCsrf("/api/messages/mark-read", {
-      method: "POST",
-      body: JSON.stringify({ currentUser, otherUser }),
-    });
-  } catch {}
-}
-
-async function dbDeleteMessage(id: string) {
-  try {
-    const res = await fetchWithCsrf(`/api/messages/${id}`, {
-      method: "DELETE",
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
-  // Don't make API call if not in database mode
-  if (!shouldUseDatabaseData()) return [];
-
-  try {
-    const res = await fetch(
-      `/api/messages/conversations?user=${encodeURIComponent(user)}`,
-      { credentials: "include" }
-    );
-    const data = await res.json();
-
-    if (!res.ok || !data?.success) throw new Error("API Error");
-    return (data.data || []).map((row: any) => ({
-      withUser: row.withUser,
-      withUserName: row.withUserName || row.withUser, // Fallback to ID if name missing
-      withUserAvatar: row.withUserAvatar,
-      lastMessage: row.lastMessage,
-      lastTimestamp: new Date(row.lastTimestamp).getTime(),
-      unreadCount: row.unreadCount || 0,
-      isOnline: !!row.isOnline,
-    }));
-  } catch (error) {
-    // Fallback to mock data only if not in Live Mode
-    console.warn("Conversations API failed", error);
-    import("@/lib/dataSource").then(({ shouldUseMockData }) => {
-      if (shouldUseMockData()) {
-        // This return inside callback won't work for the outer function, but we can't await import here easily if not top level.
-        // Better logic: just return empty array for now and let the client handle it, or use valid sync check if possible.
-        // But shouldUseMockData is exported from a module that might need import.
-        // Actually, shouldUseMockData is synchronous if imported.
-      }
-    });
-    // For now, simpler fix: just log and return empty. The component handles empty.
-    // If we want mock data, we should have used it earlier.
-    // But wait, the original code used `shouldUseDatabaseData()` check at start of function.
-    // So if we are here, we ARE in database mode (or attempted to be).
-    // If API fails in DB mode, we should NOT fallback to mock data unless we are really debugging.
-    // So returning [] is correct for Live Mode.
-    return [];
-  }
-}
+// DB-backed helpers are now imported from @/lib/utils/chat-db-utilities
+import {
+  dbFetchThread,
+  dbSendMessage,
+  dbMarkRead,
+  dbDeleteMessage,
+  dbDeleteThread,
+  dbFetchConversations,
+} from "@/lib/utils";
 
 type ChatWindowProps = {
   currentUser: string;
@@ -153,6 +56,7 @@ function ChatWindow({
   const [activity, setActivity] = useState(getMemberActivity(targetUser));
   const [targetName, setTargetName] = useState(targetUser);
   const [targetAvatar, setTargetAvatar] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -183,17 +87,15 @@ function ChatWindow({
               if (p) {
                 const threshold = Date.now() - 5 * 60 * 1000;
                 const lastSeen = new Date(p.lastSeen).getTime();
-                const isOffline = lastSeen < threshold;
+                const isOnline =
+                  (p.status === "online" || p.status === "available") &&
+                  lastSeen >= threshold;
 
                 setActivity({
                   memberName: targetName,
                   lastActive: lastSeen,
-                  status: isOffline
-                    ? "offline"
-                    : ((p.status || "online") as any),
-                  currentStatus: isOffline
-                    ? "offline"
-                    : ((p.status || "online") as any),
+                  status: isOnline ? p.status || "online" : "offline",
+                  currentStatus: isOnline ? p.status || "online" : "offline",
                 });
               } else {
                 setActivity({
@@ -250,6 +152,22 @@ function ChatWindow({
       // For mock, we don't have a specific delete utility in lib,
       // but we can filter local state for now
       setMessages((prev) => prev.filter((m) => m.id !== id));
+    }
+  };
+
+  const handleDeleteThread = async () => {
+    if (shouldUseDatabaseData()) {
+      const success = await dbDeleteThread(currentUser, targetUser);
+      if (success) {
+        setMessages([]);
+        setShowDeleteConfirm(false);
+        onClose(); // Close window after deleting thread
+      }
+    } else {
+      // For mock, just clear state and close
+      setMessages([]);
+      setShowDeleteConfirm(false);
+      onClose();
     }
   };
 
@@ -323,6 +241,13 @@ function ChatWindow({
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-1.5 hover:bg-destructive/20 text-primary-foreground/70 hover:text-white rounded transition-colors cursor-pointer"
+            title="Delete entire conversation"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button
             onClick={onToggleMinimize}
             className="p-1.5 hover:bg-primary-foreground/20 rounded transition-colors cursor-pointer"
           >
@@ -340,6 +265,36 @@ function ChatWindow({
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Overlay */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-60 bg-background/95 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+          <div className="animate-in fade-in zoom-in duration-200">
+            <Trash2 className="w-12 h-12 mx-auto mb-4 text-destructive" />
+            <h4 className="font-bold text-lg mb-2">Delete Conversation?</h4>
+            <p className="text-sm text-muted-foreground mb-6">
+              This will permanently delete all messages in this thread for both
+              participants.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteThread}
+              >
+                Delete All
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!isMinimized && (
         <>
@@ -476,23 +431,38 @@ export function TeamChat({ currentUser }: TeamChatProps) {
 
   const loadConversations = async () => {
     if (shouldUseDatabaseData()) {
-      const convs = await dbFetchConversations(currentUser);
+      const [convs, presenceRes] = await Promise.all([
+        dbFetchConversations(currentUser),
+        fetch("/api/presence").then((res) => res.json()),
+      ]);
+
+      const presenceData = presenceRes.success ? presenceRes.data : [];
+
+      // Update conversations with live presence
+      const updatedConvs = convs.map((conv) => {
+        const p = presenceData.find((item: any) => item.uid === conv.withUser);
+        let isOnline = false;
+        if (p) {
+          const threshold = Date.now() - 5 * 60 * 1000;
+          const lastSeen = new Date(p.lastSeen).getTime();
+          isOnline = lastSeen >= threshold;
+        }
+        return { ...conv, isOnline };
+      });
 
       // Play sound if unread count increased globally
       const prevUnread = conversations.reduce(
         (sum, c) => sum + c.unreadCount,
         0
       );
-      const newUnread = convs.reduce((sum, c) => sum + c.unreadCount, 0);
+      const newUnread = updatedConvs.reduce((sum, c) => sum + c.unreadCount, 0);
 
       if (newUnread > prevUnread && !activeChat) {
         playMessageTone();
-        // Also trigger a system notification if window isn't focused?
-        // For now just event
         window.dispatchEvent(new CustomEvent("chatNotification"));
       }
 
-      setConversations(convs);
+      setConversations(updatedConvs);
     } else {
       const convs = getChatConversations(currentUser);
       setConversations(convs);

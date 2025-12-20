@@ -137,3 +137,55 @@ export async function POST(request: Request) {
     );
   }
 }
+export async function DELETE(request: Request) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const u1 = searchParams.get("user1");
+  const u2 = searchParams.get("user2");
+
+  if (!u1 || !u2) {
+    return NextResponse.json(
+      { success: false, error: "Missing user1 or user2" },
+      { status: 400 }
+    );
+  }
+
+  // Enforce that the requester is one of the participants
+  if (user.uid !== u1 && user.uid !== u2) {
+    return NextResponse.json(
+      { success: false, error: "Forbidden" },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const result = await prisma.message.deleteMany({
+      where: {
+        OR: [
+          { fromUser: u1, toUser: u2 },
+          { fromUser: u2, toUser: u1 },
+        ],
+      },
+    });
+
+    log.info(
+      { user1: u1, user2: u2, deletedCount: result.count, deletedBy: user.uid },
+      "Deleted conversation thread"
+    );
+
+    return NextResponse.json({ success: true, deletedCount: result.count });
+  } catch (error) {
+    log.error({ err: error }, "Delete thread error");
+    return NextResponse.json(
+      { success: false, error: "Failed to delete conversation" },
+      { status: 500 }
+    );
+  }
+}
