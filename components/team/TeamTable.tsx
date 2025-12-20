@@ -17,7 +17,9 @@ import {
   UserCircle2,
   MoreVertical,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
+import { MemberForm } from "./MemberForm";
 import { Card } from "@/components/ui/Card";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
 import {
@@ -103,6 +105,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
   const [membersData, setMembersData] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [memberActivities, setMemberActivities] = useState<Map<string, any>>(
     new Map()
   );
@@ -173,6 +176,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   // Initialize membersData once
   React.useEffect(() => {
     async function fetchUsers() {
+      setIsLoading(true);
       try {
         const { loadUsers } = await import("@/lib/data");
         const { shouldUseDatabaseData } = await import("@/lib/dataSource");
@@ -201,7 +205,11 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           rawAddress: u.rawAddress || {},
           bio: u.bio || "",
           socials: u.socials || {},
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+          avatar:
+            u.avatar_url ||
+            u.avatarUrl ||
+            u.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
           isMasterAdmin: u.isMasterAdmin || false,
         }));
 
@@ -209,6 +217,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       } catch (error) {
         console.error("Failed to load team members:", error);
         setMembersData([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchUsers();
@@ -392,7 +402,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 },
                 bio: updatedData.bio,
                 socials: updatedData.socials,
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
+                avatar:
+                  m.avatar && !m.avatar.includes("dicebear.com")
+                    ? m.avatar
+                    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
               }
             : m
         )
@@ -471,7 +484,9 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           bio: u.bio,
           socials: u.socials || {},
           avatar:
+            u.avatar_url ||
             u.avatarUrl ||
+            u.avatar ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
         };
       } else {
@@ -621,7 +636,17 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       </div>
 
       {/* Team Table */}
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto rounded-lg border border-border relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <span className="text-xs font-medium text-muted-foreground">
+                Loading team...
+              </span>
+            </div>
+          </div>
+        )}
         <table className="w-full">
           <thead className="bg-secondary/50 border-b border-border">
             <tr>
@@ -898,198 +923,49 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
             <h3 className="text-lg font-semibold mb-6">Edit Member</h3>
             <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Name</label>
-                  <Input
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Role</label>
-                  <select
-                    value={draftRole}
-                    onChange={(e) => setDraftRole(e.target.value)}
-                    disabled={draftRole === "Master Admin"}
-                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select Role</option>
-                    {Object.keys(roleColors).map((r) => (
-                      <option
-                        key={r}
-                        value={r}
-                        disabled={
-                          r === "Master Admin" && draftRole !== "Master Admin"
-                        }
-                      >
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Email</label>
-                  <Input
-                    value={draftEmail}
-                    onChange={(e) => setDraftEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Phone</label>
-                  <Input
-                    value={draftPhone}
-                    onChange={(e) => setDraftPhone(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Address Line 1</label>
-                  <Input
-                    value={draftAddress}
-                    onChange={(e) => setDraftAddress(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Address Line 2</label>
-                  <Input
-                    value={draftAddress2}
-                    onChange={(e) => setDraftAddress2(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Country</label>
-                  <SearchableSelect
-                    options={allCountries}
-                    value={currentCountryIso || ""}
-                    onChange={(iso) => {
-                      const country = allCountries.find((c) => c.value === iso);
-                      if (country) {
-                        setDraftCountry(country.label);
-                        setDraftState("");
-                        setDraftCity("");
-                      }
-                    }}
-                    placeholder="Select Country..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">State</label>
-                  <SearchableSelect
-                    options={allStates}
-                    value={currentStateIso || ""}
-                    onChange={(iso) => {
-                      const state = allStates.find((s) => s.value === iso);
-                      if (state) {
-                        setDraftState(state.label);
-                        setDraftCity("");
-                      }
-                    }}
-                    placeholder="Select State..."
-                    disabled={!currentCountryIso}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">City</label>
-                  <SearchableSelect
-                    options={allCities}
-                    value={draftCity}
-                    onChange={(val) => setDraftCity(val)}
-                    placeholder="Select City..."
-                    disabled={!currentCountryIso}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Postal Code</label>
-                  <Input
-                    value={draftPostal}
-                    onChange={(e) => setDraftPostal(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Bio</label>
-                  <textarea
-                    value={draftBio}
-                    onChange={(e) => setDraftBio(e.target.value)}
-                    placeholder="Short bio"
-                    rows={2}
-                    className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                {/* Social Links */}
-                <div className="space-y-4 md:col-span-2 pt-2 border-t border-border mt-2">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    Social Links{" "}
-                    <span className="text-[10px] font-normal text-muted-foreground uppercase">
-                      (Optional)
-                    </span>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Linkedin className="w-3 h-3 text-blue-600" /> LinkedIn
-                      </label>
-                      <Input
-                        value={draftLinkedin}
-                        onChange={(e) => setDraftLinkedin(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Facebook className="w-3 h-3 text-blue-600" /> Facebook
-                      </label>
-                      <Input
-                        value={draftFacebook}
-                        onChange={(e) => setDraftFacebook(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Instagram className="w-3 h-3 text-pink-500" />{" "}
-                        Instagram
-                      </label>
-                      <Input
-                        value={draftInstagram}
-                        onChange={(e) => setDraftInstagram(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Music2 className="w-3 h-3 text-slate-900" /> TikTok
-                      </label>
-                      <Input
-                        value={draftTiktok}
-                        onChange={(e) => setDraftTiktok(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Github className="w-3 h-3 text-gray-700 dark:text-gray-300" />{" "}
-                        GitHub
-                      </label>
-                      <Input
-                        value={draftGithub}
-                        onChange={(e) => setDraftGithub(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Twitter className="w-3 h-3 text-sky-500" /> Twitter/X
-                      </label>
-                      <Input
-                        value={draftTwitter}
-                        onChange={(e) => setDraftTwitter(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MemberForm
+                mode="edit"
+                draftName={draftName}
+                setDraftName={setDraftName}
+                draftRole={draftRole}
+                setDraftRole={setDraftRole}
+                draftEmail={draftEmail}
+                setDraftEmail={setDraftEmail}
+                draftPhone={draftPhone}
+                setDraftPhone={setDraftPhone}
+                draftAddress={draftAddress}
+                setDraftAddress={setDraftAddress}
+                draftAddress2={draftAddress2}
+                setDraftAddress2={setDraftAddress2}
+                draftCity={draftCity}
+                setDraftCity={setDraftCity}
+                draftState={draftState}
+                setDraftState={setDraftState}
+                draftCountry={draftCountry}
+                setDraftCountry={setDraftCountry}
+                draftPostal={draftPostal}
+                setDraftPostal={setDraftPostal}
+                draftBio={draftBio}
+                setDraftBio={setDraftBio}
+                draftLinkedin={draftLinkedin}
+                setDraftLinkedin={setDraftLinkedin}
+                draftFacebook={draftFacebook}
+                setDraftFacebook={setDraftFacebook}
+                draftInstagram={draftInstagram}
+                setDraftInstagram={setDraftInstagram}
+                draftTiktok={draftTiktok}
+                setDraftTiktok={setDraftTiktok}
+                draftGithub={draftGithub}
+                setDraftGithub={setDraftGithub}
+                draftTwitter={draftTwitter}
+                setDraftTwitter={setDraftTwitter}
+                allCountries={allCountries}
+                allStates={allStates}
+                allCities={allCities}
+                currentCountryIso={currentCountryIso || ""}
+                currentStateIso={currentStateIso || ""}
+                roleColors={roleColors}
+              />
             </div>
             <div className="flex justify-end gap-3">
               <button
@@ -1126,206 +1002,51 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
             <h3 className="text-lg font-semibold mb-6">Add New Member</h3>
             <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Name *</label>
-                  <Input
-                    value={draftName}
-                    onChange={(e) => setDraftName(e.target.value)}
-                    placeholder="Full name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Role</label>
-                  <select
-                    value={draftRole}
-                    onChange={(e) => setDraftRole(e.target.value)}
-                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Select Role</option>
-                    {Object.keys(roleColors).map((r) => (
-                      <option key={r} value={r} disabled={r === "Master Admin"}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Email *</label>
-                  <Input
-                    value={draftEmail}
-                    onChange={(e) => setDraftEmail(e.target.value)}
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Password *</label>
-                  <Input
-                    type="password"
-                    value={draftPassword}
-                    onChange={(e) => setDraftPassword(e.target.value)}
-                    placeholder="Initial password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Phone</label>
-                  <Input
-                    value={draftPhone}
-                    onChange={(e) => setDraftPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Address Line 1</label>
-                  <Input
-                    value={draftAddress}
-                    onChange={(e) => setDraftAddress(e.target.value)}
-                    placeholder="Street"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Address Line 2</label>
-                  <Input
-                    value={draftAddress2}
-                    onChange={(e) => setDraftAddress2(e.target.value)}
-                    placeholder="Apt, Suite, etc."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Country</label>
-                  <SearchableSelect
-                    options={allCountries}
-                    value={currentCountryIso || ""}
-                    onChange={(iso) => {
-                      const country = allCountries.find((c) => c.value === iso);
-                      if (country) {
-                        setDraftCountry(country.label);
-                        setDraftState("");
-                        setDraftCity("");
-                      }
-                    }}
-                    placeholder="Select Country..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">State</label>
-                  <SearchableSelect
-                    options={allStates}
-                    value={currentStateIso || ""}
-                    onChange={(iso) => {
-                      const state = allStates.find((s) => s.value === iso);
-                      if (state) {
-                        setDraftState(state.label);
-                        setDraftCity("");
-                      }
-                    }}
-                    placeholder="Select State..."
-                    disabled={!currentCountryIso}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">City</label>
-                  <SearchableSelect
-                    options={allCities}
-                    value={draftCity}
-                    onChange={(val) => setDraftCity(val)}
-                    placeholder="Select City..."
-                    disabled={!currentCountryIso}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Postal Code</label>
-                  <Input
-                    value={draftPostal}
-                    onChange={(e) => setDraftPostal(e.target.value)}
-                    placeholder="Zip"
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-medium">Bio</label>
-                  <textarea
-                    value={draftBio}
-                    onChange={(e) => setDraftBio(e.target.value)}
-                    placeholder="Short bio"
-                    rows={2}
-                    className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                {/* Social Links */}
-                <div className="space-y-4 md:col-span-2 pt-2 border-t border-border mt-2">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    Social Links{" "}
-                    <span className="text-[10px] font-normal text-muted-foreground uppercase">
-                      (Optional)
-                    </span>
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Linkedin className="w-3 h-3 text-blue-600" /> LinkedIn
-                      </label>
-                      <Input
-                        value={draftLinkedin}
-                        onChange={(e) => setDraftLinkedin(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Facebook className="w-3 h-3 text-blue-600" /> Facebook
-                      </label>
-                      <Input
-                        value={draftFacebook}
-                        onChange={(e) => setDraftFacebook(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Instagram className="w-3 h-3 text-pink-500" />{" "}
-                        Instagram
-                      </label>
-                      <Input
-                        value={draftInstagram}
-                        onChange={(e) => setDraftInstagram(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Music2 className="w-3 h-3 text-slate-900" /> TikTok
-                      </label>
-                      <Input
-                        value={draftTiktok}
-                        onChange={(e) => setDraftTiktok(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Github className="w-3 h-3 text-gray-700 dark:text-gray-300" />{" "}
-                        GitHub
-                      </label>
-                      <Input
-                        value={draftGithub}
-                        onChange={(e) => setDraftGithub(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium flex items-center gap-2">
-                        <Twitter className="w-3 h-3 text-sky-500" /> Twitter/X
-                      </label>
-                      <Input
-                        value={draftTwitter}
-                        onChange={(e) => setDraftTwitter(e.target.value)}
-                        placeholder="Username"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <MemberForm
+                mode="add"
+                draftName={draftName}
+                setDraftName={setDraftName}
+                draftRole={draftRole}
+                setDraftRole={setDraftRole}
+                draftEmail={draftEmail}
+                setDraftEmail={setDraftEmail}
+                draftPassword={draftPassword}
+                setDraftPassword={setDraftPassword}
+                draftPhone={draftPhone}
+                setDraftPhone={setDraftPhone}
+                draftAddress={draftAddress}
+                setDraftAddress={setDraftAddress}
+                draftAddress2={draftAddress2}
+                setDraftAddress2={setDraftAddress2}
+                draftCity={draftCity}
+                setDraftCity={setDraftCity}
+                draftState={draftState}
+                setDraftState={setDraftState}
+                draftCountry={draftCountry}
+                setDraftCountry={setDraftCountry}
+                draftPostal={draftPostal}
+                setDraftPostal={setDraftPostal}
+                draftBio={draftBio}
+                setDraftBio={setDraftBio}
+                draftLinkedin={draftLinkedin}
+                setDraftLinkedin={setDraftLinkedin}
+                draftFacebook={draftFacebook}
+                setDraftFacebook={setDraftFacebook}
+                draftInstagram={draftInstagram}
+                setDraftInstagram={setDraftInstagram}
+                draftTiktok={draftTiktok}
+                setDraftTiktok={setDraftTiktok}
+                draftGithub={draftGithub}
+                setDraftGithub={setDraftGithub}
+                draftTwitter={draftTwitter}
+                setDraftTwitter={setDraftTwitter}
+                allCountries={allCountries}
+                allStates={allStates}
+                allCities={allCities}
+                currentCountryIso={currentCountryIso || ""}
+                currentStateIso={currentStateIso || ""}
+                roleColors={roleColors}
+              />
             </div>
             <div className="flex justify-end gap-3 pt-6 border-t mt-auto">
               <button

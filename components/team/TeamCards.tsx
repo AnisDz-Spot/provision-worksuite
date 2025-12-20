@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Input } from "@/components/ui/Input";
 import {
@@ -15,7 +15,14 @@ import {
   Clock,
   CheckCircle2,
   MessageCircle,
+  Loader2,
+  Plus, // Add Plus for parent trigger consistency
 } from "lucide-react";
+import { MemberForm } from "./MemberForm";
+import { fetchWithCsrf } from "@/lib/csrf-client";
+import { getCountries, getStates, getCities } from "@/app/actions/geo";
+import { addUser } from "@/components/auth/AuthContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
@@ -126,6 +133,54 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   const [draftEmail, setDraftEmail] = useState("");
   const [draftPhone, setDraftPhone] = useState("");
   const [draftAddress, setDraftAddress] = useState("");
+  const [draftAddress2, setDraftAddress2] = useState("");
+  const [draftPassword, setDraftPassword] = useState("");
+  const [draftBio, setDraftBio] = useState("");
+  const [draftCountry, setDraftCountry] = useState("");
+  const [draftState, setDraftState] = useState("");
+  const [draftCity, setDraftCity] = useState("");
+  const [draftPostal, setDraftPostal] = useState("");
+  // Social states
+  const [draftLinkedin, setDraftLinkedin] = useState("");
+  const [draftGithub, setDraftGithub] = useState("");
+  const [draftTwitter, setDraftTwitter] = useState("");
+  const [draftFacebook, setDraftFacebook] = useState("");
+  const [draftInstagram, setDraftInstagram] = useState("");
+  const [draftTiktok, setDraftTiktok] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [allCountries, setAllCountries] = useState<any[]>([]);
+  const [allStates, setAllStates] = useState<any[]>([]);
+  const [allCities, setAllCities] = useState<any[]>([]);
+
+  // Load geo data
+  useEffect(() => {
+    getCountries().then(setAllCountries);
+  }, []);
+
+  const currentCountryIso = useMemo(() => {
+    return allCountries.find((c) => c.label === draftCountry)?.value;
+  }, [allCountries, draftCountry]);
+
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllStates([]);
+      return;
+    }
+    getStates(currentCountryIso).then(setAllStates);
+  }, [currentCountryIso]);
+
+  const currentStateIso = useMemo(() => {
+    return allStates.find((s) => s.label === draftState)?.value;
+  }, [allStates, draftState]);
+
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllCities([]);
+      return;
+    }
+    getCities(currentCountryIso, currentStateIso).then(setAllCities);
+  }, [currentCountryIso, currentStateIso]);
 
   const initialMembers: TeamMember[] = useMemo(() => {
     // Load users from auth system
@@ -138,29 +193,45 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   // Initialize membersData once
   React.useEffect(() => {
     async function fetchUsers() {
+      setIsLoading(true);
       try {
         const { loadUsers } = await import("@/lib/data");
-        const users = await loadUsers();
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+        let users = [];
+        if (shouldUseDatabaseData()) {
+          const res = await fetch("/api/users");
+          const json = await res.json();
+          if (json.success) users = json.data;
+        } else {
+          users = await loadUsers();
+        }
 
         const teamMembers = users.map((u: any) => ({
           id: u.uid || u.id,
           name: u.name,
-          role: u.role,
+          role: u.role || "Member",
           email: u.email,
-          phone: ENRICH[u.uid || u.id]?.phone || "+1 (555) 000-0000",
-          address: ENRICH[u.uid || u.id]?.address || "-",
-          socials: ENRICH[u.uid || u.id]?.socials || {},
+          phone: u.phone || "+1 (555) 000-0000",
+          address: u.address || "-",
+          socials: u.socials || {},
+          bio: u.bio || "",
           avatar:
             u.avatar_url ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
-          status: ENRICH[u.uid || u.id]?.status || "available",
-          tasksCount: ENRICH[u.uid || u.id]?.tasksCount || 0,
+            u.avatarUrl ||
+            u.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+          status: "available", // Presence logic handles this
+          tasksCount: 0,
+          isMasterAdmin: u.role === "Master Admin",
         }));
 
         setMembersData(teamMembers);
       } catch (error) {
         console.error("Failed to load team members:", error);
         setMembersData([]);
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchUsers();
@@ -233,58 +304,154 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
     setMenuOpen(menuOpen === id ? null : id);
   }
 
-  function openEdit(member: TeamMember) {
-    setEditMemberId(member.id);
-    setDraftName(member.name);
-    setDraftRole(member.role);
-    setDraftEmail(member.email);
-    setDraftPhone(member.phone);
-    setDraftAddress(member.address);
-    setEditOpen(true);
-    setMenuOpen(null);
-  }
-
-  function saveEdit() {
-    if (!editMemberId) return;
-    setMembersData((prev) =>
-      prev.map((m) =>
-        m.id === editMemberId
-          ? {
-              ...m,
-              name: draftName.trim() || m.name,
-              role: draftRole.trim() || m.role,
-              email: draftEmail.trim() || m.email,
-              phone: draftPhone.trim() || m.phone,
-              address: draftAddress.trim() || m.address,
-              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(draftName || m.name)}`,
-            }
-          : m
-      )
-    );
-    setEditOpen(false);
-    setEditMemberId(null);
-  }
-
-  function addMember() {
-    const newMember: TeamMember = {
-      id: `u${Date.now()}`,
-      name: draftName.trim(),
-      role: draftRole.trim() || "Team Member",
-      email: draftEmail.trim(),
-      phone: draftPhone.trim() || "+1 (555) 000-0000",
-      address: draftAddress.trim() || "-",
-      socials: {},
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(draftName.trim())}`,
-      status: "available",
-      tasksCount: 0,
-    };
-    setMembersData((prev) => [...prev, newMember]);
-    setAddOpen(false);
+  function resetDrafts() {
     setDraftName("");
     setDraftRole("");
     setDraftEmail("");
     setDraftPhone("");
     setDraftAddress("");
+    setDraftAddress2("");
+    setDraftPassword("");
+    setDraftBio("");
+    setDraftCountry("");
+    setDraftState("");
+    setDraftCity("");
+    setDraftPostal("");
+    setDraftLinkedin("");
+    setDraftFacebook("");
+    setDraftInstagram("");
+    setDraftTiktok("");
+    setDraftGithub("");
+    setDraftTwitter("");
+  }
+
+  function openEdit(member: any) {
+    setEditMemberId(member.id);
+    setDraftName(member.name);
+    setDraftRole(member.role);
+    setDraftEmail(member.email);
+    setDraftPhone(member.phone);
+    setDraftAddress(member.address || "");
+    setDraftBio(member.bio || "");
+    // Socials
+    if (member.socials) {
+      setDraftLinkedin(member.socials.linkedin || "");
+      setDraftFacebook(member.socials.facebook || "");
+      setDraftInstagram(member.socials.instagram || "");
+      setDraftTiktok(member.socials.tiktok || "");
+      setDraftGithub(member.socials.github || "");
+      setDraftTwitter(member.socials.twitter || "");
+    }
+    setEditOpen(true);
+    setMenuOpen(null);
+  }
+
+  async function saveEdit() {
+    if (!editMemberId) return;
+    const updatedData = {
+      name: draftName.trim(),
+      role: draftRole.trim(),
+      email: draftEmail.trim(),
+      phone: draftPhone.trim(),
+      address: draftAddress.trim(),
+      bio: draftBio.trim(),
+      socials: {
+        linkedin: draftLinkedin.trim(),
+        facebook: draftFacebook.trim(),
+        instagram: draftInstagram.trim(),
+        tiktok: draftTiktok.trim(),
+        github: draftGithub.trim(),
+        twitter: draftTwitter.trim(),
+      },
+    };
+
+    // Optimistic Update
+    setMembersData((prev) =>
+      prev.map((m) =>
+        m.id === editMemberId
+          ? {
+              ...m,
+              ...updatedData,
+              avatar:
+                m.avatar && !m.avatar.includes("dicebear.com")
+                  ? m.avatar
+                  : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
+            }
+          : m
+      )
+    );
+
+    setEditOpen(false);
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        await fetchWithCsrf(`/api/users/${editMemberId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedData),
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save changes", e);
+    }
+  }
+
+  async function addMember() {
+    const payload = {
+      name: draftName.trim(),
+      role: draftRole.trim() || "Member",
+      email: draftEmail.trim(),
+      password: draftPassword.trim(),
+      phone: draftPhone.trim(),
+      address: draftAddress.trim(),
+      bio: draftBio.trim(),
+      socials: {
+        linkedin: draftLinkedin.trim(),
+        facebook: draftFacebook.trim(),
+        instagram: draftInstagram.trim(),
+        tiktok: draftTiktok.trim(),
+        github: draftGithub.trim(),
+        twitter: draftTwitter.trim(),
+      },
+    };
+
+    setAddOpen(false);
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        const res = await fetchWithCsrf("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+          const u = json.data;
+          const newM = {
+            id: u.id,
+            ...payload,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+            status: "offline" as const,
+            tasksCount: 0,
+          };
+          setMembersData((prev) => [...prev, newM]);
+          addUser(u);
+        }
+      } else {
+        // Mock fallback
+        const mockM = {
+          id: `u${Date.now()}`,
+          ...payload,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(payload.name)}`,
+          status: "available" as const,
+          tasksCount: 0,
+        };
+        setMembersData((prev) => [...prev, mockM]);
+      }
+      resetDrafts();
+    } catch (e) {
+      console.error("Failed to add member", e);
+    }
   }
 
   function removeMember(id: string) {
@@ -349,7 +516,17 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative min-h-[400px]">
+      {isLoading && (
+        <div className="absolute inset-x-0 top-20 z-10 flex items-center justify-center p-12 bg-background/50 backdrop-blur-[1px] rounded-xl border border-dashed border-border">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Loading team cards...
+            </span>
+          </div>
+        </div>
+      )}
       {/* Search & Filter Bar */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-64">
@@ -607,46 +784,54 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
             onClick={() => setEditOpen(false)}
           />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl space-y-6">
-            <h3 className="text-lg font-semibold">Edit Member</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Name</label>
-                <Input
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Role</label>
-                <Input
-                  value={draftRole}
-                  onChange={(e) => setDraftRole(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Email</label>
-                <Input
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Phone</label>
-                <Input
-                  value={draftPhone}
-                  onChange={(e) => setDraftPhone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address</label>
-                <Input
-                  value={draftAddress}
-                  onChange={(e) => setDraftAddress(e.target.value)}
-                />
-              </div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
+            <h3 className="text-lg font-semibold mb-6">Edit Member</h3>
+            <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
+              <MemberForm
+                mode="edit"
+                draftName={draftName}
+                setDraftName={setDraftName}
+                draftRole={draftRole}
+                setDraftRole={setDraftRole}
+                draftEmail={draftEmail}
+                setDraftEmail={setDraftEmail}
+                draftPhone={draftPhone}
+                setDraftPhone={setDraftPhone}
+                draftAddress={draftAddress}
+                setDraftAddress={setDraftAddress}
+                draftAddress2={draftAddress2}
+                setDraftAddress2={setDraftAddress2}
+                draftCity={draftCity}
+                setDraftCity={setDraftCity}
+                draftState={draftState}
+                setDraftState={setDraftState}
+                draftCountry={draftCountry}
+                setDraftCountry={setDraftCountry}
+                draftPostal={draftPostal}
+                setDraftPostal={setDraftPostal}
+                draftBio={draftBio}
+                setDraftBio={setDraftBio}
+                draftLinkedin={draftLinkedin}
+                setDraftLinkedin={setDraftLinkedin}
+                draftFacebook={draftFacebook}
+                setDraftFacebook={setDraftFacebook}
+                draftInstagram={draftInstagram}
+                setDraftInstagram={setDraftInstagram}
+                draftTiktok={draftTiktok}
+                setDraftTiktok={setDraftTiktok}
+                draftGithub={draftGithub}
+                setDraftGithub={setDraftGithub}
+                draftTwitter={draftTwitter}
+                setDraftTwitter={setDraftTwitter}
+                allCountries={allCountries}
+                allStates={allStates}
+                allCities={allCities}
+                currentCountryIso={currentCountryIso}
+                currentStateIso={currentStateIso}
+                roleColors={roleColors}
+              />
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-6 border-t mt-auto">
               <button
                 onClick={() => setEditOpen(false)}
                 className="px-4 py-2 rounded-md border text-sm hover:bg-accent cursor-pointer"
@@ -671,66 +856,63 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
             onClick={() => {
               setAddOpen(false);
-              setDraftName("");
-              setDraftRole("");
-              setDraftEmail("");
-              setDraftPhone("");
-              setDraftAddress("");
+              resetDrafts();
             }}
           />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl space-y-6">
-            <h3 className="text-lg font-semibold">Add New Member</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Name *</label>
-                <Input
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  placeholder="Full name"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Role</label>
-                <Input
-                  value={draftRole}
-                  onChange={(e) => setDraftRole(e.target.value)}
-                  placeholder="e.g. Developer"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Email *</label>
-                <Input
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                  placeholder="email@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium">Phone</label>
-                <Input
-                  value={draftPhone}
-                  onChange={(e) => setDraftPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-medium">Address</label>
-                <Input
-                  value={draftAddress}
-                  onChange={(e) => setDraftAddress(e.target.value)}
-                  placeholder="City, Country"
-                />
-              </div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border rounded-xl shadow-lg p-6 w-full max-w-xl max-h-[90vh] flex flex-col">
+            <h3 className="text-lg font-semibold mb-6">Add New Member</h3>
+            <div className="overflow-y-auto pr-2 grow scrollbar-thin scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground/30 transition-colors">
+              <MemberForm
+                mode="add"
+                draftName={draftName}
+                setDraftName={setDraftName}
+                draftRole={draftRole}
+                setDraftRole={setDraftRole}
+                draftEmail={draftEmail}
+                setDraftEmail={setDraftEmail}
+                draftPassword={draftPassword}
+                setDraftPassword={setDraftPassword}
+                draftPhone={draftPhone}
+                setDraftPhone={setDraftPhone}
+                draftAddress={draftAddress}
+                setDraftAddress={setDraftAddress}
+                draftAddress2={draftAddress2}
+                setDraftAddress2={setDraftAddress2}
+                draftCity={draftCity}
+                setDraftCity={setDraftCity}
+                draftState={draftState}
+                setDraftState={setDraftState}
+                draftCountry={draftCountry}
+                setDraftCountry={setDraftCountry}
+                draftPostal={draftPostal}
+                setDraftPostal={setDraftPostal}
+                draftBio={draftBio}
+                setDraftBio={setDraftBio}
+                draftLinkedin={draftLinkedin}
+                setDraftLinkedin={setDraftLinkedin}
+                draftFacebook={draftFacebook}
+                setDraftFacebook={setDraftFacebook}
+                draftInstagram={draftInstagram}
+                setDraftInstagram={setDraftInstagram}
+                draftTiktok={draftTiktok}
+                setDraftTiktok={setDraftTiktok}
+                draftGithub={draftGithub}
+                setDraftGithub={setDraftGithub}
+                draftTwitter={draftTwitter}
+                setDraftTwitter={setDraftTwitter}
+                allCountries={allCountries}
+                allStates={allStates}
+                allCities={allCities}
+                currentCountryIso={currentCountryIso}
+                currentStateIso={currentStateIso}
+                roleColors={roleColors}
+              />
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-6 border-t mt-auto">
               <button
                 onClick={() => {
                   setAddOpen(false);
-                  setDraftName("");
-                  setDraftRole("");
-                  setDraftEmail("");
-                  setDraftPhone("");
-                  setDraftAddress("");
+                  resetDrafts();
                 }}
                 className="px-4 py-2 rounded-md border text-sm hover:bg-accent cursor-pointer"
               >
