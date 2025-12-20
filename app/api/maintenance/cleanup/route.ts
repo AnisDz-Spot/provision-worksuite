@@ -18,6 +18,7 @@ export async function POST(req: Request) {
       "admin",
       "global-admin",
       "Administrator",
+      "Master Admin",
       "Project Manager",
     ];
     if (!allowedRoles.includes(user.role)) {
