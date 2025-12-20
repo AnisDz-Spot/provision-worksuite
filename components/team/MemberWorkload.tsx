@@ -10,6 +10,7 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 
 type Task = {
@@ -20,6 +21,7 @@ type Task = {
   estimatedHours?: number;
   assignee?: string;
   dueDate?: string;
+  assigneeName?: string;
 };
 
 type Member = {
@@ -181,8 +183,9 @@ const TASKS: Task[] = [
 
 export function MemberWorkload({ projectId }: MemberWorkloadProps) {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<Task[]>(TASKS);
-  const [members, setMembers] = useState<Member[]>(MEMBERS);
+  const [tasks, setTasks] = useState<Task[]>([]); // Start empty to prevent flicker
+  const [members, setMembers] = useState<Member[]>([]); // Start empty to prevent flicker
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [applyTimeOff, setApplyTimeOff] = useState<boolean>(true);
   const [timeOffData, setTimeOffData] = useState<{
@@ -191,54 +194,71 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
   } | null>(null);
 
   React.useEffect(() => {
-    // Determine mode
-    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
-      if (shouldUseDatabaseData()) {
-        // Fetch real data
-        Promise.all([
-          fetch("/api/users").then((r) => r.json()),
-          fetch("/api/tasks").then((r) => r.json()),
-        ])
-          .then(([usersRes, tasksRes]) => {
-            if (usersRes.success && usersRes.data) {
-              const dbMembers = usersRes.data.map((u: any) => ({
-                id: String(u.uid || u.id),
-                name: u.name,
-                avatarUrl: u.avatar_url || u.avatarUrl,
-                capacity: 40,
-                skills: u.role ? [u.role] : [],
-              }));
-              if (dbMembers.length > 0) {
-                setMembers(dbMembers);
-              }
-            }
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
 
-            if (tasksRes.success && tasksRes.data) {
-              const dbTasks = tasksRes.data.map((t: any) => ({
-                id: String(t.id),
-                title: t.title,
-                status:
-                  t.status === "in_progress"
-                    ? "in-progress"
-                    : t.status === "completed"
-                      ? "done"
-                      : t.status || "todo",
-                priority: t.priority?.toLowerCase() || "medium",
-                estimatedHours: t.estimateHours || t.estimatedHours || 0,
-                assignee: t.assigneeName || t.assignee?.name || "Unassigned",
-                dueDate: t.due ? t.due.split("T")[0] : undefined,
-              }));
-              setTasks(dbTasks);
-            }
-          })
-          .catch((err) => console.error("Failed to load live data", err));
-      } else {
-        fetch("/data/time_off.json")
-          .then((res) => res.json())
-          .then((json) => setTimeOffData(json))
-          .catch(() => setTimeOffData(null));
+        if (shouldUseDatabaseData()) {
+          // Fetch real data
+          const [usersRes, tasksRes] = await Promise.all([
+            fetch("/api/users").then((r) => r.json()),
+            fetch("/api/tasks").then((r) => r.json()),
+          ]);
+
+          if (usersRes.success && usersRes.data) {
+            const dbMembers = usersRes.data.map((u: any) => ({
+              id: String(u.uid || u.id),
+              name: u.name,
+              avatarUrl: u.avatar_url || u.avatarUrl,
+              capacity: 40,
+              skills: u.role ? [u.role] : [],
+            }));
+            setMembers(dbMembers);
+          } else {
+            setMembers(MEMBERS); // Fallback only if explicitly returned success=false
+          }
+
+          if (tasksRes.success && tasksRes.data) {
+            const dbTasks = tasksRes.data.map((t: any) => ({
+              id: String(t.id),
+              title: t.title,
+              status:
+                t.status === "in_progress"
+                  ? "in-progress"
+                  : t.status === "completed"
+                    ? "done"
+                    : t.status || "todo",
+              priority: t.priority?.toLowerCase() || "medium",
+              estimatedHours: t.estimateHours || t.estimatedHours || 0,
+              assignee: t.assigneeName || t.assignee?.name || "Unassigned",
+              dueDate: t.due ? t.due.split("T")[0] : undefined,
+            }));
+            setTasks(dbTasks);
+          } else {
+            setTasks(TASKS); // Fallback only if explicitly returned success=false
+          }
+        } else {
+          // Use mock data explicitly
+          setMembers(MEMBERS);
+          setTasks(TASKS);
+
+          fetch("/data/time_off.json")
+            .then((res) => res.json())
+            .then((json) => setTimeOffData(json))
+            .catch(() => setTimeOffData(null));
+        }
+      } catch (err) {
+        console.error("Failed to load live data", err);
+        // On hard error, fallback to mock to keep app usable
+        setMembers(MEMBERS);
+        setTasks(TASKS);
+      } finally {
+        setIsLoading(false);
       }
-    });
+    }
+
+    loadData();
   }, []);
 
   const workloadData = useMemo(() => {
@@ -373,6 +393,19 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
     );
     setDraggedTask(null);
   };
+
+  if (isLoading) {
+    return (
+      <Card className="p-6 h-[500px] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          <span className="text-sm font-medium text-muted-foreground animate-pulse">
+            Analyzing team workload...
+          </span>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6">

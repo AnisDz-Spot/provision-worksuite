@@ -543,305 +543,315 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
 
   return (
     <div className="space-y-6 relative min-h-[400px]">
-      {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center p-12 bg-background/80 backdrop-blur-sm rounded-xl min-h-[400px]">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-12 h-12 text-primary animate-spin" />
-            <span className="text-lg font-medium text-muted-foreground">
-              Loading team directory...
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center p-20 gap-3 min-h-[400px] border border-dashed rounded-xl bg-accent/20">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <div className="text-center space-y-1">
+            <span className="text-lg font-semibold text-foreground block">
+              Fetching Team Directory
+            </span>
+            <span className="text-sm text-muted-foreground animate-pulse">
+              Please wait while we synchronize with the database...
             </span>
           </div>
         </div>
-      )}
-      {/* Search & Filter Bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-64">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search team members..."
-          />
-        </div>
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium cursor-pointer hover:bg-accent/50 transition-colors"
-        >
-          <option value="all">All Roles</option>
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </div>
+      ) : (
+        <>
+          {/* Search & Filter Bar */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-64">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search team members..."
+              />
+            </div>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium cursor-pointer hover:bg-accent/50 transition-colors"
+            >
+              <option value="all">All Roles</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {/* Team Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((m) => (
-          <Card
-            key={m.id}
-            className="p-5 hover:shadow-lg transition-all duration-300 group border hover:border-primary/50 relative overflow-hidden"
-          >
-            {/* Status indicator */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+          {/* Team Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map((m) => (
+              <Card
+                key={m.id}
+                className="p-5 hover:shadow-lg transition-all duration-300 group border hover:border-primary/50 relative overflow-hidden"
+              >
+                {/* Status indicator */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            {/* Header with menu */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3 flex-1">
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={m.avatar}
-                    alt={m.name}
-                    className="w-14 h-14 rounded-full bg-accent ring-2 ring-accent/30 group-hover:ring-primary/30 transition-all"
-                  />
-                  {(() => {
-                    const p = presenceMap[m.id];
-                    let statusToUse: any = m.status;
-
-                    if (p) {
-                      const last = new Date(p.last_seen).getTime();
-                      const isOffline = Date.now() - last > 5 * 60 * 1000; // 5 minute threshold
-                      statusToUse = isOffline
-                        ? "offline"
-                        : p.status || "available";
-                    } else if (memberActivities.get(m.id)) {
-                      statusToUse =
-                        memberActivities.get(m.id)?.status ||
-                        memberActivities.get(m.id)?.currentStatus;
-                    } else if (memberActivities.get(m.name)) {
-                      statusToUse =
-                        memberActivities.get(m.name)?.status ||
-                        memberActivities.get(m.name)?.currentStatus;
-                    }
-
-                    const dotClass = getStatusColor(statusToUse);
-                    return (
-                      <div
-                        className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${dotClass}`}
+                {/* Header with menu */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={m.avatar}
+                        alt={m.name}
+                        className="w-14 h-14 rounded-full bg-accent ring-2 ring-accent/30 group-hover:ring-primary/30 transition-all"
                       />
-                    );
-                  })()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
-                    {m.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {(() => {
-                      const p = presenceMap[m.id];
-                      if (p) {
-                        const last = new Date(p.last_seen).getTime();
-                        const offline = Date.now() - last > 2 * 60 * 1000;
-                        if (offline) return "Offline";
-                        if (p.status === "available") return "Available";
-                        if (p.status === "busy") return "Busy";
-                      }
-                      const a = memberActivities.get(m.name)?.currentStatus;
-                      if (a === "online") return "Active now";
-                      if (a === "away") return "Away";
-                      return getStatusLabel(m.status);
-                    })()}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {onChatClick && m.id !== currentUser?.id && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onChatClick(m.name);
-                    }}
-                    className={`p-1.5 rounded transition-colors cursor-pointer ${
-                      memberActivities.get(m.name)?.currentStatus === "online"
-                        ? "hover:bg-green-500/10 text-green-600 dark:text-green-400"
-                        : "hover:bg-secondary text-muted-foreground"
-                    }`}
-                    title={
-                      memberActivities.get(m.name)?.currentStatus === "online"
-                        ? "Start chat (online)"
-                        : "Start chat"
-                    }
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </button>
-                )}
-                {isAdmin && (
-                  <button
-                    className="p-1.5 rounded hover:bg-accent transition-colors cursor-pointer"
-                    title="More options"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleMenu(m.id);
-                    }}
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+                      {(() => {
+                        const p = presenceMap[m.id];
+                        let statusToUse: any = m.status;
 
-            {menuOpen === m.id && isAdmin && (
-              <div className="absolute right-4 top-12 z-10 bg-popover border rounded-lg shadow-md min-w-40 text-sm animate-fadeIn">
-                <button
-                  onClick={() => openEdit(m)}
-                  className="w-full text-left px-3 py-2 hover:bg-accent cursor-pointer"
-                >
-                  Edit Member
-                </button>
-                <button
-                  onClick={() => removeMember(m.id)}
-                  className="w-full text-left px-3 py-2 hover:bg-destructive/20 text-destructive cursor-pointer"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
+                        if (p) {
+                          const last = new Date(p.last_seen).getTime();
+                          const isOffline = Date.now() - last > 5 * 60 * 1000; // 5 minute threshold
+                          statusToUse = isOffline
+                            ? "offline"
+                            : p.status || "available";
+                        } else if (memberActivities.get(m.id)) {
+                          statusToUse =
+                            memberActivities.get(m.id)?.status ||
+                            memberActivities.get(m.id)?.currentStatus;
+                        } else if (memberActivities.get(m.name)) {
+                          statusToUse =
+                            memberActivities.get(m.name)?.status ||
+                            memberActivities.get(m.name)?.currentStatus;
+                        }
 
-            {/* Role Badge */}
-            <div className="mb-4">
-              {isMasterAdmin ? (
-                <select
-                  value={m.role}
-                  onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
-                >
-                  {Object.keys(roleColors).map((r) => (
-                    <option
-                      key={r}
-                      value={r}
-                      disabled={
-                        r === "Master Admin" && m.role !== "Master Admin"
-                      }
+                        const dotClass = getStatusColor(statusToUse);
+                        return (
+                          <div
+                            className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${dotClass}`}
+                          />
+                        );
+                      })()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                        {m.name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const p = presenceMap[m.id];
+                          if (p) {
+                            const last = new Date(p.last_seen).getTime();
+                            const offline = Date.now() - last > 2 * 60 * 1000;
+                            if (offline) return "Offline";
+                            if (p.status === "available") return "Available";
+                            if (p.status === "busy") return "Busy";
+                          }
+                          const a = memberActivities.get(m.name)?.currentStatus;
+                          if (a === "online") return "Active now";
+                          if (a === "away") return "Away";
+                          return getStatusLabel(m.status);
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onChatClick && m.id !== currentUser?.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onChatClick(m.name);
+                        }}
+                        className={`p-1.5 rounded transition-colors cursor-pointer ${
+                          memberActivities.get(m.name)?.currentStatus ===
+                          "online"
+                            ? "hover:bg-green-500/10 text-green-600 dark:text-green-400"
+                            : "hover:bg-secondary text-muted-foreground"
+                        }`}
+                        title={
+                          memberActivities.get(m.name)?.currentStatus ===
+                          "online"
+                            ? "Start chat (online)"
+                            : "Start chat"
+                        }
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        className="p-1.5 rounded hover:bg-accent transition-colors cursor-pointer"
+                        title="More options"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMenu(m.id);
+                        }}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {menuOpen === m.id && isAdmin && (
+                  <div className="absolute right-4 top-12 z-10 bg-popover border rounded-lg shadow-md min-w-40 text-sm animate-fadeIn">
+                    <button
+                      onClick={() => openEdit(m)}
+                      className="w-full text-left px-3 py-2 hover:bg-accent cursor-pointer"
                     >
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span
-                  className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
-                >
-                  {m.role}
-                </span>
-              )}
-            </div>
+                      Edit Member
+                    </button>
+                    <button
+                      onClick={() => removeMember(m.id)}
+                      className="w-full text-left px-3 py-2 hover:bg-destructive/20 text-destructive cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
 
-            {/* Stats */}
-            <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  {m.tasksCount} tasks
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                <span className="text-xs text-muted-foreground">Active</span>
-              </div>
-            </div>
+                {/* Role Badge */}
+                <div className="mb-4">
+                  {isMasterAdmin ? (
+                    <select
+                      value={m.role}
+                      onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
+                    >
+                      {Object.keys(roleColors).map((r) => (
+                        <option
+                          key={r}
+                          value={r}
+                          disabled={
+                            r === "Master Admin" && m.role !== "Master Admin"
+                          }
+                        >
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
+                    >
+                      {m.role}
+                    </span>
+                  )}
+                </div>
 
-            {/* Contact Info */}
-            <div className="space-y-2.5 mb-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <Mail className="w-3.5 h-3.5 shrink-0" />
-                <a
-                  href={`mailto:${m.email}`}
-                  className="hover:text-primary transition-colors truncate"
-                >
-                  {m.email}
-                </a>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Phone className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{m.phone}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{m.address}</span>
-              </div>
-            </div>
+                {/* Stats */}
+                <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {m.tasksCount} tasks
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <span className="text-xs text-muted-foreground">
+                      Active
+                    </span>
+                  </div>
+                </div>
 
-            {/* Social Links */}
-            {(m.socials.linkedin ||
-              m.socials.facebook ||
-              m.socials.instagram ||
-              m.socials.tiktok ||
-              m.socials.github ||
-              m.socials.twitter) && (
-              <div className="pt-3 border-t border-border flex flex-wrap items-center gap-1.5">
-                {m.socials.linkedin && (
-                  <a
-                    href={`https://linkedin.com/in/${m.socials.linkedin}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-                    title="LinkedIn"
-                  >
-                    <Linkedin className="w-3.5 h-3.5" />
-                  </a>
+                {/* Contact Info */}
+                <div className="space-y-2.5 mb-4">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <Mail className="w-3.5 h-3.5 shrink-0" />
+                    <a
+                      href={`mailto:${m.email}`}
+                      className="hover:text-primary transition-colors truncate"
+                    >
+                      {m.email}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{m.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{m.address}</span>
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                {(m.socials.linkedin ||
+                  m.socials.facebook ||
+                  m.socials.instagram ||
+                  m.socials.tiktok ||
+                  m.socials.github ||
+                  m.socials.twitter) && (
+                  <div className="pt-3 border-t border-border flex flex-wrap items-center gap-1.5">
+                    {m.socials.linkedin && (
+                      <a
+                        href={`https://linkedin.com/in/${m.socials.linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                        title="LinkedIn"
+                      >
+                        <Linkedin className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {m.socials.facebook && (
+                      <a
+                        href={`https://facebook.com/${m.socials.facebook}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 transition-colors cursor-pointer"
+                        title="Facebook"
+                      >
+                        <Facebook className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {m.socials.instagram && (
+                      <a
+                        href={`https://instagram.com/${m.socials.instagram}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
+                        title="Instagram"
+                      >
+                        <Instagram className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {m.socials.tiktok && (
+                      <a
+                        href={`https://tiktok.com/@${m.socials.tiktok}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                        title="TikTok"
+                      >
+                        <Music2 className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {m.socials.github && (
+                      <a
+                        href={`https://github.com/${m.socials.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
+                        title="GitHub"
+                      >
+                        <Github className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {m.socials.twitter && (
+                      <a
+                        href={`https://twitter.com/${m.socials.twitter}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
+                        title="Twitter/X"
+                      >
+                        <Twitter className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                 )}
-                {m.socials.facebook && (
-                  <a
-                    href={`https://facebook.com/${m.socials.facebook}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 transition-colors cursor-pointer"
-                    title="Facebook"
-                  >
-                    <Facebook className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                {m.socials.instagram && (
-                  <a
-                    href={`https://instagram.com/${m.socials.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
-                    title="Instagram"
-                  >
-                    <Instagram className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                {m.socials.tiktok && (
-                  <a
-                    href={`https://tiktok.com/@${m.socials.tiktok}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-                    title="TikTok"
-                  >
-                    <Music2 className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                {m.socials.github && (
-                  <a
-                    href={`https://github.com/${m.socials.github}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
-                    title="GitHub"
-                  >
-                    <Github className="w-3.5 h-3.5" />
-                  </a>
-                )}
-                {m.socials.twitter && (
-                  <a
-                    href={`https://twitter.com/${m.socials.twitter}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
-                    title="Twitter/X"
-                  >
-                    <Twitter className="w-3.5 h-3.5" />
-                  </a>
-                )}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Empty State */}
       {!isLoading && filtered.length === 0 && (
