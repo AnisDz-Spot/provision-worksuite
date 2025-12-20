@@ -13,9 +13,7 @@ import { getNextOccurrence } from "@/lib/recurring";
 export const dynamic = "force-dynamic";
 
 // Vercel Cron config - runs daily at midnight UTC
-export const config = {
-  runtime: "nodejs",
-};
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret for security

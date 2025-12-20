@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -17,7 +17,7 @@ export async function DELETE(
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   try {
     // Check if message exists and user is either sender or receiver

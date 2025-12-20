@@ -37,7 +37,7 @@ console.log("📦 Database URL detected, syncing schema...");
 
 try {
   // Run prisma db push
-  execSync("npx prisma db push --skip-generate", {
+  execSync("npx prisma db push", {
     stdio: "inherit",
     env: {
       ...process.env,
