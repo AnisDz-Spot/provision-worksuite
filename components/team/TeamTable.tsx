@@ -233,7 +233,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           // Fallback to mock if using mock data
           const activities = new Map();
           membersData.forEach((m) => {
-            activities.set(m.name, getMemberActivity(m.name));
+            activities.set(m.id, getMemberActivity(m.name));
           });
           setMemberActivities(activities);
           return;
@@ -250,8 +250,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             const lastSeen = new Date(p.last_seen);
             const now = new Date();
             const diffMins = (now.getTime() - lastSeen.getTime()) / 60000;
-            const isOnline = diffMins < 5; // 5 minute threshold
-            const status = isOnline ? p.status || "online" : "offline";
+            const isOnline = diffMins < 2; // 2 minute threshold (unified)
+            const status = isOnline ? p.status || "available" : "offline";
 
             activityMap.set(p.uid, { currentStatus: status, lastSeen });
           });
@@ -603,8 +603,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   }
 
   const getStatusColor = (status?: string) => {
-    switch (status) {
+    const s = status?.toLowerCase();
+    switch (s) {
       case "online":
+      case "available":
         return "bg-green-500";
       case "away":
         return "bg-yellow-500";

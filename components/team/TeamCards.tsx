@@ -495,8 +495,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   }
 
   const getStatusColor = (status?: string) => {
-    switch (status) {
+    const s = status?.toLowerCase();
+    switch (s) {
       case "available":
+      case "online":
         return "bg-green-500";
       case "busy":
         return "bg-orange-500";
@@ -510,8 +512,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   };
 
   const getActivityStatusColor = (status?: string) => {
-    switch (status) {
+    const s = status?.toLowerCase();
+    switch (s) {
       case "online":
+      case "available":
         return "bg-green-500";
       case "away":
         return "bg-yellow-500";
