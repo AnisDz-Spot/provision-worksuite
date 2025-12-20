@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Group by conversation partner and aggregate
+    // 3. Group by conversation partner and aggregate
     const conversationsMap = new Map<string, any>();
 
     for (const msg of messages) {
@@ -69,6 +69,42 @@ export async function GET(request: Request) {
       if (msg.toUser === targetUser && !msg.isRead) {
         const conv = conversationsMap.get(otherUser)!;
         conv.unreadCount++;
+      }
+    }
+
+    // 4. Fetch presence and user details for all partners
+    const partners = Array.from(conversationsMap.keys());
+    if (partners.length > 0) {
+      const [presenceArr, userArr] = await Promise.all([
+        prisma.presence.findMany({
+          where: { uid: { in: partners } },
+        }),
+        prisma.user.findMany({
+          where: { uid: { in: partners } },
+          select: { uid: true, name: true, avatarUrl: true },
+        }),
+      ]);
+
+      // 5 minutes threshold for online
+      const threshold = new Date(Date.now() - 5 * 60 * 1000);
+
+      // Update with presence
+      for (const p of presenceArr) {
+        const conv = conversationsMap.get(p.uid);
+        if (conv) {
+          conv.isOnline =
+            (p.status === "online" || p.status === "available") &&
+            p.lastSeen >= threshold;
+        }
+      }
+
+      // Update with user info
+      for (const u of userArr) {
+        const conv = conversationsMap.get(u.uid);
+        if (conv) {
+          conv.withUserName = u.name;
+          conv.withUserAvatar = u.avatarUrl;
+        }
       }
     }
 

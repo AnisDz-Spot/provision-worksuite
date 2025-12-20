@@ -11,6 +11,7 @@ import {
   Circle,
   Minimize2,
   Maximize2,
+  Trash2,
 } from "lucide-react";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import {
@@ -23,6 +24,7 @@ import {
   type ChatMessage,
 } from "@/lib/utils";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { playMessageTone } from "@/lib/notificationSound";
 
 // DB-backed helpers
 async function dbFetchThread(user1: string, user2: string) {
@@ -78,6 +80,17 @@ async function dbMarkRead(currentUser: string, otherUser: string) {
   } catch {}
 }
 
+async function dbDeleteMessage(id: string) {
+  try {
+    const res = await fetchWithCsrf(`/api/messages/${id}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
   // Don't make API call if not in database mode
   if (!shouldUseDatabaseData()) return [];
@@ -92,10 +105,12 @@ async function dbFetchConversations(user: string): Promise<ChatConversation[]> {
     if (!res.ok || !data?.success) throw new Error("API Error");
     return (data.data || []).map((row: any) => ({
       withUser: row.withUser,
+      withUserName: row.withUserName || row.withUser, // Fallback to ID if name missing
+      withUserAvatar: row.withUserAvatar,
       lastMessage: row.lastMessage,
       lastTimestamp: new Date(row.lastTimestamp).getTime(),
       unreadCount: row.unreadCount || 0,
-      isOnline: false,
+      isOnline: !!row.isOnline,
     }));
   } catch (error) {
     // Fallback to mock data only if not in Live Mode
@@ -136,19 +151,63 @@ function ChatWindow({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [activity, setActivity] = useState(getMemberActivity(targetUser));
+  const [targetName, setTargetName] = useState(targetUser);
+  const [targetAvatar, setTargetAvatar] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMessages();
     if (shouldUseDatabaseData()) {
       dbMarkRead(currentUser, targetUser);
+      // Fetch target user details
+      fetch(`/api/users/${targetUser}`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data) {
+            setTargetName(json.data.name);
+            setTargetAvatar(json.data.avatar_url || json.data.avatarUrl);
+          }
+        });
     } else {
       markMessagesAsRead(currentUser, targetUser);
     }
 
     const interval = setInterval(() => {
       loadMessages();
-      setActivity(getMemberActivity(targetUser));
+      if (shouldUseDatabaseData()) {
+        fetch("/api/presence")
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.success && json.data) {
+              const p = json.data.find((item: any) => item.uid === targetUser);
+              if (p) {
+                const threshold = Date.now() - 5 * 60 * 1000;
+                const lastSeen = new Date(p.lastSeen).getTime();
+                const isOffline = lastSeen < threshold;
+
+                setActivity({
+                  memberName: targetName,
+                  lastActive: lastSeen,
+                  status: isOffline
+                    ? "offline"
+                    : ((p.status || "online") as any),
+                  currentStatus: isOffline
+                    ? "offline"
+                    : ((p.status || "online") as any),
+                });
+              } else {
+                setActivity({
+                  memberName: targetName,
+                  lastActive: 0,
+                  status: "offline",
+                  currentStatus: "offline",
+                });
+              }
+            }
+          });
+      } else {
+        setActivity(getMemberActivity(targetUser));
+      }
     }, 3000);
 
     return () => clearInterval(interval);
@@ -161,10 +220,36 @@ function ChatWindow({
   const loadMessages = async () => {
     if (shouldUseDatabaseData()) {
       const msgs = await dbFetchThread(currentUser, targetUser);
+      // Play sound if new unread messages arrived
+      if (msgs.length > messages.length) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
+          playMessageTone();
+        }
+      }
       setMessages(msgs);
     } else {
       const msgs = getChatMessages(currentUser, targetUser);
+      if (msgs.length > messages.length) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
+          playMessageTone();
+        }
+      }
       setMessages(msgs);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (shouldUseDatabaseData()) {
+      const success = await dbDeleteMessage(id);
+      if (success) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+      }
+    } else {
+      // For mock, we don't have a specific delete utility in lib,
+      // but we can filter local state for now
+      setMessages((prev) => prev.filter((m) => m.id !== id));
     }
   };
 
@@ -188,11 +273,15 @@ function ChatWindow({
   };
 
   const getStatusColor = (status?: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "online":
+      case "available":
         return "bg-green-500";
       case "away":
+      case "busy":
         return "bg-yellow-500";
+      case "offline":
+        return "bg-gray-400";
       default:
         return "bg-gray-400";
     }
@@ -204,15 +293,25 @@ function ChatWindow({
       <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-sm font-semibold">
-              {targetUser.charAt(0).toUpperCase()}
-            </div>
+            {targetAvatar ? (
+              <img
+                src={targetAvatar}
+                alt={targetName}
+                className="w-8 h-8 rounded-full object-cover bg-primary-foreground/20"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-sm font-semibold">
+                {targetName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <Circle
-              className={`w-3 h-3 absolute -bottom-0.5 -right-0.5 ${getStatusColor(activity?.currentStatus)} rounded-full fill-current`}
+              className={`w-3 h-3 absolute -bottom-0.5 -right-0.5 ${getStatusColor(activity?.currentStatus)} rounded-full fill-current border-2 border-primary`}
             />
           </div>
           <div>
-            <h3 className="font-semibold text-sm">{targetUser}</h3>
+            <h3 className="font-semibold text-sm truncate max-w-[150px]">
+              {targetName}
+            </h3>
             <p className="text-xs opacity-80">
               {activity?.currentStatus === "online"
                 ? "Online"
@@ -255,15 +354,24 @@ function ChatWindow({
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.fromUser === currentUser ? "justify-end" : "justify-start"}`}
+                  className={`flex group ${msg.fromUser === currentUser ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-lg p-3 ${
+                    className={`max-w-[75%] rounded-lg p-3 relative ${
                       msg.fromUser === currentUser
                         ? "bg-primary text-primary-foreground"
                         : "bg-card border border-border"
                     }`}
                   >
+                    {msg.fromUser === currentUser && (
+                      <button
+                        onClick={() => handleDelete(msg.id)}
+                        className="absolute -top-2 -left-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm cursor-pointer"
+                        title="Delete message"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                     <p className="text-sm wrap-break-word">{msg.message}</p>
                     <p
                       className={`text-xs mt-1 ${
@@ -331,7 +439,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     if (isOnChatPage) return;
 
     loadConversations();
-    const interval = setInterval(loadConversations, 5000);
+    const interval = setInterval(loadConversations, 3000);
 
     // Listen for chat open requests from other components
     const handleOpenChat = (event: CustomEvent) => {
@@ -369,6 +477,21 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   const loadConversations = async () => {
     if (shouldUseDatabaseData()) {
       const convs = await dbFetchConversations(currentUser);
+
+      // Play sound if unread count increased globally
+      const prevUnread = conversations.reduce(
+        (sum, c) => sum + c.unreadCount,
+        0
+      );
+      const newUnread = convs.reduce((sum, c) => sum + c.unreadCount, 0);
+
+      if (newUnread > prevUnread && !activeChat) {
+        playMessageTone();
+        // Also trigger a system notification if window isn't focused?
+        // For now just event
+        window.dispatchEvent(new CustomEvent("chatNotification"));
+      }
+
       setConversations(convs);
     } else {
       const convs = getChatConversations(currentUser);
@@ -451,18 +574,28 @@ export function TeamChat({ currentUser }: TeamChatProps) {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-semibold">
-                          {conv.withUser.charAt(0).toUpperCase()}
-                        </div>
+                        {conv.withUserAvatar ? (
+                          <img
+                            src={conv.withUserAvatar}
+                            alt={conv.withUserName || conv.withUser}
+                            className="w-10 h-10 rounded-full object-cover shadow-sm bg-accent"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-semibold">
+                            {(conv.withUserName || conv.withUser)
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                        )}
                         <Circle
                           className={`w-3 h-3 absolute -bottom-0.5 -right-0.5 ${
                             conv.isOnline ? "bg-green-500" : "bg-gray-400"
-                          } rounded-full fill-current`}
+                          } rounded-full fill-current border-2 border-card`}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-sm truncate">
-                          {conv.withUser}
+                          {conv.withUserName || conv.withUser}
                         </h4>
                         <p className="text-xs text-muted-foreground truncate">
                           {conv.lastMessage}

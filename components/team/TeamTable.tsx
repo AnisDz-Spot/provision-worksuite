@@ -863,7 +863,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     <div className="flex items-center justify-end gap-2 relative">
                       {onChatClick && currentUser?.id !== m.id && (
                         <button
-                          onClick={() => onChatClick(m.name)}
+                          onClick={() => onChatClick(m.id)}
                           className={`p-2 rounded-lg transition-colors cursor-pointer ${
                             memberActivities.get(m.id)?.currentStatus ===
                             "online"

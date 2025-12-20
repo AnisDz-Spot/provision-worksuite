@@ -393,10 +393,12 @@ export type ChatMessage = {
 
 export type ChatConversation = {
   withUser: string;
+  withUserName?: string;
+  withUserAvatar?: string;
   lastMessage: string;
   lastTimestamp: number;
   unreadCount: number;
-  isOnline?: boolean; // Optional property used by dbFetchConversations
+  isOnline?: boolean;
 };
 
 function readChatMessages(): ChatMessage[] {

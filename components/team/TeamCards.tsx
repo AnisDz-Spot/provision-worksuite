@@ -655,17 +655,15 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onChatClick(m.name);
+                          onChatClick(m.id);
                         }}
                         className={`p-1.5 rounded transition-colors cursor-pointer ${
-                          memberActivities.get(m.name)?.currentStatus ===
-                          "online"
+                          memberActivities.get(m.id)?.currentStatus === "online"
                             ? "hover:bg-green-500/10 text-green-600 dark:text-green-400"
                             : "hover:bg-secondary text-muted-foreground"
                         }`}
                         title={
-                          memberActivities.get(m.name)?.currentStatus ===
-                          "online"
+                          memberActivities.get(m.id)?.currentStatus === "online"
                             ? "Start chat (online)"
                             : "Start chat"
                         }
