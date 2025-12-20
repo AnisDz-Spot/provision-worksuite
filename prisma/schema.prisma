@@ -533,17 +533,47 @@ model Blocker {
 // =============================================================================
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  fromUser  String   @map("from_user")
-  toUser    String   @map("to_user")
-  message   String
-  createdAt DateTime @default(now()) @map("created_at")
-  isRead    Boolean  @default(false) @map("is_read")
+  id             Int      @id @default(autoincrement())
+  fromUser       String   @map("from_user")
+  toUser         String?  @map("to_user") // Make optional as we move to conversationId
+  message        String
+  createdAt      DateTime @default(now()) @map("created_at")
+  isRead         Boolean  @default(false) @map("is_read")
+  conversationId String?  @map("conversation_id")
+
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([fromUser])
   @@index([toUser])
   @@index([createdAt])
+  @@index([conversationId])
   @@map("messages")
+}
+
+model Conversation {
+  id            String   @id @default(uuid())
+  type          String   @default("direct") // "direct" or "group"
+  name          String? // Group name
+  lastMessageAt DateTime @default(now()) @map("last_message_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  userId         String   @map("user_id") // UID of the user
+  joinedAt       DateTime @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_members")
 }
 
 model ChatGroup {

@@ -40,6 +40,7 @@ import {
 type ChatWindowProps = {
   currentUser: string;
   targetUser: string;
+  conversationId?: string;
   onClose: () => void;
   isMinimized: boolean;
   onToggleMinimize: () => void;
@@ -49,6 +50,7 @@ type ChatWindowProps = {
 function ChatWindow({
   currentUser,
   targetUser,
+  conversationId,
   onClose,
   isMinimized,
   onToggleMinimize,
@@ -58,13 +60,18 @@ function ChatWindow({
   const [newMessage, setNewMessage] = useState("");
   const [activity, setActivity] = useState(getMemberActivity(targetUser));
   const [targetName, setTargetName] = useState(() => {
-    const conv = conversations.find((c) => c.withUser === targetUser);
+    const conv = conversations.find(
+      (c: ChatConversation) => c.withUser === targetUser
+    );
     return conv?.withUserName || targetUser;
   });
   const [targetAvatar, setTargetAvatar] = useState(() => {
-    const conv = conversations.find((c) => c.withUser === targetUser);
+    const conv = conversations.find(
+      (c: ChatConversation) => c.withUser === targetUser
+    );
     return conv?.withUserAvatar || "";
   });
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -76,7 +83,7 @@ function ChatWindow({
 
   const loadMessages = React.useCallback(async () => {
     if (shouldUseDatabaseData()) {
-      const msgs = await dbFetchThread(currentUser, targetUser);
+      const msgs = await dbFetchThread(currentUser, targetUser, conversationId);
       // Use ref to avoid stale closure in comparison logic for notification sound
       if (msgs.length > messagesRef.current.length) {
         const lastMsg = msgs[msgs.length - 1];
@@ -114,7 +121,7 @@ function ChatWindow({
   useEffect(() => {
     loadMessages();
     if (shouldUseDatabaseData()) {
-      dbMarkRead(currentUser, targetUser);
+      dbMarkRead(currentUser, targetUser, conversationId);
     } else {
       markMessagesAsRead(currentUser, targetUser);
     }
@@ -126,12 +133,22 @@ function ChatWindow({
           .then((res) => res.json())
           .then((json) => {
             if (json.success && json.data) {
+              if (json.serverTime) {
+                const serverDate = new Date(json.serverTime).getTime();
+                const clientDate = Date.now();
+                setServerTimeOffset(serverDate - clientDate);
+              }
+
               const p = json.data.find((item: any) => item.uid === targetUser);
               if (p) {
-                const threshold = Date.now() - 5 * 60 * 1000;
+                const nowOnServer = Date.now() + (serverTimeOffset || 0);
+                const threshold = nowOnServer - 5 * 60 * 1000;
                 const lastSeen = new Date(p.lastSeen).getTime();
+
+                const normalizedStatus = p.status?.toLowerCase() || "";
                 const isOnline =
-                  (p.status === "online" || p.status === "available") &&
+                  (normalizedStatus === "online" ||
+                    normalizedStatus === "available") &&
                   lastSeen >= threshold;
 
                 setActivity({
@@ -193,8 +210,13 @@ function ChatWindow({
     const msg = newMessage.trim();
     setNewMessage(""); // Clear early for better UX
     if (shouldUseDatabaseData()) {
-      const success = await dbSendMessage(currentUser, targetUser, msg);
-      if (success) {
+      const res = await dbSendMessage(
+        currentUser,
+        targetUser,
+        msg,
+        conversationId
+      );
+      if (res.success) {
         await loadMessages();
       }
     } else {
@@ -444,6 +466,9 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   const pathname = usePathname();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
   const [simulatedUnread, setSimulatedUnread] = useState(0);
@@ -517,8 +542,9 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     };
   }, [currentUser, isOnChatPage, loadConversations]);
 
-  const openChat = (user: string) => {
+  const openChat = (user: string, convId?: string) => {
     setActiveChat(user);
+    setActiveConversationId(convId || null);
     setShowConversations(false);
     setIsMinimized(false);
     // Clear simulated unread when opening chat
@@ -586,7 +612,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
               conversations.map((conv) => (
                 <button
                   key={conv.withUser}
-                  onClick={() => openChat(conv.withUser)}
+                  onClick={() => openChat(conv.withUser, conv.id)}
                   className="w-full p-3 hover:bg-secondary transition-colors text-left border-b border-border cursor-pointer"
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -646,6 +672,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
         <ChatWindow
           currentUser={currentUser}
           targetUser={activeChat}
+          conversationId={activeConversationId || undefined}
           conversations={conversations}
           onClose={() => {
             setActiveChat(null);

@@ -382,6 +382,7 @@ export type ChatMessage = {
   message: string; // Original property name used by components
   timestamp: number;
   read: boolean;
+  conversationId?: string;
   attachment?: {
     id: string;
     name: string;
@@ -392,6 +393,7 @@ export type ChatMessage = {
 };
 
 export type ChatConversation = {
+  id?: string; // Conversation ID
   withUser: string;
   withUserName?: string;
   withUserAvatar?: string;
@@ -399,6 +401,8 @@ export type ChatConversation = {
   lastTimestamp: number;
   unreadCount: number;
   isOnline?: boolean;
+  type?: string;
+  name?: string;
 };
 
 function readChatMessages(): ChatMessage[] {

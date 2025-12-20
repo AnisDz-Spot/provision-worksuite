@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       data: { uid: "demo", status: "available", lastSeen: new Date() },
+      serverTime: new Date().toISOString(),
     });
   }
 
@@ -25,7 +26,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const stat = typeof status === "string" && status ? status : "available";
+    const stat = (
+      typeof status === "string" && status ? status : "available"
+    ).toLowerCase();
 
     // Upsert presence record
     const presence = await prisma.presence.upsert({
@@ -49,7 +52,11 @@ export async function POST(request: Request) {
 
     log.debug({ uid, status: stat }, "Presence heartbeat");
 
-    return NextResponse.json({ success: true, data: mapped });
+    return NextResponse.json({
+      success: true,
+      data: mapped,
+      serverTime: new Date().toISOString(),
+    });
   } catch (error) {
     log.error({ err: error }, "Presence heartbeat error");
     return NextResponse.json(

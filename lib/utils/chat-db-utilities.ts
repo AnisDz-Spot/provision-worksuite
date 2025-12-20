@@ -6,12 +6,17 @@ import { type ChatConversation, type ChatMessage } from "./team-utilities";
  * These functions interact with the /api/messages related endpoints.
  */
 
-export async function dbFetchThread(user1: string, user2: string) {
+export async function dbFetchThread(
+  user1: string,
+  user2: string,
+  conversationId?: string
+) {
   try {
-    const res = await fetch(
-      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`,
-      { credentials: "include", cache: "no-store" }
-    );
+    const url = conversationId
+      ? `/api/messages?conversationId=${encodeURIComponent(conversationId)}`
+      : `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
+
+    const res = await fetch(url, { credentials: "include", cache: "no-store" });
     const data = await res.json();
 
     if (!res.ok || !data?.success) throw new Error("API Error");
@@ -22,6 +27,7 @@ export async function dbFetchThread(user1: string, user2: string) {
       message: row.message,
       timestamp: new Date(row.created_at).getTime(),
       read: !!row.is_read,
+      conversationId: row.conversationId,
     }));
   } catch (error) {
     console.error("dbFetchThread error:", error);
@@ -32,25 +38,31 @@ export async function dbFetchThread(user1: string, user2: string) {
 export async function dbSendMessage(
   fromUser: string,
   toUser: string,
-  message: string
+  message: string,
+  conversationId?: string
 ) {
   try {
     const res = await fetchWithCsrf("/api/messages", {
       method: "POST",
-      body: JSON.stringify({ fromUser, toUser, message }),
+      body: JSON.stringify({ fromUser, toUser, message, conversationId }),
     });
-    return res.ok;
+    const data = await res.json();
+    return data;
   } catch (error) {
     console.error("dbSendMessage error:", error);
-    return false;
+    return { success: false };
   }
 }
 
-export async function dbMarkRead(currentUser: string, otherUser: string) {
+export async function dbMarkRead(
+  currentUser: string,
+  otherUser: string,
+  conversationId?: string
+) {
   try {
     await fetchWithCsrf("/api/messages/mark-read", {
       method: "POST",
-      body: JSON.stringify({ currentUser, otherUser }),
+      body: JSON.stringify({ currentUser, otherUser, conversationId }),
     });
     return true;
   } catch (error) {
@@ -71,12 +83,17 @@ export async function dbDeleteMessage(id: string) {
   }
 }
 
-export async function dbDeleteThread(user1: string, user2: string) {
+export async function dbDeleteThread(
+  user1: string,
+  user2: string,
+  conversationId?: string
+) {
   try {
-    const res = await fetchWithCsrf(
-      `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`,
-      { method: "DELETE" }
-    );
+    const url = conversationId
+      ? `/api/messages?conversationId=${encodeURIComponent(conversationId)}`
+      : `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
+
+    const res = await fetchWithCsrf(url, { method: "DELETE" });
     return res.ok;
   } catch (error) {
     console.error("dbDeleteThread error:", error);
@@ -96,6 +113,7 @@ export async function dbFetchConversations(
 
     if (!res.ok || !data?.success) throw new Error("API Error");
     return (data.data || []).map((row: any) => ({
+      id: row.id,
       withUser: row.withUser,
       withUserName: row.withUserName || row.withUser,
       withUserAvatar: row.withUserAvatar,
@@ -103,6 +121,8 @@ export async function dbFetchConversations(
       lastTimestamp: new Date(row.lastTimestamp).getTime(),
       unreadCount: row.unreadCount || 0,
       isOnline: !!row.isOnline,
+      type: row.type || "direct",
+      name: row.name,
     }));
   } catch (error) {
     console.error("dbFetchConversations error:", error);

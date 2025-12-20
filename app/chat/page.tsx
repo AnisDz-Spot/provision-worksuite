@@ -52,6 +52,9 @@ export default function ChatPage() {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,6 +93,7 @@ export default function ChatPage() {
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [presenceData, setPresenceData] = useState<any[]>([]);
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Keep refs in sync
@@ -106,7 +110,14 @@ export default function ChatPage() {
       try {
         const res = await fetch("/api/presence", { cache: "no-store" });
         const json = await res.json();
-        if (json.success) setPresenceData(json.data);
+        if (json.success) {
+          setPresenceData(json.data);
+          if (json.serverTime) {
+            const serverDate = new Date(json.serverTime).getTime();
+            const clientDate = Date.now();
+            setServerTimeOffset(serverDate - clientDate);
+          }
+        }
       } catch (err) {
         console.error("Failed to load presence", err);
       }
@@ -154,11 +165,11 @@ export default function ChatPage() {
   }, [currentUser]);
 
   const loadMessages = useCallback(
-    async (otherUser: string) => {
+    async (otherUser: string, convId?: string) => {
       if (shouldUseDatabaseData()) {
-        const msgs = await dbFetchThread(currentUser, otherUser);
+        const msgs = await dbFetchThread(currentUser, otherUser, convId);
         setMessages(msgs);
-        await dbMarkRead(currentUser, otherUser);
+        await dbMarkRead(currentUser, otherUser, convId);
         loadConversations();
       } else {
         const { getChatMessages, markMessagesAsRead } =
@@ -187,9 +198,13 @@ export default function ChatPage() {
     // Load persisted active chat from localStorage (as ID/UID)
     if (typeof window !== "undefined") {
       const persistedChat = localStorage.getItem("pv:activeChatUser");
+      const persistedConvId = localStorage.getItem("pv:activeConversationId");
       if (persistedChat) {
         setActiveChat(persistedChat);
         activeChatRef.current = persistedChat;
+      }
+      if (persistedConvId) {
+        setActiveConversationId(persistedConvId);
       }
     }
 
@@ -210,12 +225,14 @@ export default function ChatPage() {
   }, [currentUser, loadConversations, loadChatGroups]);
 
   useEffect(() => {
-    if (activeChat) {
-      loadMessages(activeChat);
-      const interval = setInterval(() => loadMessages(activeChat), 3000);
+    if (activeChat || activeConversationId) {
+      const targetUser = activeChat || "";
+      const cid = activeConversationId || undefined;
+      loadMessages(targetUser, cid);
+      const interval = setInterval(() => loadMessages(targetUser, cid), 3000);
       return () => clearInterval(interval);
     }
-  }, [activeChat, loadMessages]);
+  }, [activeChat, activeConversationId, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -288,7 +305,15 @@ export default function ChatPage() {
 
     if (shouldUseDatabaseData()) {
       if (inputMessage.trim()) {
-        await dbSendMessage(currentUser, activeChat, inputMessage.trim());
+        const res = await dbSendMessage(
+          currentUser,
+          activeChat,
+          inputMessage.trim(),
+          activeConversationId || undefined
+        );
+        if (res.success && res.data?.conversationId && !activeConversationId) {
+          setActiveConversationId(res.data.conversationId);
+        }
       }
       // Attachments are still simulated in local state for now, but
       // in a real app they would be uploaded to /api/uploads
@@ -372,11 +397,25 @@ export default function ChatPage() {
   const handleStartChat = (memberNameOrUid: string) => {
     setActiveChat(memberNameOrUid);
     activeChatRef.current = memberNameOrUid;
+
+    // Try to find existing conversation ID
+    const conv = conversations.find(
+      (c) =>
+        c.withUser === memberNameOrUid || c.withUserName === memberNameOrUid
+    );
+    const cid = conv?.id || null;
+    setActiveConversationId(cid);
+
     if (typeof window !== "undefined") {
       localStorage.setItem("pv:activeChatUser", memberNameOrUid);
+      if (cid) {
+        localStorage.setItem("pv:activeConversationId", cid);
+      } else {
+        localStorage.removeItem("pv:activeConversationId");
+      }
     }
     setShowMobileSidebar(false);
-    loadMessages(memberNameOrUid);
+    loadMessages(memberNameOrUid, cid || undefined);
   };
 
   const getOnlineStatus = (memberNameOrUid: string) => {
@@ -385,14 +424,19 @@ export default function ChatPage() {
         (item) => item.uid === memberNameOrUid || item.name === memberNameOrUid
       );
       if (!p) return "offline";
-      const threshold = Date.now() - 5 * 60 * 1000;
+
+      // Account for server/client clock drift
+      const nowOnServer = Date.now() + serverTimeOffset;
+      const threshold = nowOnServer - 5 * 60 * 1000;
       const lastSeen = new Date(p.lastSeen).getTime();
+
+      const normalizedStatus = p.status?.toLowerCase() || "";
       const isOnline =
-        (p.status === "online" || p.status === "available") &&
+        (normalizedStatus === "online" || normalizedStatus === "available") &&
         lastSeen >= threshold;
 
       if (isOnline) return "online";
-      if (lastSeen >= Date.now() - 30 * 60 * 1000) return "away";
+      if (lastSeen >= nowOnServer - 30 * 60 * 1000) return "away";
       return "offline";
     }
 

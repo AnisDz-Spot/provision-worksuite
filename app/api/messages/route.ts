@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
+import { Message } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -15,64 +16,91 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const conversationId = searchParams.get("conversationId");
   const u1 = searchParams.get("user1");
   const u2 = searchParams.get("user2");
 
-  if (!u1 || !u2) {
-    return NextResponse.json(
-      { success: false, error: "Missing user1 or user2" },
-      { status: 400 }
-    );
-  }
-
-  // Enforce that the requester is one of the participants
-  if (user.uid !== u1 && user.uid !== u2) {
-    return NextResponse.json(
-      { success: false, error: "Forbidden" },
-      { status: 403 }
-    );
-  }
-
   try {
-    const messages = await prisma.message.findMany({
+    let threadId = conversationId;
+
+    // Legacy fallback: Find conversation by participants if ID not provided
+    if (!threadId && u1 && u2) {
+      if (user.uid !== u1 && user.uid !== u2) {
+        return NextResponse.json(
+          { success: false, error: "Forbidden" },
+          { status: 403 }
+        );
+      }
+
+      const existing = await prisma.conversation.findFirst({
+        where: {
+          type: "direct",
+          members: {
+            every: {
+              userId: { in: [u1, u2] },
+            },
+          },
+          // Ensure it only has exactly these two members
+          AND: [
+            { members: { some: { userId: u1 } } },
+            { members: { some: { userId: u2 } } },
+          ],
+        },
+      });
+      threadId = existing?.id || null;
+
+      // If none exists and it's a direct chat, we might need to return empty
+      if (!threadId) {
+        return NextResponse.json({ success: true, data: [] });
+      }
+    }
+
+    if (!threadId) {
+      return NextResponse.json(
+        { success: false, error: "Missing conversationId" },
+        { status: 400 }
+      );
+    }
+
+    const activeThreadId = threadId as string;
+
+    // Verify membership
+    const isMember = await prisma.conversationMember.findUnique({
       where: {
-        OR: [
-          { fromUser: u1, toUser: u2 },
-          { fromUser: u2, toUser: u1 },
-        ],
+        conversationId_userId: {
+          conversationId: activeThreadId,
+          userId: user.uid,
+        },
       },
+    });
+
+    if (!isMember) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Not a member" },
+        { status: 403 }
+      );
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId: threadId },
       orderBy: { createdAt: "asc" },
     });
 
-    // Map to match frontend expectations
-    const mappedMessages = messages.map(
-      (msg: {
-        id: number;
-        fromUser: string;
-        toUser: string;
-        message: string;
-        createdAt: Date;
-        isRead: boolean;
-      }) => ({
-        id: msg.id,
-        from_user: msg.fromUser,
-        to_user: msg.toUser,
-        message: msg.message,
-        created_at: msg.createdAt,
-        is_read: msg.isRead,
-      })
-    );
-
-    log.info(
-      { user1: u1, user2: u2, count: messages.length },
-      "Fetched message thread"
-    );
+    const mappedMessages = messages.map((msg: Message) => ({
+      id: String(msg.id),
+      from_user: msg.fromUser,
+      to_user: msg.toUser,
+      message: msg.message,
+      created_at: msg.createdAt,
+      is_read: msg.isRead,
+      conversationId: msg.conversationId || undefined,
+    }));
 
     return NextResponse.json({ success: true, data: mappedMessages });
   } catch (error) {
     log.error({ err: error }, "Get thread error");
     return NextResponse.json(
-      { success: false, error: "Failed to fetch messages", data: [] },
+      { success: false, error: "Failed to fetch messages" },
       { status: 500 }
     );
   }
@@ -89,46 +117,101 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { fromUser, toUser, message } = body || {};
-    if (!fromUser || !toUser || !message) {
+    const { fromUser, toUser, message, conversationId } = body as {
+      fromUser?: string;
+      toUser?: string;
+      message: string;
+      conversationId?: string;
+    };
+
+    if (!message || (!conversationId && (!fromUser || !toUser))) {
       return NextResponse.json(
         { success: false, error: "Missing fields" },
         { status: 400 }
       );
     }
 
-    // Enforce that the sender is the authenticated user
-    if (user.uid !== fromUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden: You can only send messages as yourself",
+    let targetConvId = conversationId;
+
+    // 1. Find or Create conversation if not provided
+    if (!targetConvId && fromUser && toUser) {
+      const existing = await prisma.conversation.findFirst({
+        where: {
+          type: "direct",
+          AND: [
+            { members: { some: { userId: fromUser } } },
+            { members: { some: { userId: toUser } } },
+          ],
+          members: {
+            every: {
+              userId: { in: [fromUser, toUser] },
+            },
+          },
         },
+      });
+
+      if (existing) {
+        targetConvId = existing.id;
+      } else {
+        const newConv = await prisma.conversation.create({
+          data: {
+            type: "direct",
+            members: {
+              create: [{ userId: fromUser }, { userId: toUser }],
+            },
+          },
+        });
+        targetConvId = newConv.id;
+      }
+    }
+
+    const finalConvId = targetConvId as string;
+
+    // 2. Verify membership (for provided conversationId)
+    const isMember = await prisma.conversationMember.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: finalConvId,
+          userId: user.uid,
+        },
+      },
+    });
+
+    if (!isMember) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Not a member" },
         { status: 403 }
       );
     }
 
+    // 3. Create message
     const newMessage = await prisma.message.create({
       data: {
-        fromUser,
-        toUser,
+        fromUser: user.uid,
+        toUser: toUser || null, // Optional in modern
         message,
+        conversationId: targetConvId,
       },
     });
 
-    // Map to match frontend expectations
-    const mappedMessage = {
-      id: newMessage.id,
-      from_user: newMessage.fromUser,
-      to_user: newMessage.toUser,
-      message: newMessage.message,
-      created_at: newMessage.createdAt,
-      is_read: newMessage.isRead,
-    };
+    // 4. Update conversation timestamp
+    await prisma.conversation.update({
+      where: { id: finalConvId },
+      data: { updatedAt: new Date(), lastMessageAt: new Date() },
+    });
 
-    log.info({ from: fromUser, to: toUser }, "Message sent");
-
-    return NextResponse.json({ success: true, data: mappedMessage });
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: String(newMessage.id),
+        from_user: newMessage.fromUser,
+        to_user: newMessage.toUser,
+        message: newMessage.message,
+        created_at: newMessage.createdAt,
+        is_read: newMessage.isRead,
+        conversationId: newMessage.conversationId || undefined,
+      },
+    });
   } catch (error) {
     log.error({ err: error }, "Send message error");
     return NextResponse.json(
@@ -137,6 +220,7 @@ export async function POST(request: Request) {
     );
   }
 }
+
 export async function DELETE(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -147,44 +231,48 @@ export async function DELETE(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const u1 = searchParams.get("user1");
-  const u2 = searchParams.get("user2");
+  const conversationId = searchParams.get("conversationId");
 
-  if (!u1 || !u2) {
+  if (!conversationId) {
     return NextResponse.json(
-      { success: false, error: "Missing user1 or user2" },
+      { success: false, error: "Missing conversationId" },
       { status: 400 }
     );
   }
 
-  // Enforce that the requester is one of the participants
-  if (user.uid !== u1 && user.uid !== u2) {
-    return NextResponse.json(
-      { success: false, error: "Forbidden" },
-      { status: 403 }
-    );
-  }
-
   try {
-    const result = await prisma.message.deleteMany({
+    // Check if requester is a member
+    const isMember = await prisma.conversationMember.findUnique({
       where: {
-        OR: [
-          { fromUser: u1, toUser: u2 },
-          { fromUser: u2, toUser: u1 },
-        ],
+        conversationId_userId: {
+          conversationId: conversationId,
+          userId: user.uid,
+        },
       },
     });
 
+    if (!isMember) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the conversation record - this will cascade to messages and members
+    await prisma.conversation.delete({
+      where: { id: conversationId },
+    });
+
     log.info(
-      { user1: u1, user2: u2, deletedCount: result.count, deletedBy: user.uid },
+      { conversationId, deletedBy: user.uid },
       "Deleted conversation thread"
     );
 
-    return NextResponse.json({ success: true, deletedCount: result.count });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    log.error({ err: error }, "Delete thread error");
+    log.error({ err: error }, "Delete messages error");
     return NextResponse.json(
-      { success: false, error: "Failed to delete conversation" },
+      { success: false, error: "Failed to delete messages" },
       { status: 500 }
     );
   }

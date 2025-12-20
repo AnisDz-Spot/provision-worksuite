@@ -21,7 +21,11 @@ export async function GET() {
 
     log.info({ count: presences.length }, "Fetched presence data");
 
-    return NextResponse.json({ success: true, data: mappedPresences });
+    return NextResponse.json({
+      success: true,
+      data: mappedPresences,
+      serverTime: new Date().toISOString(),
+    });
   } catch (error) {
     log.error({ err: error }, "Presence GET error");
     return NextResponse.json(
