@@ -95,7 +95,7 @@ type TeamTableProps = {
 };
 
 export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
-  const { isAdmin, currentUser } = useAuth();
+  const { isAdmin, isMasterAdmin, currentUser } = useAuth();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -965,6 +965,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 currentCountryIso={currentCountryIso || ""}
                 currentStateIso={currentStateIso || ""}
                 roleColors={roleColors}
+                isMasterAdmin={isMasterAdmin}
               />
             </div>
             <div className="flex justify-end gap-3">
@@ -1046,6 +1047,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                 currentCountryIso={currentCountryIso || ""}
                 currentStateIso={currentStateIso || ""}
                 roleColors={roleColors}
+                isMasterAdmin={isMasterAdmin}
               />
             </div>
             <div className="flex justify-end gap-3 pt-6 border-t mt-auto">

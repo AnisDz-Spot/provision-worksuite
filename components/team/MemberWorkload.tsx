@@ -201,15 +201,13 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
         ])
           .then(([usersRes, tasksRes]) => {
             if (usersRes.success && usersRes.data) {
-              // Map users to Member type
               const dbMembers = usersRes.data.map((u: any) => ({
-                id: String(u.id),
+                id: String(u.uid || u.id),
                 name: u.name,
-                avatarUrl: u.avatarUrl,
-                capacity: 40, // Default capacity as not in DB
+                avatarUrl: u.avatar_url || u.avatarUrl,
+                capacity: 40,
                 skills: u.role ? [u.role] : [],
               }));
-              // If no members found (e.g. only admin), ensure at least current user
               if (dbMembers.length > 0) {
                 setMembers(dbMembers);
               }
@@ -220,11 +218,14 @@ export function MemberWorkload({ projectId }: MemberWorkloadProps) {
                 id: String(t.id),
                 title: t.title,
                 status:
-                  (t.status === "in_progress" ? "in-progress" : t.status) ||
-                  "todo",
-                priority: t.priority || "medium",
-                estimatedHours: t.estimateHours || 0,
-                assignee: t.assignee?.name || "Unassigned",
+                  t.status === "in_progress"
+                    ? "in-progress"
+                    : t.status === "completed"
+                      ? "done"
+                      : t.status || "todo",
+                priority: t.priority?.toLowerCase() || "medium",
+                estimatedHours: t.estimateHours || t.estimatedHours || 0,
+                assignee: t.assigneeName || t.assignee?.name || "Unassigned",
                 dueDate: t.due ? t.due.split("T")[0] : undefined,
               }));
               setTasks(dbTasks);

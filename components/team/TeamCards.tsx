@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   MessageCircle,
   Loader2,
-  Plus, // Add Plus for parent trigger consistency
+  Plus,
+  Facebook,
+  Instagram,
+  Music2,
 } from "lucide-react";
 import { MemberForm } from "./MemberForm";
 import { fetchWithCsrf } from "@/lib/csrf-client";
@@ -27,7 +30,14 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
 
-type Socials = { linkedin?: string; github?: string; twitter?: string };
+type Socials = {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+};
 
 type TeamMember = {
   id: string;
@@ -114,7 +124,7 @@ type TeamCardsProps = {
 };
 
 export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
-  const { isAdmin } = useAuth();
+  const { currentUser, isAdmin, isMasterAdmin } = useAuth();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -613,7 +623,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {onChatClick && (
+                {onChatClick && m.id !== currentUser?.id && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -667,14 +677,20 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
 
             {/* Role Badge */}
             <div className="mb-4">
-              {isAdmin ? (
+              {isMasterAdmin ? (
                 <select
                   value={m.role}
                   onChange={(e) => handleRoleChange(m.id, e.target.value)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
                 >
                   {Object.keys(roleColors).map((r) => (
-                    <option key={r} value={r}>
+                    <option
+                      key={r}
+                      value={r}
+                      disabled={
+                        r === "Master Admin" && m.role !== "Master Admin"
+                      }
+                    >
                       {r}
                     </option>
                   ))}
@@ -724,8 +740,13 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             </div>
 
             {/* Social Links */}
-            {(m.socials.linkedin || m.socials.github || m.socials.twitter) && (
-              <div className="pt-3 border-t border-border flex items-center gap-1.5">
+            {(m.socials.linkedin ||
+              m.socials.facebook ||
+              m.socials.instagram ||
+              m.socials.tiktok ||
+              m.socials.github ||
+              m.socials.twitter) && (
+              <div className="pt-3 border-t border-border flex flex-wrap items-center gap-1.5">
                 {m.socials.linkedin && (
                   <a
                     href={`https://linkedin.com/in/${m.socials.linkedin}`}
@@ -735,6 +756,39 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     title="LinkedIn"
                   >
                     <Linkedin className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {m.socials.facebook && (
+                  <a
+                    href={`https://facebook.com/${m.socials.facebook}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 transition-colors cursor-pointer"
+                    title="Facebook"
+                  >
+                    <Facebook className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {m.socials.instagram && (
+                  <a
+                    href={`https://instagram.com/${m.socials.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
+                    title="Instagram"
+                  >
+                    <Instagram className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {m.socials.tiktok && (
+                  <a
+                    href={`https://tiktok.com/@${m.socials.tiktok}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                    title="TikTok"
+                  >
+                    <Music2 className="w-3.5 h-3.5" />
                   </a>
                 )}
                 {m.socials.github && (
@@ -754,7 +808,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
-                    title="Twitter"
+                    title="Twitter/X"
                   >
                     <Twitter className="w-3.5 h-3.5" />
                   </a>
@@ -829,6 +883,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                 currentCountryIso={currentCountryIso}
                 currentStateIso={currentStateIso}
                 roleColors={roleColors}
+                isMasterAdmin={isMasterAdmin}
               />
             </div>
             <div className="flex justify-end gap-3 pt-6 border-t mt-auto">
@@ -906,6 +961,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                 currentCountryIso={currentCountryIso}
                 currentStateIso={currentStateIso}
                 roleColors={roleColors}
+                isMasterAdmin={isMasterAdmin}
               />
             </div>
             <div className="flex justify-end gap-3 pt-6 border-t mt-auto">

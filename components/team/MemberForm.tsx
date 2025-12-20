@@ -58,6 +58,7 @@ type MemberFormProps = {
   currentStateIso?: string;
   // Roles
   roleColors: Record<string, string>;
+  isMasterAdmin: boolean;
 };
 
 export function MemberForm({
@@ -104,6 +105,7 @@ export function MemberForm({
   currentCountryIso,
   currentStateIso,
   roleColors,
+  isMasterAdmin,
 }: MemberFormProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
@@ -122,7 +124,9 @@ export function MemberForm({
         <select
           value={draftRole}
           onChange={(e) => setDraftRole(e.target.value)}
-          disabled={mode === "edit" && draftRole === "Master Admin"}
+          disabled={
+            (mode === "edit" && draftRole === "Master Admin") || !isMasterAdmin
+          }
           className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Select Role</option>

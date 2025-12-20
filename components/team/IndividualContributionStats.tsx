@@ -15,11 +15,28 @@ export function IndividualContributionStats() {
   const [stats, setStats] = React.useState<ContributionStats | null>(null);
 
   React.useEffect(() => {
-    const teamMembers = getTeamMembers();
-    setMembers(teamMembers);
-    if (teamMembers.length > 0 && !selectedMember) {
-      setSelectedMember(teamMembers[0]);
-    }
+    import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
+      if (shouldUseDatabaseData()) {
+        fetch("/api/users")
+          .then((r) => r.json())
+          .then((res) => {
+            if (res.success && res.data) {
+              const userNames = res.data.map((u: any) => u.name);
+              setMembers(userNames);
+              if (userNames.length > 0 && !selectedMember) {
+                setSelectedMember(userNames[0]);
+              }
+            }
+          })
+          .catch((err) => console.error("Failed to load users for stats", err));
+      } else {
+        const teamMembers = getTeamMembers();
+        setMembers(teamMembers);
+        if (teamMembers.length > 0 && !selectedMember) {
+          setSelectedMember(teamMembers[0]);
+        }
+      }
+    });
   }, [selectedMember]);
 
   React.useEffect(() => {
