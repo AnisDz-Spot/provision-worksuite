@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -58,6 +58,35 @@ function ChatWindow({
   const [targetAvatar, setTargetAvatar] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+
+  // Update ref whenever messages change to avoid stale closures in polling
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const loadMessages = React.useCallback(async () => {
+    if (shouldUseDatabaseData()) {
+      const msgs = await dbFetchThread(currentUser, targetUser);
+      // Use ref to avoid stale closure in comparison logic for notification sound
+      if (msgs.length > messagesRef.current.length) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
+          playMessageTone();
+        }
+      }
+      setMessages(msgs);
+    } else {
+      const msgs = getChatMessages(currentUser, targetUser);
+      if (msgs.length > messagesRef.current.length) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
+          playMessageTone();
+        }
+      }
+      setMessages(msgs);
+    }
+  }, [currentUser, targetUser]);
 
   useEffect(() => {
     loadMessages();
@@ -92,14 +121,14 @@ function ChatWindow({
                   lastSeen >= threshold;
 
                 setActivity({
-                  memberName: targetName,
+                  memberName: targetUser,
                   lastActive: lastSeen,
                   status: isOnline ? p.status || "online" : "offline",
                   currentStatus: isOnline ? p.status || "online" : "offline",
                 });
               } else {
                 setActivity({
-                  memberName: targetName,
+                  memberName: targetUser,
                   lastActive: 0,
                   status: "offline",
                   currentStatus: "offline",
@@ -113,34 +142,11 @@ function ChatWindow({
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [currentUser, targetUser]);
+  }, [currentUser, targetUser, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const loadMessages = async () => {
-    if (shouldUseDatabaseData()) {
-      const msgs = await dbFetchThread(currentUser, targetUser);
-      // Play sound if new unread messages arrived
-      if (msgs.length > messages.length) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
-          playMessageTone();
-        }
-      }
-      setMessages(msgs);
-    } else {
-      const msgs = getChatMessages(currentUser, targetUser);
-      if (msgs.length > messages.length) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg.fromUser !== currentUser && !lastMsg.read) {
-          playMessageTone();
-        }
-      }
-      setMessages(msgs);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     if (shouldUseDatabaseData()) {
@@ -149,8 +155,6 @@ function ChatWindow({
         setMessages((prev) => prev.filter((m) => m.id !== id));
       }
     } else {
-      // For mock, we don't have a specific delete utility in lib,
-      // but we can filter local state for now
       setMessages((prev) => prev.filter((m) => m.id !== id));
     }
   };
@@ -161,10 +165,9 @@ function ChatWindow({
       if (success) {
         setMessages([]);
         setShowDeleteConfirm(false);
-        onClose(); // Close window after deleting thread
+        onClose();
       }
     } else {
-      // For mock, just clear state and close
       setMessages([]);
       setShowDeleteConfirm(false);
       onClose();
@@ -389,51 +392,11 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   // Track if we're on chat page (for conditional rendering, NOT for hooks)
   const isOnChatPage = pathname?.startsWith("/chat");
 
-  useEffect(() => {
-    // Don't load conversations if on chat page
-    if (isOnChatPage) return;
-
-    loadConversations();
-    const interval = setInterval(loadConversations, 3000);
-
-    // Listen for chat open requests from other components
-    const handleOpenChat = (event: CustomEvent) => {
-      const { memberName } = event.detail;
-      if (memberName && memberName !== currentUser) {
-        openChat(memberName);
-      }
-    };
-
-    window.addEventListener("openTeamChat", handleOpenChat as EventListener);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener(
-        "openTeamChat",
-        handleOpenChat as EventListener
-      );
-    };
-  }, [currentUser, isOnChatPage]);
-
-  // Listen for simulated chat notifications to update unread count
-  useEffect(() => {
-    // Don't track notifications if on chat page
-    if (isOnChatPage) return;
-
-    const handleNewMessage = () => {
-      setSimulatedUnread((prev) => Math.min(prev + 1, 9));
-    };
-
-    window.addEventListener("chatNotification", handleNewMessage);
-    return () =>
-      window.removeEventListener("chatNotification", handleNewMessage);
-  }, [isOnChatPage]);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (shouldUseDatabaseData()) {
       const [convs, presenceRes] = await Promise.all([
         dbFetchConversations(currentUser),
-        fetch("/api/presence").then((res) => res.json()),
+        fetch("/api/presence", { cache: "no-store" }).then((res) => res.json()),
       ]);
 
       const presenceData = presenceRes.success ? presenceRes.data : [];
@@ -467,7 +430,33 @@ export function TeamChat({ currentUser }: TeamChatProps) {
       const convs = getChatConversations(currentUser);
       setConversations(convs);
     }
-  };
+  }, [currentUser, conversations.length, activeChat]); // conversations.length is enough to check for changes if we just want to avoid redundant re-renders
+
+  useEffect(() => {
+    // Don't load conversations if on chat page
+    if (isOnChatPage) return;
+
+    loadConversations();
+    const interval = setInterval(loadConversations, 3000);
+
+    // Listen for chat open requests from other components
+    const handleOpenChat = (event: CustomEvent) => {
+      const { memberName } = event.detail;
+      if (memberName && memberName !== currentUser) {
+        openChat(memberName);
+      }
+    };
+
+    window.addEventListener("openTeamChat", handleOpenChat as EventListener);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(
+        "openTeamChat",
+        handleOpenChat as EventListener
+      );
+    };
+  }, [currentUser, isOnChatPage, loadConversations]);
 
   const openChat = (user: string) => {
     setActiveChat(user);

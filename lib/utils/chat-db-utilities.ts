@@ -10,7 +10,7 @@ export async function dbFetchThread(user1: string, user2: string) {
   try {
     const res = await fetch(
       `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`,
-      { credentials: "include" }
+      { credentials: "include", cache: "no-store" }
     );
     const data = await res.json();
 
@@ -90,7 +90,7 @@ export async function dbFetchConversations(
   try {
     const res = await fetch(
       `/api/messages/conversations?user=${encodeURIComponent(user)}`,
-      { credentials: "include" }
+      { credentials: "include", cache: "no-store" }
     );
     const data = await res.json();
 

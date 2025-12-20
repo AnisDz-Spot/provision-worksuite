@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import {
   MessageCircle,
@@ -50,9 +50,198 @@ export default function ChatPage() {
   const currentUser = authUser?.id || "You";
   const currentUserName = authUser?.name || "You";
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
 
-  // Initialize current user from auth context or similar if available, else standard "You"
-  // But we need to fetch real members
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const activeChatRef = useRef<string | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [currentUserRole] = useState<string>("admin");
+  const canCreateGroups =
+    currentUserRole === "admin" || currentUserRole === "project_manager";
+
+  // Group creation state
+  const [newGroup, setNewGroup] = useState({
+    name: "",
+    description: "",
+    members: [] as string[],
+    isPrivate: false,
+  });
+
+  // Group creation status notification
+  const [groupCreationStatus, setGroupCreationStatus] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+  }>({ show: false, type: "success", message: "" });
+
+  const [chatGroups, setChatGroups] = useState<any[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [presenceData, setPresenceData] = useState<any[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Keep refs in sync
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const loadPresence = useCallback(async () => {
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await fetch("/api/presence", { cache: "no-store" });
+        const json = await res.json();
+        if (json.success) setPresenceData(json.data);
+      } catch (err) {
+        console.error("Failed to load presence", err);
+      }
+    }
+  }, []);
+
+  const loadChatGroups = useCallback(async () => {
+    setIsLoadingGroups(true);
+    try {
+      const response = await fetch("/api/chat-groups", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.offline && Array.isArray(data.groups)) {
+          const stored = localStorage.getItem("pv:chatGroups");
+          setChatGroups(stored ? JSON.parse(stored) : []);
+        } else if (Array.isArray(data)) {
+          if (data.length > 0) {
+            setChatGroups(data);
+            localStorage.setItem("pv:chatGroups", JSON.stringify(data));
+          } else {
+            const stored = localStorage.getItem("pv:chatGroups");
+            setChatGroups(stored ? JSON.parse(stored) : []);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load chat groups", error);
+    } finally {
+      setIsLoadingGroups(false);
+    }
+  }, []);
+
+  const loadConversations = useCallback(async () => {
+    if (shouldUseDatabaseData()) {
+      const convs = await dbFetchConversations(currentUser);
+      setConversations(convs);
+    } else {
+      const { getChatConversations } =
+        await import("@/lib/utils/team-utilities");
+      setConversations(getChatConversations(currentUser));
+    }
+  }, [currentUser]);
+
+  const loadMessages = useCallback(
+    async (otherUser: string) => {
+      if (shouldUseDatabaseData()) {
+        const msgs = await dbFetchThread(currentUser, otherUser);
+        setMessages(msgs);
+        await dbMarkRead(currentUser, otherUser);
+        loadConversations();
+      } else {
+        const { getChatMessages, markMessagesAsRead } =
+          await import("@/lib/utils/team-utilities");
+        setMessages(getChatMessages(currentUser, otherUser));
+        markMessagesAsRead(currentUser, otherUser);
+        loadConversations();
+      }
+    },
+    [currentUser, loadConversations]
+  );
+
+  useEffect(() => {
+    if (mounted) {
+      loadPresence();
+      const interval = setInterval(loadPresence, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [mounted, loadPresence]);
+
+  useEffect(() => {
+    setMounted(true);
+    loadConversations();
+    loadChatGroups(); // Load groups on mount
+
+    // Load persisted active chat from localStorage (as ID/UID)
+    if (typeof window !== "undefined") {
+      const persistedChat = localStorage.getItem("pv:activeChatUser");
+      if (persistedChat) {
+        setActiveChat(persistedChat);
+        activeChatRef.current = persistedChat;
+      }
+    }
+
+    const interval = setInterval(() => {
+      loadConversations();
+      loadChatGroups(); // Refresh groups
+
+      // Check for active chat changes from other tabs/components
+      if (typeof window !== "undefined") {
+        const currentStored = localStorage.getItem("pv:activeChatUser");
+        if (currentStored !== activeChatRef.current) {
+          setActiveChat(currentStored);
+          activeChatRef.current = currentStored || null;
+        }
+      }
+    }, 10000); // Poll every 10 seconds
+    return () => clearInterval(interval);
+  }, [currentUser, loadConversations, loadChatGroups]);
+
+  useEffect(() => {
+    if (activeChat) {
+      loadMessages(activeChat);
+      const interval = setInterval(() => loadMessages(activeChat), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [activeChat, loadMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowActionMenu(false);
+      }
+    }
+
+    if (showActionMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showActionMenu]);
+
   useEffect(() => {
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
       if (shouldUseDatabaseData()) {
@@ -92,216 +281,6 @@ export default function ChatPage() {
       }
     });
   }, []);
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
-  const [activeChat, setActiveChat] = useState<string | null>(null);
-  const activeChatRef = useRef<string | null>(null); // For polling ref
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [currentUserRole] = useState<string>("admin"); // In real app, get from auth
-  const canCreateGroups =
-    currentUserRole === "admin" || currentUserRole === "project_manager";
-
-  // Group creation state
-  const [newGroup, setNewGroup] = useState({
-    name: "",
-    description: "",
-    members: [] as string[],
-    isPrivate: false,
-  });
-
-  // Group creation status notification
-  const [groupCreationStatus, setGroupCreationStatus] = useState<{
-    show: boolean;
-    type: "success" | "error";
-    message: string;
-  }>({ show: false, type: "success", message: "" });
-
-  // Chat groups state
-  const [chatGroups, setChatGroups] = useState<any[]>([]);
-  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
-  const [presenceData, setPresenceData] = useState<any[]>([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const loadPresence = async () => {
-    if (shouldUseDatabaseData()) {
-      try {
-        const res = await fetch("/api/presence");
-        const json = await res.json();
-        if (json.success) setPresenceData(json.data);
-      } catch (err) {
-        console.error("Failed to load presence", err);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (mounted) {
-      loadPresence();
-      const interval = setInterval(loadPresence, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [mounted]);
-
-  const loadChatGroups = async () => {
-    setIsLoadingGroups(true);
-    try {
-      // Try API first
-      const response = await fetch("/api/chat-groups", {
-        credentials: "include", // Include auth cookies
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-
-        // Check if response indicates offline mode
-        if (data.offline && Array.isArray(data.groups)) {
-          // Use localStorage for offline mode
-          const stored = localStorage.getItem("pv:chatGroups");
-          if (stored) {
-            setChatGroups(JSON.parse(stored));
-          } else {
-            setChatGroups([]);
-          }
-        } else if (Array.isArray(data)) {
-          // Normal API response - only update if not empty
-          if (data.length > 0) {
-            setChatGroups(data);
-            localStorage.setItem("pv:chatGroups", JSON.stringify(data));
-          } else {
-            // API empty - keep localStorage
-            const stored = localStorage.getItem("pv:chatGroups");
-            setChatGroups(stored ? JSON.parse(stored) : []);
-          }
-        }
-      } else if (response.status === 401) {
-        // Not authenticated, fall back to localStorage
-        const stored = localStorage.getItem("pv:chatGroups");
-        if (stored) {
-          setChatGroups(JSON.parse(stored));
-        }
-      } else {
-        throw new Error("Failed to fetch groups");
-      }
-    } catch (error) {
-      log.error(
-        { err: error },
-        "Failed to load chat groups from API, using localStorage"
-      );
-      // Fallback to localStorage
-      try {
-        const stored = localStorage.getItem("pv:chatGroups");
-        if (stored) {
-          setChatGroups(JSON.parse(stored));
-        }
-      } catch (localError) {
-        log.error({ err: localError }, "Failed to load from localStorage");
-      }
-    } finally {
-      setIsLoadingGroups(false);
-    }
-  };
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        actionMenuRef.current &&
-        !actionMenuRef.current.contains(event.target as Node)
-      ) {
-        setShowActionMenu(false);
-      }
-    }
-
-    if (showActionMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showActionMenu]);
-
-  useEffect(() => {
-    setMounted(true);
-    loadConversations();
-    loadChatGroups(); // Load groups on mount
-
-    // Load persisted active chat from localStorage (as ID/UID)
-    if (typeof window !== "undefined") {
-      const persistedChat = localStorage.getItem("pv:activeChatUser");
-      if (persistedChat) {
-        setActiveChat(persistedChat);
-        activeChatRef.current = persistedChat;
-      }
-    }
-
-    const interval = setInterval(() => {
-      loadConversations();
-      loadChatGroups(); // Refresh groups
-
-      // Check for active chat changes from other tabs/components
-      if (typeof window !== "undefined") {
-        const currentStored = localStorage.getItem("pv:activeChatUser");
-        if (currentStored !== activeChatRef.current) {
-          setActiveChat(currentStored);
-          activeChatRef.current = currentStored || null;
-        }
-      }
-    }, 10000); // Poll every 10 seconds
-    return () => clearInterval(interval);
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (activeChat) {
-      loadMessages(activeChat);
-      const interval = setInterval(() => loadMessages(activeChat), 3000);
-      return () => clearInterval(interval);
-    }
-  }, [activeChat]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const loadConversations = async () => {
-    if (shouldUseDatabaseData()) {
-      const convs = await dbFetchConversations(currentUser);
-      setConversations(convs);
-    } else {
-      const { getChatConversations } =
-        await import("@/lib/utils/team-utilities");
-      const convs = getChatConversations(currentUser);
-      setConversations(convs);
-    }
-  };
-
-  const loadMessages = async (otherUser: string) => {
-    if (shouldUseDatabaseData()) {
-      const msgs = await dbFetchThread(currentUser, otherUser);
-      setMessages(msgs);
-      await dbMarkRead(currentUser, otherUser);
-      // We don't need to await the second loadConversations, can do it periodically or after markRead
-      loadConversations();
-    } else {
-      const { getChatMessages, markMessagesAsRead } =
-        await import("@/lib/utils/team-utilities");
-      const msgs = getChatMessages(currentUser, otherUser);
-      setMessages(msgs);
-      markMessagesAsRead(currentUser, otherUser);
-      loadConversations();
-    }
-  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() && attachments.length === 0) return;
