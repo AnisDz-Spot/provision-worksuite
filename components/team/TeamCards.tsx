@@ -288,7 +288,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   // Expose add function to parent
   React.useEffect(() => {
     if (onAddClick) {
-      onAddClick(() => setAddOpen(true));
+      onAddClick(() => {
+        resetDrafts();
+        setAddOpen(true);
+      });
     }
   }, [onAddClick]);
 
@@ -432,7 +435,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
         const res = await fetchWithCsrf("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            password_hash: payload.password, // The API handles hashing
+          }),
         });
         const json = await res.json();
         if (json.success) {
@@ -528,10 +534,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   return (
     <div className="space-y-6 relative min-h-[400px]">
       {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center p-12 bg-background/80 backdrop-blur-sm rounded-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center p-12 bg-background/80 backdrop-blur-sm rounded-xl min-h-[400px]">
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            <span className="text-base font-medium text-muted-foreground">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            <span className="text-lg font-medium text-muted-foreground">
               Loading team directory...
             </span>
           </div>

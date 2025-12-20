@@ -279,7 +279,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   // Expose add function to parent
   React.useEffect(() => {
     if (onAddClick) {
-      onAddClick(() => setAddOpen(true));
+      onAddClick(() => {
+        resetDrafts();
+        setAddOpen(true);
+      });
     }
   }, [onAddClick]);
 
@@ -638,9 +641,9 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       {/* Team Table */}
       <div className="overflow-x-auto rounded-lg border border-border relative">
         {isLoading && (
-          <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center min-h-[300px]">
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
               <span className="text-sm font-medium text-muted-foreground">
                 Loading team directory...
               </span>

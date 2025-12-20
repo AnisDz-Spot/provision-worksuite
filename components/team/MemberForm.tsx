@@ -127,14 +127,17 @@ export function MemberForm({
           disabled={
             (mode === "edit" && draftRole === "Master Admin") || !isMasterAdmin
           }
-          className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed dark:bg-card dark:text-foreground"
         >
-          <option value="">Select Role</option>
+          <option value="" className="dark:bg-card">
+            Select Role
+          </option>
           {Object.keys(roleColors).map((r) => (
             <option
               key={r}
               value={r}
               disabled={r === "Master Admin" && draftRole !== "Master Admin"}
+              className="dark:bg-card"
             >
               {r}
             </option>

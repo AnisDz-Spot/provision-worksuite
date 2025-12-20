@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
@@ -183,6 +184,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // Hash password if provided, or use a default one
+    let hashedPassword = "";
+    if (password_hash) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password_hash, salt);
+    } else {
+      // Create a default secure password if none provided
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash("ProVision@2024", salt);
+    }
+
     // Create user with Prisma
     const user = await prisma.user.create({
       data: {
@@ -190,7 +202,7 @@ export async function POST(req: Request) {
         name,
         role,
         avatarUrl: avatar_url,
-        passwordHash: password_hash || "",
+        passwordHash: hashedPassword,
         phone,
         bio,
         addressLine1,
