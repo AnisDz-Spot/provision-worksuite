@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import {
   dbFetchThread,
   dbSendMessage,
@@ -129,6 +130,7 @@ export default function ChatPage() {
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [presenceData, setPresenceData] = useState<any[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const loadPresence = async () => {
     if (shouldUseDatabaseData()) {
@@ -355,25 +357,32 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async () => {
-    const partner =
-      teamMembers.find((m) => m.name === activeChat)?.name || activeChat;
-    if (activeChat && confirm(`Clear all messages with ${partner}?`)) {
-      if (shouldUseDatabaseData()) {
-        // In DB mode, we need the partner's UID.
-        // We assume teamMembers contains the mapping if needed,
-        // but often activeChat IS the UID in DB mode.
-        const partnerUid =
-          teamMembers.find((m) => m.name === activeChat)?.uid || activeChat;
-        await dbDeleteThread(currentUser, partnerUid);
-      } else {
-        localStorage.removeItem(
-          `pv:chat:${[currentUser, activeChat].sort().join(":")}`
-        );
+    const partner = teamMembers.find(
+      (m) => m.uid === activeChat || m.name === activeChat
+    );
+    if (!activeChat || !partner) return;
+
+    if (shouldUseDatabaseData()) {
+      const partnerUid = partner.uid || activeChat;
+      const success = await dbDeleteThread(currentUser, partnerUid);
+      if (success) {
+        setMessages([]);
+        setActiveChat(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("pv:activeChatUser");
+        }
+        loadConversations();
       }
+    } else {
+      localStorage.removeItem(
+        `pv:chat:${[currentUser, activeChat].sort().join(":")}`
+      );
       setMessages([]);
+      setActiveChat(null);
       loadConversations();
-      setShowActionMenu(false);
     }
+    setShowActionMenu(false);
+    setShowDeleteConfirm(false);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -433,11 +442,19 @@ export default function ChatPage() {
     }
   };
 
-  const filteredMembers = teamMembers.filter(
-    (m) =>
-      m.name !== currentUser &&
-      m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMembers = teamMembers.filter((m) => {
+    if (m.name === currentUser || m.uid === currentUser) return false;
+    const matchesSearch = m.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    if (searchQuery.trim()) return matchesSearch;
+
+    // If not searching, only show if they have a conversation
+    const hasConv = conversations.some(
+      (c) => c.withUser === m.uid || c.withUser === m.name
+    );
+    return matchesSearch && hasConv;
+  });
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -924,11 +941,14 @@ export default function ChatPage() {
                   {showActionMenu && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
                       <button
-                        onClick={handleClearChat}
-                        className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 rounded-t-lg"
+                        onClick={() => {
+                          setShowActionMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2 rounded-t-lg"
                       >
                         <Trash2 className="w-4 h-4" />
-                        Clear Chat
+                        Delete Conversation
                       </button>
                       <button
                         onClick={() => {
@@ -1321,6 +1341,39 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <Card className="w-full max-w-md p-6 bg-card border-border shadow-2xl scale-in-center overflow-hidden">
+            <div className="flex items-center gap-3 text-destructive mb-4">
+              <div className="p-2 bg-destructive/10 rounded-full">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Delete Conversation?</h3>
+            </div>
+            <p className="text-muted-foreground mb-6 leading-relaxed">
+              This will permanently delete all messages in this conversation.
+              This action cannot be undone.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="w-full sm:w-auto hover:bg-accent order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleClearChat}
+                className="w-full sm:w-auto shadow-lg shadow-destructive/20 order-1 sm:order-2"
+              >
+                Delete Everything
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </section>
