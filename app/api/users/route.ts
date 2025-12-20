@@ -38,9 +38,12 @@ export async function GET() {
         state: true,
         country: true,
         postalCode: true,
+        socials: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { id: "asc" }, // Fetch by ID asc to easily identify first user
     });
+
+    const firstUser = users[0];
 
     // Map to match frontend expectations (if needed)
     const mappedUsers = users.map(
@@ -59,7 +62,11 @@ export async function GET() {
         state: string | null;
         country: string | null;
         postalCode: string | null;
+        socials: any;
+        id: number;
       }) => {
+        const isMasterAdmin = user.id === firstUser?.id;
+        const role = isMasterAdmin ? "Master Admin" : user.role;
         // Construct basic address string
         const addressParts = [user.city, user.country].filter(Boolean);
         const addressStr =
@@ -72,7 +79,8 @@ export async function GET() {
           email: user.email,
           name: user.name,
           avatar_url: user.avatarUrl,
-          role: user.role,
+          role: role,
+          isMasterAdmin: isMasterAdmin,
           created_at: user.createdAt,
           phone: user.phone,
           bio: user.bio,
@@ -85,6 +93,7 @@ export async function GET() {
             country: user.country,
             postalCode: user.postalCode,
           },
+          socials: user.socials || {},
         };
       }
     );
@@ -127,6 +136,7 @@ export async function POST(req: Request) {
       "global-admin",
       "Admin",
       "Administrator",
+      "Master Admin",
       "Project Manager",
     ];
     if (!allowedRoles.includes(currentUser.role)) {
@@ -154,6 +164,7 @@ export async function POST(req: Request) {
       state,
       country,
       postalCode,
+      socials,
     } = body;
 
     if (!name || !email || !role) {
@@ -188,6 +199,7 @@ export async function POST(req: Request) {
         state,
         country,
         postalCode,
+        socials: socials || {},
       },
     });
 

@@ -35,6 +35,7 @@ export async function GET(
         state: true,
         country: true,
         postalCode: true,
+        socials: true,
         createdAt: true,
       },
     });
@@ -46,6 +47,13 @@ export async function GET(
       );
     }
 
+    // Identify if this is the Master Admin (first user)
+    const firstUser = await prisma.user.findFirst({
+      orderBy: { id: "asc" },
+      select: { id: true },
+    });
+    const isMasterAdmin = firstUser?.id === user.id;
+
     return NextResponse.json({
       success: true,
       user: {
@@ -53,7 +61,7 @@ export async function GET(
         email: user.email,
         name: user.name,
         avatar_url: user.avatarUrl,
-        role: user.role,
+        role: isMasterAdmin ? "Master Admin" : user.role,
         phone: user.phone,
         bio: user.bio,
         addressLine1: user.addressLine1,
@@ -62,7 +70,9 @@ export async function GET(
         state: user.state,
         country: user.country,
         postalCode: user.postalCode,
+        socials: user.socials || {},
         created_at: user.createdAt,
+        isMasterAdmin,
       },
     });
   } catch (error: unknown) {
@@ -101,6 +111,7 @@ export async function PATCH(
       "global-admin",
       "Admin",
       "Administrator",
+      "Master Admin",
       "Project Manager",
     ].includes(currentUser.role);
     const isSelf = currentUser.uid === uid;
@@ -129,10 +140,31 @@ export async function PATCH(
       state,
       country,
       postalCode,
+      role,
+      socials,
     } = body || {};
 
     // Build update data object
     const updateData: Record<string, unknown> = {};
+
+    // MASTER ADMIN PROTECTION: Prevent changing role of the first user
+    if (role) {
+      const firstUser = await prisma.user.findFirst({
+        orderBy: { id: "asc" },
+        select: { uid: true },
+      });
+
+      if (firstUser?.uid === uid && role !== "Master Admin") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Forbidden: The Master Admin role cannot be changed",
+          },
+          { status: 403 }
+        );
+      }
+      updateData.role = role;
+    }
 
     if (typeof name === "string") updateData.name = name.trim();
     if (typeof email === "string") updateData.email = email.trim();
@@ -148,6 +180,7 @@ export async function PATCH(
     if (typeof country === "string") updateData.country = country.trim();
     if (typeof postalCode === "string")
       updateData.postalCode = postalCode.trim();
+    if (socials && typeof socials === "object") updateData.socials = socials;
 
     // Handle password update with hashing
     if (typeof password === "string" && password.length >= 6) {
@@ -186,6 +219,7 @@ export async function PATCH(
         state: true,
         country: true,
         postalCode: true,
+        socials: true,
         createdAt: true,
       },
     });
@@ -208,6 +242,7 @@ export async function PATCH(
         state: user.state,
         country: user.country,
         postalCode: user.postalCode,
+        socials: user.socials || {},
         created_at: user.createdAt,
       },
     });

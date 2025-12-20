@@ -11,6 +11,9 @@ import {
   Linkedin,
   Github,
   Twitter,
+  Facebook,
+  Instagram,
+  Music2, // Using Music2 for TikTok
   UserCircle2,
   MoreVertical,
   MessageCircle,
@@ -25,7 +28,14 @@ import {
 } from "@/app/actions/geo";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
-type Socials = { linkedin?: string; github?: string; twitter?: string };
+type Socials = {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+};
 
 type TeamMember = {
   id: string;
@@ -46,6 +56,7 @@ type TeamMember = {
     postalCode?: string;
   };
   bio?: string;
+  isMasterAdmin?: boolean;
 };
 
 // ENRICH constant removed as we now fetch real data
@@ -72,6 +83,8 @@ const roleColors: Record<string, string> = {
   DevOps:
     "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
   Admin: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  "Master Admin":
+    "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 font-bold",
 };
 
 type TeamTableProps = {
@@ -108,6 +121,12 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [draftPostal, setDraftPostal] = useState("");
   const [draftBio, setDraftBio] = useState("");
   const [draftPassword, setDraftPassword] = useState("");
+  const [draftLinkedin, setDraftLinkedin] = useState("");
+  const [draftGithub, setDraftGithub] = useState("");
+  const [draftTwitter, setDraftTwitter] = useState("");
+  const [draftFacebook, setDraftFacebook] = useState("");
+  const [draftInstagram, setDraftInstagram] = useState("");
+  const [draftTiktok, setDraftTiktok] = useState("");
 
   // Geo State
   const [allCountries, setAllCountries] = useState<GeoOption[]>([]);
@@ -182,10 +201,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           rawAddress: u.rawAddress || {},
           bio: u.bio || "",
           socials: u.socials || {},
-          avatar:
-            u.avatar_url ||
-            u.avatarUrl ||
-            `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+          isMasterAdmin: u.isMasterAdmin || false,
         }));
 
         setMembersData(teamMembers);
@@ -302,6 +319,12 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     setDraftCountry(member.rawAddress?.country || "");
     setDraftPostal(member.rawAddress?.postalCode || "");
     setDraftBio(member.bio || "");
+    setDraftLinkedin(member.socials?.linkedin || "");
+    setDraftGithub(member.socials?.github || "");
+    setDraftTwitter(member.socials?.twitter || "");
+    setDraftFacebook(member.socials?.facebook || "");
+    setDraftInstagram(member.socials?.instagram || "");
+    setDraftTiktok(member.socials?.tiktok || "");
 
     setEditOpen(true);
     setMenuOpen(null);
@@ -325,6 +348,14 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
         country: draftCountry.trim(),
         postalCode: draftPostal.trim(),
         bio: draftBio.trim(),
+        socials: {
+          linkedin: draftLinkedin.trim(),
+          github: draftGithub.trim(),
+          twitter: draftTwitter.trim(),
+          facebook: draftFacebook.trim(),
+          instagram: draftInstagram.trim(),
+          tiktok: draftTiktok.trim(),
+        },
       };
 
       if (shouldUseDatabaseData()) {
@@ -360,6 +391,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   postalCode: updatedData.postalCode,
                 },
                 bio: updatedData.bio,
+                socials: updatedData.socials,
                 avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
               }
             : m
@@ -394,6 +426,14 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
         state: draftState.trim(),
         country: draftCountry.trim(),
         postalCode: draftPostal.trim(),
+        socials: {
+          linkedin: draftLinkedin.trim(),
+          github: draftGithub.trim(),
+          twitter: draftTwitter.trim(),
+          facebook: draftFacebook.trim(),
+          instagram: draftInstagram.trim(),
+          tiktok: draftTiktok.trim(),
+        },
       };
 
       let newMember: TeamMember;
@@ -429,7 +469,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             postalCode: u.postalCode,
           },
           bio: u.bio,
-          socials: {},
+          socials: u.socials || {},
           avatar:
             u.avatarUrl ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
@@ -461,7 +501,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             country: payload.country,
             postalCode: payload.postalCode,
           },
-          socials: {},
+          bio: payload.bio,
+          socials: payload.socials,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(newUser.name)}`,
         };
       }
@@ -486,7 +527,16 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     setDraftCountry("");
     setDraftPostal("");
     setDraftBio("");
+    setDraftLinkedin("");
+    setDraftGithub("");
+    setDraftTwitter("");
+    setDraftFacebook("");
+    setDraftInstagram("");
+    setDraftTiktok("");
     setDraftPassword("");
+    setDraftLinkedin("");
+    setDraftGithub("");
+    setDraftTwitter("");
   }
 
   function removeMember(id: string) {
@@ -507,10 +557,31 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     setMenuOpen(null);
   }
 
-  function handleRoleChange(id: string, newRole: string) {
+  async function handleRoleChange(id: string, newRole: string) {
+    if (newRole === "Master Admin") return; // Safety check
+
     setMembersData((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, role: newRole } : m))
+      prev.map((m) => {
+        if (m.id === id) {
+          if (m.isMasterAdmin) return m; // Prevent changing Master Admin role
+          return { ...m, role: newRole };
+        }
+        return m;
+      })
     );
+
+    try {
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        await fetchWithCsrf(`/api/users/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: newRole }),
+        });
+      }
+    } catch (e) {
+      console.error("Failed to update role", e);
+    }
   }
 
   const getStatusColor = (status?: string) => {
@@ -616,10 +687,15 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     <select
                       value={m.role}
                       onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
+                      disabled={m.isMasterAdmin}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer disabled:cursor-not-allowed ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
                     >
                       {Object.keys(roleColors).map((r) => (
-                        <option key={r} value={r}>
+                        <option
+                          key={r}
+                          value={r}
+                          disabled={r === "Master Admin" && !m.isMasterAdmin}
+                        >
                           {r}
                         </option>
                       ))}
@@ -660,11 +736,13 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   </div>
                 </td>
 
-                {/* Social Column */}
                 <td className="px-4 py-3">
                   {m.socials.linkedin ||
                   m.socials.github ||
-                  m.socials.twitter ? (
+                  m.socials.twitter ||
+                  m.socials.facebook ||
+                  m.socials.instagram ||
+                  m.socials.tiktok ? (
                     <div className="flex items-center gap-1">
                       {m.socials.linkedin && (
                         <a
@@ -675,6 +753,39 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                           title="LinkedIn"
                         >
                           <Linkedin className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      {m.socials.facebook && (
+                        <a
+                          href={`https://facebook.com/${m.socials.facebook}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-500 transition-colors cursor-pointer"
+                          title="Facebook"
+                        >
+                          <Facebook className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      {m.socials.instagram && (
+                        <a
+                          href={`https://instagram.com/${m.socials.instagram}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
+                          title="Instagram"
+                        >
+                          <Instagram className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      {m.socials.tiktok && (
+                        <a
+                          href={`https://tiktok.com/@${m.socials.tiktok}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 dark:text-slate-100 transition-colors cursor-pointer"
+                          title="TikTok"
+                        >
+                          <Music2 className="w-3.5 h-3.5" />
                         </a>
                       )}
                       {m.socials.github && (
@@ -800,11 +911,18 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   <select
                     value={draftRole}
                     onChange={(e) => setDraftRole(e.target.value)}
-                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={draftRole === "Master Admin"}
+                    className="w-full h-10 rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">Select Role</option>
                     {Object.keys(roleColors).map((r) => (
-                      <option key={r} value={r}>
+                      <option
+                        key={r}
+                        value={r}
+                        disabled={
+                          r === "Master Admin" && draftRole !== "Master Admin"
+                        }
+                      >
                         {r}
                       </option>
                     ))}
@@ -897,6 +1015,80 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
+
+                {/* Social Links */}
+                <div className="space-y-4 md:col-span-2 pt-2 border-t border-border mt-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    Social Links{" "}
+                    <span className="text-[10px] font-normal text-muted-foreground uppercase">
+                      (Optional)
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Linkedin className="w-3 h-3 text-blue-600" /> LinkedIn
+                      </label>
+                      <Input
+                        value={draftLinkedin}
+                        onChange={(e) => setDraftLinkedin(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Facebook className="w-3 h-3 text-blue-600" /> Facebook
+                      </label>
+                      <Input
+                        value={draftFacebook}
+                        onChange={(e) => setDraftFacebook(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Instagram className="w-3 h-3 text-pink-500" />{" "}
+                        Instagram
+                      </label>
+                      <Input
+                        value={draftInstagram}
+                        onChange={(e) => setDraftInstagram(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Music2 className="w-3 h-3 text-slate-900" /> TikTok
+                      </label>
+                      <Input
+                        value={draftTiktok}
+                        onChange={(e) => setDraftTiktok(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Github className="w-3 h-3 text-gray-700 dark:text-gray-300" />{" "}
+                        GitHub
+                      </label>
+                      <Input
+                        value={draftGithub}
+                        onChange={(e) => setDraftGithub(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Twitter className="w-3 h-3 text-sky-500" /> Twitter/X
+                      </label>
+                      <Input
+                        value={draftTwitter}
+                        onChange={(e) => setDraftTwitter(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3">
@@ -952,7 +1144,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   >
                     <option value="">Select Role</option>
                     {Object.keys(roleColors).map((r) => (
-                      <option key={r} value={r}>
+                      <option key={r} value={r} disabled={r === "Master Admin"}>
                         {r}
                       </option>
                     ))}
@@ -1058,6 +1250,80 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     rows={2}
                     className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
+                </div>
+
+                {/* Social Links */}
+                <div className="space-y-4 md:col-span-2 pt-2 border-t border-border mt-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    Social Links{" "}
+                    <span className="text-[10px] font-normal text-muted-foreground uppercase">
+                      (Optional)
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Linkedin className="w-3 h-3 text-blue-600" /> LinkedIn
+                      </label>
+                      <Input
+                        value={draftLinkedin}
+                        onChange={(e) => setDraftLinkedin(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Facebook className="w-3 h-3 text-blue-600" /> Facebook
+                      </label>
+                      <Input
+                        value={draftFacebook}
+                        onChange={(e) => setDraftFacebook(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Instagram className="w-3 h-3 text-pink-500" />{" "}
+                        Instagram
+                      </label>
+                      <Input
+                        value={draftInstagram}
+                        onChange={(e) => setDraftInstagram(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Music2 className="w-3 h-3 text-slate-900" /> TikTok
+                      </label>
+                      <Input
+                        value={draftTiktok}
+                        onChange={(e) => setDraftTiktok(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Github className="w-3 h-3 text-gray-700 dark:text-gray-300" />{" "}
+                        GitHub
+                      </label>
+                      <Input
+                        value={draftGithub}
+                        onChange={(e) => setDraftGithub(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium flex items-center gap-2">
+                        <Twitter className="w-3 h-3 text-sky-500" /> Twitter/X
+                      </label>
+                      <Input
+                        value={draftTwitter}
+                        onChange={(e) => setDraftTwitter(e.target.value)}
+                        placeholder="Username"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

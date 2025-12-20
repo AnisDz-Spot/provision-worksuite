@@ -19,6 +19,7 @@ type User = {
   email: string;
   role: string;
   isAdmin: boolean;
+  isMasterAdmin?: boolean;
   avatarUrl?: string;
   password?: string;
 };
@@ -33,6 +34,7 @@ type AuthContextType = {
   ) => Promise<{ success: boolean; error?: string; requires2FA?: boolean }>;
   logout: () => void;
   isAdmin: boolean;
+  isMasterAdmin: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   updateCurrentUser: (patch: Partial<User>) => void;
@@ -266,7 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatarUrl: data.user.avatar_url,
             isAdmin:
               data.user.role?.toLowerCase() === "administrator" ||
-              data.user.role?.toLowerCase() === "admin",
+              data.user.role?.toLowerCase() === "admin" ||
+              data.user.isMasterAdmin === true,
+            isMasterAdmin: data.user.isMasterAdmin || false,
           };
 
           setCurrentUser(authUser);
@@ -418,6 +422,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isAdmin: currentUser?.isAdmin || false,
+        isMasterAdmin: currentUser?.isMasterAdmin || false,
         isAuthenticated,
         isLoading,
         updateCurrentUser,

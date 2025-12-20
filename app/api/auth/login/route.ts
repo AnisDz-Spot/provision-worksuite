@@ -264,6 +264,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 6.c Identify Master Admin (first user)
+    let isMasterAdmin = false;
+    if (user.uid !== "global-admin") {
+      const firstUser = await prisma.user.findFirst({
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      isMasterAdmin = firstUser?.id === user.id;
+    }
+
     // 7. Create response with user data
     const response = NextResponse.json({
       success: true,
@@ -272,7 +282,8 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         avatar_url: user.avatarUrl,
-        role: user.role,
+        role: isMasterAdmin ? "Master Admin" : user.role,
+        isMasterAdmin,
       },
     });
 

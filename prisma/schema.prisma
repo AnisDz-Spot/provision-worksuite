@@ -63,6 +63,7 @@ model User {
   state        String?
   country      String?
   postalCode   String?
+  socials      Json?    @default("{}") @map("socials")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
