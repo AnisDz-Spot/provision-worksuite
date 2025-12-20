@@ -638,11 +638,11 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       {/* Team Table */}
       <div className="overflow-x-auto rounded-lg border border-border relative">
         {isLoading && (
-          <div className="absolute inset-0 z-10 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <span className="text-xs font-medium text-muted-foreground">
-                Loading team...
+              <span className="text-sm font-medium text-muted-foreground">
+                Loading team directory...
               </span>
             </div>
           </div>
@@ -902,7 +902,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       {/* Remove previous inline menu (deleted by replacement overlap) */}
 
       {/* Empty State */}
-      {filtered.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <div className="text-center py-16">
           <UserCircle2 className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">

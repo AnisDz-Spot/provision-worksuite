@@ -528,11 +528,11 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   return (
     <div className="space-y-6 relative min-h-[400px]">
       {isLoading && (
-        <div className="absolute inset-x-0 top-20 z-10 flex items-center justify-center p-12 bg-background/50 backdrop-blur-[1px] rounded-xl border border-dashed border-border">
+        <div className="absolute inset-0 z-20 flex items-center justify-center p-12 bg-background/80 backdrop-blur-sm rounded-xl">
           <div className="flex flex-col items-center gap-2">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Loading team cards...
+            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            <span className="text-base font-medium text-muted-foreground">
+              Loading team directory...
             </span>
           </div>
         </div>
@@ -820,7 +820,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
       </div>
 
       {/* Empty State */}
-      {filtered.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <div className="text-center py-16">
           <UserCircle2 className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">
