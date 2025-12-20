@@ -31,13 +31,11 @@ export async function GET() {
     // 3. Check if tables exist
     const hasTables = await checkTablesExist();
 
-    // 4. Check if at least one admin exists
+    // 4. Check if at least one user exists (the first is always Master Admin)
     let adminExists = false;
     if (hasTables) {
-      const adminCount = await prisma.user.count({
-        where: { role: "Administrator" },
-      });
-      adminExists = adminCount > 0;
+      const userCount = await prisma.user.count();
+      adminExists = userCount > 0;
     }
 
     // 5. Check optional Storage
