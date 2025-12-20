@@ -48,7 +48,7 @@ type TeamMember = {
   address: string;
   socials: Socials;
   avatar: string;
-  status?: "available" | "busy" | "offline";
+  status?: "available" | "busy" | "offline" | "online" | "away";
   tasksCount?: number;
 };
 
@@ -598,17 +598,25 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                   />
                   {(() => {
                     const p = presenceMap[m.id];
-                    let dotClass = getStatusColor(m.status);
+                    let statusToUse: any = m.status;
+
                     if (p) {
                       const last = new Date(p.last_seen).getTime();
-                      const offline = Date.now() - last > 2 * 60 * 1000; // >2 minutes
-                      if (offline) dotClass = getStatusColor("offline");
-                      else dotClass = getStatusColor(p.status);
+                      const isOffline = Date.now() - last > 5 * 60 * 1000; // 5 minute threshold
+                      statusToUse = isOffline
+                        ? "offline"
+                        : p.status || "available";
+                    } else if (memberActivities.get(m.id)) {
+                      statusToUse =
+                        memberActivities.get(m.id)?.status ||
+                        memberActivities.get(m.id)?.currentStatus;
                     } else if (memberActivities.get(m.name)) {
-                      dotClass = getActivityStatusColor(
-                        memberActivities.get(m.name)?.currentStatus
-                      );
+                      statusToUse =
+                        memberActivities.get(m.name)?.status ||
+                        memberActivities.get(m.name)?.currentStatus;
                     }
+
+                    const dotClass = getStatusColor(statusToUse);
                     return (
                       <div
                         className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${dotClass}`}

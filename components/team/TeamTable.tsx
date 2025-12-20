@@ -233,7 +233,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           // Fallback to mock if using mock data
           const activities = new Map();
           membersData.forEach((m) => {
-            activities.set(m.id, getMemberActivity(m.name));
+            const act = getMemberActivity(m.name);
+            activities.set(m.id, act);
           });
           setMemberActivities(activities);
           return;
@@ -250,10 +251,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             const lastSeen = new Date(p.last_seen);
             const now = new Date();
             const diffMins = (now.getTime() - lastSeen.getTime()) / 60000;
-            const isOnline = diffMins < 2; // 2 minute threshold (unified)
+            const isOnline = diffMins < 5; // Unified 5-minute threshold
             const status = isOnline ? p.status || "available" : "offline";
 
-            activityMap.set(p.uid, { currentStatus: status, lastSeen });
+            activityMap.set(p.uid, { status, lastSeen });
           });
           setMemberActivities(activityMap);
         }
@@ -697,7 +698,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       />
                       {memberActivities.get(m.id) && (
                         <div
-                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${getStatusColor(memberActivities.get(m.id)?.currentStatus)}`}
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${getStatusColor(memberActivities.get(m.id)?.status || memberActivities.get(m.id)?.currentStatus)}`}
                         />
                       )}
                     </div>
@@ -705,8 +706,12 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       <span className="font-medium text-sm block">
                         {m.name}
                       </span>
-                      {memberActivities.get(m.id)?.currentStatus ===
-                        "online" && (
+                      {(memberActivities.get(m.id)?.status === "online" ||
+                        memberActivities.get(m.id)?.status === "available" ||
+                        memberActivities.get(m.id)?.currentStatus ===
+                          "online" ||
+                        memberActivities.get(m.id)?.currentStatus ===
+                          "available") && (
                         <span className="text-xs text-green-600 dark:text-green-400">
                           Active now
                         </span>
