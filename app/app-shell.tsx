@@ -69,25 +69,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
 
     // 2. DETERMINE MODE & SETUP FLAGS
-    if (currentUser?.isAdmin) {
+    if (isAuthenticated && currentUser) {
       const pref = localStorage.getItem("pv:dataMode");
 
-      // Auto-choose mock if no DB is configured and no preference exists
-      if (!pref && !isDatabaseConfigured()) {
-        setDataModePreference("mock");
-        setMode("mock");
-        localStorage.setItem("pv:onboardingDone", "true");
-        setShowModeModal(false);
-      } else if (!pref && isDatabaseConfigured()) {
-        // DB exists but no choice made, show modal
-        setShowModeModal(true);
-      } else if (pref) {
-        // Preference exists, respect it
-        setMode(pref);
-        setShowModeModal(false);
-        if (pref === "mock") {
+      if (currentUser.isMasterAdmin) {
+        // Master Admin gets to choose
+        if (!pref && !isDatabaseConfigured()) {
+          setDataModePreference("mock");
+          setMode("mock");
           localStorage.setItem("pv:onboardingDone", "true");
+          setShowModeModal(false);
+        } else if (!pref && isDatabaseConfigured()) {
+          // DB exists but no choice made, show modal
+          setShowModeModal(true);
+        } else if (pref) {
+          setMode(pref);
+          setShowModeModal(false);
+          if (pref === "mock") {
+            localStorage.setItem("pv:onboardingDone", "true");
+          }
         }
+      } else {
+        // All other roles (Admins, Members, etc.) are FORCED to 'real' mode
+        if (pref !== "real") {
+          setDataModePreference("real");
+          setMode("real");
+        } else {
+          setMode("real");
+        }
+        setShowModeModal(false);
       }
 
       // 3. SECURE REDIRECTS (Only after sync and if mode is explicitly 'real')
@@ -96,6 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const onboardingComplete =
         localStorage.getItem("pv:onboardingDone") === "true";
 
+      // Redirect logic for Real mode setup
       if (
         currentMode === "real" &&
         !setupComplete &&
