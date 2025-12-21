@@ -143,9 +143,10 @@ function ChatWindow({
               if (p) {
                 const nowOnServer = Date.now() + (serverTimeOffset || 0);
                 const threshold = nowOnServer - 5 * 60 * 1000;
+                // Use standardized lastSeen property
                 const lastSeen = new Date(p.lastSeen).getTime();
 
-                const normalizedStatus = p.status?.toLowerCase() || "";
+                const normalizedStatus = (p.status || "").toLowerCase();
                 const isOnline =
                   (normalizedStatus === "online" ||
                     normalizedStatus === "available") &&
@@ -154,8 +155,8 @@ function ChatWindow({
                 setActivity({
                   memberName: targetUser,
                   lastActive: lastSeen,
-                  status: isOnline ? p.status || "online" : "offline",
-                  currentStatus: isOnline ? p.status || "online" : "offline",
+                  status: isOnline ? p.status || "available" : "offline",
+                  currentStatus: isOnline ? "online" : "offline",
                 });
               } else {
                 setActivity({
