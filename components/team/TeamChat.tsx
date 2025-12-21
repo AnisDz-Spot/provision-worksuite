@@ -216,7 +216,11 @@ function ChatWindow({
 
   const handleDeleteThread = async () => {
     if (shouldUseDatabaseData()) {
-      const success = await dbDeleteThread(currentUser, targetUser);
+      const success = await dbDeleteThread(
+        currentUser,
+        targetUser,
+        conversationId
+      );
       if (success) {
         setMessages([]);
         setShowDeleteConfirm(false);

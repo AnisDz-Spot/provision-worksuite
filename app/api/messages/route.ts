@@ -231,7 +231,35 @@ export async function DELETE(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const conversationId = searchParams.get("conversationId");
+  let conversationId = searchParams.get("conversationId");
+  const u1 = searchParams.get("user1");
+  const u2 = searchParams.get("user2");
+
+  // Fallback: Find conversation by participants if ID not provided
+  if (!conversationId && u1 && u2) {
+    if (user.uid !== u1 && user.uid !== u2) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        type: "direct",
+        members: {
+          every: {
+            userId: { in: [u1, u2] },
+          },
+        },
+        AND: [
+          { members: { some: { userId: u1 } } },
+          { members: { some: { userId: u2 } } },
+        ],
+      },
+    });
+    conversationId = existing?.id || null;
+  }
 
   if (!conversationId) {
     return NextResponse.json(
