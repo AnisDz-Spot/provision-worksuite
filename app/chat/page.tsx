@@ -235,7 +235,11 @@ export default function ChatPage() {
       }
     }
 
+    // Poll every 10 seconds
     const interval = setInterval(() => {
+      // Skip updates if viewing archives
+      if (viewMode === "archived") return;
+
       loadConversations();
       loadChatGroups(); // Refresh groups
 
@@ -247,7 +251,7 @@ export default function ChatPage() {
           activeChatRef.current = currentStored || null;
         }
       }
-    }, 10000); // Poll every 10 seconds
+    }, 10000);
     return () => clearInterval(interval);
   }, [currentUser, loadConversations, loadChatGroups]);
 
@@ -1037,6 +1041,32 @@ export default function ChatPage() {
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                   {(() => {
+                    // 1. Check if it's an archived conversation (View Mode: Archived)
+                    // We match by ID because for archives, activeChat is set to conversation ID
+                    const archivedConv =
+                      viewMode === "archived" && isMasterAdmin
+                        ? adminConversations.find((c) => c.id === activeChat)
+                        : null;
+
+                    if (archivedConv) {
+                      return (
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">
+                              {archivedConv.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              Archived • {archivedConv.memberCount} members
+                            </p>
+                          </div>
+                        </>
+                      );
+                    }
+
+                    // 2. Check if it's a group chat
                     const group = chatGroups.find((g) => g.id === activeChat);
                     if (group) {
                       return (
