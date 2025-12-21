@@ -407,6 +407,27 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async () => {
+    // 1. Handle Archive Deletion (Master Admin)
+    if (viewMode === "archived" && isMasterAdmin && activeChat) {
+      if (shouldUseDatabaseData()) {
+        const success = await dbDeleteThread(currentUser, "", activeChat);
+        if (success) {
+          setMessages([]);
+          setActiveChat(null);
+          setActiveConversationId(null);
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("pv:activeChatUser");
+            localStorage.removeItem("pv:activeConversationId");
+          }
+          loadAdminConversations();
+        }
+      }
+      setShowActionMenu(false);
+      setShowDeleteConfirm(false);
+      return;
+    }
+
+    // 2. Regular Chat Deletion
     const partner = teamMembers.find(
       (m) => m.uid === activeChat || m.name === activeChat
     );

@@ -269,7 +269,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    // Check if requester is a member
+    // Check if requester is a member OR is a Master Admin/Global Admin
     const isMember = await prisma.conversationMember.findUnique({
       where: {
         conversationId_userId: {
@@ -279,7 +279,11 @@ export async function DELETE(request: Request) {
       },
     });
 
-    if (!isMember) {
+    const isMasterAdmin =
+      user.role === "Administrator" || user.role === "Master Admin";
+
+    // Allow if member OR master admin
+    if (!isMember && !isMasterAdmin) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 }
