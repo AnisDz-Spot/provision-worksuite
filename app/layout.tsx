@@ -61,14 +61,9 @@ export const metadata: Metadata = {
   },
 };
 
-import { getOrCreateCsrfToken } from "@/lib/csrf";
-
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Ensure CSRF token cookie is set
-  await getOrCreateCsrfToken();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body>

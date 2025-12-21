@@ -21,7 +21,20 @@ export async function fetchWithCsrf(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const csrfToken = getCsrfToken();
+  const method = options.method?.toUpperCase() || "GET";
+  const needsCsrf = !["GET", "HEAD", "OPTIONS"].includes(method);
+
+  let csrfToken = getCsrfToken();
+
+  // If we need CSRF and don't have it, try to initialize it first
+  if (needsCsrf && !csrfToken) {
+    try {
+      await fetch("/api/auth/csrf");
+      csrfToken = getCsrfToken();
+    } catch (e) {
+      console.error("[CSRF] Failed to initialize token", e);
+    }
+  }
 
   const headers = new Headers(options.headers);
 

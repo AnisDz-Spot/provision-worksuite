@@ -100,11 +100,6 @@ export async function proxy(request: NextRequest) {
       },
     });
 
-    // Set CSRF cookie if not present
-    if (!request.cookies.get("csrf-token")) {
-      setCsrfCookie(response, generateCsrfToken());
-    }
-
     return response;
   }
 

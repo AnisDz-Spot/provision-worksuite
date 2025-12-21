@@ -97,7 +97,8 @@ export async function invalidateSession(): Promise<void> {
 }
 
 /**
- * Get session from request
+ * Get session from request (Read-only)
+ * Safe to call from Server Components as it no longer mutates cookies
  */
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
@@ -113,12 +114,12 @@ export async function getSession(): Promise<SessionUser | null> {
     // Check if token is expired
     const exp = (payload as any).exp;
     if (exp && exp < Math.floor(Date.now() / 1000)) {
-      await invalidateSession();
+      // NOTE: We cannot delete the cookie here if called from a Server Component
       return null;
     }
 
-    // Try to refresh if needed
-    await refreshSessionIfNeeded(token);
+    // NOTE: We cannot refresh the cookie here if called from a Server Component
+    // refreshSessionIfNeeded(token) removed
 
     return {
       uid: payload.uid,
@@ -127,9 +128,19 @@ export async function getSession(): Promise<SessionUser | null> {
       name: (payload as any).name,
     };
   } catch (error) {
-    await invalidateSession();
     return null;
   }
+}
+
+/**
+ * Server action to refresh session
+ * Call this from Client Components or Route Handlers
+ */
+export async function refreshSessionAction(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth-token")?.value;
+  if (!token) return null;
+  return await refreshSessionIfNeeded(token);
 }
 
 /**

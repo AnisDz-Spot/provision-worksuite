@@ -101,10 +101,19 @@ export function isCsrfExempt(pathname: string): boolean {
 }
 
 /**
- * Server action to get or create CSRF token
- * Call this in layouts to ensure token is set
+ * Get CSRF token from cookies (Read-only)
+ * Safe to call from Server Components
  */
-export async function getOrCreateCsrfToken(): Promise<string> {
+export async function getCsrfToken(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get(CSRF_COOKIE_NAME)?.value;
+}
+
+/**
+ * Server action to initialize CSRF token
+ * Only call from Server Actions or Route Handlers
+ */
+export async function initializeCsrfTokenAction(): Promise<string> {
   const cookieStore = await cookies();
   let token = cookieStore.get(CSRF_COOKIE_NAME)?.value;
 
