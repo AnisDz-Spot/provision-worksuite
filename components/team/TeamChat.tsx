@@ -92,6 +92,15 @@ function ChatWindow({
         }
       }
       setMessages(msgs);
+
+      // Only mark as read if there are unread messages from the other user
+      // Optimization: Check local state first, but dbMarkRead is safe/idempotent anyway
+      const hasUnread = msgs.some(
+        (m: ChatMessage) => m.fromUser !== currentUser && !m.read
+      );
+      if (hasUnread) {
+        dbMarkRead(currentUser, targetUser, conversationId);
+      }
     } else {
       const msgs = getChatMessages(currentUser, targetUser);
       if (msgs.length > messagesRef.current.length) {
