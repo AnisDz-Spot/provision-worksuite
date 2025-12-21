@@ -1363,16 +1363,8 @@ export default function ChatPage() {
                         e.key === "Enter" && !e.shiftKey && handleSendMessage()
                       }
                       placeholder="Type a message..."
-                      className="flex-1 pr-10 h-12"
+                      className="flex-1 h-12"
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                    >
-                      <Smile className="w-5 h-5" />
-                    </Button>
                     {showEmojiPicker && (
                       <div className="absolute bottom-[calc(100%+12px)] right-0 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 max-w-xs z-50">
                         {[
@@ -1392,6 +1384,7 @@ export default function ChatPage() {
                           "😠",
                           "🙏",
                           "👏",
+                          "✨",
                         ].map((emoji) => (
                           <button
                             key={emoji}
@@ -1405,9 +1398,17 @@ export default function ChatPage() {
                     )}
                   </div>
                   <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className={`h-12 w-12 shrink-0 ${showEmojiPicker ? "bg-accent text-primary" : "text-muted-foreground hover:bg-accent"}`}
+                  >
+                    <Smile className="w-5 h-5" />
+                  </Button>
+                  <Button
                     onClick={handleSendMessage}
                     disabled={!inputMessage.trim() && attachments.length === 0}
-                    className="shrink-0 h-12"
+                    className="shrink-0 h-12 px-4 shadow-sm"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
