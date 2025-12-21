@@ -951,6 +951,60 @@ export default function ChatPage() {
                 </>
               ))}
             {/* End Active Conversations */}
+
+            {/* Archived Conversations (Master Admin) */}
+            {viewMode === "archived" && (
+              <>
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                  Audit Log
+                </div>
+                {adminConversations.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No conversations found
+                  </div>
+                ) : (
+                  adminConversations.map((conv) => (
+                    <button
+                      key={conv.id}
+                      onClick={() => {
+                        // For audit, we set active chat to the conv ID or handle specifically
+                        // Here we reuse handleStartChat if possible, or just view it
+                        setActiveChat(conv.id); // Assuming we can view by ID
+                        setActiveConversationId(conv.id);
+                        loadMessages("", conv.id);
+                      }}
+                      className={`w-full p-4 hover:bg-accent/50 transition-colors border-b border-border text-left ${
+                        activeConversationId === conv.id ? "bg-accent" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-sm truncate">
+                              {conv.name || "Unknown Conversation"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(
+                                conv.lastTimestamp
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {conv.lastMessage}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {conv.memberCount} Participants
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </>
+            )}
           </div>
         </div>
 
