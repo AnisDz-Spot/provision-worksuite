@@ -410,12 +410,19 @@ export default function ChatPage() {
 
     if (shouldUseDatabaseData()) {
       const partnerUid = partner.uid || activeChat;
-      const success = await dbDeleteThread(currentUser, partnerUid);
+      // Pass activeConversationId to ensure robust deletion
+      const success = await dbDeleteThread(
+        currentUser,
+        partnerUid,
+        activeConversationId || undefined
+      );
       if (success) {
         setMessages([]);
         setActiveChat(null);
+        setActiveConversationId(null);
         if (typeof window !== "undefined") {
           localStorage.removeItem("pv:activeChatUser");
+          localStorage.removeItem("pv:activeConversationId");
         }
         loadConversations();
       }
