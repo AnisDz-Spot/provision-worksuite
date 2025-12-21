@@ -334,7 +334,7 @@ function MainContent({
       <Sidebar canNavigate={canNavigate} />
       <div
         className={`flex flex-col min-h-screen transition-all duration-300 ${
-          collapsed ? "ml-16" : "ml-60"
+          collapsed ? "md:ml-16" : "md:ml-60"
         }`}
       >
         <Navbar canNavigate={canNavigate} />

@@ -108,7 +108,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
     <>
       <header className="sticky top-0 z-30 bg-background/95 dark:bg-[#111743]/95 shadow-sm border-b h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-sm overflow-visible">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <span className="font-semibold text-xl text-foreground whitespace-nowrap">
+          <span className="font-semibold text-xl text-foreground truncate">
             {currentRoute}
           </span>
           {shouldUseMockData() && (
@@ -123,7 +123,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
           {workspace.tagline && (
             <div className="flex-1 min-w-0 max-w-md">
               <div className="overflow-x-auto scrollbar-hide">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <span className="text-sm text-muted-foreground truncate block">
                   {workspace.tagline}
                 </span>
               </div>

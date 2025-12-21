@@ -278,7 +278,7 @@ function ChatWindow({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 z-50 shadow-2xl rounded-lg overflow-hidden border border-border bg-card">
+    <div className="fixed bottom-4 right-4 w-[calc(100vw-2rem)] md:w-96 z-50 shadow-2xl rounded-lg overflow-hidden border border-border bg-card">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -639,7 +639,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
 
       {/* Conversations List */}
       {showConversations && !activeChat && (
-        <Card className="fixed bottom-20 right-4 w-80 max-h-96 z-50 shadow-2xl overflow-hidden">
+        <Card className="fixed bottom-20 right-4 w-[calc(100vw-2rem)] md:w-80 max-h-96 z-50 shadow-2xl overflow-hidden">
           <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between">
             <h3 className="font-semibold">Team Chat</h3>
             <button
