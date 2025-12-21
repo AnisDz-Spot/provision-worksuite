@@ -1054,7 +1054,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-background">
+        <div className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
           {!activeChat ? (
             <div className="flex-1 flex items-center justify-center text-center p-8">
               <div>
@@ -1096,11 +1096,11 @@ export default function ChatPage() {
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Users className="w-5 h-5 text-primary" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">
                               {archivedConv.name}
                             </h3>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground truncate">
                               Archived • {archivedConv.memberCount} members
                             </p>
                           </div>
@@ -1116,9 +1116,11 @@ export default function ChatPage() {
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                             <Users className="w-5 h-5 text-primary" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold">{group.name}</h3>
-                            <p className="text-xs text-muted-foreground">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">
+                              {group.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground truncate">
                               {group.members.length} members
                             </p>
                           </div>
@@ -1147,14 +1149,14 @@ export default function ChatPage() {
                               fill="currentColor"
                             />
                           </div>
-                          <div>
-                            <h3 className="font-semibold">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">
                               {teamMembers.find(
                                 (m) =>
                                   m.uid === activeChat || m.name === activeChat
                               )?.name || activeChat}
                             </h3>
-                            <p className="text-xs text-muted-foreground uppercase">
+                            <p className="text-xs text-muted-foreground uppercase truncate">
                               {getOnlineStatus(activeChat)}
                             </p>
                           </div>
@@ -1255,7 +1257,9 @@ export default function ChatPage() {
                               </button>
                             </div>
                           ) : (
-                            <p className="text-sm">{msg.message}</p>
+                            <p className="text-sm wrap-break-word whitespace-pre-wrap">
+                              {msg.message}
+                            </p>
                           )}
                           <p
                             className={`text-xs mt-1 ${
@@ -1366,7 +1370,7 @@ export default function ChatPage() {
                       className="flex-1 h-12"
                     />
                     {showEmojiPicker && (
-                      <div className="absolute bottom-[calc(100%+12px)] right-0 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 max-w-xs z-50">
+                      <div className="absolute bottom-[calc(100%+12px)] right-0 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 w-max max-w-[calc(100vw-2rem)] md:max-w-xs z-50">
                         {[
                           "😊",
                           "😂",
@@ -1465,7 +1469,7 @@ export default function ChatPage() {
                     </p>
                   </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-2">
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-linear-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-2">
                   <Button
                     size="icon"
                     variant="secondary"
