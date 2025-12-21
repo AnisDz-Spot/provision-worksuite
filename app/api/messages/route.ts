@@ -286,14 +286,15 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Delete the conversation record - this will cascade to messages and members
-    await prisma.conversation.delete({
-      where: { id: conversationId },
+    // Soft-Delete: Mark as archived for ALL members instead of deleting
+    await prisma.conversationMember.updateMany({
+      where: { conversationId: conversationId },
+      data: { isArchived: true },
     });
 
     log.info(
       { conversationId, deletedBy: user.uid },
-      "Deleted conversation thread"
+      "Soft-deleted (archived) conversation thread"
     );
 
     return NextResponse.json({ success: true });

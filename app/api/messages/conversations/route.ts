@@ -87,7 +87,10 @@ export async function GET(request: Request) {
 
     // 1. Fetch all conversations the user is a member of
     const memberships = await prisma.conversationMember.findMany({
-      where: { userId: user.uid },
+      where: {
+        userId: user.uid,
+        isArchived: false,
+      },
       include: {
         conversation: {
           include: {
