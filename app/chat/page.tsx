@@ -253,7 +253,7 @@ export default function ChatPage() {
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [currentUser, loadConversations, loadChatGroups]);
+  }, [currentUser, loadConversations, loadChatGroups, viewMode]);
 
   useEffect(() => {
     if (activeChat || activeConversationId) {
