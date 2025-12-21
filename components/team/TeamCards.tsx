@@ -50,6 +50,14 @@ type TeamMember = {
   avatar: string;
   status?: "available" | "busy" | "offline" | "online" | "away";
   tasksCount?: number;
+  rawAddress?: {
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
 };
 
 const ENRICH: Record<string, Partial<TeamMember>> = {
@@ -226,6 +234,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
           email: u.email,
           phone: u.phone || "+1 (555) 000-0000",
           address: u.address || "-",
+          rawAddress: u.rawAddress || {},
           socials: u.socials || {},
           bio: u.bio || "",
           avatar:
@@ -346,7 +355,13 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
     setDraftRole(member.role);
     setDraftEmail(member.email);
     setDraftPhone(member.phone);
-    setDraftAddress(member.address || "");
+    setDraftPhone(member.phone);
+    setDraftAddress(member.rawAddress?.addressLine1 || "");
+    setDraftAddress2(member.rawAddress?.addressLine2 || "");
+    setDraftCity(member.rawAddress?.city || "");
+    setDraftState(member.rawAddress?.state || "");
+    setDraftCountry(member.rawAddress?.country || "");
+    setDraftPostal(member.rawAddress?.postalCode || "");
     setDraftBio(member.bio || "");
     // Socials
     if (member.socials) {
@@ -368,7 +383,12 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
       role: draftRole.trim(),
       email: draftEmail.trim(),
       phone: draftPhone.trim(),
-      address: draftAddress.trim(),
+      addressLine1: draftAddress.trim(),
+      addressLine2: draftAddress2.trim(),
+      city: draftCity.trim(),
+      state: draftState.trim(),
+      country: draftCountry.trim(),
+      postalCode: draftPostal.trim(),
       bio: draftBio.trim(),
       socials: {
         linkedin: draftLinkedin.trim(),
@@ -387,10 +407,27 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
           ? {
               ...m,
               ...updatedData,
+              // Derive display string from components or fallback to line 1
+              address:
+                [updatedData.city, updatedData.country]
+                  .filter(Boolean)
+                  .join(", ") ||
+                updatedData.addressLine1 ||
+                m.address,
+              rawAddress: {
+                addressLine1: updatedData.addressLine1,
+                addressLine2: updatedData.addressLine2,
+                city: updatedData.city,
+                state: updatedData.state,
+                country: updatedData.country,
+                postalCode: updatedData.postalCode,
+              },
               avatar:
                 m.avatar && !m.avatar.includes("dicebear.com")
                   ? m.avatar
-                  : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedData.name || m.name)}`,
+                  : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                      updatedData.name || m.name
+                    )}`,
             }
           : m
       )
@@ -707,11 +744,14 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
 
                 {/* Role Badge */}
                 <div className="mb-4">
-                  {isMasterAdmin ? (
+                  {isMasterAdmin && m.role !== "Master Admin" ? (
                     <select
                       value={m.role}
                       onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${
+                        roleColors[m.role] ||
+                        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"
+                      }`}
                     >
                       {Object.keys(roleColors).map((r) => (
                         <option
@@ -727,7 +767,10 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     </select>
                   ) : (
                     <span
-                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        roleColors[m.role] ||
+                        "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"
+                      }`}
                     >
                       {m.role}
                     </span>
@@ -763,7 +806,12 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Phone className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{m.phone}</span>
+                    <a
+                      href={`tel:${m.phone}`}
+                      className="hover:text-primary transition-colors truncate"
+                    >
+                      {m.phone}
+                    </a>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <MapPin className="w-3.5 h-3.5 shrink-0" />
