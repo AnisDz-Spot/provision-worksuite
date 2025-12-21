@@ -65,7 +65,9 @@ export default function ChatPage() {
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
 
   // Admin Audit State
-  const [viewMode, setViewMode] = useState<"active" | "archived">("active");
+  const [viewMode, setViewMode] = useState<"active" | "archived" | "directory">(
+    "active"
+  );
   const [adminConversations, setAdminConversations] = useState<any[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const { isMasterAdmin } = useAuth();
@@ -477,6 +479,7 @@ export default function ChatPage() {
   const handleStartChat = (memberNameOrUid: string) => {
     setActiveChat(memberNameOrUid);
     activeChatRef.current = memberNameOrUid;
+    setViewMode("active"); // Switch to active chats view when starting a chat
 
     // Try to find existing conversation ID
     const conv = conversations.find(
@@ -842,19 +845,29 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Sidebar Tabs (Master Admin Only) */}
-          {isMasterAdmin && (
-            <div className="flex border-b border-border">
-              <button
-                onClick={() => setViewMode("active")}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  viewMode === "active"
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                My Chats
-              </button>
+          {/* Sidebar Tabs */}
+          <div className="flex border-b border-border bg-card/50">
+            <button
+              onClick={() => setViewMode("active")}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                viewMode === "active"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Chats
+            </button>
+            <button
+              onClick={() => setViewMode("directory")}
+              className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+                viewMode === "directory"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Team
+            </button>
+            {isMasterAdmin && (
               <button
                 onClick={() => setViewMode("archived")}
                 className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -865,8 +878,8 @@ export default function ChatPage() {
               >
                 Archives
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="flex-1 overflow-y-auto">
             {/* Chat Groups Section */}
@@ -982,6 +995,71 @@ export default function ChatPage() {
                 </>
               ))}
             {/* End Active Conversations */}
+
+            {/* Team Directory Section */}
+            {viewMode === "directory" && (
+              <>
+                <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
+                  Team Members
+                </div>
+                {teamMembers
+                  .filter((m) => {
+                    const isMe =
+                      m.uid === currentUser || m.name === currentUser;
+                    if (isMe) return false;
+                    if (!searchQuery.trim()) return true;
+                    return m.name
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase());
+                  })
+                  .map((member) => {
+                    const status = getOnlineStatus(member.uid);
+                    return (
+                      <button
+                        key={member.uid || member.name}
+                        onClick={() =>
+                          handleStartChat(member.uid || member.name)
+                        }
+                        className={`w-full p-4 hover:bg-accent/50 transition-colors border-b border-border text-left ${
+                          activeChat === member.uid ||
+                          activeChat === member.name
+                            ? "bg-accent"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <Image
+                              src={member.avatar}
+                              alt={member.name}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 rounded-full"
+                            />
+                            <Circle
+                              className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(status)} rounded-full border-2 border-card`}
+                              fill="currentColor"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-semibold text-sm truncate block">
+                              {member.name}
+                            </span>
+                            <p className="text-xs text-muted-foreground truncate font-medium uppercase">
+                              {member.role?.replace("_", " ")}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                {teamMembers.length === 0 && (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No team members found
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Archived Conversations (Master Admin) */}
             {viewMode === "active" ? (
