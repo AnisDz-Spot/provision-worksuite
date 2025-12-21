@@ -234,6 +234,21 @@ export default function ChatPage() {
     }
   }, [activeChat, activeConversationId, loadMessages]);
 
+  const lastReadMessageId = useCallback(() => {
+    // We want the last message where (fromUser === currentUser) AND (read === true)
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      // Normalize property access if needed, but Utils returns strict types now
+      if (
+        msg.fromUser === currentUser &&
+        msg.read // 'read' is the correct property in ChatMessage interface
+      ) {
+        return msg.id;
+      }
+    }
+    return null;
+  }, [messages, currentUser])();
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -1002,6 +1017,13 @@ export default function ChatPage() {
                     const isCurrentUser = msg.fromUser === currentUser;
                     const isFileMessage = msg.message.startsWith("📎");
 
+                    // Find chat partner details for the seen indicator
+                    const chatPartner = filteredMembers.find(
+                      (m) =>
+                        m.uid === activeChat ||
+                        (activeChat && m.name === activeChat)
+                    );
+
                     return (
                       <div
                         key={msg.id}
@@ -1056,6 +1078,28 @@ export default function ChatPage() {
                               minute: "2-digit",
                             })}
                           </p>
+                          {/* Seen Indicator */}
+                          {msg.id === lastReadMessageId && (
+                            <div className="absolute -bottom-2 -right-2">
+                              {chatPartner?.avatar ? (
+                                <img
+                                  src={chatPartner.avatar}
+                                  alt="Seen"
+                                  className="w-4 h-4 rounded-full border border-background shadow-sm"
+                                  title={`Seen by ${chatPartner.name}`}
+                                />
+                              ) : (
+                                <div
+                                  className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
+                                  title={`Seen by ${chatPartner?.name || "User"}`}
+                                >
+                                  {(chatPartner?.name || "?")
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

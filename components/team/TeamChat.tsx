@@ -104,6 +104,20 @@ function ChatWindow({
     }
   }, [currentUser, targetUser]);
 
+  // Derived state: Find the last message sent by ME that was read by THEM
+  const lastReadMessageId = React.useMemo(() => {
+    // We want the last message where (fromUser === currentUser) AND (read === true)
+    // Since messages are ordered by time, we can reverse find
+    // But array.findLast might not be available in all envs yet, so let's iterate backwards
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.fromUser === currentUser && msg.read) {
+        return msg.id;
+      }
+    }
+    return null;
+  }, [messages, currentUser]);
+
   // Fetch target user details to resolve UUID to name
   useEffect(() => {
     if (shouldUseDatabaseData()) {
@@ -383,6 +397,26 @@ function ChatWindow({
                         minute: "2-digit",
                       })}
                     </p>
+                    {/* Seen Indicator */}
+                    {msg.id === lastReadMessageId && (
+                      <div className="absolute -bottom-1 -right-2">
+                        {targetAvatar ? (
+                          <img
+                            src={targetAvatar}
+                            alt="Seen"
+                            className="w-4 h-4 rounded-full border border-background shadow-sm"
+                            title={`Seen by ${targetName}`}
+                          />
+                        ) : (
+                          <div
+                            className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
+                            title={`Seen by ${targetName}`}
+                          >
+                            {targetName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
