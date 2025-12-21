@@ -116,6 +116,8 @@ const roleColors: Record<string, string> = {
     "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   DevOps:
     "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  "Master Admin":
+    "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 font-bold",
 };
 
 type TeamCardsProps = {
@@ -135,7 +137,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
     new Map()
   );
   const [presenceMap, setPresenceMap] = useState<
-    Record<string, { status: string; last_seen: string }>
+    Record<string, { status: string; lastSeen: string }>
   >({});
   const [addOpen, setAddOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -255,9 +257,9 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
         const res = await fetch("/api/presence");
         const data = await res.json();
         if (mounted && data?.success && Array.isArray(data.data)) {
-          const map: Record<string, { status: string; last_seen: string }> = {};
+          const map: Record<string, { status: string; lastSeen: string }> = {};
           for (const row of data.data) {
-            map[row.uid] = { status: row.status, last_seen: row.last_seen };
+            map[row.uid] = { status: row.status, lastSeen: row.lastSeen };
           }
           setPresenceMap(map);
         }
@@ -605,8 +607,8 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         let statusToUse: any = m.status;
 
                         if (p) {
-                          const last = new Date(p.last_seen).getTime();
-                          const isOffline = Date.now() - last > 5 * 60 * 1000; // 5 minute threshold
+                          const last = new Date(p.lastSeen).getTime();
+                          const isOffline = Date.now() - last > 5 * 60 * 1000; // 5 minute threshold matches Table
                           statusToUse = isOffline
                             ? "offline"
                             : p.status || "available";
@@ -636,8 +638,8 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         {(() => {
                           const p = presenceMap[m.id];
                           if (p) {
-                            const last = new Date(p.last_seen).getTime();
-                            const offline = Date.now() - last > 2 * 60 * 1000;
+                            const last = new Date(p.lastSeen).getTime();
+                            const offline = Date.now() - last > 5 * 60 * 1000;
                             if (offline) return "Offline";
                             if (p.status === "available") return "Available";
                             if (p.status === "busy") return "Busy";

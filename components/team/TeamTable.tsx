@@ -248,7 +248,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           // Using simple status interpretation
           json.data.forEach((p: any) => {
             // Check if online (seen in last 5 mins)
-            const lastSeen = new Date(p.last_seen);
+            const lastSeen = new Date(p.lastSeen);
             const now = new Date();
             const diffMins = (now.getTime() - lastSeen.getTime()) / 60000;
             const isOnline = diffMins < 5; // Unified 5-minute threshold

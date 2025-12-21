@@ -125,7 +125,10 @@ export function MemberForm({
           value={draftRole}
           onChange={(e) => setDraftRole(e.target.value)}
           disabled={
-            (mode === "edit" && draftRole === "Master Admin") || !isMasterAdmin
+            (mode === "edit" &&
+              draftRole === "Master Admin" &&
+              !isMasterAdmin) ||
+            !isMasterAdmin
           }
           className="w-full h-10 rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed dark:bg-card dark:text-foreground"
         >
