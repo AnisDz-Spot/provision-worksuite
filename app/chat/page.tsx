@@ -67,6 +67,7 @@ export default function ChatPage() {
   // Admin Audit State
   const [viewMode, setViewMode] = useState<"active" | "archived">("active");
   const [adminConversations, setAdminConversations] = useState<any[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const { isMasterAdmin } = useAuth();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,8 +161,13 @@ export default function ChatPage() {
 
   const loadConversations = useCallback(async () => {
     if (shouldUseDatabaseData()) {
-      const convs = await dbFetchConversations(currentUser);
-      setConversations(convs);
+      setIsLoadingConversations(true);
+      try {
+        const convs = await dbFetchConversations(currentUser);
+        setConversations(convs);
+      } finally {
+        setIsLoadingConversations(false);
+      }
     } else {
       const { getChatConversations } =
         await import("@/lib/utils/team-utilities");
@@ -978,7 +984,22 @@ export default function ChatPage() {
             {/* End Active Conversations */}
 
             {/* Archived Conversations (Master Admin) */}
-            {viewMode === "archived" && (
+            {viewMode === "active" ? (
+              <>
+                {
+                  isLoadingConversations && conversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                      <p className="text-sm">Loading chats...</p>
+                    </div>
+                  ) : conversations.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-muted-foreground">
+                      No conversations found
+                    </div>
+                  ) : null /* Render conversations here if not loading and not empty */
+                }
+              </>
+            ) : (
               <>
                 <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
                   Audit Log
@@ -1353,7 +1374,7 @@ export default function ChatPage() {
                       <Smile className="w-5 h-5" />
                     </Button>
                     {showEmojiPicker && (
-                      <div className="absolute bottom-full right-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 max-w-xs">
+                      <div className="absolute bottom-[calc(100%+12px)] right-0 p-3 bg-card border border-border rounded-lg shadow-lg grid grid-cols-8 gap-2 max-w-xs z-50">
                         {[
                           "😊",
                           "😂",

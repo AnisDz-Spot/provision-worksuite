@@ -63,7 +63,9 @@ function ChatWindow({
     const conv = conversations.find(
       (c: ChatConversation) => c.withUser === targetUser
     );
-    return conv?.withUserName || targetUser;
+    // If not found in convs, we can't do much yet but wait for the fetch
+    // However, if targetUser doesn't look like a UUID, use it as is
+    return conv?.withUserName || (targetUser.length > 30 ? "User" : targetUser);
   });
   const [targetAvatar, setTargetAvatar] = useState(() => {
     const conv = conversations.find(
