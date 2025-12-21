@@ -290,7 +290,19 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Soft-Delete: Mark as archived for ALL members instead of deleting
+    // Hard Delete for Master Admin
+    if (isMasterAdmin) {
+      await prisma.conversation.delete({
+        where: { id: conversationId },
+      });
+      log.info(
+        { conversationId, deletedBy: user.uid },
+        "Hard-deleted conversation thread"
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    // Soft-Delete (Archive) for regular members
     await prisma.conversationMember.updateMany({
       where: { conversationId: conversationId },
       data: { isArchived: true },
