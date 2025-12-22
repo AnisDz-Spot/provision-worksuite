@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
@@ -6,7 +6,7 @@ import { Message } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json(
@@ -15,16 +15,29 @@ export async function GET(request: Request) {
     );
   }
 
-  const { searchParams } = new URL(request.url);
-  const conversationId = searchParams.get("conversationId");
-  const u1 = searchParams.get("user1");
-  const u2 = searchParams.get("user2");
+  const searchParams = request.nextUrl.searchParams;
+  let conversationId = searchParams.get("conversationId");
+  let u1 = searchParams.get("user1");
+  let u2 = searchParams.get("user2");
+
+  // Normalize string "null" or "undefined" to null
+  if (conversationId === "null" || conversationId === "undefined")
+    conversationId = null;
+  if (u1 === "null" || u1 === "undefined") u1 = null;
+  if (u2 === "null" || u2 === "undefined") u2 = null;
 
   const isMasterAdmin =
     user.role === "Administrator" || user.role === "Master Admin";
 
   log.info(
-    { conversationId, u1, u2, userId: user.uid, role: user.role },
+    {
+      conversationId,
+      u1,
+      u2,
+      userId: user.uid,
+      role: user.role,
+      isMasterAdmin,
+    },
     "Messages GET request"
   );
 
@@ -35,6 +48,10 @@ export async function GET(request: Request) {
     if (!threadId && u1 && u2) {
       // Permission check: Must be a participant OR Master Admin
       if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
+        log.warn(
+          { userId: user.uid, u1, u2 },
+          "Forbidden message access attempt"
+        );
         return NextResponse.json(
           { success: false, error: "Forbidden" },
           { status: 403 }
@@ -51,8 +68,8 @@ export async function GET(request: Request) {
           },
           // Ensure it only has exactly these two members
           AND: [
-            { members: { some: { userId: u1 } } },
-            { members: { some: { userId: u2 } } },
+            { members: { some: { userId: u1 || "" } } },
+            { members: { some: { userId: u2 || "" } } },
           ],
         },
       });
@@ -60,14 +77,15 @@ export async function GET(request: Request) {
 
       // If none exists and it's a direct chat, return empty list
       if (!threadId) {
+        log.info({ u1, u2 }, "No existing conversation found, returning empty");
         return NextResponse.json({ success: true, data: [] });
       }
     }
 
     if (!threadId) {
       log.warn(
-        { u1, u2, conversationId },
-        "Missing conversationId for request"
+        { u1, u2, conversationId, hasU1: !!u1, hasU2: !!u2 },
+        "Missing conversationId for request - failed fallback"
       );
       return NextResponse.json(
         { success: false, error: "Missing conversationId" },
@@ -121,7 +139,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json(
@@ -132,12 +150,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { fromUser, toUser, message, conversationId } = body as {
+    let { fromUser, toUser, message, conversationId } = body as {
       fromUser?: string;
       toUser?: string;
       message: string;
       conversationId?: string;
     };
+
+    // Normalize string "null" or "undefined" to null/undefined
+    if (conversationId === "null" || conversationId === "undefined")
+      conversationId = undefined;
+    if (fromUser === "null" || fromUser === "undefined") fromUser = undefined;
+    if (toUser === "null" || toUser === "undefined") toUser = undefined;
 
     if (!message || (!conversationId && (!fromUser || !toUser))) {
       return NextResponse.json(
@@ -246,7 +270,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json(
@@ -255,14 +279,28 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const { searchParams } = new URL(request.url);
+  const searchParams = request.nextUrl.searchParams;
   let conversationId = searchParams.get("conversationId");
-  const u1 = searchParams.get("user1");
-  const u2 = searchParams.get("user2");
+  let u1 = searchParams.get("user1");
+  let u2 = searchParams.get("user2");
+
+  // Normalize
+  if (conversationId === "null" || conversationId === "undefined")
+    conversationId = null;
+  if (u1 === "null" || u1 === "undefined") u1 = null;
+  if (u2 === "null" || u2 === "undefined") u2 = null;
+
+  log.info(
+    { conversationId, u1, u2, userId: user.uid, role: user.role },
+    "Messages DELETE request"
+  );
 
   // Fallback: Find conversation by participants if ID not provided
   if (!conversationId && u1 && u2) {
-    if (user.uid !== u1 && user.uid !== u2) {
+    const isMasterAdmin =
+      user.role === "Administrator" || user.role === "Master Admin";
+
+    if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 }
