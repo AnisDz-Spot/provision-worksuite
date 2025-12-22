@@ -16,6 +16,9 @@ export interface JitsiConfig {
     startWithVideoMuted: boolean;
     enableWelcomePage: boolean;
     prejoinPageEnabled: boolean;
+    prejoinConfig?: {
+      enabled: boolean;
+    };
     disableDeepLinking: boolean;
     fileRecordingsEnabled: boolean;
     liveStreamingEnabled: boolean;
@@ -60,6 +63,9 @@ export function getJitsiConfig(
       startWithVideoMuted: true,
       enableWelcomePage: false,
       prejoinPageEnabled: false,
+      prejoinConfig: {
+        enabled: false,
+      },
       disableDeepLinking: true,
 
       // Security: Disable features by default

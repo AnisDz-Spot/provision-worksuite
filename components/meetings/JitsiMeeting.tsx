@@ -96,6 +96,12 @@ export function JitsiMeeting({
           initializingRef.current = false;
         });
 
+        // FALLBACK: Hide loader after 5 seconds regardless of join event
+        // This ensures the custom loader doesn't block Jitsi's own UI if events are delayed
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 5000);
+
         api.addEventListener("readyToClose", () => {
           onMeetingEnd?.();
         });
