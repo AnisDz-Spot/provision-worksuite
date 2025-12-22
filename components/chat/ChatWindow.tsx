@@ -1,0 +1,322 @@
+"use client";
+
+import React, { RefObject } from "react";
+import Image from "next/image";
+import {
+  ArrowLeft,
+  Users,
+  Circle,
+  MoreVertical,
+  Trash2,
+  Download,
+  MessageCircle,
+  File,
+  Eye,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { ChatInput } from "./ChatInput";
+
+interface ChatWindowProps {
+  activeChat: string | null;
+  messages: any[];
+  currentUser: string;
+  teamMembers: any[];
+  filteredMembers: any[];
+  chatGroups: any[];
+  adminConversations: any[];
+  viewMode: string;
+  isMasterAdmin: boolean;
+  activeConversationId: string | null;
+  showActionMenu: boolean;
+  setShowActionMenu: (val: boolean) => void;
+  actionMenuRef: RefObject<HTMLDivElement | null>;
+  setShowDeleteConfirm: (val: boolean) => void;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
+  lastReadMessageId: string | null;
+  setPreviewFile: (file: any | null) => void;
+  attachments: any[];
+  getStatusColor: (status: string) => string;
+  getOnlineStatus: (id: string) => string;
+  handleSendMessage: () => void;
+  inputMessage: string;
+  setInputMessage: (val: string) => void;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  removeAttachment: (id: string) => void;
+  showEmojiPicker: boolean;
+  setShowEmojiPicker: (val: boolean) => void;
+  handleEmojiSelect: (emoji: string) => void;
+  formatFileSize: (bytes: number) => string;
+  onBack: () => void;
+}
+
+export function ChatWindow({
+  activeChat,
+  messages,
+  currentUser,
+  teamMembers,
+  filteredMembers,
+  chatGroups,
+  adminConversations,
+  viewMode,
+  isMasterAdmin,
+  activeConversationId,
+  showActionMenu,
+  setShowActionMenu,
+  actionMenuRef,
+  setShowDeleteConfirm,
+  messagesEndRef,
+  lastReadMessageId,
+  setPreviewFile,
+  attachments,
+  getStatusColor,
+  getOnlineStatus,
+  handleSendMessage,
+  inputMessage,
+  setInputMessage,
+  fileInputRef,
+  handleFileSelect,
+  removeAttachment,
+  showEmojiPicker,
+  setShowEmojiPicker,
+  handleEmojiSelect,
+  formatFileSize,
+  onBack,
+}: ChatWindowProps) {
+  if (!activeChat) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-center p-8 bg-background">
+        <div>
+          <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Select a conversation</h2>
+          <p className="text-muted-foreground">
+            Choose a team member from the sidebar to start chatting
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const archivedConv =
+    viewMode === "archived" && isMasterAdmin
+      ? adminConversations.find((c) => c.id === activeChat)
+      : null;
+
+  const group = chatGroups.find((g) => g.id === activeChat);
+  const partnerMatch = teamMembers.find(
+    (m) => m.uid === activeChat || m.name === activeChat
+  );
+
+  return (
+    <div className="flex-1 flex flex-col bg-background min-w-0 overflow-hidden">
+      <div className="p-4 border-b border-border flex items-center justify-between bg-card">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            onClick={onBack}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+
+          {archivedConv ? (
+            <>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">{archivedConv.name}</h3>
+                <p className="text-xs text-muted-foreground truncate">
+                  Archived • {archivedConv.memberCount} members
+                </p>
+              </div>
+            </>
+          ) : group ? (
+            <>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">{group.name}</h3>
+                <p className="text-xs text-muted-foreground truncate">
+                  {group.members.length} members
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="relative">
+                <Image
+                  src={
+                    partnerMatch?.avatar ||
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeChat}`
+                  }
+                  alt={partnerMatch?.name || activeChat}
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full border border-border"
+                />
+                <Circle
+                  className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(getOnlineStatus(activeChat))} rounded-full border-2 border-card`}
+                  fill="currentColor"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">
+                  {partnerMatch?.name || activeChat}
+                </h3>
+                <p className="text-xs text-muted-foreground uppercase truncate">
+                  {getOnlineStatus(activeChat)}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="relative" ref={actionMenuRef}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowActionMenu(!showActionMenu)}
+          >
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+          {showActionMenu && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
+              <button
+                onClick={() => {
+                  setShowActionMenu(false);
+                  setShowDeleteConfirm(true);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2 rounded-t-lg"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Conversation
+              </button>
+              <button
+                onClick={() => {
+                  alert("Export feature coming soon!");
+                  setShowActionMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 rounded-b-lg"
+              >
+                <Download className="w-4 h-4" />
+                Export Chat
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center text-sm text-muted-foreground py-8">
+            No messages yet. Start the conversation!
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isCurrentUser = msg.fromUser === currentUser;
+            const isFileMessage = msg.message.startsWith("📎");
+            const chatPartner = filteredMembers.find(
+              (m) =>
+                m.uid === activeChat || (activeChat && m.name === activeChat)
+            );
+
+            return (
+              <div
+                key={msg.id}
+                className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`relative max-w-[70%] rounded-2xl px-4 py-2 ${
+                    isCurrentUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border"
+                  }`}
+                >
+                  {isFileMessage ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <File className="w-4 h-4 shrink-0" />
+                      <span className="text-sm truncate" title={msg.message}>
+                        {msg.message}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (msg.attachment) {
+                            setPreviewFile(msg.attachment);
+                          } else {
+                            const fileName = msg.message.replace("📎 ", "");
+                            const file = attachments.find(
+                              (a) => a.name === fileName
+                            );
+                            if (file) setPreviewFile(file);
+                          }
+                        }}
+                        className="ml-2 p-1 hover:bg-accent/20 rounded"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm wrap-break-word whitespace-pre-wrap">
+                      {msg.message}
+                    </p>
+                  )}
+                  <p
+                    className={`text-xs mt-1 ${isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                  >
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                  {isCurrentUser && msg.id === lastReadMessageId && (
+                    <div className="absolute -bottom-2 -right-2">
+                      {chatPartner?.avatar ? (
+                        <Image
+                          src={chatPartner.avatar}
+                          alt="Seen"
+                          width={16}
+                          height={16}
+                          className="w-4 h-4 rounded-full border border-background shadow-sm"
+                          title={`Seen by ${chatPartner.name}`}
+                        />
+                      ) : (
+                        <div
+                          className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
+                          title={`Seen by ${chatPartner?.name || "User"}`}
+                        >
+                          {(chatPartner?.name || "?").charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <ChatInput
+        inputMessage={inputMessage}
+        setInputMessage={setInputMessage}
+        handleSendMessage={handleSendMessage}
+        fileInputRef={fileInputRef}
+        handleFileSelect={handleFileSelect}
+        attachments={attachments}
+        removeAttachment={removeAttachment}
+        showEmojiPicker={showEmojiPicker}
+        setShowEmojiPicker={setShowEmojiPicker}
+        handleEmojiSelect={handleEmojiSelect}
+        formatFileSize={formatFileSize}
+      />
+
+      <p className="text-xs text-muted-foreground mt-2 px-4 pb-4">
+        🔒 Messages are securely stored and encrypted
+      </p>
+    </div>
+  );
+}

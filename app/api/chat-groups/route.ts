@@ -8,8 +8,9 @@ import { shouldUseDatabaseData } from "@/lib/dataSource";
 interface CreateGroupRequest {
   name: string;
   description?: string;
-  members: string[];
+  members: string[]; // emails
   isPrivate?: boolean;
+  projectId?: number;
 }
 
 // Helper to validate email format
@@ -42,6 +43,14 @@ export async function GET(request: NextRequest) {
       const groups = await prisma.chatGroup.findMany({
         where: {
           OR: [{ createdBy: userEmail }, { members: { has: userEmail } }],
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -83,7 +92,13 @@ export async function POST(request: NextRequest) {
     const userEmail = user.email;
 
     const body = (await request.json()) as CreateGroupRequest;
-    const { name, description, members = [], isPrivate = false } = body;
+    const {
+      name,
+      description,
+      members = [],
+      isPrivate = false,
+      projectId,
+    } = body;
 
     // Validation
     if (!name || !name.trim()) {
@@ -93,7 +108,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ... (rest of validation)
     if (name.trim().length > 100) {
       return NextResponse.json(
         { error: "Group name must be 100 characters or less" },
@@ -145,20 +159,61 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Create chat group
-      const group = await prisma.chatGroup.create({
-        data: {
-          name: name.trim(),
-          description: description?.trim() || null,
-          members: uniqueMembers,
-          createdBy: userEmail,
-          isPrivate: isPrivate,
+      // 1. Fetch UIDs for all members
+      const dbMembers = await prisma.user.findMany({
+        where: {
+          email: { in: uniqueMembers },
+        },
+        select: {
+          uid: true,
+          email: true,
         },
       });
 
-      log.info({ groupId: group.id, userEmail }, "Chat group created");
+      if (dbMembers.length === 0) {
+        return NextResponse.json(
+          { error: "No valid members found" },
+          { status: 400 }
+        );
+      }
 
-      return NextResponse.json(group, { status: 201 });
+      // 2. Create in transaction
+      const result = await prisma.$transaction(async (tx: any) => {
+        // A. Create Conversation
+        const conversation = await tx.conversation.create({
+          data: {
+            type: "group",
+            name: name.trim(),
+            members: {
+              create: dbMembers.map((m: any) => ({
+                userId: m.uid,
+              })),
+            },
+          },
+        });
+
+        // B. Create ChatGroup and link it
+        const chatGroup = await tx.chatGroup.create({
+          data: {
+            name: name.trim(),
+            description: description?.trim() || null,
+            members: uniqueMembers,
+            createdBy: userEmail,
+            isPrivate: isPrivate,
+            conversationId: conversation.id,
+            projectId: projectId || null,
+          },
+        });
+
+        return chatGroup;
+      });
+
+      log.info(
+        { groupId: result.id, userEmail },
+        "Chat group and linked conversation created"
+      );
+
+      return NextResponse.json(result, { status: 201 });
     } catch (dbError) {
       log.error({ err: dbError }, "Database error during group creation");
       return NextResponse.json(
