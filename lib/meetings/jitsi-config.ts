@@ -59,7 +59,7 @@ export function getJitsiConfig(
       startWithAudioMuted: true,
       startWithVideoMuted: true,
       enableWelcomePage: false,
-      prejoinPageEnabled: true,
+      prejoinPageEnabled: false,
       disableDeepLinking: true,
 
       // Security: Disable features by default
