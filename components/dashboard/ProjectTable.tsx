@@ -30,15 +30,23 @@ declare module "@tanstack/react-table" {
 
 type Project = {
   id: string;
+  uid?: string; // Database UID
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
   deadline: string; // ISO date
   priority?: "low" | "medium" | "high";
   starred?: boolean;
-  members?: { name: string; avatarUrl?: string }[];
+  members?: { name: string; avatarUrl?: string; user?: any }[];
   isTemplate?: boolean;
   archived?: boolean;
+  // Database fields
+  _count?: { tasks: number; milestones: number };
+  tasks?: {
+    status: string;
+    estimateHours: number | null;
+    loggedHours: number | null;
+  }[];
 };
 
 const PROJECTS: Project[] = [
@@ -143,17 +151,33 @@ const columns: ColumnDef<Project>[] = [
     header: () => "Time",
     cell: ({ row }) => {
       const p = row.original;
-      const r = getProjectTimeRollup(p.id);
+
+      // Calculate from API tasks if available, else fallback
+      let estimate = 0,
+        logged = 0;
+      if (p.tasks) {
+        p.tasks.forEach((t) => {
+          estimate += t.estimateHours || 0;
+          logged += t.loggedHours || 0;
+        });
+      } else {
+        const r = getProjectTimeRollup(p.id);
+        estimate = r.estimate;
+        logged = r.logged;
+      }
+
+      const remaining = Math.max(0, parseFloat((estimate - logged).toFixed(2)));
+
       return (
         <div className="flex items-center gap-2 text-[10px]">
           <Badge variant="secondary" pill>
-            Est {r.estimate}h
+            Est {parseFloat(estimate.toFixed(2))}h
           </Badge>
           <Badge variant="info" pill>
-            Log {r.logged}h
+            Log {parseFloat(logged.toFixed(2))}h
           </Badge>
           <Badge variant="warning" pill>
-            Rem {r.remaining}h
+            Rem {remaining}h
           </Badge>
         </div>
       );
@@ -164,7 +188,24 @@ const columns: ColumnDef<Project>[] = [
     header: () => "Progress",
     cell: ({ row }) => {
       const p = row.original;
-      const t = getTaskCompletionForProject(p.id);
+
+      let total = 0,
+        done = 0,
+        percent = 0;
+
+      if (p.tasks) {
+        total = p.tasks.length;
+        done = p.tasks.filter(
+          (t) => t.status === "done" || t.status === "completed"
+        ).length;
+        percent = total > 0 ? Math.round((done / total) * 100) : 0;
+      } else {
+        const t = getTaskCompletionForProject(p.id);
+        total = t.total;
+        done = t.done;
+        percent = t.percent;
+      }
+
       const fallback =
         p.status === "Completed"
           ? 100
@@ -173,17 +214,21 @@ const columns: ColumnDef<Project>[] = [
             : p.status === "In Progress"
               ? 40
               : 20;
-      const percent = t.total > 0 ? t.percent : fallback;
+
+      const displayPercent = total > 0 ? percent : fallback;
+
       return (
         <div className="min-w-40">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>{t.total > 0 ? `${t.done}/${t.total}` : "—"}</span>
-            <span className="font-medium text-foreground">{percent}%</span>
+            <span>{total > 0 ? `${done}/${total}` : "—"}</span>
+            <span className="font-medium text-foreground">
+              {displayPercent}%
+            </span>
           </div>
           <div className="h-2 bg-accent rounded-full overflow-hidden">
             <div
               className="h-full bg-linear-to-r from-primary to-primary/60"
-              style={{ width: `${percent}%` }}
+              style={{ width: `${displayPercent}%` }}
             />
           </div>
         </div>
@@ -562,188 +607,188 @@ export function ProjectTable() {
         <>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-            <thead className="bg-accent/20">
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {selectMode && <th className="p-4"></th>}
-                  {hg.headers.map((h) => (
-                    <th
-                      className="p-4 font-medium text-left text-muted-foreground"
-                      key={h.id}
-                    >
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {pageRows.map((p) => (
-                <tr
-                  key={p.id}
-                  className={`border-t [&:last-child>td]:border-b-0 transition-colors`}
-                >
-                  {selectMode && (
-                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(p.id)}
+              <thead className="bg-accent/20">
+                {table.getHeaderGroups().map((hg) => (
+                  <tr key={hg.id}>
+                    {selectMode && <th className="p-4"></th>}
+                    {hg.headers.map((h) => (
+                      <th
+                        className="p-4 font-medium text-left text-muted-foreground"
+                        key={h.id}
+                      >
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {pageRows.map((p) => (
+                  <tr
+                    key={p.id}
+                    className={`border-t [&:last-child>td]:border-b-0 transition-colors`}
+                  >
+                    {selectMode && (
+                      <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(p.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(p.id);
+                                else next.delete(p.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </div>
+                      </td>
+                    )}
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          className={`p-1 rounded hover:bg-accent/20 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
+                          title={p.starred ? "Unstar" : "Star"}
                           onClick={(e) => {
                             e.stopPropagation();
+                            table.options.meta?.toggleStar?.(p.id);
                           }}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(p.id);
-                              else next.delete(p.id);
-                              return next;
-                            });
-                          }}
-                        />
+                        >
+                          <Star
+                            className="w-4 h-4"
+                            fill={p.starred ? "currentColor" : "none"}
+                          />
+                        </button>
+                        <button
+                          className="text-foreground hover:underline"
+                          title="Open project"
+                          onClick={() => openProject(p.id)}
+                        >
+                          {p.name}
+                        </button>
                       </div>
                     </td>
-                  )}
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className={`p-1 rounded hover:bg-accent/20 ${p.starred ? "text-amber-500" : "text-muted-foreground"}`}
-                        title={p.starred ? "Unstar" : "Star"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          table.options.meta?.toggleStar?.(p.id);
-                        }}
-                      >
-                        <Star
-                          className="w-4 h-4"
-                          fill={p.starred ? "currentColor" : "none"}
-                        />
-                      </button>
-                      <button
-                        className="text-foreground hover:underline"
-                        title="Open project"
-                        onClick={() => openProject(p.id)}
-                      >
-                        {p.name}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="p-4">{p.owner}</td>
-                  <td className="p-4">
-                    <Badge
-                      variant={
-                        p.status === "Active"
-                          ? "info"
-                          : p.status === "Completed"
-                            ? "success"
-                            : "warning"
-                      }
-                      pill
-                    >
-                      {p.status}
-                    </Badge>
-                  </td>
-                  <td className="p-4">{p.deadline}</td>
-                  {/* Time rollup */}
-                  <td className="p-4">
-                    {(() => {
-                      const r = getProjectTimeRollup(p.id);
-                      return (
-                        <div className="flex items-center gap-2 text-[10px]">
-                          <Badge variant="secondary" pill>
-                            Est {r.estimate}h
-                          </Badge>
-                          <Badge variant="info" pill>
-                            Log {r.logged}h
-                          </Badge>
-                          <Badge variant="warning" pill>
-                            Rem {r.remaining}h
-                          </Badge>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  {/* Progress */}
-                  <td className="p-4">
-                    {(() => {
-                      const t = getTaskCompletionForProject(p.id);
-                      const fallback =
-                        p.status === "Completed"
-                          ? 100
-                          : p.status === "Active"
-                            ? 65
-                            : p.status === "In Progress"
-                              ? 40
-                              : 20;
-                      const percent = t.total > 0 ? t.percent : fallback;
-                      return (
-                        <div className="min-w-40">
-                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span>
-                              {t.total > 0 ? `${t.done}/${t.total}` : "—"}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {percent}%
-                            </span>
-                          </div>
-                          <div className="h-2 bg-accent rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-linear-to-r from-primary to-primary/60"
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  {/* Members */}
-                  <td className="p-4">
-                    <div className="flex items-center">
-                      {(p.members || []).slice(0, 5).map((m, idx) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          key={idx}
-                          src={
-                            m.avatarUrl ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                          }
-                          alt={m.name}
-                          className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
-                        />
-                      ))}
-                      {p.members && p.members.length > 5 && (
-                        <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
-                          +{p.members.length - 5}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openProject(p.id)}
-                      >
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-destructive border-destructive/40"
-                        onClick={() =>
-                          setDeleteConfirm({ id: p.id, name: p.name })
+                    <td className="p-4">{p.owner}</td>
+                    <td className="p-4">
+                      <Badge
+                        variant={
+                          p.status === "Active"
+                            ? "info"
+                            : p.status === "Completed"
+                              ? "success"
+                              : "warning"
                         }
+                        pill
                       >
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        {p.status}
+                      </Badge>
+                    </td>
+                    <td className="p-4">{p.deadline}</td>
+                    {/* Time rollup */}
+                    <td className="p-4">
+                      {(() => {
+                        const r = getProjectTimeRollup(p.id);
+                        return (
+                          <div className="flex items-center gap-2 text-[10px]">
+                            <Badge variant="secondary" pill>
+                              Est {r.estimate}h
+                            </Badge>
+                            <Badge variant="info" pill>
+                              Log {r.logged}h
+                            </Badge>
+                            <Badge variant="warning" pill>
+                              Rem {r.remaining}h
+                            </Badge>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    {/* Progress */}
+                    <td className="p-4">
+                      {(() => {
+                        const t = getTaskCompletionForProject(p.id);
+                        const fallback =
+                          p.status === "Completed"
+                            ? 100
+                            : p.status === "Active"
+                              ? 65
+                              : p.status === "In Progress"
+                                ? 40
+                                : 20;
+                        const percent = t.total > 0 ? t.percent : fallback;
+                        return (
+                          <div className="min-w-40">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                              <span>
+                                {t.total > 0 ? `${t.done}/${t.total}` : "—"}
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {percent}%
+                              </span>
+                            </div>
+                            <div className="h-2 bg-accent rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-linear-to-r from-primary to-primary/60"
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    {/* Members */}
+                    <td className="p-4">
+                      <div className="flex items-center">
+                        {(p.members || []).slice(0, 5).map((m, idx) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={idx}
+                            src={
+                              m.avatarUrl ||
+                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
+                            }
+                            alt={m.name}
+                            className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
+                          />
+                        ))}
+                        {p.members && p.members.length > 5 && (
+                          <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
+                            +{p.members.length - 5}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openProject(p.id)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive border-destructive/40"
+                          onClick={() =>
+                            setDeleteConfirm({ id: p.id, name: p.name })
+                          }
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Pagination */}
@@ -838,6 +883,3 @@ export function ProjectTable() {
     </div>
   );
 }
-
-
-

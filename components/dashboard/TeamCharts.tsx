@@ -27,26 +27,29 @@ type TeamPoint = {
 
 export function TeamCharts() {
   const [chartType, setChartType] = useState<ChartType>("bar");
-  const [users, setUsers] = useState<User[] | null>(null);
-  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [chartData, setChartData] = useState<any>(null);
 
   useEffect(() => {
-    let mounted = true;
-    loadUsers().then((u) => mounted && setUsers(u));
-    loadTasks().then((t) => mounted && setTasks(t));
-    return () => {
-      mounted = false;
-    };
+    async function fetchChartData() {
+      try {
+        const res = await fetch("/api/analytics/charts", { cache: "no-store" });
+        const result = await res.json();
+        if (result.success) {
+          setChartData(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to load team chart data:", error);
+      }
+    }
+    fetchChartData();
   }, []);
 
   const teamMetricsData: TeamPoint[] = useMemo(() => {
-    const uCount = (users || []).length;
-    const tAll = tasks || [];
-    const completed = tAll.filter((t) =>
-      ["done", "completed", "complete"].includes((t.status || "").toLowerCase())
-    ).length;
-    const utilization =
-      tAll.length > 0 ? Math.round((completed / tAll.length) * 100) : 0;
+    const metrics = chartData?.teamMetrics || {
+      activeMembers: 0,
+      utilization: 0,
+    };
+
     // Build last 6 months labels
     const months: string[] = [];
     const now = new Date();
@@ -54,13 +57,14 @@ export function TeamCharts() {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months.push(d.toLocaleString(undefined, { month: "short" }));
     }
+
     return months.map((m) => ({
       month: m,
-      active: uCount,
+      active: metrics.activeMembers,
       inactive: 0,
-      utilization,
+      utilization: metrics.utilization,
     }));
-  }, [users, tasks]);
+  }, [chartData]);
 
   const renderChart = () => {
     switch (chartType) {

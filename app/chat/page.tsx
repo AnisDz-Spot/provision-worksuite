@@ -65,6 +65,7 @@ export default function ChatPage() {
   const actionMenuRef = useRef<HTMLDivElement>(null);
   const activeChatRef = useRef<string | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
+  const lastRequestTimeRef = useRef<number>(0);
 
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [currentUserRole] = useState<string>("admin");
@@ -104,6 +105,11 @@ export default function ChatPage() {
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  // Immediate message clearing on chat switch to prevent flashing
+  useEffect(() => {
+    setMessages([]);
+  }, [activeChat, activeConversationId]);
 
   const loadPresence = useCallback(async () => {
     if (shouldUseDatabaseData()) {
@@ -208,15 +214,28 @@ export default function ChatPage() {
 
   const loadMessages = useCallback(
     async (otherUser: string, convId?: string) => {
+      const requestId = Date.now();
+      lastRequestTimeRef.current = requestId;
+
       if (shouldUseDatabaseData()) {
         const msgs = await dbFetchThread(currentUser, otherUser, convId);
-        setMessages(msgs);
+
+        // Stale request guard: only update if this is still the latest request
+        if (requestId === lastRequestTimeRef.current) {
+          setMessages(msgs);
+        }
+
         await dbMarkRead(currentUser, otherUser, convId);
         loadConversations();
       } else {
         const { getChatMessages, markMessagesAsRead } =
           await import("@/lib/utils/team-utilities");
-        setMessages(getChatMessages(currentUser, otherUser));
+        const msgs = getChatMessages(currentUser, otherUser);
+
+        if (requestId === lastRequestTimeRef.current) {
+          setMessages(msgs);
+        }
+
         markMessagesAsRead(currentUser, otherUser);
         loadConversations();
       }

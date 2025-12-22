@@ -61,6 +61,13 @@ export async function GET() {
             milestones: true,
           },
         },
+        tasks: {
+          select: {
+            status: true,
+            estimateHours: true,
+            loggedHours: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

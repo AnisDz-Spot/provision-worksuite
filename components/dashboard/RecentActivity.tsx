@@ -19,56 +19,46 @@ export function RecentActivity() {
   useEffect(() => {
     async function loadActivities() {
       try {
-        const { loadProjects, loadTasks } = await import("@/lib/data");
-        const [projects, tasks] = await Promise.all([
-          loadProjects(),
-          loadTasks(),
-        ]);
-
-        // Generate activities from real data
-        const recentActivities: Activity[] = [];
-
-        // Recent tasks (last 5)
-        tasks.slice(0, 5).forEach((task: any, idx: number) => {
-          const project = projects.find((p: any) => p.id === task.projectId);
-          const timeAgo =
-            idx === 0
-              ? "7 min ago"
-              : idx === 1
-                ? "55 min ago"
-                : idx === 2
-                  ? "2 hrs ago"
-                  : "yesterday";
-
-          recentActivities.push({
-            id: `task_${task.id}`,
-            who: task.assignee || "Someone",
-            action:
-              task.status === "done"
-                ? `completed task ${task.title}`
-                : `created task ${task.title}`,
-            when: timeAgo,
-            link: `/tasks/${task.id}`,
-            type: "task",
-          });
+        const res = await fetch("/api/analytics/activities", {
+          cache: "no-store",
         });
+        const result = await res.json();
 
-        // Recent projects (last 2)
-        projects.slice(0, 2).forEach((project: any, idx: number) => {
-          recentActivities.push({
-            id: `project_${project.id}`,
-            who: project.owner || "Admin",
-            action: `created ${project.name}`,
-            when: idx === 0 ? "3 hrs ago" : "yesterday",
-            link: `/projects/${project.id}`,
-            type: "project",
+        if (result.success && result.data) {
+          const { tasks, projects } = result.data;
+          const recentActivities: Activity[] = [];
+
+          // Map Tasks
+          tasks.forEach((task: any, idx: number) => {
+            recentActivities.push({
+              id: `task_${task.id}`,
+              who: task.assignee?.name || "Someone",
+              action:
+                task.status === "done" || task.status === "completed"
+                  ? `completed task ${task.title}`
+                  : `updated task ${task.title}`,
+              when: idx === 0 ? "Just now" : idx === 1 ? "15m ago" : "2h ago", // Fallback for time
+              link: `/tasks/${task.id}`,
+              type: "task",
+            });
           });
-        });
 
-        setActivities(recentActivities.slice(0, 4));
+          // Map Projects
+          projects.forEach((project: any, idx: number) => {
+            recentActivities.push({
+              id: `project_${project.id}`,
+              who: project.user?.name || "Admin",
+              action: `created ${project.name}`,
+              when: idx === 0 ? "3h ago" : "Yesterday",
+              link: `/projects/${project.id}`,
+              type: "project",
+            });
+          });
+
+          setActivities(recentActivities.slice(0, 4));
+        }
       } catch (error) {
         console.error("Failed to load activities:", error);
-        // Show empty state
         setActivities([]);
       }
     }
@@ -125,6 +115,3 @@ export function RecentActivity() {
     </div>
   );
 }
-
-
-

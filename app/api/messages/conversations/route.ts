@@ -35,61 +35,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 0. Lazy Migration: consolidate orphan messages into conversations
-    const orphanMessages = await prisma.message.findMany({
-      where: {
-        conversationId: null,
-        OR: [{ fromUser: user.uid }, { toUser: user.uid }],
-      },
-    });
-
-    if (orphanMessages.length > 0) {
-      log.info(
-        { userId: user.uid, count: orphanMessages.length },
-        "Migrating orphan messages"
-      );
-
-      const pairs = new Map<string, any[]>();
-      for (const msg of orphanMessages) {
-        if (!msg.fromUser || !msg.toUser) continue;
-        const pair = [msg.fromUser, msg.toUser].sort().join(":");
-        if (!pairs.has(pair)) pairs.set(pair, []);
-        pairs.get(pair)!.push(msg);
-      }
-
-      for (const [pair, msgs] of pairs.entries()) {
-        const [u1, u2] = pair.split(":");
-        let conv = await prisma.conversation.findFirst({
-          where: {
-            type: "direct",
-            members: { some: { userId: u1 } },
-            AND: { members: { some: { userId: u2 } } },
-          },
-        });
-
-        if (!conv) {
-          conv = await prisma.conversation.create({
-            data: {
-              type: "direct",
-              members: {
-                create: [{ userId: u1 }, { userId: u2 }],
-              },
-            },
-          });
-        }
-
-        await prisma.message.updateMany({
-          where: { id: { in: msgs.map((m) => m.id) } },
-          data: { conversationId: conv.id },
-        });
-      }
-    }
-
-    // 1. Fetch all conversations the user is a member of
+    // Fetches all conversations the user is a member of with a limit for performance
     const memberships = await prisma.conversationMember.findMany({
       where: {
         userId: user.uid,
         isArchived: false,
+      },
+      take: 50, // Keep it snappy
+      orderBy: {
+        conversation: {
+          lastMessageAt: "desc",
+        },
       },
       include: {
         conversation: {

@@ -21,36 +21,14 @@ export function AnalyticsWidgets() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const { loadProjects, loadTasks, loadUsers } =
-          await import("@/lib/data");
-        const [projects, tasks, users] = await Promise.all([
-          loadProjects(),
-          loadTasks(),
-          loadUsers(),
-        ]);
+        const res = await fetch("/api/analytics/stats", { cache: "no-store" });
+        const result = await res.json();
 
-        // Calculate stats from real data
-        const completedTasks = tasks.filter(
-          (t: any) => t.status === "done" || t.status === "completed"
-        ).length;
-        const upcomingDeadlines = projects.filter((p: any) => {
-          if (!p.deadline) return false;
-          const deadline = new Date(p.deadline);
-          const now = new Date();
-          const daysUntil =
-            (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-          return daysUntil > 0 && daysUntil <= 7;
-        }).length;
-
-        setStats({
-          totalProjects: projects.length,
-          completedTasks,
-          activeUsers: users.length,
-          upcomingDeadlines,
-        });
+        if (result.success && result.data) {
+          setStats(result.data);
+        }
       } catch (error) {
         console.error("Failed to load analytics:", error);
-        // Keep default values (0)
       }
     }
     loadStats();

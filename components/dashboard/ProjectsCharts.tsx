@@ -35,38 +35,45 @@ export function ProjectsCharts() {
   const [timelineChartType, setTimelineChartType] = useState<ChartType>("line");
   const [statusChartType, setStatusChartType] = useState<ChartType>("pie");
   const [healthChartType, setHealthChartType] = useState<ChartType>("bar");
-  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [chartData, setChartData] = useState<any>(null);
 
   useEffect(() => {
-    let mounted = true;
-    loadProjects().then((p) => {
-      if (mounted) setProjects(p);
-    });
-    return () => {
-      mounted = false;
-    };
+    async function fetchChartData() {
+      try {
+        const res = await fetch("/api/analytics/charts", { cache: "no-store" });
+        const result = await res.json();
+        if (result.success) {
+          setChartData(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to load chart data:", error);
+      }
+    }
+    fetchChartData();
   }, []);
 
   const projectStatusData: StatusPoint[] = useMemo(() => {
-    const p = projects || [];
+    if (!chartData?.projectStatus) return [];
+
     const counts: Record<string, number> = {
       Active: 0,
       Completed: 0,
       Paused: 0,
       "In Progress": 0,
     };
-    for (const pr of p) {
-      const s = pr.status as string;
-      if (s in counts) counts[s] += 1;
-      else counts["In Progress"] += 1;
-    }
+
+    chartData.projectStatus.forEach((s: any) => {
+      if (s.status in counts) counts[s.status] = s._count;
+      else counts["In Progress"] += s._count;
+    });
+
     return [
       { name: "Active", value: counts["Active"], color: "#3b82f6" },
       { name: "Completed", value: counts["Completed"], color: "#10b981" },
       { name: "Paused", value: counts["Paused"], color: "#f59e0b" },
       { name: "In Progress", value: counts["In Progress"], color: "#8b5cf6" },
     ];
-  }, [projects]);
+  }, [chartData]);
 
   const projectsTimelineData: TimelinePoint[] = useMemo(() => {
     // Build last 6 weeks labels
@@ -78,7 +85,7 @@ export function ProjectsCharts() {
       const week = `${d.getMonth() + 1}/${d.getDate()}`;
       labels.push(week);
     }
-    // Simple approach: reflect overall status counts across weeks (flat trend but DB-driven)
+
     const base = projectStatusData.reduce(
       (acc, cur) => {
         if (cur.name === "Active") acc.active = cur.value;
@@ -92,22 +99,8 @@ export function ProjectsCharts() {
   }, [projectStatusData]);
 
   const projectHealthData: HealthPoint[] = useMemo(() => {
-    const p = projects || [];
-    // Map each project to a health/progress tuple
-    return p.slice(0, 12).map((pr) => {
-      const progress =
-        typeof pr.progress === "number"
-          ? Math.max(0, Math.min(100, pr.progress))
-          : 0;
-      // Basic health heuristic: progress with slight deadline pressure penalty if overdue
-      let health = progress;
-      const deadline = pr.deadline ? new Date(pr.deadline) : null;
-      if (deadline && deadline.getTime() < Date.now() && progress < 100) {
-        health = Math.max(0, progress - 20);
-      }
-      return { name: pr.name, health, progress };
-    });
-  }, [projects]);
+    return chartData?.projectHealth || [];
+  }, [chartData]);
 
   const renderTimelineChart = () => {
     const commonProps = {

@@ -548,6 +548,7 @@ model Message {
   @@index([toUser])
   @@index([createdAt])
   @@index([conversationId])
+  @@index([isRead])
   @@map("messages")
 }
 
@@ -596,6 +597,9 @@ model ChatGroup {
   conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
+  @@index([createdBy])
+  @@index([isArchived])
+  @@index([conversationId])
   @@map("chat_groups")
 }
 
@@ -605,6 +609,7 @@ model Presence {
   lastSeen DateTime @default(now()) @map("last_seen")
 
   @@index([status])
+  @@index([lastSeen])
   @@map("presence")
 }
 
