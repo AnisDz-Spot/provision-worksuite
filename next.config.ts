@@ -57,17 +57,18 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=*, microphone=*, geolocation=()",
           },
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.jit.si https://meet.jit.si",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com",
+              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.jit.si wss://*.jit.si",
+              "frame-src 'self' https://*.jit.si https://meet.jit.si",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
