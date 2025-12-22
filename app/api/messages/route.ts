@@ -300,7 +300,12 @@ export async function DELETE(request: NextRequest) {
     const isMasterAdmin =
       user.role === "Administrator" || user.role === "Master Admin";
 
+    // Permission check: Must be a participant OR Master Admin
     if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
+      log.warn(
+        { userId: user.uid, u1, u2 },
+        "Forbidden message delete attempt"
+      );
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 }
@@ -315,16 +320,32 @@ export async function DELETE(request: NextRequest) {
             userId: { in: [u1, u2] },
           },
         },
+        // Ensure it only has exactly these two members
         AND: [
-          { members: { some: { userId: u1 } } },
-          { members: { some: { userId: u2 } } },
+          { members: { some: { userId: u1 || "" } } },
+          { members: { some: { userId: u2 || "" } } },
         ],
       },
     });
     conversationId = existing?.id || null;
+
+    if (!conversationId) {
+      log.info(
+        { u1, u2 },
+        "DELETE request: No conversation found to delete, returning success"
+      );
+      return NextResponse.json({
+        success: true,
+        message: "No conversation found",
+      });
+    }
   }
 
   if (!conversationId) {
+    log.warn(
+      { u1, u2, conversationId },
+      "DELETE request: Missing conversationId after fallback"
+    );
     return NextResponse.json(
       { success: false, error: "Missing conversationId" },
       { status: 400 }
