@@ -293,7 +293,7 @@ export function ChatModals({
       )}
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <Card className="w-full max-w-md p-6 bg-card border-border shadow-2xl scale-in-center overflow-hidden">
             <div className="flex items-center gap-3 text-destructive mb-4">
               <div className="p-2 bg-destructive/10 rounded-full">

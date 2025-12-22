@@ -405,7 +405,9 @@ export default function ChatPage() {
   };
 
   const handleClearChat = async () => {
-    if (viewMode === "archived" && isMasterAdmin && activeChat) {
+    if (!activeChat) return;
+
+    if (viewMode === "archived" && isMasterAdmin) {
       if (shouldUseDatabaseData()) {
         if (await dbDeleteThread(currentUser, "", activeChat)) {
           setMessages([]);
@@ -424,13 +426,15 @@ export default function ChatPage() {
     const partner = teamMembers.find(
       (m) => m.uid === activeChat || m.name === activeChat
     );
-    if (!activeChat || !partner) return;
+    const isGroup = chatGroups.some((g) => g.id === activeChat);
+
+    if (!partner && !isGroup && !activeConversationId) return;
 
     if (shouldUseDatabaseData()) {
       if (
         await dbDeleteThread(
           currentUser,
-          partner.uid || activeChat,
+          partner?.uid || activeChat,
           activeConversationId || undefined
         )
       ) {
@@ -442,9 +446,11 @@ export default function ChatPage() {
         loadConversations();
       }
     } else {
-      localStorage.removeItem(
-        `pv:chat:${[currentUser, activeChat].sort().join(":")}`
-      );
+      const storageKey = partner
+        ? `pv:chat:${[currentUser, partner.uid || activeChat].sort().join(":")}`
+        : `pv:chat:group:${activeChat}`;
+
+      localStorage.removeItem(storageKey);
       setMessages([]);
       setActiveChat(null);
       loadConversations();
