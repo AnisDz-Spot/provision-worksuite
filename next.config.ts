@@ -57,8 +57,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value:
-              'camera=(self "https://*.jit.si" "https://meet.jit.si"), microphone=(self "https://*.jit.si" "https://meet.jit.si"), speaker-selection=(self "https://*.jit.si" "https://meet.jit.si"), display-capture=(self "https://*.jit.si" "https://meet.jit.si"), geolocation=()',
+            value: "camera=*, microphone=*, display-capture=*, geolocation=()",
           },
           {
             key: "Content-Security-Policy",

@@ -41,6 +41,7 @@ export interface JitsiConfig {
   };
   userInfo: {
     displayName: string;
+    email?: string;
   };
 }
 
@@ -52,7 +53,8 @@ export interface JitsiConfig {
  */
 export function getJitsiConfig(
   roomName: string,
-  userDisplayName: string
+  userDisplayName: string,
+  userEmail?: string
 ): JitsiConfig {
   return {
     roomName,
@@ -107,6 +109,7 @@ export function getJitsiConfig(
     },
     userInfo: {
       displayName: userDisplayName,
+      email: userEmail,
     },
   };
 }

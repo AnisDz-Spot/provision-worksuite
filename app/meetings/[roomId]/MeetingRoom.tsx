@@ -26,12 +26,14 @@ const JitsiMeeting = dynamic(
 interface MeetingRoomProps {
   roomId: string;
   userDisplayName: string;
+  userEmail?: string;
   meetingTitle: string;
 }
 
 export function MeetingRoom({
   roomId,
   userDisplayName,
+  userEmail,
   meetingTitle,
 }: MeetingRoomProps) {
   const router = useRouter();
@@ -71,6 +73,7 @@ export function MeetingRoom({
         <JitsiMeeting
           roomId={roomId}
           userDisplayName={userDisplayName}
+          userEmail={userEmail}
           onMeetingEnd={handleMeetingEnd}
         />
       </div>

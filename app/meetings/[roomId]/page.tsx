@@ -48,6 +48,7 @@ export default async function MeetingPage({
     <MeetingRoom
       roomId={roomId}
       userDisplayName={user.name || user.email || "User"}
+      userEmail={user.email}
       meetingTitle={meeting.title}
     />
   );

@@ -7,6 +7,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 interface JitsiMeetingProps {
   roomId: string;
   userDisplayName: string;
+  userEmail?: string;
   onMeetingEnd?: () => void;
 }
 
@@ -28,6 +29,7 @@ declare global {
 export function JitsiMeeting({
   roomId,
   userDisplayName,
+  userEmail,
   onMeetingEnd,
 }: JitsiMeetingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,7 +86,7 @@ export function JitsiMeeting({
       }
 
       try {
-        const config = getJitsiConfig(roomId, userDisplayName);
+        const config = getJitsiConfig(roomId, userDisplayName, userEmail);
         config.parentNode = containerRef.current;
 
         const api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, config);
@@ -96,10 +98,24 @@ export function JitsiMeeting({
           initializingRef.current = false;
         });
 
+        api.addEventListener("videoConferenceFailed", (details: any) => {
+          console.error("Meeting failure:", details);
+          setIsLoading(false);
+          if (details.error === "conference.connectionError.membersOnly") {
+            setError(
+              "Access Denied: This room is restricted to members only or requires a moderator to start."
+            );
+          } else {
+            setError(`Meeting failed: ${details.error || "Unknown error"}`);
+          }
+        });
+
         // FALLBACK: Hide loader after 5 seconds regardless of join event
         // This ensures the custom loader doesn't block Jitsi's own UI if events are delayed
         setTimeout(() => {
-          setIsLoading(false);
+          if (initializingRef.current) {
+            setIsLoading(false);
+          }
         }, 5000);
 
         api.addEventListener("readyToClose", () => {
