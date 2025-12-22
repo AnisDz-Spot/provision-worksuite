@@ -601,14 +601,30 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
 
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
       if (shouldUseDatabaseData()) {
-        await fetchWithCsrf(`/api/users/${memberId}`, {
+        const response = await fetchWithCsrf(`/api/users/${memberId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ statusEmoji: emoji, statusMessage: message }),
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Failed to save status:", errorData);
+          throw new Error(errorData.error || "Failed to save status");
+        }
+
+        console.log("Status saved successfully for user:", memberId);
       }
     } catch (error) {
       console.error("Failed to update status:", error);
+      // Revert optimistic update on error
+      setMembersData((prev) =>
+        prev.map((m) =>
+          m.id === memberId
+            ? { ...m, statusEmoji: undefined, statusMessage: undefined }
+            : m
+        )
+      );
     }
   };
 
@@ -625,14 +641,22 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
 
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
       if (shouldUseDatabaseData()) {
-        await fetchWithCsrf(`/api/users/${memberId}`, {
+        const response = await fetchWithCsrf(`/api/users/${memberId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ statusEmoji: "", statusMessage: "" }),
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Failed to clear status:", errorData);
+          throw new Error(errorData.error || "Failed to clear status");
+        }
+
+        console.log("Status cleared successfully for user:", memberId);
       }
     } catch (error) {
-      console.error("Failed to clear status:", error);
+      console.error("Failed to update status:", error);
     }
   };
 

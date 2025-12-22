@@ -672,6 +672,9 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   Role
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
+                  Status
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
                   Contact
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-foreground">
@@ -754,6 +757,22 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                       >
                         {m.role}
                       </span>
+                    )}
+                  </td>
+
+                  {/* Status Column */}
+                  <td className="px-4 py-3">
+                    {(m as any).statusMessage ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-sm">
+                          {(m as any).statusEmoji || "💬"}
+                        </span>
+                        <span className="text-muted-foreground truncate max-w-[150px]">
+                          {(m as any).statusMessage}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </td>
 
