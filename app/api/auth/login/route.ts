@@ -230,30 +230,55 @@ export async function POST(request: NextRequest) {
       }
 
       if (!isVerified) {
-        log.warn({ email }, "Invalid 2FA code provided");
         return NextResponse.json(
           {
             success: false,
             error: "Invalid authentication code",
-            requires2FA: true, // Keep them on 2FA screen
+            requires2FA: true,
           },
           { status: 401 }
         );
       }
     }
 
-    // 6. Generate JWT token
+    // 6. Identify Master Admin (first user) and Sync role if needed
+    let isMasterAdmin = false;
+    if (user.uid !== "global-admin") {
+      const firstUser = await prisma.user.findFirst({
+        orderBy: { id: "asc" },
+        select: { id: true, role: true },
+      });
+      isMasterAdmin = firstUser?.id === user.id;
+
+      // 🔑 CRITICAL: Sync "Master Admin" role in database if detected
+      // This ensures that subsequent DB-based role checks (like in audit routes) pass.
+      if (isMasterAdmin && firstUser?.role !== "Master Admin") {
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { role: "Master Admin" },
+          });
+          log.info(
+            { userId: user.id },
+            "Synchronized Master Admin role in database"
+          );
+          // Update local user object so the JWT contains the correct role
+          user.role = "Master Admin";
+        } catch (e) {
+          log.error({ err: e }, "Failed to sync Master Admin role");
+        }
+      }
+    }
+
+    // 6.b Generate JWT token
     const token = await signToken({
       uid: user.uid,
       email: user.email,
-      role: user.role,
+      role: isMasterAdmin ? "Master Admin" : user.role,
     });
 
-    // 6.b Create Session in DB
-    // We attempt to create a session, but if it fails (e.g. for global admin with no DB), we continue
-    // to ensuring the cookie is set so requests pass.
+    // 6.c Create Session in DB
     try {
-      // Always attempt to create a session record if we have a user.id
       if (user.id !== undefined) {
         await createSession(user.id, token);
       }
@@ -262,16 +287,6 @@ export async function POST(request: NextRequest) {
         "[Login] Failed to create session record, but proceeding with token",
         e
       );
-    }
-
-    // 6.c Identify Master Admin (first user)
-    let isMasterAdmin = false;
-    if (user.uid !== "global-admin") {
-      const firstUser = await prisma.user.findFirst({
-        orderBy: { id: "asc" },
-        select: { id: true },
-      });
-      isMasterAdmin = firstUser?.id === user.id;
     }
 
     // 7. Create response with user data

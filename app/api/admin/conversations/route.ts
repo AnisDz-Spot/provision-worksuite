@@ -22,9 +22,30 @@ export async function GET(request: Request) {
     select: { role: true },
   });
 
-  if (dbUser?.role !== "master_admin" && dbUser?.role !== "Master Admin") {
+  if (!dbUser) {
+    console.log(`[Admin API] User ${user.uid} not found in database`);
     return NextResponse.json(
-      { success: false, error: "Forbidden: Master Admin only" },
+      { success: false, error: "User not found" },
+      { status: 404 }
+    );
+  }
+
+  const isAuthorized =
+    dbUser.role === "master_admin" ||
+    dbUser.role === "Master Admin" ||
+    dbUser.role === "Administrator" ||
+    dbUser.role === "admin";
+
+  console.log(
+    `[Admin API] User: ${user.email}, DB Role: ${dbUser.role}, Authorized: ${isAuthorized}`
+  );
+
+  if (!isAuthorized) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Forbidden: ${dbUser.role} role does not have admin access`,
+      },
       { status: 403 }
     );
   }

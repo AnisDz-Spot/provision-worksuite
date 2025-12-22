@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     }
 
     const user = await getAuthenticatedUser();
+
+    // DEBUG: Identify authorization failures on Vercel
+    console.log(
+      `[Groups API] GET request. User: ${user?.email || "none"}, Role: ${user?.role || "none"}, Live: ${shouldUseDatabaseData()}`
+    );
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
