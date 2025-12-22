@@ -444,13 +444,25 @@ export default function ChatPage() {
           activeConversationId || undefined
         )
       ) {
+        // Optimistic State Update: Remove from local state immediately
+        setConversations((prev) =>
+          prev.filter((c) => c.id !== activeConversationId)
+        );
+        setChatGroups((prev) => prev.filter((g) => g.id !== activeChat));
+        setAdminConversations((prev) =>
+          prev.filter((c) => c.id !== activeConversationId)
+        );
+
         setMessages([]);
         setActiveChat(null);
         setActiveConversationId(null);
         localStorage.removeItem("pv:activeChatUser");
         localStorage.removeItem("pv:activeConversationId");
+
+        // Background reload just to stay in sync
         loadConversations();
         loadChatGroups();
+        if (isMasterAdmin) loadAdminConversations();
       }
     } else {
       const storageKey = partner
@@ -544,13 +556,7 @@ export default function ChatPage() {
 
   const filteredMembers = teamMembers.filter((m) => {
     if (m.name === currentUser || m.uid === currentUser) return false;
-    const matchesSearch = m.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    if (searchQuery.trim()) return matchesSearch;
-    return conversations.some(
-      (c) => c.withUser === m.uid || c.withUser === m.name
-    );
+    return true;
   });
 
   const formatFileSize = (bytes: number) => {
