@@ -444,6 +444,7 @@ export default function ChatPage() {
         localStorage.removeItem("pv:activeChatUser");
         localStorage.removeItem("pv:activeConversationId");
         loadConversations();
+        loadChatGroups();
       }
     } else {
       const storageKey = partner
@@ -451,9 +452,22 @@ export default function ChatPage() {
         : `pv:chat:group:${activeChat}`;
 
       localStorage.removeItem(storageKey);
+
+      // Also remove from the groups list in local storage if it's a group
+      if (!partner) {
+        const storedGroups = JSON.parse(
+          localStorage.getItem("pv:chatGroups") || "[]"
+        );
+        const filteredGroups = storedGroups.filter(
+          (g: any) => g.id !== activeChat
+        );
+        localStorage.setItem("pv:chatGroups", JSON.stringify(filteredGroups));
+      }
+
       setMessages([]);
       setActiveChat(null);
       loadConversations();
+      loadChatGroups();
     }
     setShowActionMenu(false);
     setShowDeleteConfirm(false);

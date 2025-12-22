@@ -292,12 +292,17 @@ export async function DELETE(request: Request) {
 
     // Hard Delete for Master Admin
     if (isMasterAdmin) {
+      // First delete associated ChatGroup records if they exist
+      await prisma.chatGroup.deleteMany({
+        where: { conversationId: conversationId },
+      });
+
       await prisma.conversation.delete({
         where: { id: conversationId },
       });
       log.info(
         { conversationId, deletedBy: user.uid },
-        "Hard-deleted conversation thread"
+        "Hard-deleted conversation thread and associated chat group"
       );
       return NextResponse.json({ success: true });
     }
