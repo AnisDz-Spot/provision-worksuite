@@ -687,7 +687,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
               {filtered.map((m) => (
                 <tr
                   key={m.id}
-                  className="hover:bg-secondary/30 transition-colors group"
+                  className="hover:bg-secondary/30 transition-colors group cursor-pointer"
+                  onClick={() =>
+                    onChatClick && currentUser?.id !== m.id && onChatClick(m.id)
+                  }
                 >
                   {/* Member Column */}
                   <td className="px-4 py-3">
@@ -728,6 +731,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     {isAdmin ? (
                       <select
                         value={m.role}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleRoleChange(m.id, e.target.value)}
                         disabled={m.isMasterAdmin}
                         className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer disabled:cursor-not-allowed ${roleColors[m.role] || "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20"}`}
@@ -759,6 +763,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                         <a
                           href={`mailto:${m.email}`}
                           className="hover:text-primary transition-colors"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {m.email}
                         </a>
@@ -791,6 +796,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://linkedin.com/in/${m.socials.linkedin}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
                             title="LinkedIn"
                           >
@@ -802,6 +808,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://facebook.com/${m.socials.facebook}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-500 transition-colors cursor-pointer"
                             title="Facebook"
                           >
@@ -813,6 +820,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://instagram.com/${m.socials.instagram}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
                             title="Instagram"
                           >
@@ -824,6 +832,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://tiktok.com/@${m.socials.tiktok}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-slate-900/10 hover:bg-slate-900/20 text-slate-900 dark:text-slate-100 transition-colors cursor-pointer"
                             title="TikTok"
                           >
@@ -835,6 +844,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://github.com/${m.socials.github}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
                             title="GitHub"
                           >
@@ -846,6 +856,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                             href={`https://twitter.com/${m.socials.twitter}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="p-1.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
                             title="Twitter"
                           >
@@ -863,7 +874,10 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                     <div className="flex items-center justify-end gap-2 relative">
                       {onChatClick && currentUser?.id !== m.id && (
                         <button
-                          onClick={() => onChatClick(m.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onChatClick(m.id);
+                          }}
                           className={`p-2 rounded-lg transition-colors cursor-pointer ${
                             memberActivities.get(m.id)?.currentStatus ===
                             "online"

@@ -35,6 +35,7 @@ import {
   dbDeleteMessage,
   dbDeleteThread,
   dbFetchConversations,
+  getInitials,
 } from "@/lib/utils";
 
 type ChatWindowProps = {
@@ -65,7 +66,7 @@ function ChatWindow({
     );
     // If not found in convs, we can't do much yet but wait for the fetch
     // However, if targetUser doesn't look like a UUID, use it as is
-    return conv?.withUserName || (targetUser.length > 30 ? "User" : targetUser);
+    return conv?.withUserName || (targetUser.length > 30 ? "Chat" : targetUser);
   });
   const [targetAvatar, setTargetAvatar] = useState(() => {
     const conv = conversations.find(
@@ -142,6 +143,15 @@ function ChatWindow({
         });
     }
   }, [targetUser]);
+
+  // Also sync with the conversations list we have in parent
+  useEffect(() => {
+    const conv = conversations.find((c) => c.withUser === targetUser);
+    if (conv) {
+      if (conv.withUserName) setTargetName(conv.withUserName);
+      if (conv.withUserAvatar) setTargetAvatar(conv.withUserAvatar);
+    }
+  }, [conversations, targetUser]);
 
   useEffect(() => {
     loadMessages();
@@ -290,8 +300,8 @@ function ChatWindow({
                 className="w-8 h-8 rounded-full object-cover bg-primary-foreground/20"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-sm font-semibold">
-                {targetName.charAt(0).toUpperCase()}
+              <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs font-semibold">
+                {getInitials(targetName)}
               </div>
             )}
             <Circle
@@ -424,10 +434,10 @@ function ChatWindow({
                           />
                         ) : (
                           <div
-                            className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
+                            className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm font-bold"
                             title={`Seen by ${targetName}`}
                           >
-                            {targetName.charAt(0).toUpperCase()}
+                            {getInitials(targetName)}
                           </div>
                         )}
                       </div>
@@ -675,10 +685,8 @@ export function TeamChat({ currentUser }: TeamChatProps) {
                             className="w-10 h-10 rounded-full object-cover shadow-sm bg-accent"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-semibold">
-                            {(conv.withUserName || conv.withUser)
-                              .charAt(0)
-                              .toUpperCase()}
+                          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-sm">
+                            {getInitials(conv.withUserName || conv.withUser)}
                           </div>
                         )}
                         <Circle

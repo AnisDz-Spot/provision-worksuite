@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ChatInput } from "./ChatInput";
+import { getInitials } from "@/lib/utils";
 
 interface ChatWindowProps {
   activeChat: string | null;
@@ -441,7 +442,7 @@ export function ChatWindow({
                             className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
                             title={`Seen by ${chatPartner?.name || "User"}`}
                           >
-                            {(chatPartner?.name || "?").charAt(0).toUpperCase()}
+                            {getInitials(chatPartner?.name || "?")}
                           </div>
                         )}
                       </div>

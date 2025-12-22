@@ -6,6 +6,19 @@ import { type ChatConversation, type ChatMessage } from "./team-utilities";
  * These functions interact with the /api/messages related endpoints.
  */
 
+export function getInitials(name: string) {
+  if (!name || name === "User" || name.length > 30) return "?";
+  const initials = name
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
+  return initials.length > 0
+    ? initials.slice(0, 2)
+    : name.charAt(0).toUpperCase();
+}
+
 export async function dbFetchThread(
   user1: string,
   user2: string,

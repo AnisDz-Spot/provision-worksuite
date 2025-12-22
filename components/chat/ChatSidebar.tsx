@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Search, Users, MessageCircle, Circle } from "lucide-react";
 import { Input } from "@/components/ui/Input";
-import { type ChatConversation } from "@/lib/utils";
+import { type ChatConversation, getInitials } from "@/lib/utils";
 
 // ... (props omitted for brevity in instruction, will be included in ReplacementContent)
 
@@ -165,8 +165,8 @@ export function ChatSidebar({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                    {getInitials(group.name)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">

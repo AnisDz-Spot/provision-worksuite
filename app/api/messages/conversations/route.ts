@@ -107,8 +107,10 @@ export async function GET(request: Request) {
 
         return {
           id: conv.id,
-          withUser: isDirect ? otherUid : "",
-          withUserName: isDirect ? otherUserInfo?.name || otherUid : "",
+          withUser: isDirect ? otherUid : conv.id,
+          withUserName: isDirect
+            ? otherUserInfo?.name || otherUid
+            : conv.name || "Group",
           withUserAvatar: isDirect ? otherUserInfo?.avatarUrl || "" : "",
           unreadCount,
           lastMessage: lastMsg?.message || "",

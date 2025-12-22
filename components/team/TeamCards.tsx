@@ -624,7 +624,12 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             {filtered.map((m) => (
               <Card
                 key={m.id}
-                className="p-5 hover:shadow-lg transition-all duration-300 group border hover:border-primary/50 relative overflow-hidden"
+                className="p-5 hover:shadow-lg transition-all duration-300 group border hover:border-primary/50 relative overflow-hidden cursor-pointer"
+                onClick={() => {
+                  if (onChatClick && m.id !== currentUser?.id) {
+                    onChatClick(m.id);
+                  }
+                }}
               >
                 {/* Status indicator */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -747,6 +752,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                   {isMasterAdmin && m.role !== "Master Admin" ? (
                     <select
                       value={m.role}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleRoleChange(m.id, e.target.value)}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${
                         roleColors[m.role] ||
@@ -799,6 +805,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     <Mail className="w-3.5 h-3.5 shrink-0" />
                     <a
                       href={`mailto:${m.email}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="hover:text-primary transition-colors truncate"
                     >
                       {m.email}
@@ -808,6 +815,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                     <Phone className="w-3.5 h-3.5 shrink-0" />
                     <a
                       href={`tel:${m.phone}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="hover:text-primary transition-colors truncate"
                     >
                       {m.phone}
@@ -832,6 +840,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://linkedin.com/in/${m.socials.linkedin}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
                         title="LinkedIn"
                       >
@@ -843,6 +852,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://facebook.com/${m.socials.facebook}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 transition-colors cursor-pointer"
                         title="Facebook"
                       >
@@ -854,6 +864,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://instagram.com/${m.socials.instagram}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 transition-colors cursor-pointer"
                         title="Instagram"
                       >
@@ -865,6 +876,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://tiktok.com/@${m.socials.tiktok}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-slate-500/10 hover:bg-slate-500/20 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                         title="TikTok"
                       >
@@ -876,6 +888,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://github.com/${m.socials.github}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer"
                         title="GitHub"
                       >
@@ -887,6 +900,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         href={`https://twitter.com/${m.socials.twitter}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 transition-colors cursor-pointer"
                         title="Twitter/X"
                       >
