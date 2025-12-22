@@ -161,14 +161,41 @@ export function JitsiMeeting({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-destructive/10 p-8 rounded-lg">
-        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
-        <h3 className="text-lg font-semibold text-destructive mb-2">
-          Meeting Error
-        </h3>
-        <p className="text-sm text-muted-foreground text-center max-w-md">
-          {error}
-        </p>
+      <div className="flex flex-col items-center justify-center h-full bg-background p-8 rounded-lg overflow-hidden">
+        <div className="max-w-md w-full p-8 border-2 border-destructive/20 rounded-2xl bg-destructive/5 text-center shadow-lg">
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-destructive mb-3">
+            Connection Failed
+          </h3>
+          <p className="text-sm text-balance text-muted-foreground mb-8 leading-relaxed">
+            {error}
+          </p>
+          <div className="space-y-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 px-6 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 transition-all shadow-md active:scale-95"
+            >
+              Retry Connection
+            </button>
+            <div className="p-4 bg-muted/50 rounded-xl text-left border border-muted">
+              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-2">
+                Technical Guide
+              </p>
+              <p className="text-xs text-muted-foreground">
+                If <code className="bg-muted px-1 rounded">meet.jit.si</code>{" "}
+                remains restricted, try setting a community instance like
+                <code className="bg-muted px-1 rounded ml-1">
+                  meet.ffmuc.net
+                </code>{" "}
+                in your
+                <code className="bg-muted px-1 rounded ml-1">.env</code> as
+                <code className="bg-muted px-1 rounded ml-1 line-clamp-1 mt-1 block">
+                  NEXT_PUBLIC_JITSI_DOMAIN=meet.ffmuc.net
+                </code>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
