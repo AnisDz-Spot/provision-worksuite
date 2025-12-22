@@ -89,9 +89,10 @@ export async function dbDeleteThread(
   conversationId?: string
 ) {
   try {
-    const url = conversationId
-      ? `/api/messages?conversationId=${encodeURIComponent(conversationId)}`
-      : `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
+    let url = `/api/messages?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`;
+    if (conversationId) {
+      url += `&conversationId=${encodeURIComponent(conversationId)}`;
+    }
 
     const res = await fetchWithCsrf(url, { method: "DELETE" });
     return res.ok;

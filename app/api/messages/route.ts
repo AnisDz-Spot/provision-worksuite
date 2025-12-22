@@ -297,10 +297,11 @@ export async function DELETE(request: NextRequest) {
 
   // Fallback: Find conversation by participants if ID not provided
   if (!conversationId && u1 && u2) {
-    const isMasterAdmin = user.role === "Master Admin";
+    const isMasterAdminFallback =
+      user.role === "Master Admin" || user.role === "master_admin";
 
     // Permission check: Must be a participant OR Master Admin
-    if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
+    if (!isMasterAdminFallback && user.uid !== u1 && user.uid !== u2) {
       log.warn(
         { userId: user.uid, u1, u2 },
         "Forbidden message delete attempt"
@@ -385,10 +386,21 @@ export async function DELETE(request: NextRequest) {
       user.role === "Project Manager" ||
       user.role === "project_manager";
 
-    // 1. Check if it's a ChatGroup
-    const linkedGroup = await prisma.chatGroup.findFirst({
+    // 1. Identify which ChatGroup is being targeted
+    // Check by conversationId OR by u2 (which might be the groupId)
+    let linkedGroup = await prisma.chatGroup.findFirst({
       where: { conversationId: conversationId },
     });
+
+    if (!linkedGroup && u2) {
+      // Fallback: Check if u2 is actually the Group ID
+      const groupById = await prisma.chatGroup.findUnique({
+        where: { id: u2 },
+      });
+      if (groupById) {
+        linkedGroup = groupById;
+      }
+    }
 
     // Case 1: Master Admin - Hard Delete
     if (isMasterAdmin) {
@@ -396,6 +408,7 @@ export async function DELETE(request: NextRequest) {
         await prisma.chatGroup.delete({
           where: { id: linkedGroup.id },
         });
+        log.info({ groupId: linkedGroup.id }, "Deleted ChatGroup record");
       }
 
       await prisma.conversation.delete({
