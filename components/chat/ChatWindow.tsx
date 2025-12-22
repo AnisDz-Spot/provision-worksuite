@@ -13,6 +13,9 @@ import {
   MessageCircle,
   File,
   Eye,
+  Loader2,
+  AlertCircle,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ChatInput } from "./ChatInput";
@@ -47,6 +50,7 @@ interface ChatWindowProps {
   showEmojiPicker: boolean;
   setShowEmojiPicker: (val: boolean) => void;
   handleEmojiSelect: (emoji: string) => void;
+  handleRetryMessage: (msg: any) => void;
   formatFileSize: (bytes: number) => string;
   onBack: () => void;
 }
@@ -81,6 +85,7 @@ export function ChatWindow({
   showEmojiPicker,
   setShowEmojiPicker,
   handleEmojiSelect,
+  handleRetryMessage,
   formatFileSize,
   onBack,
 }: ChatWindowProps) {
@@ -338,19 +343,45 @@ export function ChatWindow({
               (m: any) =>
                 m.uid === activeChat || (activeChat && m.name === activeChat)
             );
+            const sender = teamMembers.find((m: any) => m.uid === msg.fromUser);
+            const isGroup = chatGroups.some((g: any) => g.id === activeChat);
+            const isArchived = viewMode === "archived";
 
             return (
               <div
                 key={msg.id}
-                className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
+                className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}
               >
+                {!isCurrentUser && (isGroup || isArchived) && (
+                  <span className="text-[10px] font-medium text-muted-foreground mb-1 ml-2">
+                    {sender?.name || msg.fromUser}
+                  </span>
+                )}
                 <div
                   className={`relative max-w-[70%] rounded-2xl px-4 py-2 ${
                     isCurrentUser
                       ? "bg-primary text-primary-foreground"
                       : "bg-card border border-border"
+                  } ${msg.status === "sending" ? "opacity-70" : ""} ${
+                    msg.status === "error"
+                      ? "border-destructive ring-1 ring-destructive/20"
+                      : ""
                   }`}
                 >
+                  {/* Error indicator for current user messages */}
+                  {isCurrentUser && msg.status === "error" && (
+                    <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button
+                        onClick={() => handleRetryMessage(msg)}
+                        className="p-1.5 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                        title="Retry sending"
+                      >
+                        <RefreshCcw className="w-4 h-4" />
+                      </button>
+                      <AlertCircle className="w-4 h-4 text-destructive" />
+                    </div>
+                  )}
+
                   {isFileMessage ? (
                     <div className="flex items-center gap-2 min-w-0">
                       <File className="w-4 h-4 shrink-0" />
@@ -379,35 +410,42 @@ export function ChatWindow({
                       {msg.message}
                     </p>
                   )}
-                  <p
-                    className={`text-xs mt-1 ${isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                  >
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  {isCurrentUser && msg.id === lastReadMessageId && (
-                    <div className="absolute -bottom-2 -right-2">
-                      {chatPartner?.avatar ? (
-                        <Image
-                          src={chatPartner.avatar}
-                          alt="Seen"
-                          width={16}
-                          height={16}
-                          className="w-4 h-4 rounded-full border border-background shadow-sm"
-                          title={`Seen by ${chatPartner.name}`}
-                        />
-                      ) : (
-                        <div
-                          className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
-                          title={`Seen by ${chatPartner?.name || "User"}`}
-                        >
-                          {(chatPartner?.name || "?").charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <p
+                      className={`text-xs ${isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                    >
+                      {new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    {isCurrentUser && msg.status === "sending" && (
+                      <Loader2 className="w-3 h-3 animate-spin opacity-50" />
+                    )}
+                  </div>
+                  {isCurrentUser &&
+                    msg.id === lastReadMessageId &&
+                    msg.status !== "error" && (
+                      <div className="absolute -bottom-2 -right-2">
+                        {chatPartner?.avatar ? (
+                          <Image
+                            src={chatPartner.avatar}
+                            alt="Seen"
+                            width={16}
+                            height={16}
+                            className="w-4 h-4 rounded-full border border-background shadow-sm"
+                            title={`Seen by ${chatPartner.name}`}
+                          />
+                        ) : (
+                          <div
+                            className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] border border-background shadow-sm"
+                            title={`Seen by ${chatPartner?.name || "User"}`}
+                          >
+                            {(chatPartner?.name || "?").charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               </div>
             );

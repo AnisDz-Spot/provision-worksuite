@@ -390,6 +390,7 @@ export type ChatMessage = {
     url: string; // Data URL for persistence
     size: number;
   };
+  status?: "sending" | "sent" | "error";
 };
 
 export type ChatConversation = {

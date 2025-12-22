@@ -367,26 +367,81 @@ export default function ChatPage() {
     if (!inputMessage.trim() && attachments.length === 0) return;
     if (!activeChat) return;
 
+    const storedInput = inputMessage.trim();
+    const storedAttachments = [...attachments];
+    const tempId = `temp_${Date.now()}`;
+
+    // 1. Optimistic Update
+    if (storedInput) {
+      const optimisticMsg: ChatMessage = {
+        id: tempId,
+        fromUser: currentUser,
+        toUser: activeChat,
+        message: storedInput,
+        timestamp: Date.now(),
+        read: false,
+        conversationId: activeConversationId || undefined,
+        status: "sending",
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+    }
+
+    // Clear input immediately for responsiveness
+    setInputMessage("");
+    setAttachments([]);
+
     if (shouldUseDatabaseData()) {
-      if (inputMessage.trim()) {
-        const res = await dbSendMessage(
-          currentUser,
-          activeChat,
-          inputMessage.trim(),
-          activeConversationId || undefined
-        );
-        if (res.success && res.data?.conversationId && !activeConversationId) {
-          setActiveConversationId(res.data.conversationId);
+      try {
+        if (storedInput) {
+          const res = await dbSendMessage(
+            currentUser,
+            activeChat,
+            storedInput,
+            activeConversationId || undefined
+          );
+
+          if (res.success && res.data) {
+            // Update the temporary message with real ID and conversation ID
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === tempId
+                  ? {
+                      ...m,
+                      id: String(res.data.id),
+                      conversationId: res.data.conversationId,
+                      status: "sent",
+                    }
+                  : m
+              )
+            );
+
+            if (res.data.conversationId && !activeConversationId) {
+              setActiveConversationId(res.data.conversationId);
+              localStorage.setItem(
+                "pv:activeConversationId",
+                res.data.conversationId
+              );
+            }
+          }
         }
-      }
-      for (const attachment of attachments) {
-        await dbSendMessage(currentUser, activeChat, `📎 ${attachment.name}`);
+
+        for (const attachment of storedAttachments) {
+          await dbSendMessage(currentUser, activeChat, `📎 ${attachment.name}`);
+        }
+
+        // Refresh thread to ensure sync
+        loadMessages(activeChat, activeConversationId || undefined);
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        // Update message status to error
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? { ...m, status: "error" } : m))
+        );
       }
     } else {
       const { sendChatMessage } = await import("@/lib/utils/team-utilities");
-      if (inputMessage.trim())
-        sendChatMessage(currentUser, activeChat, inputMessage.trim());
-      for (const attachment of attachments) {
+      if (storedInput) sendChatMessage(currentUser, activeChat, storedInput);
+      for (const attachment of storedAttachments) {
         sendChatMessage(
           currentUser,
           activeChat,
@@ -394,10 +449,48 @@ export default function ChatPage() {
           attachment
         );
       }
+      loadMessages(activeChat, activeConversationId || undefined);
     }
-    setInputMessage("");
-    setAttachments([]);
-    loadMessages(activeChat, activeConversationId || undefined);
+  };
+
+  const handleRetryMessage = async (msg: ChatMessage) => {
+    if (!activeChat) return;
+
+    // Reset status to sending
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, status: "sending" } : m))
+    );
+
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await dbSendMessage(
+          currentUser,
+          activeChat,
+          msg.message,
+          activeConversationId || undefined
+        );
+
+        if (res.success && res.data) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.id
+                ? {
+                    ...m,
+                    id: String(res.data.id),
+                    conversationId: res.data.conversationId,
+                    status: "sent",
+                  }
+                : m
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Retry failed:", error);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msg.id ? { ...m, status: "error" } : m))
+        );
+      }
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -422,34 +515,6 @@ export default function ChatPage() {
   const handleClearChat = async () => {
     if (!activeChat) return;
 
-    if (viewMode === "archived" && isMasterAdmin) {
-      if (shouldUseDatabaseData()) {
-        if (
-          await dbDeleteThread(
-            currentUser,
-            activeChat,
-            activeConversationId || undefined
-          )
-        ) {
-          // Optimistic update for archives
-          setAdminConversations((prev) =>
-            prev.filter(
-              (c) => c.id !== activeChat && c.id !== activeConversationId
-            )
-          );
-          setMessages([]);
-          setActiveChat(null);
-          setActiveConversationId(null);
-          localStorage.removeItem("pv:activeChatUser");
-          localStorage.removeItem("pv:activeConversationId");
-          loadAdminConversations();
-        }
-      }
-      setShowActionMenu(false);
-      setShowDeleteConfirm(false);
-      return;
-    }
-
     const partner = teamMembers.find(
       (m) => m.uid === activeChat || m.name === activeChat
     );
@@ -457,59 +522,78 @@ export default function ChatPage() {
 
     if (!partner && !isGroup && !activeConversationId) return;
 
-    if (shouldUseDatabaseData()) {
-      if (
-        await dbDeleteThread(
+    // 1. Optimistic Updates - Clear from UI immediately
+    const prevMessages = [...messages];
+    const prevConversations = [...conversations];
+    const prevGroups = [...chatGroups];
+    const prevAdminConvs = [...adminConversations];
+
+    setMessages([]);
+    setActiveChat(null);
+    setActiveConversationId(null);
+    setShowActionMenu(false);
+    setShowDeleteConfirm(false);
+
+    // Remove from local storage
+    localStorage.removeItem("pv:activeChatUser");
+    localStorage.removeItem("pv:activeConversationId");
+
+    // Filter out from lists optimistically
+    setConversations((prev) =>
+      prev.filter(
+        (c) => c.id !== activeConversationId && c.withUser !== activeChat
+      )
+    );
+    setChatGroups((prev) => prev.filter((g) => g.id !== activeChat));
+    setAdminConversations((prev) =>
+      prev.filter((c) => c.id !== activeConversationId && c.id !== activeChat)
+    );
+
+    try {
+      if (shouldUseDatabaseData()) {
+        const success = await dbDeleteThread(
           currentUser,
           partner?.uid || activeChat,
           activeConversationId || undefined
-        )
-      ) {
-        // Optimistic State Update: Remove from local state immediately
-        setConversations((prev) =>
-          prev.filter((c) => c.id !== activeConversationId)
-        );
-        setChatGroups((prev) => prev.filter((g) => g.id !== activeChat));
-        setAdminConversations((prev) =>
-          prev.filter((c) => c.id !== activeConversationId)
         );
 
-        setMessages([]);
-        setActiveChat(null);
-        setActiveConversationId(null);
-        localStorage.removeItem("pv:activeChatUser");
-        localStorage.removeItem("pv:activeConversationId");
+        if (!success) {
+          throw new Error("Delete failed");
+        }
 
-        // Background reload just to stay in sync
+        // Background reload to ensure perfect sync
         loadConversations();
         loadChatGroups();
         if (isMasterAdmin) loadAdminConversations();
+      } else {
+        const storageKey = partner
+          ? `pv:chat:${[currentUser, partner.uid || activeChat].sort().join(":")}`
+          : `pv:chat:group:${activeChat}`;
+
+        localStorage.removeItem(storageKey);
+
+        if (!partner) {
+          const storedGroups = JSON.parse(
+            localStorage.getItem("pv:chatGroups") || "[]"
+          );
+          const filteredGroups = storedGroups.filter(
+            (g: any) => g.id !== activeChat
+          );
+          localStorage.setItem("pv:chatGroups", JSON.stringify(filteredGroups));
+        }
+
+        loadConversations();
+        loadChatGroups();
       }
-    } else {
-      const storageKey = partner
-        ? `pv:chat:${[currentUser, partner.uid || activeChat].sort().join(":")}`
-        : `pv:chat:group:${activeChat}`;
-
-      localStorage.removeItem(storageKey);
-
-      // Also remove from the groups list in local storage if it's a group
-      if (!partner) {
-        const storedGroups = JSON.parse(
-          localStorage.getItem("pv:chatGroups") || "[]"
-        );
-        const filteredGroups = storedGroups.filter(
-          (g: any) => g.id !== activeChat
-        );
-        localStorage.setItem("pv:chatGroups", JSON.stringify(filteredGroups));
-      }
-
-      setMessages([]);
-      setActiveChat(null);
-      loadConversations();
-      loadChatGroups();
+    } catch (error) {
+      console.error("Failed to delete thread:", error);
+      // Rollback on error
+      setMessages(prevMessages);
+      setConversations(prevConversations);
+      setChatGroups(prevGroups);
+      setAdminConversations(prevAdminConvs);
+      alert("Failed to delete conversation. Please try again.");
     }
-    setShowActionMenu(false);
-    setShowDeleteConfirm(false);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -745,6 +829,7 @@ export default function ChatPage() {
           getStatusColor={getStatusColor}
           getOnlineStatus={getOnlineStatus}
           handleSendMessage={handleSendMessage}
+          handleRetryMessage={handleRetryMessage}
           inputMessage={inputMessage}
           setInputMessage={setInputMessage}
           fileInputRef={fileInputRef}
