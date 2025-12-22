@@ -284,11 +284,20 @@ export async function DELETE(request: NextRequest) {
   let u1 = searchParams.get("user1");
   let u2 = searchParams.get("user2");
 
-  // Normalize
-  if (conversationId === "null" || conversationId === "undefined")
+  // Normalize and trim
+  if (conversationId) conversationId = conversationId.trim();
+  if (
+    conversationId === "null" ||
+    conversationId === "undefined" ||
+    !conversationId
+  )
     conversationId = null;
-  if (u1 === "null" || u1 === "undefined") u1 = null;
-  if (u2 === "null" || u2 === "undefined") u2 = null;
+
+  if (u1) u1 = u1.trim();
+  if (u1 === "null" || u1 === "undefined" || !u1) u1 = null;
+
+  if (u2) u2 = u2.trim();
+  if (u2 === "null" || u2 === "undefined" || !u2) u2 = null;
 
   log.info(
     { conversationId, u1, u2, userId: user.uid, role: user.role },
@@ -378,49 +387,54 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    const isMasterAdmin =
-      user.role === "Master Admin" || user.role === "master_admin";
-    const isAdminOrPM =
-      user.role === "Administrator" ||
-      user.role === "admin" ||
-      user.role === "Project Manager" ||
-      user.role === "project_manager";
-
     // 1. Identify which ChatGroup is being targeted
-    // Check by conversationId OR by u2 (which might be the groupId)
-    let linkedGroup = await prisma.chatGroup.findFirst({
-      where: { conversationId: conversationId },
+    // We try multiple signals: conversationId, u1, and u2
+    let linkedGroups = await prisma.chatGroup.findMany({
+      where: {
+        OR: [
+          { conversationId: conversationId || "non-existent" },
+          { id: u1 || "non-existent" },
+          { id: u2 || "non-existent" },
+        ],
+      },
     });
 
-    if (!linkedGroup && u2) {
-      // Fallback: Check if u2 is actually the Group ID
-      const groupById = await prisma.chatGroup.findUnique({
-        where: { id: u2 },
-      });
-      if (groupById) {
-        linkedGroup = groupById;
-      }
-    }
+    const isMasterAdmin =
+      user.role?.toLowerCase() === "master admin" ||
+      user.role?.toLowerCase() === "master_admin";
 
-    // Case 1: Master Admin - Hard Delete
+    const isAdminOrPM =
+      user.role?.toLowerCase() === "administrator" ||
+      user.role?.toLowerCase() === "admin" ||
+      user.role?.toLowerCase() === "project manager" ||
+      user.role?.toLowerCase() === "project_manager";
+
+    // Case 1: Master Admin - Hard Delete EVERYTHING associated
     if (isMasterAdmin) {
-      if (linkedGroup) {
-        await prisma.chatGroup.delete({
-          where: { id: linkedGroup.id },
+      // A. Delete any matching ChatGroup records
+      if (linkedGroups.length > 0) {
+        const groupIds = linkedGroups.map((g: any) => g.id);
+        await prisma.chatGroup.deleteMany({
+          where: { id: { in: groupIds } },
         });
-        log.info({ groupId: linkedGroup.id }, "Deleted ChatGroup record");
+        log.info(
+          { groupIds },
+          "Master Admin: Deleted matching ChatGroup records"
+        );
       }
 
-      await prisma.conversation.delete({
-        where: { id: conversationId },
-      });
+      // B. Delete the conversation (if we have an ID)
+      if (conversationId) {
+        await prisma.conversation.delete({
+          where: { id: conversationId },
+        });
+        log.info({ conversationId }, "Master Admin: Deleted conversation");
+      }
 
-      log.info(
-        { conversationId, deletedBy: user.uid, role: user.role },
-        "Master Admin: Hard-deleted conversation and associated chat group"
-      );
       return NextResponse.json({ success: true, action: "hard-delete" });
     }
+
+    const linkedGroup = linkedGroups[0]; // For other cases, we operation on the first match
 
     // Case 2: Admin or Project Manager - Global Archival
     if (isAdminOrPM && linkedGroup) {
