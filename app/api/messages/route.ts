@@ -282,40 +282,54 @@ export async function DELETE(request: Request) {
     const isMasterAdmin =
       user.role === "Administrator" || user.role === "Master Admin";
 
-    // Allow if member OR master admin
-    if (!isMember && !isMasterAdmin) {
-      return NextResponse.json(
-        { success: false, error: "Forbidden" },
-        { status: 403 }
-      );
-    }
+    // 1. Check if it's a ChatGroup and if the user is the creator
+    const linkedGroup = await prisma.chatGroup.findFirst({
+      where: { conversationId: conversationId },
+    });
 
-    // Hard Delete for Master Admin
-    if (isMasterAdmin) {
-      // First delete associated ChatGroup records if they exist
-      await prisma.chatGroup.deleteMany({
-        where: { conversationId: conversationId },
-      });
+    const isCreator = linkedGroup && linkedGroup.createdBy === user.email;
+
+    // Hard Delete for Admin or Group Creator
+    if (isMasterAdmin || isCreator) {
+      // Delete associated ChatGroup record
+      if (linkedGroup) {
+        await prisma.chatGroup.delete({
+          where: { id: linkedGroup.id },
+        });
+      }
 
       await prisma.conversation.delete({
         where: { id: conversationId },
       });
+
       log.info(
-        { conversationId, deletedBy: user.uid },
-        "Hard-deleted conversation thread and associated chat group"
+        { conversationId, deletedBy: user.uid, role: user.role, isCreator },
+        "Hard-deleted conversation and associated chat group"
       );
       return NextResponse.json({ success: true });
     }
 
-    // Soft-Delete (Archive) for regular members
+    // Soft-Delete (Archive for self and leave group) for regular members
+    // A. Remove user email from ChatGroup members array
+    if (linkedGroup) {
+      const updatedMembers = linkedGroup.members.filter(
+        (m: string) => m !== user.email
+      );
+      await prisma.chatGroup.update({
+        where: { id: linkedGroup.id },
+        data: { members: updatedMembers },
+      });
+    }
+
+    // B. Archive conversation member record
     await prisma.conversationMember.updateMany({
-      where: { conversationId: conversationId },
+      where: { conversationId: conversationId, userId: user.uid },
       data: { isArchived: true },
     });
 
     log.info(
-      { conversationId, deletedBy: user.uid },
-      "Soft-deleted (archived) conversation thread"
+      { conversationId, userId: user.uid },
+      "Soft-deleted conversation (archived member and left group list)"
     );
 
     return NextResponse.json({ success: true });
