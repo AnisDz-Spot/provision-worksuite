@@ -62,14 +62,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!shouldUseDatabaseData()) {
+    const user = await getAuthenticatedUser();
+    const isLive = shouldUseDatabaseData();
+    console.log(
+      `[Groups API] POST request. User: ${user?.email || "none"}, Role: ${user?.role || "none"}, Live: ${isLive}`
+    );
+
+    if (!isLive) {
+      console.log("[Groups API] 403 Forbidden: Database mode required");
       return NextResponse.json(
         { error: "Database mode required for creating groups" },
         { status: 403 }
       );
     }
 
-    const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

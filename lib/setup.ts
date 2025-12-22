@@ -8,8 +8,17 @@
  * This function should only be used on the server side
  */
 export function isDatabaseConfiguredServer(): boolean {
-  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  return !!dbUrl;
+  const dbUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.MYSQL_URL ||
+    process.env.SQLSERVER_URL ||
+    process.env.MONGODB_URI;
+
+  // Also check explicit data source flag
+  const dataSource = process.env.NEXT_PUBLIC_DATA_SOURCE;
+
+  return !!dbUrl || dataSource === "database";
 }
 
 /**

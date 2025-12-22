@@ -34,6 +34,7 @@ import {
 } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthContext";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { log } from "@/lib/logger";
 
 type FileAttachment = {
@@ -586,10 +587,9 @@ export default function ChatPage() {
 
     try {
       // Try API first
-      const response = await fetch("/api/chat-groups", {
+      const response = await fetchWithCsrf("/api/chat-groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // Include auth cookies
         body: JSON.stringify({
           name: newGroup.name.trim(),
           description: newGroup.description.trim() || undefined,
