@@ -156,14 +156,10 @@ export default function ChatPage() {
           const stored = localStorage.getItem("pv:chatGroups");
           setChatGroups(stored ? JSON.parse(stored) : []);
         } else if (Array.isArray(data)) {
-          setChatGroups(
-            data.length > 0
-              ? data
-              : JSON.parse(localStorage.getItem("pv:chatGroups") || "[]")
-          );
-          if (data.length > 0) {
-            localStorage.setItem("pv:chatGroups", JSON.stringify(data));
-          }
+          // Fix: If useDatabaseData is true, we trust the DB response (even if [])
+          // do NOT fallback to stale localStorage pv:chatGroups
+          setChatGroups(data);
+          localStorage.setItem("pv:chatGroups", JSON.stringify(data));
         }
       }
     } catch (error) {
@@ -416,6 +412,12 @@ export default function ChatPage() {
             activeConversationId || undefined
           )
         ) {
+          // Optimistic update for archives
+          setAdminConversations((prev) =>
+            prev.filter(
+              (c) => c.id !== activeChat && c.id !== activeConversationId
+            )
+          );
           setMessages([]);
           setActiveChat(null);
           setActiveConversationId(null);

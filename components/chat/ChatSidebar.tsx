@@ -58,7 +58,7 @@ export function ChatSidebar({
 
           {/* Member Search Dropdown */}
           {searchQuery && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl z-[100] max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
               <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase bg-muted/30 sticky top-0 backdrop-blur-sm">
                 Team Results
               </div>

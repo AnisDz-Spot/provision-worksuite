@@ -1,6 +1,7 @@
 "use client";
 
-import React, { RefObject } from "react";
+import React, { RefObject, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -83,6 +84,60 @@ export function ChatWindow({
   formatFileSize,
   onBack,
 }: ChatWindowProps) {
+  const router = useRouter();
+
+  const resolvedMembers = useMemo(() => {
+    if (!activeChat) return [];
+
+    // 1. Check if it's an archived conversation (Admin View)
+    if (viewMode === "archived" && isMasterAdmin) {
+      const archivedConv = adminConversations.find(
+        (c: any) => c.id === activeChat
+      );
+      if (archivedConv && Array.isArray(archivedConv.members)) {
+        return archivedConv.members.map((m: any) => ({
+          uid: m.uid,
+          name: m.name || m.uid,
+          avatar:
+            m.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${m.uid}`,
+        }));
+      }
+    }
+
+    // 2. Check if it's a group
+    const group = chatGroups.find((g: any) => g.id === activeChat);
+    if (group) {
+      return group.members.map((email: string) => {
+        const member = teamMembers.find(
+          (m: any) => m.email === email || m.uid === email || m.name === email
+        );
+        return {
+          uid: member?.uid || email,
+          name: member?.name || email,
+          avatar:
+            member?.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        };
+      });
+    }
+
+    // 3. Simple Direct Message
+    const partner = teamMembers.find(
+      (m: any) => m.uid === activeChat || m.name === activeChat
+    );
+    if (partner) return [partner];
+
+    return [];
+  }, [
+    activeChat,
+    viewMode,
+    isMasterAdmin,
+    adminConversations,
+    chatGroups,
+    teamMembers,
+  ]);
+
   if (!activeChat) {
     return (
       <div className="flex-1 flex items-center justify-center text-center p-8 bg-background">
@@ -102,9 +157,9 @@ export function ChatWindow({
       ? adminConversations.find((c) => c.id === activeChat)
       : null;
 
-  const group = chatGroups.find((g) => g.id === activeChat);
+  const group = chatGroups.find((g: any) => g.id === activeChat);
   const partnerMatch = teamMembers.find(
-    (m) => m.uid === activeChat || m.name === activeChat
+    (m: any) => m.uid === activeChat || m.name === activeChat
   );
 
   return (
@@ -127,9 +182,34 @@ export function ChatWindow({
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{archivedConv.name}</h3>
-                <p className="text-xs text-muted-foreground truncate">
-                  Archived • {archivedConv.memberCount} members
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    Archived • {resolvedMembers.length} members
+                  </span>
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {resolvedMembers.slice(0, 5).map((m: any) => (
+                      <button
+                        key={m.uid}
+                        onClick={() => router.push(`/users/${m.uid}`)}
+                        className="inline-block"
+                        title={m.name}
+                      >
+                        <Image
+                          src={m.avatar}
+                          alt={m.name}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 rounded-full border border-background ring-2 ring-background hover:ring-primary transition-all"
+                        />
+                      </button>
+                    ))}
+                    {resolvedMembers.length > 5 && (
+                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-muted text-[10px] ring-2 ring-background">
+                        +{resolvedMembers.length - 5}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           ) : group ? (
@@ -139,9 +219,34 @@ export function ChatWindow({
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{group.name}</h3>
-                <p className="text-xs text-muted-foreground truncate">
-                  {group.members.length} members
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {resolvedMembers.length} members
+                  </span>
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {resolvedMembers.slice(0, 5).map((m: any) => (
+                      <button
+                        key={m.uid}
+                        onClick={() => router.push(`/users/${m.uid}`)}
+                        className="inline-block"
+                        title={m.name}
+                      >
+                        <Image
+                          src={m.avatar}
+                          alt={m.name}
+                          width={20}
+                          height={20}
+                          className="w-5 h-5 rounded-full border border-background ring-2 ring-background hover:ring-primary transition-all"
+                        />
+                      </button>
+                    ))}
+                    {resolvedMembers.length > 5 && (
+                      <span className="flex items-center justify-center w-5 h-5 rounded-full bg-muted text-[10px] ring-2 ring-background">
+                        +{resolvedMembers.length - 5}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           ) : (
@@ -155,7 +260,12 @@ export function ChatWindow({
                   alt={partnerMatch?.name || activeChat}
                   width={40}
                   height={40}
-                  className="w-10 h-10 rounded-full border border-border"
+                  className="w-10 h-10 rounded-full border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() =>
+                    partnerMatch?.uid &&
+                    router.push(`/users/${partnerMatch.uid}`)
+                  }
+                  title={partnerMatch?.name || activeChat}
                 />
                 <Circle
                   className={`absolute bottom-0 right-0 w-3 h-3 ${getStatusColor(getOnlineStatus(activeChat))} rounded-full border-2 border-card`}
@@ -163,7 +273,13 @@ export function ChatWindow({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">
+                <h3
+                  className="font-semibold truncate cursor-pointer hover:text-primary transition-colors"
+                  onClick={() =>
+                    partnerMatch?.uid &&
+                    router.push(`/users/${partnerMatch.uid}`)
+                  }
+                >
                   {partnerMatch?.name || activeChat}
                 </h3>
                 <p className="text-xs text-muted-foreground uppercase truncate">
@@ -215,11 +331,11 @@ export function ChatWindow({
             No messages yet. Start the conversation!
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg: any) => {
             const isCurrentUser = msg.fromUser === currentUser;
             const isFileMessage = msg.message.startsWith("📎");
             const chatPartner = filteredMembers.find(
-              (m) =>
+              (m: any) =>
                 m.uid === activeChat || (activeChat && m.name === activeChat)
             );
 
@@ -248,7 +364,7 @@ export function ChatWindow({
                           } else {
                             const fileName = msg.message.replace("📎 ", "");
                             const file = attachments.find(
-                              (a) => a.name === fileName
+                              (a: any) => a.name === fileName
                             );
                             if (file) setPreviewFile(file);
                           }
