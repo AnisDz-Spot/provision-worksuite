@@ -20,12 +20,21 @@ export async function GET(request: Request) {
   const u1 = searchParams.get("user1");
   const u2 = searchParams.get("user2");
 
+  const isMasterAdmin =
+    user.role === "Administrator" || user.role === "Master Admin";
+
+  log.info(
+    { conversationId, u1, u2, userId: user.uid, role: user.role },
+    "Messages GET request"
+  );
+
   try {
     let threadId = conversationId;
 
     // Legacy fallback: Find conversation by participants if ID not provided
     if (!threadId && u1 && u2) {
-      if (user.uid !== u1 && user.uid !== u2) {
+      // Permission check: Must be a participant OR Master Admin
+      if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
         return NextResponse.json(
           { success: false, error: "Forbidden" },
           { status: 403 }
@@ -49,13 +58,17 @@ export async function GET(request: Request) {
       });
       threadId = existing?.id || null;
 
-      // If none exists and it's a direct chat, we might need to return empty
+      // If none exists and it's a direct chat, return empty list
       if (!threadId) {
         return NextResponse.json({ success: true, data: [] });
       }
     }
 
     if (!threadId) {
+      log.warn(
+        { u1, u2, conversationId },
+        "Missing conversationId for request"
+      );
       return NextResponse.json(
         { success: false, error: "Missing conversationId" },
         { status: 400 }
@@ -64,25 +77,27 @@ export async function GET(request: Request) {
 
     const activeThreadId = threadId as string;
 
-    // Verify membership
-    const isMember = await prisma.conversationMember.findUnique({
-      where: {
-        conversationId_userId: {
-          conversationId: activeThreadId,
-          userId: user.uid,
+    // Verify membership (Skip for Master Admin)
+    if (!isMasterAdmin) {
+      const isMember = await prisma.conversationMember.findUnique({
+        where: {
+          conversationId_userId: {
+            conversationId: activeThreadId,
+            userId: user.uid,
+          },
         },
-      },
-    });
+      });
 
-    if (!isMember) {
-      return NextResponse.json(
-        { success: false, error: "Forbidden: Not a member" },
-        { status: 403 }
-      );
+      if (!isMember) {
+        return NextResponse.json(
+          { success: false, error: "Forbidden: Not a member" },
+          { status: 403 }
+        );
+      }
     }
 
     const messages = await prisma.message.findMany({
-      where: { conversationId: threadId },
+      where: { conversationId: activeThreadId },
       orderBy: { createdAt: "asc" },
     });
 
@@ -131,6 +146,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const isMasterAdmin =
+      user.role === "Administrator" || user.role === "Master Admin";
+
+    log.info(
+      { conversationId, fromUser, toUser, userId: user.uid, role: user.role },
+      "Messages POST request"
+    );
+
     let targetConvId = conversationId;
 
     // 1. Find or Create conversation if not provided
@@ -167,21 +190,23 @@ export async function POST(request: Request) {
 
     const finalConvId = targetConvId as string;
 
-    // 2. Verify membership (for provided conversationId)
-    const isMember = await prisma.conversationMember.findUnique({
-      where: {
-        conversationId_userId: {
-          conversationId: finalConvId,
-          userId: user.uid,
+    // 2. Verify membership (Skip for Master Admin)
+    if (!isMasterAdmin) {
+      const isMember = await prisma.conversationMember.findUnique({
+        where: {
+          conversationId_userId: {
+            conversationId: finalConvId,
+            userId: user.uid,
+          },
         },
-      },
-    });
+      });
 
-    if (!isMember) {
-      return NextResponse.json(
-        { success: false, error: "Forbidden: Not a member" },
-        { status: 403 }
-      );
+      if (!isMember) {
+        return NextResponse.json(
+          { success: false, error: "Forbidden: Not a member" },
+          { status: 403 }
+        );
+      }
     }
 
     // 3. Create message
