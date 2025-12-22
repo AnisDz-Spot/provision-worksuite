@@ -41,6 +41,8 @@ export async function GET() {
         country: true,
         postalCode: true,
         socials: true,
+        statusMessage: true,
+        statusEmoji: true,
       },
       orderBy: { id: "asc" }, // Fetch by ID asc to easily identify first user
     });
@@ -65,6 +67,8 @@ export async function GET() {
         country: string | null;
         postalCode: string | null;
         socials: any;
+        statusMessage: string | null;
+        statusEmoji: string | null;
         id: number;
       }) => {
         const isMasterAdmin = user.id === firstUser?.id;
@@ -96,6 +100,8 @@ export async function GET() {
             postalCode: user.postalCode,
           },
           socials: user.socials || {},
+          statusMessage: user.statusMessage,
+          statusEmoji: user.statusEmoji,
         };
       }
     );
