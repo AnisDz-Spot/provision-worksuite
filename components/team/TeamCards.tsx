@@ -29,6 +29,7 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
+import { StatusPicker } from "./StatusPicker";
 
 type Socials = {
   linkedin?: string;
@@ -172,6 +173,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   const [allCountries, setAllCountries] = useState<any[]>([]);
   const [allStates, setAllStates] = useState<any[]>([]);
   const [allCities, setAllCities] = useState<any[]>([]);
+  const [statusPickerOpen, setStatusPickerOpen] = useState<string | null>(null);
 
   // Load geo data
   useEffect(() => {
@@ -245,6 +247,8 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
           status: "available", // Presence logic handles this
           tasksCount: 0,
           isMasterAdmin: u.role === "Master Admin",
+          statusMessage: u.statusMessage || u.status_message,
+          statusEmoji: u.statusEmoji || u.status_emoji,
         }));
 
         setMembersData(teamMembers);
@@ -580,6 +584,58 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
     }
   };
 
+  const handleStatusSave = async (
+    memberId: string,
+    emoji: string,
+    message: string
+  ) => {
+    try {
+      // Optimistic update
+      setMembersData((prev) =>
+        prev.map((m) =>
+          m.id === memberId
+            ? { ...m, statusEmoji: emoji, statusMessage: message }
+            : m
+        )
+      );
+
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        await fetchWithCsrf(`/api/users/${memberId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ statusEmoji: emoji, statusMessage: message }),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
+
+  const handleStatusClear = async (memberId: string) => {
+    try {
+      // Optimistic update
+      setMembersData((prev) =>
+        prev.map((m) =>
+          m.id === memberId
+            ? { ...m, statusEmoji: undefined, statusMessage: undefined }
+            : m
+        )
+      );
+
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+      if (shouldUseDatabaseData()) {
+        await fetchWithCsrf(`/api/users/${memberId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ statusEmoji: "", statusMessage: "" }),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to clear status:", error);
+    }
+  };
+
   return (
     <div className="space-y-6 relative min-h-[400px]">
       {isLoading ? (
@@ -791,12 +847,42 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                       {m.tasksCount} tasks
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                    <span className="text-xs text-muted-foreground">
-                      Active
-                    </span>
-                  </div>
+                  {(m as any).statusMessage ? (
+                    <div
+                      className="flex items-center gap-1.5 cursor-pointer hover:bg-accent/50 px-2 py-1 rounded transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (m.id === currentUser?.id || isAdmin) {
+                          setStatusPickerOpen(m.id);
+                        }
+                      }}
+                      title={
+                        m.id === currentUser?.id || isAdmin
+                          ? "Click to change status"
+                          : ""
+                      }
+                    >
+                      <span className="text-sm">
+                        {(m as any).statusEmoji || "💬"}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {(m as any).statusMessage}
+                      </span>
+                    </div>
+                  ) : (
+                    (m.id === currentUser?.id || isAdmin) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStatusPickerOpen(m.id);
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-accent/50"
+                      >
+                        <span>💬</span>
+                        <span>Set status</span>
+                      </button>
+                    )
+                  )}
                 </div>
 
                 {/* Contact Info */}
@@ -1081,6 +1167,23 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
           </div>
         </div>
       )}
+
+      {/* Status Picker Modal */}
+      {statusPickerOpen &&
+        (() => {
+          const member = membersData.find((m) => m.id === statusPickerOpen);
+          return member ? (
+            <StatusPicker
+              currentStatus={(member as any).statusMessage}
+              currentEmoji={(member as any).statusEmoji}
+              onSave={(emoji, message) =>
+                handleStatusSave(member.id, emoji, message)
+              }
+              onClear={() => handleStatusClear(member.id)}
+              onClose={() => setStatusPickerOpen(null)}
+            />
+          ) : null;
+        })()}
     </div>
   );
 }

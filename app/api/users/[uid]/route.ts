@@ -37,6 +37,8 @@ export async function GET(
         country: true,
         postalCode: true,
         socials: true,
+        statusMessage: true,
+        statusEmoji: true,
         createdAt: true,
       },
     });
@@ -72,6 +74,8 @@ export async function GET(
         country: user.country,
         postalCode: user.postalCode,
         socials: user.socials || {},
+        statusMessage: user.statusMessage,
+        statusEmoji: user.statusEmoji,
         created_at: user.createdAt,
         isMasterAdmin,
       },
@@ -143,6 +147,8 @@ export async function PATCH(
       postalCode,
       role,
       socials,
+      statusMessage,
+      statusEmoji,
     } = body || {};
 
     // Build update data object
@@ -182,6 +188,10 @@ export async function PATCH(
     if (typeof postalCode === "string")
       updateData.postalCode = postalCode.trim();
     if (socials && typeof socials === "object") updateData.socials = socials;
+    if (typeof statusMessage === "string")
+      updateData.statusMessage = statusMessage.trim();
+    if (typeof statusEmoji === "string")
+      updateData.statusEmoji = statusEmoji.trim();
 
     // Handle password update with hashing
     if (typeof password === "string" && password.length >= 6) {
@@ -221,6 +231,8 @@ export async function PATCH(
         country: true,
         postalCode: true,
         socials: true,
+        statusMessage: true,
+        statusEmoji: true,
         createdAt: true,
       },
     });
@@ -244,6 +256,8 @@ export async function PATCH(
         country: user.country,
         postalCode: user.postalCode,
         socials: user.socials || {},
+        statusMessage: user.statusMessage,
+        statusEmoji: user.statusEmoji,
         created_at: user.createdAt,
       },
     });

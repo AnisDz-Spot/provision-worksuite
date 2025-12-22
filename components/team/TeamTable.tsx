@@ -211,6 +211,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             u.avatar ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
           isMasterAdmin: u.isMasterAdmin || false,
+          statusMessage: u.statusMessage || u.status_message,
+          statusEmoji: u.statusEmoji || u.status_emoji,
         }));
 
         setMembersData(teamMembers);
