@@ -132,11 +132,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Remove duplicates and ensure creator is included
-    const uniqueMembers = Array.from(new Set([userEmail, ...members]));
+    // For the ChatGroup record, we respect the user's selection
+    const requestedMembers = Array.from(new Set(members));
 
-    // Limit members
-    if (uniqueMembers.length > 100) {
+    // For the Conversation, we MUST include the creator so they have access at the DB level.
+    const conversationParticipants = Array.from(
+      new Set([userEmail, ...requestedMembers])
+    );
+
+    // Validation: Limit members
+    if (conversationParticipants.length > 100) {
       return NextResponse.json(
         { error: "Group cannot have more than 100 members" },
         { status: 400 }
@@ -163,7 +168,7 @@ export async function POST(request: NextRequest) {
       // 1. Fetch UIDs for all members
       const dbMembers = await prisma.user.findMany({
         where: {
-          email: { in: uniqueMembers },
+          email: { in: conversationParticipants },
         },
         select: {
           uid: true,
@@ -198,7 +203,8 @@ export async function POST(request: NextRequest) {
           data: {
             name: name.trim(),
             description: description?.trim() || null,
-            members: uniqueMembers,
+            members:
+              requestedMembers.length > 0 ? requestedMembers : [userEmail],
             createdBy: userEmail,
             isPrivate: isPrivate,
             conversationId: conversation.id,

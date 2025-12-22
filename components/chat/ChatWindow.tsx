@@ -190,7 +190,7 @@ export function ChatWindow({
                     {resolvedMembers.slice(0, 5).map((m: any) => (
                       <button
                         key={m.uid}
-                        onClick={() => router.push(`/users/${m.uid}`)}
+                        onClick={() => router.push(`/team/${m.uid}`)}
                         className="inline-block"
                         title={m.name}
                       >
@@ -227,7 +227,7 @@ export function ChatWindow({
                     {resolvedMembers.slice(0, 5).map((m: any) => (
                       <button
                         key={m.uid}
-                        onClick={() => router.push(`/users/${m.uid}`)}
+                        onClick={() => router.push(`/team/${m.uid}`)}
                         className="inline-block"
                         title={m.name}
                       >
@@ -263,7 +263,7 @@ export function ChatWindow({
                   className="w-10 h-10 rounded-full border border-border cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() =>
                     partnerMatch?.uid &&
-                    router.push(`/users/${partnerMatch.uid}`)
+                    router.push(`/team/${partnerMatch.uid}`)
                   }
                   title={partnerMatch?.name || activeChat}
                 />
@@ -277,7 +277,7 @@ export function ChatWindow({
                   className="font-semibold truncate cursor-pointer hover:text-primary transition-colors"
                   onClick={() =>
                     partnerMatch?.uid &&
-                    router.push(`/users/${partnerMatch.uid}`)
+                    router.push(`/team/${partnerMatch.uid}`)
                   }
                 >
                   {partnerMatch?.name || activeChat}
