@@ -13,6 +13,8 @@ import {
   Maximize2,
   Trash2,
   Smile,
+  Video,
+  Phone,
 } from "lucide-react";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import {
@@ -270,6 +272,67 @@ function ChatWindow({
     setShowEmojiPicker(false);
   };
 
+  const handleStartCall = async (type: "video" | "audio") => {
+    if (!targetUser) return;
+
+    try {
+      // 1. Determine title and participants
+      // In floating chat, we might not have all context, but we can try to guess
+      const isGroup = conversations.some(
+        (c) => c.withUser === targetUser && c.type === "group"
+      );
+      const conv = conversations.find((c) => c.withUser === targetUser);
+
+      let title = targetName || "Meeting";
+      let participantUids: string[] = [];
+
+      if (isGroup) {
+        // Fetch group members
+        const res = await fetch(`/api/chat-groups/${targetUser}/members`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.members)) {
+            participantUids = data.members.map((m: any) => m.uid);
+          }
+        }
+      } else {
+        // Direct chat - targetUser is usually the UID in DB mode
+        // If not a UUID, we try to find it in conversations
+        const uid = targetUser.length > 30 ? targetUser : undefined;
+        if (uid) {
+          participantUids = [uid];
+        }
+      }
+
+      // 2. Create meeting via API
+      if (shouldUseDatabaseData()) {
+        const response = await fetchWithCsrf("/api/meetings/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description: `Started from floating chat`,
+            participantUids,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success && data.meeting) {
+          window.open(`/meetings/${data.meeting.roomId}`, "_blank");
+        } else {
+          alert("Failed to start meeting: " + (data.error || "Unknown error"));
+        }
+      } else {
+        // Demo mode
+        const mockRoomId = `demo-${Date.now()}`;
+        window.open(`/meetings/${mockRoomId}`, "_blank");
+      }
+    } catch (error) {
+      console.error("Error starting meeting:", error);
+      alert("Failed to start meeting.");
+    }
+  };
+
   const getStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
       case "online":
@@ -323,6 +386,20 @@ function ChatWindow({
         </div>
         <div className="flex items-center gap-1">
           <button
+            onClick={() => handleStartCall("audio")}
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
+            title="Audio call"
+          >
+            <Phone className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleStartCall("video")}
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
+            title="Video call"
+          >
+            <Video className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setShowDeleteConfirm(true)}
             className="p-1.5 hover:bg-destructive/20 text-primary-foreground/70 hover:text-white rounded transition-colors cursor-pointer"
             title="Delete entire conversation"
@@ -331,7 +408,7 @@ function ChatWindow({
           </button>
           <button
             onClick={onToggleMinimize}
-            className="p-1.5 hover:bg-primary-foreground/20 rounded transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
           >
             {isMinimized ? (
               <Maximize2 className="w-4 h-4" />
@@ -341,7 +418,7 @@ function ChatWindow({
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-primary-foreground/20 rounded transition-colors cursor-pointer"
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

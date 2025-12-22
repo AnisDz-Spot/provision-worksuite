@@ -16,6 +16,8 @@ import {
   Loader2,
   AlertCircle,
   RefreshCcw,
+  Video,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ChatInput } from "./ChatInput";
@@ -54,6 +56,7 @@ interface ChatWindowProps {
   handleRetryMessage: (msg: any) => void;
   formatFileSize: (bytes: number) => string;
   onBack: () => void;
+  onStartCall: (type: "video" | "audio") => void;
 }
 
 export function ChatWindow({
@@ -89,6 +92,7 @@ export function ChatWindow({
   handleRetryMessage,
   formatFileSize,
   onBack,
+  onStartCall,
 }: ChatWindowProps) {
   const router = useRouter();
 
@@ -297,13 +301,36 @@ export function ChatWindow({
         </div>
 
         <div className="relative" ref={actionMenuRef}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowActionMenu(!showActionMenu)}
-          >
-            <MoreVertical className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 text-muted-foreground hover:text-primary transition-colors"
+              onClick={() => onStartCall("audio")}
+              title="Voice call"
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 text-muted-foreground hover:text-primary transition-colors"
+              onClick={() => onStartCall("video")}
+              title="Video call"
+            >
+              <Video className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-4 bg-border mx-1" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 text-muted-foreground hover:text-danger transition-colors"
+              onClick={() => setShowActionMenu(!showActionMenu)}
+            >
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </div>
+
           {showActionMenu && (
             <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
               <button

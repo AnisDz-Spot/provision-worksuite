@@ -601,6 +601,73 @@ export default function ChatPage() {
     setShowEmojiPicker(false);
   };
 
+  const handleStartCall = async (type: "video" | "audio") => {
+    if (!activeChat) return;
+
+    try {
+      // 1. Get participants and title
+      const isGroup = chatGroups.some((g) => g.id === activeChat);
+      const partner = teamMembers.find(
+        (m) => m.uid === activeChat || m.name === activeChat
+      );
+
+      let participantUids: string[] = [];
+      let title = "Meeting";
+
+      if (isGroup) {
+        const group = chatGroups.find((g) => g.id === activeChat);
+        title = group?.name || "Group Meeting";
+
+        // Fetch group members if we are in live mode
+        if (shouldUseDatabaseData()) {
+          const res = await fetch(`/api/chat-groups/${activeChat}/members`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.members)) {
+              participantUids = data.members.map((m: any) => m.uid);
+            }
+          }
+        }
+
+        // Fallback for demo or if fetch fails
+        if (participantUids.length === 0) {
+          participantUids = teamMembers.map((m) => m.uid).slice(0, 5);
+        }
+      } else if (partner) {
+        title = `Call with ${partner.name}`;
+        participantUids = [partner.uid];
+      }
+
+      // 2. Create meeting via API
+      if (shouldUseDatabaseData()) {
+        const response = await fetchWithCsrf("/api/meetings/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description: `Started from chat by ${authUser?.name || currentUser}`,
+            participantUids,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success && data.meeting) {
+          // 3. Open meeting in a new tab
+          window.open(`/meetings/${data.meeting.roomId}`, "_blank");
+        } else {
+          alert("Failed to start meeting: " + (data.error || "Unknown error"));
+        }
+      } else {
+        // Demo mode: just redirect to a mock room
+        const mockRoomId = `demo-${Date.now()}`;
+        window.open(`/meetings/${mockRoomId}`, "_blank");
+      }
+    } catch (error) {
+      console.error("Error starting meeting:", error);
+      alert("Failed to start meeting.");
+    }
+  };
+
   const handleStartChat = (memberNameOrUid: string, convId?: string) => {
     setActiveChat(memberNameOrUid);
     activeChatRef.current = memberNameOrUid;
@@ -843,6 +910,7 @@ export default function ChatPage() {
             setActiveChat(null);
             setShowMobileSidebar(true);
           }}
+          onStartCall={handleStartCall}
         />
       </div>
 

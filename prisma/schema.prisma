@@ -83,15 +83,17 @@ model User {
   sessions Session[]
 
   // Relations
-  projects           Project[]
-  projectMemberships ProjectMember[]
-  comments           Comment[]
-  notifications      Notification[]
-  activities         Activity[]
-  uploadedFiles      File[]
-  createdEvents      CalendarEvent[]
-  assignedTasks      Task[]          @relation("TaskAssignee")
-  accounts           Account[]
+  projects            Project[]
+  projectMemberships  ProjectMember[]
+  comments            Comment[]
+  notifications       Notification[]
+  activities          Activity[]
+  uploadedFiles       File[]
+  createdEvents       CalendarEvent[]
+  assignedTasks       Task[]               @relation("TaskAssignee")
+  accounts            Account[]
+  createdMeetings     Meeting[]            @relation("CreatedMeetings")
+  meetingParticipants MeetingParticipant[]
 
   @@index([email])
   @@index([roleId])
@@ -676,4 +678,49 @@ model RecurringTaskTemplate {
   @@index([nextRun])
   @@index([isActive])
   @@map("recurring_task_templates")
+}
+
+// =============================================================================
+// MEETINGS (Jitsi Integration)
+// =============================================================================
+
+model Meeting {
+  id              String    @id @default(cuid())
+  roomId          String    @unique // Cryptographically secure UUID
+  title           String
+  description     String?
+  createdBy       String // User UID
+  creator         User      @relation("CreatedMeetings", fields: [createdBy], references: [uid], onDelete: Cascade)
+  startTime       DateTime?
+  endTime         DateTime?
+  isActive        Boolean   @default(true)
+  maxParticipants Int       @default(50)
+
+  participants MeetingParticipant[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([roomId])
+  @@index([createdBy])
+  @@index([isActive])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id        String    @id @default(cuid())
+  meetingId String    @map("meeting_id")
+  meeting   Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId    String    @map("user_id") // User UID
+  user      User      @relation(fields: [userId], references: [uid], onDelete: Cascade)
+  role      String    @default("participant") // "host", "moderator", "participant"
+  joinedAt  DateTime? @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+  @@map("meeting_participants")
 }
