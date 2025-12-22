@@ -585,6 +585,7 @@ model ChatGroup {
   description    String?
   members        String[] @default([]) // Array of user emails
   isPrivate      Boolean  @default(false) @map("is_private")
+  isArchived     Boolean  @default(false) @map("is_archived")
   createdBy      String   @map("created_by") // Creator email
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")

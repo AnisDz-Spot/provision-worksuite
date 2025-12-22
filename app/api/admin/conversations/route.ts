@@ -55,6 +55,7 @@ export async function GET(request: Request) {
     const allConversations = await prisma.conversation.findMany({
       include: {
         members: true, // Need this to show who is in the chat
+        chatGroups: true, // Check for global archival
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1, // Preview last message
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
           "Unknown";
 
         const lastMsg = conv.messages[0];
+        const linkedGroup = conv.chatGroups?.[0];
 
         return {
           id: conv.id,
@@ -88,6 +90,7 @@ export async function GET(request: Request) {
           lastMessage: lastMsg?.message || "",
           lastTimestamp: lastMsg?.createdAt || conv.updatedAt,
           memberCount: conv.members.length,
+          isArchived: linkedGroup?.isArchived || false,
         };
       })
     );

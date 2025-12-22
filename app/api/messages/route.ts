@@ -377,18 +377,21 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    const isMasterAdmin = user.role === "Master Admin";
+    const isMasterAdmin =
+      user.role === "Master Admin" || user.role === "master_admin";
+    const isAdminOrPM =
+      user.role === "Administrator" ||
+      user.role === "admin" ||
+      user.role === "Project Manager" ||
+      user.role === "project_manager";
 
     // 1. Check if it's a ChatGroup
     const linkedGroup = await prisma.chatGroup.findFirst({
       where: { conversationId: conversationId },
     });
 
-    const isCreator = linkedGroup && linkedGroup.createdBy === user.email;
-
-    // Hard Delete ONLY for Master Admin
+    // Case 1: Master Admin - Hard Delete
     if (isMasterAdmin) {
-      // Delete associated ChatGroup record
       if (linkedGroup) {
         await prisma.chatGroup.delete({
           where: { id: linkedGroup.id },
@@ -401,13 +404,26 @@ export async function DELETE(request: NextRequest) {
 
       log.info(
         { conversationId, deletedBy: user.uid, role: user.role },
-        "Hard-deleted conversation and associated chat group (Master Admin action)"
+        "Master Admin: Hard-deleted conversation and associated chat group"
       );
       return NextResponse.json({ success: true, action: "hard-delete" });
     }
 
-    // Soft-Delete / Archive for others (Admins, PMs, members)
-    // A. Remove user email from ChatGroup members array
+    // Case 2: Admin or Project Manager - Global Archival
+    if (isAdminOrPM && linkedGroup) {
+      await prisma.chatGroup.update({
+        where: { id: linkedGroup.id },
+        data: { isArchived: true },
+      });
+
+      log.info(
+        { conversationId, archivedBy: user.uid, role: user.role },
+        "Admin/PM: Globally archived chat group"
+      );
+      return NextResponse.json({ success: true, action: "global-archive" });
+    }
+
+    // Case 3: Regular members or fallback - Private Archival / Leave Group
     if (linkedGroup) {
       const updatedMembers = linkedGroup.members.filter(
         (m: string) => m !== user.email
@@ -418,7 +434,7 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    // B. Archive conversation member record
+    // Archive conversation member record for the caller
     await prisma.conversationMember.updateMany({
       where: { conversationId: conversationId, userId: user.uid },
       data: { isArchived: true },
@@ -426,10 +442,10 @@ export async function DELETE(request: NextRequest) {
 
     log.info(
       { conversationId, userId: user.uid, role: user.role },
-      "Soft-deleted conversation (archived member and left group list)"
+      "Member: Private archival (left group/hidden from view)"
     );
 
-    return NextResponse.json({ success: true, action: "archive" });
+    return NextResponse.json({ success: true, action: "private-archive" });
   } catch (error) {
     log.error({ err: error }, "Delete messages error");
     return NextResponse.json(

@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       const groups = await prisma.chatGroup.findMany({
         where: {
           OR: [{ createdBy: userEmail }, { members: { has: userEmail } }],
+          isArchived: false,
         },
         include: {
           project: {

@@ -409,7 +409,13 @@ export default function ChatPage() {
 
     if (viewMode === "archived" && isMasterAdmin) {
       if (shouldUseDatabaseData()) {
-        if (await dbDeleteThread(currentUser, "", activeChat)) {
+        if (
+          await dbDeleteThread(
+            currentUser,
+            activeChat,
+            activeConversationId || undefined
+          )
+        ) {
           setMessages([]);
           setActiveChat(null);
           setActiveConversationId(null);
@@ -478,13 +484,15 @@ export default function ChatPage() {
     setShowEmojiPicker(false);
   };
 
-  const handleStartChat = (memberNameOrUid: string) => {
+  const handleStartChat = (memberNameOrUid: string, convId?: string) => {
     setActiveChat(memberNameOrUid);
     activeChatRef.current = memberNameOrUid;
-    setViewMode("active");
+    // Don't auto-switch viewMode if we are in archived mode, we just want to load the messages
+    if (viewMode !== "archived") setViewMode("active");
 
     const group = chatGroups.find((g) => g.id === memberNameOrUid);
     let cid =
+      convId ||
       group?.conversationId ||
       conversations.find(
         (c) =>
@@ -677,7 +685,9 @@ export default function ChatPage() {
           chatGroups={chatGroups}
           filteredMembers={filteredMembers}
           conversations={conversations}
+          adminConversations={adminConversations}
           activeChat={activeChat}
+          activeConversationId={activeConversationId}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           isMasterAdmin={isMasterAdmin}
