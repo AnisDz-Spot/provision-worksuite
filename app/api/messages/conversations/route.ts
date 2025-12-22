@@ -110,28 +110,34 @@ export async function GET(request: Request) {
         const conv = m.conversation;
         const lastMsg = conv.messages[0];
 
-        // Find the "other" user for direct chats
-        const otherMember = conv.members.find(
-          (mem: { userId: string }) => mem.userId !== user.uid
-        );
-        const otherUid = otherMember?.userId || user.uid; // Fallback to self for notes
+        // For group chats, we don't resolve an "other user" for the sidebar DM mapping
+        const isDirect = conv.type === "direct";
+        const otherMember = isDirect
+          ? conv.members.find(
+              (mem: { userId: string }) => mem.userId !== user.uid
+            )
+          : null;
+        const otherUid = otherMember?.userId || (isDirect ? user.uid : "");
 
-        // Fetch user details and presence for the other user
-        const [otherUserInfo, presence] = await Promise.all([
-          prisma.user.findUnique({
-            where: { uid: otherUid },
-            select: { name: true, avatarUrl: true },
-          }),
-          prisma.presence.findUnique({
-            where: { uid: otherUid },
-          }),
-        ]);
+        // Fetch user details and presence only if it's a direct chat
+        const [otherUserInfo, presence] =
+          isDirect && otherUid
+            ? await Promise.all([
+                prisma.user.findUnique({
+                  where: { uid: otherUid },
+                  select: { name: true, avatarUrl: true },
+                }),
+                prisma.presence.findUnique({
+                  where: { uid: otherUid },
+                }),
+              ])
+            : [null, null];
 
         // Count unread messages in this conversation for the current user
         const unreadCount = await prisma.message.count({
           where: {
             conversationId: conv.id,
-            toUser: user.uid, // Legacy field check or use isRead per user etc.
+            toUser: user.uid,
             isRead: false,
           },
         });
@@ -145,9 +151,9 @@ export async function GET(request: Request) {
 
         return {
           id: conv.id,
-          withUser: otherUid,
-          withUserName: otherUserInfo?.name || otherUid,
-          withUserAvatar: otherUserInfo?.avatarUrl || "",
+          withUser: isDirect ? otherUid : "",
+          withUserName: isDirect ? otherUserInfo?.name || otherUid : "",
+          withUserAvatar: isDirect ? otherUserInfo?.avatarUrl || "" : "",
           unreadCount,
           lastMessage: lastMsg?.message || "",
           lastTimestamp: lastMsg?.createdAt || conv.updatedAt,
