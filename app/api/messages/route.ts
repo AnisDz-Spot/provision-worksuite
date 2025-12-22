@@ -297,8 +297,7 @@ export async function DELETE(request: NextRequest) {
 
   // Fallback: Find conversation by participants if ID not provided
   if (!conversationId && u1 && u2) {
-    const isMasterAdmin =
-      user.role === "Administrator" || user.role === "Master Admin";
+    const isMasterAdmin = user.role === "Master Admin";
 
     // Permission check: Must be a participant OR Master Admin
     if (!isMasterAdmin && user.uid !== u1 && user.uid !== u2) {
@@ -312,6 +311,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // 1. Try Direct Chat lookup
     const existing = await prisma.conversation.findFirst({
       where: {
         type: "direct",
@@ -328,6 +328,20 @@ export async function DELETE(request: NextRequest) {
       },
     });
     conversationId = existing?.id || null;
+
+    // 2. If not found, check if u2 is a Group ID
+    if (!conversationId) {
+      const group = await prisma.chatGroup.findUnique({
+        where: { id: u2 },
+      });
+      if (group) {
+        conversationId = group.conversationId;
+        log.info(
+          { groupId: u2, conversationId },
+          "Found Group Conversation ID via fallback"
+        );
+      }
+    }
 
     if (!conversationId) {
       log.info(
@@ -363,18 +377,17 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    const isMasterAdmin =
-      user.role === "Administrator" || user.role === "Master Admin";
+    const isMasterAdmin = user.role === "Master Admin";
 
-    // 1. Check if it's a ChatGroup and if the user is the creator
+    // 1. Check if it's a ChatGroup
     const linkedGroup = await prisma.chatGroup.findFirst({
       where: { conversationId: conversationId },
     });
 
     const isCreator = linkedGroup && linkedGroup.createdBy === user.email;
 
-    // Hard Delete for Admin or Group Creator
-    if (isMasterAdmin || isCreator) {
+    // Hard Delete ONLY for Master Admin
+    if (isMasterAdmin) {
       // Delete associated ChatGroup record
       if (linkedGroup) {
         await prisma.chatGroup.delete({
@@ -387,13 +400,13 @@ export async function DELETE(request: NextRequest) {
       });
 
       log.info(
-        { conversationId, deletedBy: user.uid, role: user.role, isCreator },
-        "Hard-deleted conversation and associated chat group"
+        { conversationId, deletedBy: user.uid, role: user.role },
+        "Hard-deleted conversation and associated chat group (Master Admin action)"
       );
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, action: "hard-delete" });
     }
 
-    // Soft-Delete (Archive for self and leave group) for regular members
+    // Soft-Delete / Archive for others (Admins, PMs, members)
     // A. Remove user email from ChatGroup members array
     if (linkedGroup) {
       const updatedMembers = linkedGroup.members.filter(
@@ -412,11 +425,11 @@ export async function DELETE(request: NextRequest) {
     });
 
     log.info(
-      { conversationId, userId: user.uid },
+      { conversationId, userId: user.uid, role: user.role },
       "Soft-deleted conversation (archived member and left group list)"
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, action: "archive" });
   } catch (error) {
     log.error({ err: error }, "Delete messages error");
     return NextResponse.json(
