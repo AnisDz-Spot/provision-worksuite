@@ -58,7 +58,7 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value:
-              "camera=*, microphone=*, speaker-selection=*, display-capture=*, geolocation=()",
+              'camera=(self "https://*.jit.si" "https://meet.jit.si"), microphone=(self "https://*.jit.si" "https://meet.jit.si"), speaker-selection=(self "https://*.jit.si" "https://meet.jit.si"), display-capture=(self "https://*.jit.si" "https://meet.jit.si"), geolocation=()',
           },
           {
             key: "Content-Security-Policy",
@@ -68,8 +68,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.jit.si wss://*.jit.si",
-              "frame-src 'self' https://*.jit.si https://meet.jit.si",
+              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.jit.si wss://*.jit.si https://*.8x8.vc wss://*.8x8.vc",
+              "frame-src 'self' https://*.jit.si https://meet.jit.si https://*.8x8.vc",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
