@@ -141,39 +141,29 @@ export default function ClientForm({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size must be less than 2MB");
+      return;
+    }
+
     setUploadingLogo(true);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append("file", file);
-      // Path strategy: clients/timestamp-filename
-      const filename = sanitizeFilename(file.name);
-      formDataUpload.append("path", `clients/${Date.now()}-${filename}`);
-
-      // Using the generic local upload endpoint
-      const res = await fetchWithCsrf("/api/upload-local", {
-        method: "POST",
-        body: formDataUpload,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Upload failed");
-      }
-
-      const data = await res.json();
-      setFormData((prev) => ({ ...prev, logo: data.url }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({ ...prev, logo: reader.result as string }));
+        setUploadingLogo(false);
+      };
+      reader.onerror = () => {
+        alert("Failed to read file");
+        setUploadingLogo(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error("Logo upload error:", error);
-      alert("Failed to upload logo. Please try again.");
-    } finally {
+      alert("Failed to process logo. Please try again.");
       setUploadingLogo(false);
     }
   };
-
-  // Helper to sanitize filename for client-side usage if needed
-  function sanitizeFilename(name: string) {
-    return name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
