@@ -179,6 +179,8 @@ model Project {
   visibility  String    @default("private") // public, private, team-only
   archivedAt  DateTime? @map("archived_at")
   color       String?
+  coverUrl    String?   @map("cover_url")
+  clientLogo  String?   @map("client_logo")
 
   // Creator/Owner reference (legacy support)
   userId Int     @map("user_id")

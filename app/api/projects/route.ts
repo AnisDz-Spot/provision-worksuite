@@ -141,6 +141,10 @@ export async function POST(req: Request) {
       tags,
       visibility,
       color,
+      cover,
+      clientLogo,
+      files,
+      members,
     } = body;
 
     if (!name) {
@@ -167,6 +171,8 @@ export async function POST(req: Request) {
         tags: tags || [],
         visibility: visibility || "private",
         color: color || null,
+        coverUrl: cover || null,
+        clientLogo: clientLogo || null,
       },
       include: {
         user: true,
@@ -182,6 +188,44 @@ export async function POST(req: Request) {
         role: "owner",
       },
     });
+
+    // Add other members
+    if (Array.isArray(members) && members.length > 0) {
+      // Find user IDs from UIDs
+      const memberUsers = await prisma.user.findMany({
+        where: { uid: { in: members } },
+        select: { id: true },
+      });
+
+      const memberIds = memberUsers
+        .map((u: { id: number }) => u.id)
+        .filter((id: number) => id !== projectUserId);
+
+      if (memberIds.length > 0) {
+        await prisma.projectMember.createMany({
+          data: memberIds.map((uid: number) => ({
+            projectId: project.id,
+            userId: uid,
+            role: "member",
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    // Add Files
+    if (Array.isArray(files) && files.length > 0) {
+      await prisma.file.createMany({
+        data: files.map((f: any) => ({
+          projectId: project.id,
+          filename: f.name,
+          fileUrl: f.url,
+          fileSize: f.size,
+          mimeType: f.type,
+          uploadedBy: projectUserId,
+        })),
+      });
+    }
 
     log.info(
       {
