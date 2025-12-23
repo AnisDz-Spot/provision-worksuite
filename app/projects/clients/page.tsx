@@ -16,6 +16,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { log } from "@/lib/logger";
@@ -163,17 +164,12 @@ export default function ClientsPage() {
             </p>
           </div>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => {
-            setEditingClient(null);
-            resetForm();
-            setIsModalOpen(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Client
-        </Button>
+        <Link href="/projects/clients/new">
+          <Button variant="primary">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Client
+          </Button>
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">
@@ -208,13 +204,13 @@ export default function ClientsPage() {
               className="p-6 hover:shadow-lg transition-all group relative"
             >
               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                <button
-                  onClick={() => openEdit(client)}
+                <Link
+                  href={`/projects/clients/${client.id}/edit`}
                   className="p-2 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground"
                   title="Edit"
                 >
                   <Edit className="w-4 h-4" />
-                </button>
+                </Link>
                 <button
                   onClick={() => handleDelete(client.id)}
                   className="p-2 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-600"

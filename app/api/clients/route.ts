@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { companyName: { contains: search, mode: "insensitive" } },
+        { primaryEmail: { contains: search, mode: "insensitive" } },
+        { primaryContact: { contains: search, mode: "insensitive" } },
       ];
     }
     if (status && status !== "all") {
@@ -56,16 +56,34 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
-      email,
+      logo,
+      type,
+      status,
+      // Contact
+      primaryEmail,
+      secondaryEmail,
       phone,
-      companyName,
+      website,
+      primaryContact,
+      // Address
       address,
       city,
       state,
-      country,
       postalCode,
-      website,
+      country,
+      timezone,
+      language,
+      // Billing
+      billingEmail,
+      vatNumber,
+      currency,
+      hourlyRate,
+      paymentTerms,
+      // Meta
+      defaultVisibility,
+      tags,
       notes,
+      customFields,
     } = body;
 
     if (!name) {
@@ -75,17 +93,30 @@ export async function POST(request: NextRequest) {
     const client = await prisma.client.create({
       data: {
         name,
-        email,
+        logo,
+        type: type || "company",
+        status: status || "active",
+        primaryEmail,
+        secondaryEmail,
         phone,
-        companyName,
+        website,
+        primaryContact,
         address,
         city,
         state,
-        country,
         postalCode,
-        website,
+        country,
+        timezone,
+        language,
+        billingEmail,
+        vatNumber,
+        currency,
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        paymentTerms,
+        defaultVisibility: defaultVisibility || "shared",
+        tags: tags || [],
         notes,
-        status: "active",
+        customFields: customFields || {},
       },
     });
 

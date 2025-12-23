@@ -205,25 +205,46 @@ model Project {
 }
 
 model Client {
-  id          String   @id @default(uuid())
-  name        String
-  email       String?
-  phone       String?
-  companyName String?  @map("company_name")
-  address     String?
-  city        String?
-  state       String?
-  country     String?
-  postalCode  String?  @map("postal_code")
-  website     String?
-  notes       String?
-  status      String   @default("active") // active, inactive, archived
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id     String  @id @default(uuid())
+  name   String
+  logo   String?
+  type   String  @default("company") // "individual" | "company"
+  status String  @default("active") // "active" | "archived"
+
+  // Contact
+  primaryEmail   String? @map("primary_email")
+  secondaryEmail String? @map("secondary_email")
+  phone          String?
+  website        String?
+  primaryContact String? @map("primary_contact")
+
+  // Address
+  address    String?
+  city       String?
+  state      String?
+  postalCode String? @map("postal_code")
+  country    String?
+  timezone   String?
+  language   String?
+
+  // Billing
+  billingEmail String? @map("billing_email")
+  vatNumber    String? @map("vat_number")
+  currency     String?
+  hourlyRate   Float?  @map("hourly_rate")
+  paymentTerms String? @map("payment_terms")
+
+  // Meta
+  defaultVisibility String?  @default("shared") @map("default_visibility")
+  tags              String[] @default([])
+  notes             String?
+  customFields      Json?    @map("custom_fields")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   projects Project[]
 
-  @@index([status])
   @@map("clients")
 }
 
