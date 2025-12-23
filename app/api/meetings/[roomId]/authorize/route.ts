@@ -66,16 +66,26 @@ export async function GET(
       );
     }
 
-    // Update joinedAt timestamp
-    await prisma.meetingParticipant.updateMany({
-      where: {
-        meetingId: meeting.id,
-        userId: user.uid,
-      },
-      data: {
-        joinedAt: new Date(),
-      },
-    });
+    // Update joinedAt timestamp and meeting startTime if not set
+    await prisma.$transaction([
+      prisma.meetingParticipant.updateMany({
+        where: {
+          meetingId: meeting.id,
+          userId: user.uid,
+        },
+        data: {
+          joinedAt: new Date(),
+        },
+      }),
+      ...(meeting.startTime === null
+        ? [
+            prisma.meeting.update({
+              where: { id: meeting.id },
+              data: { startTime: new Date() },
+            }),
+          ]
+        : []),
+    ]);
 
     log.info({ roomId, userId: user.uid }, "User authorized for meeting");
 

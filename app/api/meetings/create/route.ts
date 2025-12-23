@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       body = {};
     }
-    const { title, description, participantUids } = body;
+    const { title, description, participantUids, type, conversationId } = body;
 
     if (!title || typeof title !== "string") {
       return NextResponse.json(
@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
           title: title.trim(),
           description: description?.trim() || null,
           createdBy: user.uid,
+          type: type || "video",
+          conversationId: conversationId || null,
           participants: {
             create: [
               { userId: user.uid, role: "host" },

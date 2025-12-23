@@ -707,6 +707,8 @@ model Meeting {
   startTime       DateTime?
   endTime         DateTime?
   isActive        Boolean   @default(true)
+  type            String    @default("video") // "audio" or "video"
+  conversationId  String?   @map("conversation_id")
   maxParticipants Int       @default(50)
 
   participants MeetingParticipant[]

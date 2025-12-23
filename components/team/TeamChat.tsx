@@ -311,8 +311,10 @@ function ChatWindow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title,
-            description: `Started from floating chat`,
+            description: `Started from chat`,
             participantUids,
+            type,
+            conversationId,
           }),
         });
 

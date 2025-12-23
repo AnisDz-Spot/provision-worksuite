@@ -46,13 +46,33 @@ export function MeetingRoom({
 }: MeetingRoomProps) {
   const router = useRouter();
 
-  const handleMeetingEnd = () => {
+  const handleMeetingEnd = async () => {
+    try {
+      const { fetchWithCsrf } = await import("@/lib/csrf-client");
+      await fetchWithCsrf("/api/meetings/finish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId }),
+      });
+    } catch (e) {
+      console.error("Failed to finish meeting:", e);
+    }
     // Redirect to meetings list or dashboard
     router.push("/");
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
     if (confirm("Are you sure you want to leave the meeting?")) {
+      try {
+        const { fetchWithCsrf } = await import("@/lib/csrf-client");
+        await fetchWithCsrf("/api/meetings/finish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ roomId }),
+        });
+      } catch (e) {
+        console.error("Failed to finish meeting on leave:", e);
+      }
       router.push("/");
     }
   };
