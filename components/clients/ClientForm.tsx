@@ -208,7 +208,10 @@ export default function ClientForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto py-20">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-8 max-w-5xl mx-auto pt-10 pb-20"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 ">
           <Link

@@ -95,7 +95,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url });
   } catch (error) {
     log.error({ err: error }, "Local upload failed");
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: `Upload failed: ${error instanceof Error ? error.message : String(error)}`,
+      },
+      { status: 500 }
+    );
   }
 }
 
