@@ -67,7 +67,7 @@ export function CallRinging({ invite, onClose }: CallRingingProps) {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-200 transition-all duration-500 transform ${isClosing ? "translate-y-20 opacity-0" : "translate-y-0 opacity-100"}`}
+      className={`fixed bottom-6 right-6 z-9999 transition-all duration-500 transform ${isClosing ? "translate-y-20 opacity-0" : "translate-y-0 opacity-100"}`}
     >
       <Card className="w-80 shadow-2xl border-primary/20 bg-background/95 backdrop-blur-md overflow-hidden ring-1 ring-primary/10">
         <div className="p-1 bg-primary/10 animate-pulse" />

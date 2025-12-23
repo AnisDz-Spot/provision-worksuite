@@ -271,6 +271,7 @@ function MainContent({
         });
         const json = await res.json();
         if (json.success && json.pendingCalls && json.pendingCalls.length > 0) {
+          console.log(`[AppShell] Pending calls found:`, json.pendingCalls);
           if (!activeCall) {
             setActiveCall(json.pendingCalls[0]);
           }

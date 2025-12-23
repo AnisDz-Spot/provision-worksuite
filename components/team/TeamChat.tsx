@@ -298,7 +298,7 @@ function ChatWindow({
       } else {
         // Direct chat - targetUser is usually the UID in DB mode
         // If not a UUID, we try to find it in conversations
-        const uid = targetUser.length > 30 ? targetUser : undefined;
+        const uid = targetUser;
         if (uid) {
           participantUids = [uid];
         }
