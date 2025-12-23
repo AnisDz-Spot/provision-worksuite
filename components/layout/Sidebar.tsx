@@ -40,7 +40,14 @@ type NavGroup = {
 
 const navItems: (NavItem | NavGroup)[] = [
   { href: "/", label: "Dashboard", icon: HomeIcon },
-  { href: "/projects", label: "Projects", icon: FolderKanbanIcon },
+  {
+    label: "Projects",
+    icon: FolderKanbanIcon,
+    items: [
+      { href: "/projects", label: "All Projects", icon: FolderKanbanIcon },
+      { href: "/projects/clients", label: "Clients", icon: UsersIcon },
+    ],
+  },
   { href: "/templates", label: "Templates", icon: Rocket },
   { href: "/tasks", label: "Tasks", icon: ClipboardListIcon },
   { href: "/team", label: "Team", icon: UsersIcon },

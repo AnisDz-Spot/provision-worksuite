@@ -165,7 +165,10 @@ export function ResourceAllocation({
       totalCapacity,
       totalAllocated,
       totalAvailable: totalCapacity - totalAllocated,
-      avgUtilization: Math.round((totalAllocated / totalCapacity) * 100),
+      avgUtilization:
+        totalCapacity > 0
+          ? Math.round((totalAllocated / totalCapacity) * 100)
+          : 0,
       overallocated,
       available,
     };

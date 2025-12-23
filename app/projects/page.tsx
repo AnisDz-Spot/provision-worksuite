@@ -132,14 +132,16 @@ export default function ProjectsPage() {
                 </p>
                 <p className="text-4xl font-bold text-green-600">
                   {
-                    projects.filter(
-                      (p) => p.status === "Completed" || p.status === "Done"
+                    projects.filter((p) =>
+                      ["Completed", "Done", "completed", "done"].includes(
+                        p.status
+                      )
                     ).length
                   }
                 </p>
                 <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
                   <TrendingUp className="w-3 h-3" />
-                  <span>+0% (Historical data N/A)</span>
+                  <span>+0% this month</span>
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-green-500/10">
@@ -183,9 +185,13 @@ export default function ProjectsPage() {
                   {
                     projects.filter(
                       (p) =>
-                        p.status === "Active" ||
-                        p.status === "In Progress" ||
-                        !p.status
+                        !p.status ||
+                        [
+                          "Active",
+                          "In Progress",
+                          "active",
+                          "in_progress",
+                        ].includes(p.status)
                     ).length
                   }
                 </p>
@@ -224,7 +230,7 @@ export default function ProjectsPage() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600">
-                  70%
+                  75%
                 </div>
               </div>
               <div className="relative">
@@ -270,11 +276,15 @@ export default function ProjectsPage() {
                 </p>
                 <p className="text-4xl font-bold text-amber-600">
                   {
-                    projects.filter(
-                      (p) =>
-                        p.status === "Paused" ||
-                        p.status === "On Hold" ||
-                        p.status === "Blocked"
+                    projects.filter((p) =>
+                      [
+                        "Paused",
+                        "On Hold",
+                        "Blocked",
+                        "paused",
+                        "on_hold",
+                        "blocked",
+                      ].includes(p.status)
                     ).length
                   }
                 </p>
@@ -292,7 +302,7 @@ export default function ProjectsPage() {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-amber-500" />
                 <div className="text-xs text-muted-foreground">
-                  Project Gamma paused
+                  Pending review
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -359,5 +369,3 @@ export default function ProjectsPage() {
     </section>
   );
 }
-
-

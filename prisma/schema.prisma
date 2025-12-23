@@ -2,8 +2,7 @@
 // Updated: 2024-12-10
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -175,14 +174,16 @@ model Project {
   // New fields
   completedAt DateTime? @map("completed_at")
   clientName  String?   @map("client_name")
+  clientId    String?   @map("client_id")
   tags        String[]  @default([])
   visibility  String    @default("private") // public, private, team-only
   archivedAt  DateTime? @map("archived_at")
   color       String?
 
   // Creator/Owner reference (legacy support)
-  userId Int  @map("user_id")
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int     @map("user_id")
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   // Relations - tasks linked via projectId=uid
   tasks      Task[]
@@ -196,10 +197,34 @@ model Project {
   chatGroups ChatGroup[]
 
   @@index([userId])
+  @@index([clientId])
   @@index([status])
   @@index([visibility])
   @@index([archivedAt])
   @@map("projects")
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  companyName String?  @map("company_name")
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  postalCode  String?  @map("postal_code")
+  website     String?
+  notes       String?
+  status      String   @default("active") // active, inactive, archived
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  projects Project[]
+
+  @@index([status])
+  @@map("clients")
 }
 
 model ProjectMember {
