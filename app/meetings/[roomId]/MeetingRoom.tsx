@@ -73,7 +73,7 @@ export function MeetingRoom({
       } catch (e) {
         console.error("Failed to finish meeting on leave:", e);
       }
-      // router.push("/");
+      router.push("/");
     }
   };
 
