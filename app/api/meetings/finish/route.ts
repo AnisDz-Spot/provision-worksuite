@@ -55,6 +55,10 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     let updatedMeeting = meeting;
 
+    console.log(
+      `[Meeting Finish] ${roomId}: Active=${meeting.isActive}, ConvID=${meeting.conversationId}`
+    );
+
     if (meeting.isActive) {
       updatedMeeting = await prisma.meeting.update({
         where: { roomId },
@@ -66,6 +70,9 @@ export async function POST(request: NextRequest) {
 
       // 3. Post chat log if linked to a conversation
       if (meeting.conversationId) {
+        console.log(
+          `[Meeting Finish] Creating chat log for conversation ${meeting.conversationId}`
+        );
         const startTime = meeting.startTime || meeting.createdAt;
         const durationMs = now.getTime() - startTime.getTime();
 
