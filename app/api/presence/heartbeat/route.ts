@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         recipientUid: uid,
         status: "pending",
         createdAt: {
-          gte: new Date(Date.now() - 60000), // Only show invites from last 60 seconds
+          gte: new Date(Date.now() - 120000), // Show invites from last 2 minutes
         },
       },
       orderBy: { createdAt: "desc" },

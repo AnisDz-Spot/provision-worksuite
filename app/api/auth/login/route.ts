@@ -107,6 +107,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for existing user in DB first to ensure consistent signaling IDs
+    const dbUser = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        uid: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        passwordHash: true,
+        twoFactorEnabled: true,
+        twoFactorSecret: true,
+        backupCodes: true,
+      },
+    });
+
     let user;
 
     if (
@@ -115,34 +132,19 @@ export async function POST(request: NextRequest) {
       shouldAllowBackdoor
     ) {
       user = {
-        id: 0, // Mock ID
-        uid: "global-admin",
+        id: dbUser?.id || 0,
+        uid: dbUser?.uid || "admin-global",
         email: "admin@provision.com",
-        name: "Global Admin",
-        avatarUrl: null,
-        role: "Administrator",
-        passwordHash: "", // Not used
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-        backupCodes: [],
+        name: dbUser?.name || "Global Admin",
+        avatarUrl: dbUser?.avatarUrl || null,
+        role: dbUser?.role || "Administrator",
+        passwordHash: dbUser?.passwordHash || "",
+        twoFactorEnabled: dbUser?.twoFactorEnabled || false,
+        twoFactorSecret: dbUser?.twoFactorSecret || null,
+        backupCodes: dbUser?.backupCodes || [],
       };
     } else {
-      // 3. Query user from database
-      user = await prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          uid: true,
-          email: true,
-          name: true,
-          avatarUrl: true,
-          role: true,
-          passwordHash: true,
-          twoFactorEnabled: true,
-          twoFactorSecret: true,
-          backupCodes: true,
-        },
-      });
+      user = dbUser;
     }
 
     if (!user) {
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Secure password check
-    if (user.uid !== "global-admin") {
+    if (user.uid !== "admin-global") {
       const passwordMatch = await bcrypt.compare(
         password,
         user.passwordHash || ""

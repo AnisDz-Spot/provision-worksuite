@@ -336,7 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isGlobalAdmin) {
         console.log("[Auth] Falling back to local admin credentials");
         const authUser: User = {
-          id: "global-admin",
+          id: "admin-global",
           name: "Admin",
           email,
           role: "Administrator",
