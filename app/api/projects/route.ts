@@ -22,17 +22,36 @@ export async function GET() {
   }
 
   try {
+    // Fetch user from DB to get Int ID
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: currentUser.uid },
+      select: { id: true, role: true },
+    });
+
+    if (!dbUser) {
+      // User authenticated via JWT but not found in DB?
+      // Should not happen in normal flow, but return empty
+      return NextResponse.json({ success: true, data: [], source: "database" });
+    }
+
     // Filter projects by user unless admin
-    const whereClause =
-      currentUser.role === "admin" || currentUser.role === "global-admin"
-        ? { archivedAt: null } // Admins see all non-archived projects
-        : {
-            OR: [
-              { userId: parseInt(currentUser.uid) || 0 },
-              { members: { some: { userId: parseInt(currentUser.uid) || 0 } } },
-            ],
-            archivedAt: null,
-          };
+    const isAdmin = [
+      "admin",
+      "global-admin",
+      "master-admin",
+      "Administrator",
+      "Master Admin",
+    ].includes(currentUser.role);
+
+    const whereClause = isAdmin
+      ? { archivedAt: null } // Admins see all non-archived projects
+      : {
+          OR: [
+            { userId: dbUser.id },
+            { members: { some: { userId: dbUser.id } } },
+          ],
+          archivedAt: null,
+        };
 
     const projects = await prisma.project.findMany({
       where: whereClause,
@@ -182,8 +201,21 @@ export async function POST(req: Request) {
       uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
     }
 
+    // Fetch user for Int ID
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: currentUser.uid },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     // Use current user's ID for the project
-    const projectUserId = parseInt(currentUser.uid) || 0;
+    const projectUserId = dbUser.id;
 
     const project = await prisma.project.create({
       data: {
