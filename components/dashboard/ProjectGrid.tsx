@@ -26,6 +26,7 @@ import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 type Project = {
   id: string;
   uid?: string;
+  slug?: string;
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
@@ -725,7 +726,9 @@ export function ProjectGrid() {
                 <Card
                   key={p.id}
                   className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
-                  onClick={() => router.push(`/projects/${p.uid || p.id}`)}
+                  onClick={() =>
+                    router.push(`/projects/${p.slug || p.uid || p.id}`)
+                  }
                 >
                   {selectMode && (
                     <div className="absolute top-2 left-2 z-20">
@@ -811,7 +814,9 @@ export function ProjectGrid() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setMenuOpen(null);
-                                  router.push(`/projects/${p.uid || p.id}`);
+                                  router.push(
+                                    `/projects/${p.slug || p.uid || p.id}`
+                                  );
                                 }}
                               >
                                 Open

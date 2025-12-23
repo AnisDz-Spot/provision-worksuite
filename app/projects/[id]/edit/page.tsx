@@ -30,19 +30,7 @@ type Project = {
   isTemplate?: boolean;
 };
 
-function loadProject(id: string): Project | null {
-  try {
-    const raw = localStorage.getItem("pv:projects");
-    const arr = raw ? JSON.parse(raw) : [];
-    if (Array.isArray(arr) && arr.length > 0) {
-      const match = arr.find((p: any) => p.id === id);
-      if (match) return match;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+// Local storage load removed
 
 export default function ProjectEditPage() {
   const params = useParams();
@@ -61,22 +49,78 @@ export default function ProjectEditPage() {
     return categoriesData;
   });
 
+  const [clients, setClients] = React.useState<any[]>([]);
+
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      setProject(loadProject(projectId));
-      setIsLoading(false);
-    }
+    const fetchData = async () => {
+      try {
+        const [projectRes, clientsRes] = await Promise.all([
+          fetch(`/api/projects/${projectId}`),
+          fetch("/api/clients"),
+        ]);
+
+        if (projectRes.ok) {
+          const data = await projectRes.json();
+          if (data.success) {
+            const p = data.project;
+            // Map API response to local state structure
+            setProject({
+              id: p.uid || p.id.toString(), // Prefer UID
+              name: p.name,
+              owner: p.userId ? p.userId.toString() : "",
+              status: p.status,
+              deadline: p.deadline ? p.deadline.split("T")[0] : "",
+              priority: p.priority,
+              cover: p.coverUrl,
+              tags: p.tags,
+              privacy: p.visibility,
+              categories: p.categories,
+              description: p.description,
+              client: p.clientName,
+              clientId: p.clientId, // Store ID
+              budget: p.budget ? p.budget.toString() : "",
+            } as any);
+          }
+        }
+
+        if (clientsRes.ok) {
+          const data = await clientsRes.json();
+          if (data.success) setClients(data.data);
+        }
+      } catch (error) {
+        console.error(error);
+        showToast("Failed to load data", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
   }, [projectId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!project) return;
     try {
-      const raw = localStorage.getItem("pv:projects");
-      const arr = raw ? JSON.parse(raw) : [];
-      const next = Array.isArray(arr)
-        ? arr.map((p: any) => (p.id === project.id ? project : p))
-        : [project];
-      localStorage.setItem("pv:projects", JSON.stringify(next));
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          priority: project.priority,
+          deadline: project.deadline,
+          budget: (project as any).budget,
+          clientId: (project as any).clientId,
+          clientName: (project as any).client,
+          tags: project.tags,
+          categories: project.categories,
+          visibility: project.privacy,
+          cover: project.cover,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update");
+
       logProjectEvent(project.id, "edit", { name: project.name });
       showToast("Project saved successfully", "success");
       router.push(`/projects/${projectId}`);
@@ -315,99 +359,28 @@ export default function ProjectEditPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Client</label>
-              <input
+              <select
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={(project as any).client || ""}
-                onChange={(e) =>
+                value={(project as any).clientId || ""}
+                onChange={(e) => {
+                  const cid = e.target.value;
+                  const c = clients.find((cl) => cl.id === cid);
                   setProject((p) =>
-                    p ? ({ ...p, client: e.target.value } as any) : p
-                  )
-                }
-                placeholder="Client or organization name"
-              />
+                    p
+                      ? ({ ...p, clientId: cid, client: c?.name || "" } as any)
+                      : p
+                  );
+                }}
+              >
+                <option value="">-- Select Client --</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Client Logo</label>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                  value={(project as any).clientLogo || ""}
-                  onChange={(e) =>
-                    setProject((p) =>
-                      p ? ({ ...p, clientLogo: e.target.value } as any) : p
-                    )
-                  }
-                  placeholder="https://..."
-                />
-                <input
-                  type="file"
-                  id="client-logo-upload"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 1 * 1024 * 1024) {
-                        showToast("Logo must be less than 1MB", "error");
-                        e.target.value = "";
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setProject((p) =>
-                          p
-                            ? ({
-                                ...p,
-                                clientLogo: reader.result as string,
-                              } as any)
-                            : p
-                        );
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-[42px] shrink-0"
-                  onClick={() =>
-                    document.getElementById("client-logo-upload")?.click()
-                  }
-                >
-                  Upload
-                </Button>
-              </div>
-              {(project as any).clientLogo && (
-                <div className="mt-2 flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={(project as any).clientLogo}
-                    alt="Client logo preview"
-                    className="w-16 h-16 rounded border border-border object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNFNUU3RUIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOUI5QkE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SW52YWxpZDwvdGV4dD48L3N2Zz4=";
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setProject((p) =>
-                        p ? ({ ...p, clientLogo: "" } as any) : p
-                      )
-                    }
-                    className="text-xs text-destructive hover:underline"
-                  >
-                    Remove logo
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Enter URL or upload logo (max 1MB)
-              </p>
-            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Budget (USD)</label>
               <input

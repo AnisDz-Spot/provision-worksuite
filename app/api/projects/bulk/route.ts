@@ -40,20 +40,30 @@ export async function POST(request: NextRequest) {
 
     for (const project of projects) {
       try {
+        const uid = String(project.uid || project.id || "");
+        if (!uid) continue; // Skip if no ID
+
+        // Generate a simple slug if not provided, just to satisfy unique constraint if creating
+        // For updates, we don't want to overwrite unless necessary.
+        // Ideally slug generation happens on creation.
+        // We'll use the ID as fallback slug if needed or just let the default(cuid) handle it on create.
+
         await prisma.project.upsert({
-          where: { uid: project.id || project.uid || "" },
+          where: { uid: uid },
           create: {
-            uid: project.id || project.uid,
+            uid: uid,
             name: project.name || "Untitled Project",
             description: project.description || null,
             status: (project.status || "active").toLowerCase(),
             deadline: project.deadline ? new Date(project.deadline) : null,
             priority: project.priority || null,
             budget: project.budget || null,
-            userId: parseInt(user.uid) || 0,
+            userId: user.uid ? parseInt(user.uid) : 0, // Ensure int
             tags: project.tags || [],
+            categories: project.categories || [],
             visibility: project.privacy || "private",
             completedAt: project.status === "Completed" ? new Date() : null,
+            // Slug will use default(cuid()) if not provided here, which is safe for unique constraint
           },
           update: {
             name: project.name || "Untitled Project",
@@ -63,6 +73,7 @@ export async function POST(request: NextRequest) {
             priority: project.priority || null,
             budget: project.budget || null,
             tags: project.tags || [],
+            categories: project.categories || [],
             visibility: project.privacy || "private",
             completedAt: project.status === "Completed" ? new Date() : null,
           },

@@ -53,8 +53,9 @@ export default function NewProjectPage() {
     members: [] as User[],
     dependencies: [] as string[],
     client: "",
-    clientLogo: "",
-    clientLogoFile: null as File | null,
+    clientId: "", // NEW
+    // clientLogo and File removed from UI but kept in state types to avoid breaking if referenced elsewhere strictly?
+    // User requested removal. I will remove them from usage.
     budget: "",
     sla: "",
     files: [] as ProjectFile[],
@@ -69,28 +70,34 @@ export default function NewProjectPage() {
     }
     return categoriesData;
   });
-  // Uploading states now used during save, or we can just use generic isLoading
-  // But keeping them might be useful if we want granular progress in future
+  const [clients, setClients] = useState<any[]>([]);
+  // Uploading states
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingClientLogo, setUploadingClientLogo] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
-  // Load Users from API
+  // Load Users and Clients from API
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("/api/users");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) {
-            setUsers(data.data);
-          }
+        const [usersRes, clientsRes] = await Promise.all([
+          fetch("/api/users"),
+          fetch("/api/clients"),
+        ]);
+
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          if (data.success) setUsers(data.data);
+        }
+
+        if (clientsRes.ok) {
+          const data = await clientsRes.json();
+          if (data.success) setClients(data.data);
         }
       } catch (error) {
-        console.error("Failed to fetch users", error);
+        console.error("Failed to fetch data", error);
       }
     };
-    fetchUsers();
+    fetchData();
   }, []);
 
   // Use Templates (from localStorage for now, or update to API if available)
@@ -175,8 +182,8 @@ export default function NewProjectPage() {
       members: [],
       dependencies: [],
       client: (tpl as any).client || "",
-      clientLogo: (tpl as any).clientLogo || "",
-      clientLogoFile: null,
+      clientId: (tpl as any).clientId || "",
+
       budget: (tpl as any).budget || "",
       sla: (tpl as any).sla || "",
       files: [],
@@ -206,20 +213,7 @@ export default function NewProjectPage() {
         }
       }
 
-      let finalClientLogo = draft.clientLogo;
-      if (draft.clientLogoFile) {
-        try {
-          const data = await handleUpload(
-            draft.clientLogoFile,
-            "projects/clients"
-          );
-          finalClientLogo = data.url;
-        } catch (e) {
-          console.error("Client logo upload failed", e);
-          showToast("Failed to upload client logo.", "warning");
-          finalClientLogo = "";
-        }
-      }
+      // NOTE: Client Logo upload removed as per request.
 
       // Upload attachments
       // We only upload files that have a 'file' object (newly added).
@@ -304,7 +298,9 @@ export default function NewProjectPage() {
 
         // Passing data to API (even if currently unused, to be ready):
         cover: finalCover,
-        clientLogo: finalClientLogo,
+        clientLogo: undefined,
+        clientId: draft.clientId, // Send Client ID
+
         files: finalFiles, // API needs to handle this!
         members: draft.members.map((m) => m.uid), // Send member UIDs
         categories: draft.categories,
@@ -491,80 +487,28 @@ export default function NewProjectPage() {
               <option value="private">Private</option>
             </select>
           </div>
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Client Name</label>
-              <Input
-                value={draft.client}
-                onChange={(e) => setDraft({ ...draft, client: e.target.value })}
-                placeholder="Client or organization name"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Client Logo (Upload)
-              </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="file"
-                  id="client-logo-upload"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 2 * 1024 * 1024) {
-                        showToast("Logo must be less than 2MB", "warning");
-                        e.target.value = "";
-                        return;
-                      }
-                      const preview = URL.createObjectURL(file);
-                      setDraft((d) => ({
-                        ...d,
-                        clientLogo: preview,
-                        clientLogoFile: file,
-                      }));
-                      e.target.value = ""; // Reset input
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    document.getElementById("client-logo-upload")?.click()
-                  }
-                  disabled={isLoading}
-                  title="Upload Logo"
-                >
-                  <Upload className="w-4 h-4" />
-                </Button>
-                {draft.clientLogo && (
-                  <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={draft.clientLogo}
-                      alt="Client logo preview"
-                      className="w-10 h-10 rounded border border-border object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          clientLogo: "",
-                          clientLogoFile: null,
-                        })
-                      }
-                      className="text-xs text-destructive hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-sm font-medium">Client</label>
+            <select
+              value={draft.clientId}
+              onChange={(e) => {
+                const cid = e.target.value;
+                const c = clients.find((client) => client.id === cid);
+                setDraft({
+                  ...draft,
+                  clientId: cid,
+                  client: c ? c.name : "", // Set client name for fallback
+                });
+              }}
+              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+            >
+              <option value="">-- Select Client --</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Budget (USD)</label>
@@ -921,12 +865,7 @@ export default function NewProjectPage() {
           <Button
             variant="primary"
             onClick={handleCreateProject}
-            disabled={
-              isLoading ||
-              uploadingFiles ||
-              uploadingCover ||
-              uploadingClientLogo
-            }
+            disabled={isLoading || uploadingFiles || uploadingCover}
           >
             {isLoading ? "Creating..." : "Save & Open"}
           </Button>

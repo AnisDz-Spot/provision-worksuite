@@ -342,7 +342,18 @@ export default function ProjectDetailsPage() {
                         className={`flex items-center gap-2 mt-2 px-3 py-1.5 rounded-md ${bgColor} ${color} font-semibold text-base w-fit`}
                       >
                         <CalendarDays className="w-4 h-4" />
-                        <span>Due: {project.deadline || "—"}</span>
+                        <span>
+                          Due:{" "}
+                          {project.deadline
+                            ? new Date(project.deadline)
+                                .toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                })
+                                .replace(/\//g, "-")
+                            : "—"}
+                        </span>
                         {daysLeft >= 0 && (
                           <span className="text-sm">
                             ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)

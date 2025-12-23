@@ -138,6 +138,7 @@ export async function POST(req: Request) {
       budget,
       priority,
       clientName,
+      clientId, // NEW
       tags,
       visibility,
       color,
@@ -154,12 +155,40 @@ export async function POST(req: Request) {
       );
     }
 
+    // Generate Slug
+    let slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    // Ensure uniqueness (simple append for now, or assume name is unique enough + uid handles collision by failing? No, we need unique slug)
+    // For now, let's append a random short string to ensure uniqueness basically always
+    // Or better, check if exists? Checking adds latency.
+    // The user wants "use project name instead of uid".
+    // I will use `slug` as is, but if it fails (unique constraint), valid names might clash.
+    // Let's append 4 chars of random string to be safe and cleaner than UUID?
+    // Or just use name and catch error?
+    // User request: "slug: use project name instead of uid".
+    // I'll try to use name-slug. If it exists, I'll append a suffix.
+    // Actually, checking DB is safer.
+
+    let uniqueSlug = slug;
+    const existing = await prisma.project.findFirst({
+      where: { slug: uniqueSlug },
+    });
+    if (existing) {
+      uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+    }
+
     // Use current user's ID for the project
     const projectUserId = parseInt(currentUser.uid) || 0;
 
     const project = await prisma.project.create({
       data: {
         name,
+        slug: uniqueSlug,
         description: description || null,
         status: status || "active",
         userId: projectUserId,
@@ -168,6 +197,7 @@ export async function POST(req: Request) {
         budget: budget ? parseFloat(budget) : null,
         priority: priority || null,
         clientName: clientName || null,
+        clientId: clientId || null,
         tags: body.tags || [],
         categories: body.categories || [],
         visibility: body.visibility || "private",
