@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useState, useEffect } from "react";
 import categoriesData from "@/data/categories.json";
 import Image from "next/image";
+import { getCsrfToken } from "@/lib/csrf-client";
 
 type ProjectFile = {
   name: string;
@@ -118,8 +119,15 @@ export default function NewProjectPage() {
     formData.append("file", file);
     formData.append("path", path);
 
+    const csrfToken = getCsrfToken();
+    const headers: HeadersInit = {};
+    if (csrfToken) {
+      headers["x-csrf-token"] = csrfToken;
+    }
+
     const res = await fetch("/api/uploads", {
       method: "POST",
+      headers,
       body: formData,
     });
 
@@ -211,9 +219,17 @@ export default function NewProjectPage() {
         // We will send the basic props first.
       };
 
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+
       const res = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -507,6 +523,29 @@ export default function NewProjectPage() {
                   </span>
                 ))}
               </div>
+              <select
+                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm mb-2"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value && !draft.categories.includes(value)) {
+                    setDraft({
+                      ...draft,
+                      categories: [...draft.categories, value],
+                    });
+                  }
+                  e.target.value = "";
+                }}
+                value=""
+              >
+                <option value="">+ Select Category</option>
+                {allCategories
+                  .filter((c) => !draft.categories.includes(c))
+                  .map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+              </select>
               <div className="flex gap-2">
                 <Input
                   value={categoryInput}
