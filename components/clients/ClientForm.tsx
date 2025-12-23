@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { ChevronLeft, Save, Upload, X, Loader2 } from "lucide-react";
+import { ChevronLeft, Save, Upload, X, Loader2, Plus } from "lucide-react";
 import Link from "next/link";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -64,6 +64,7 @@ type ClientData = {
   defaultVisibility?: string;
   tags?: string[];
   notes?: string;
+  customFields?: Record<string, string>;
 };
 
 export default function ClientForm({
@@ -82,6 +83,19 @@ export default function ClientForm({
   const [allStates, setAllStates] = useState<GeoOption[]>([]);
   const [allCities, setAllCities] = useState<GeoOption[]>([]);
 
+  // Custom Fields State (Array for UI, convert to Object for data)
+  const [customFields, setCustomFields] = useState<
+    { key: string; value: string }[]
+  >(() => {
+    if (initialData?.customFields) {
+      return Object.entries(initialData.customFields).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
+    }
+    return [];
+  });
+
   const [formData, setFormData] = useState<ClientData>(
     initialData || {
       name: "",
@@ -93,8 +107,20 @@ export default function ClientForm({
       state: "",
       city: "",
       timezone: "",
+      customFields: {},
     }
   );
+
+  // Sync custom fields array to formData object
+  useEffect(() => {
+    const fieldsObj: Record<string, string> = {};
+    customFields.forEach((f) => {
+      if (f.key.trim()) {
+        fieldsObj[f.key] = f.value;
+      }
+    });
+    setFormData((prev) => ({ ...prev, customFields: fieldsObj }));
+  }, [customFields]);
 
   // Load Countries on mount
   useEffect(() => {
@@ -588,6 +614,65 @@ export default function ClientForm({
                   placeholder="Net 30"
                 />
               </div>
+            </div>
+          </Card>
+
+          {/* Custom Fields Section */}
+          <Card className="p-6 space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2 mb-4">
+              Custom Fields
+            </h3>
+            <div className="space-y-3">
+              {customFields.map((field, index) => (
+                <div key={index} className="flex gap-2 items-start">
+                  <Input
+                    placeholder="Field Name"
+                    value={field.key}
+                    onChange={(e) => {
+                      const newFields = [...customFields];
+                      newFields[index].key = e.target.value;
+                      setCustomFields(newFields);
+                    }}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Value"
+                    value={field.value}
+                    onChange={(e) => {
+                      const newFields = [...customFields];
+                      newFields[index].value = e.target.value;
+                      setCustomFields(newFields);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => {
+                      const newFields = customFields.filter(
+                        (_, i) => i !== index
+                      );
+                      setCustomFields(newFields);
+                    }}
+                    title="Remove field"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCustomFields([...customFields, { key: "", value: "" }])
+                }
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Custom Field
+              </Button>
             </div>
           </Card>
 

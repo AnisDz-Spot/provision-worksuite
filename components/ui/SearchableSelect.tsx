@@ -44,7 +44,7 @@ export function SearchableSelect({
         : options.filter((option) =>
             option.label.toLowerCase().includes(query.toLowerCase())
           );
-    return filtered.slice(0, 50); // Limit to 50 items to prevent UI freeze
+    return filtered.slice(0, 1000); // Increased limit to 1000 to show more cities/states
   }, [options, query]);
 
   return (

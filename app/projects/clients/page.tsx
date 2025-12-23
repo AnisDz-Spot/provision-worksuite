@@ -24,17 +24,18 @@ import { log } from "@/lib/logger";
 type Client = {
   id: string;
   name: string;
-  email?: string;
+  logo?: string;
+  primaryEmail?: string;
   phone?: string;
-  companyName?: string;
+  website?: string;
+  primaryContact?: string;
   address?: string;
   city?: string;
   state?: string;
   country?: string;
   postalCode?: string;
-  website?: string;
-  notes?: string;
   status: string;
+  tags?: string[];
   _count?: {
     projects: number;
   };
@@ -120,16 +121,16 @@ export default function ClientsPage() {
     setEditingClient(client);
     setFormData({
       name: client.name,
-      email: client.email || "",
+      email: client.primaryEmail || "",
       phone: client.phone || "",
-      companyName: client.companyName || "",
+      companyName: "",
       address: client.address || "",
       city: client.city || "",
       state: client.state || "",
       country: client.country || "",
       postalCode: client.postalCode || "",
       website: client.website || "",
-      notes: client.notes || "",
+      notes: "",
     });
     setIsModalOpen(true);
   };
@@ -201,89 +202,71 @@ export default function ClientsPage() {
           clients.map((client) => (
             <Card
               key={client.id}
-              className="p-6 hover:shadow-lg transition-all group relative"
+              className="group relative overflow-hidden flex flex-col hover:shadow-xl transition-all border-border/50 hover:border-primary/20 bg-card"
             >
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                <Link
-                  href={`/projects/clients/${client.id}/edit`}
-                  className="p-2 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground"
-                  title="Edit"
-                >
-                  <Edit className="w-4 h-4" />
-                </Link>
-                <button
-                  onClick={() => handleDelete(client.id)}
-                  className="p-2 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-600"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary shrink-0">
-                  {client.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg leading-tight">
-                    {client.name}
-                  </h3>
-                  {client.companyName && (
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                      <Building className="w-3.5 h-3.5" />
-                      {client.companyName}
+              <div className="p-5 flex-1 space-y-4">
+                {/* Header: Logo & Name */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-12 h-12 rounded-lg border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                      {client.logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={client.logo}
+                          alt={client.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-lg font-bold text-primary">
+                          {client.name.charAt(0)}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    <div>
+                      <h3 className="font-semibold text-base leading-tight">
+                        {client.name}
+                      </h3>
+                      {client.primaryContact && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                          <Users className="w-3 h-3" />
+                          {client.primaryContact}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border ${
+                      client.status === "active"
+                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30"
+                        : "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800"
+                    }`}
+                  >
+                    {client.status}
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-3 text-sm">
-                {(client.email || client.phone) && (
-                  <div className="space-y-1.5 pt-2 border-t border-border/50">
-                    {client.email && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="w-3.5 h-3.5" />
-                        <a
-                          href={`mailto:${client.email}`}
-                          className="hover:text-primary transition-colors truncate"
-                        >
-                          {client.email}
-                        </a>
-                      </div>
-                    )}
-                    {client.phone && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-3.5 h-3.5" />
-                        <a
-                          href={`tel:${client.phone}`}
-                          className="hover:text-primary transition-colors"
-                        >
-                          {client.phone}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {(client.address || client.city || client.country) && (
-                  <div className="flex items-start gap-2 text-muted-foreground pt-2 border-t border-border/50">
-                    <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    <span className="line-clamp-2">
-                      {[
-                        client.address,
-                        client.city,
-                        client.state,
-                        client.country,
-                      ]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </span>
-                  </div>
-                )}
-
-                {client.website && (
-                  <div className="flex items-center gap-2 text-muted-foreground pt-2 border-t border-border/50">
-                    <Globe className="w-3.5 h-3.5" />
+                {/* Contact Info Grid */}
+                <div className="grid gap-2 text-sm text-muted-foreground pt-2">
+                  {client.primaryEmail && (
+                    <a
+                      href={`mailto:${client.primaryEmail}`}
+                      className="flex items-center gap-2 hover:text-primary transition-colors truncate"
+                      title={client.primaryEmail}
+                    >
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{client.primaryEmail}</span>
+                    </a>
+                  )}
+                  {client.phone && (
+                    <a
+                      href={`tel:${client.phone}`}
+                      className="flex items-center gap-2 hover:text-primary transition-colors truncate"
+                    >
+                      <Phone className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{client.phone}</span>
+                    </a>
+                  )}
+                  {client.website && (
                     <a
                       href={
                         client.website.startsWith("http")
@@ -292,20 +275,67 @@ export default function ClientsPage() {
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-primary transition-colors truncate"
+                      className="flex items-center gap-2 hover:text-primary transition-colors truncate"
                     >
-                      {client.website}
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {client.website.replace(/^https?:\/\//, "")}
+                      </span>
                     </a>
+                  )}
+                  {(client.city || client.country) && (
+                    <div className="flex items-center gap-2 truncate">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {[client.city, client.country]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {client.tags && client.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {client.tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground text-[10px] font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {client.tags.length > 3 && (
+                      <span className="px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        +{client.tags.length - 3}
+                      </span>
+                    )}
                   </div>
                 )}
+              </div>
 
-                <div className="pt-3 mt-1 flex items-center justify-between">
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-accent text-accent-foreground">
-                    {client.status}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {client._count?.projects || 0} Projects
-                  </span>
+              {/* Footer Actions */}
+              <div className="bg-muted/30 p-3 flex items-center justify-between border-t border-border/50">
+                <span className="text-xs text-muted-foreground font-medium">
+                  {client._count?.projects || 0} Project
+                  {(client._count?.projects || 0) !== 1 ? "s" : ""}
+                </span>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Link
+                    href={`/projects/clients/${client.id}/edit`}
+                    className="p-1.5 hover:bg-background rounded-md shadow-sm border border-transparent hover:border-border text-muted-foreground hover:text-foreground transition-all"
+                    title="Edit"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(client.id)}
+                    className="p-1.5 hover:bg-destructive/10 rounded-md shadow-sm border border-transparent hover:border-destructive/20 text-muted-foreground hover:text-destructive transition-all"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             </Card>
