@@ -58,7 +58,7 @@ export function MeetingRoom({
   };
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden z-[100]">
       {/* Header */}
       <div className="bg-background/95 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between z-20 shadow-sm">
         <div className="flex items-center gap-3">
@@ -78,8 +78,8 @@ export function MeetingRoom({
         </div>
       </div>
 
-      {/* Video Container */}
-      <div className="flex-1 relative bg-neutral-950">
+      {/* Video Area */}
+      <div className="flex-1 relative bg-black overflow-hidden">
         <ZegoMeeting
           roomId={roomId}
           userId={userId}

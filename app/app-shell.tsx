@@ -152,8 +152,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     (mode === "real" && isDatabaseConfigured()) ||
     currentUser?.email === "admin@provision.com";
 
-  // Show auth pages without any layout (after all hooks)
-  if (pathname.startsWith("/auth")) {
+  // Show auth or meeting pages without any layout (after all hooks)
+  if (pathname.startsWith("/auth") || pathname.startsWith("/meetings/")) {
     return <>{children}</>;
   }
 

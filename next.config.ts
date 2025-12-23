@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: blob: https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
               "font-src 'self' data:",
               "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.zegocloud.com wss://*.zegocloud.com https://*.zego.im wss://*.zego.im https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com",
-              "frame-src 'self' https://*.zegocloud.com https://*.zego.im",
+              "frame-src 'self' https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

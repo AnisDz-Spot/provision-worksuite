@@ -82,7 +82,10 @@ export function ZegoMeeting({
           },
           showScreenSharingButton: true,
           showUserList: true,
-          showPreJoinView: false, // Direct join for better UX
+          showPreJoinView: false,
+          showLeavingView: true,
+          showTextChat: true,
+          layout: "Auto",
           onLeaveRoom: () => {
             onMeetingEnd?.();
           },
@@ -140,8 +143,8 @@ export function ZegoMeeting({
       )}
       <div
         ref={containerRef}
-        className="flex-1 w-full h-full [&_iframe]:border-0!"
-        style={{ height: "100%" }}
+        className="flex-1 w-full h-full zego-container [&_iframe]:border-0!"
+        style={{ width: "100%", height: "100%" }}
       />
     </div>
   );
