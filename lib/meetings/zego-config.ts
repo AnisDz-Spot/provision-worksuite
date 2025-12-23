@@ -24,17 +24,19 @@ export interface ZegoConfig {
 export function getZegoConfig(
   roomID: string,
   userID: string,
-  userName: string
+  userName: string,
+  overrides?: { appID?: number | null; serverSecret?: string | null }
 ): ZegoConfig {
-  if (!ZEGO_APP_ID || !ZEGO_SERVER_SECRET) {
-    console.warn(
-      "ZegoCloud credentials are not configured in environment variables."
-    );
+  const appID = overrides?.appID || ZEGO_APP_ID;
+  const serverSecret = overrides?.serverSecret || ZEGO_SERVER_SECRET;
+
+  if (!appID || !serverSecret) {
+    console.warn("ZegoCloud credentials are not configured correctly.");
   }
 
   return {
-    appID: ZEGO_APP_ID || 0,
-    serverSecret: ZEGO_SERVER_SECRET || "",
+    appID: appID || 0,
+    serverSecret: serverSecret || "",
     roomID,
     userID,
     userName,

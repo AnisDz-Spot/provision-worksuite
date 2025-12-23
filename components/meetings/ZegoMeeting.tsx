@@ -9,6 +9,8 @@ interface ZegoMeetingProps {
   userId: string;
   userName: string;
   onMeetingEnd?: () => void;
+  zegoAppId?: number | null;
+  zegoServerSecret?: string | null;
 }
 
 /**
@@ -22,6 +24,8 @@ export function ZegoMeeting({
   userId,
   userName,
   onMeetingEnd,
+  zegoAppId,
+  zegoServerSecret,
 }: ZegoMeetingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +38,10 @@ export function ZegoMeeting({
       try {
         const { ZegoUIKitPrebuilt } =
           await import("@zegocloud/zego-uikit-prebuilt");
-        const config = getZegoConfig(roomId, userId, userName);
+        const config = getZegoConfig(roomId, userId, userName, {
+          appID: zegoAppId,
+          serverSecret: zegoServerSecret,
+        });
 
         if (!config.appID || !config.serverSecret) {
           console.error("ZegoCloud Config Missing:", {

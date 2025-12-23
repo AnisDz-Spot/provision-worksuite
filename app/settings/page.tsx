@@ -10,7 +10,7 @@ import { BlockerCategorySettings } from "@/components/settings/BlockerCategorySe
 import RiskLevelSettings from "@/components/settings/RiskLevelSettings";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { Bell, Shield, Mail, HelpCircle } from "lucide-react";
+import { Bell, Shield, Mail, HelpCircle, Video } from "lucide-react";
 import RolesSettings from "@/components/settings/RolesSettings";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { AlertRulesManager } from "@/components/notifications/AlertRulesManager";
@@ -24,6 +24,7 @@ import {
   hasDatabaseTables,
 } from "@/lib/setup";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
+import { ZegoSettingsForm } from "@/components/settings/ZegoSettingsForm";
 import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import {
@@ -40,9 +41,6 @@ type TabKey =
   | "profile"
   | "user"
   | "workspace"
-  | "profile"
-  | "user"
-  | "workspace"
   | "appearance"
   | "security"
   | "roles"
@@ -51,6 +49,7 @@ type TabKey =
   | "notifications"
   | "blockers"
   | "dataSource"
+  | "video"
   | "support";
 
 function DataSourceTab() {
@@ -584,6 +583,15 @@ function SettingsContent() {
             Chat
           </Button>
           <Button
+            variant={tab === "video" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("video")}
+            className={cn(tab === "video" && "shadow")}
+          >
+            <Video className="w-4 h-4 mr-2" />
+            Video
+          </Button>
+          <Button
             variant={tab === "email" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleSetTab("email")}
@@ -703,6 +711,7 @@ function SettingsContent() {
           <ChatGroupSettings />
         </div>
       )}
+      {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
       {tab === "support" && !isSetupMode && <SupportTab />}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
     </section>

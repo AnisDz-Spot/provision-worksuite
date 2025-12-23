@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAuthenticatedUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MeetingRoom } from "./MeetingRoom";
+import { getZegoSystemSettings } from "@/lib/meetings/zego-settings-server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,9 @@ export default async function MeetingPage({
   if (!user) {
     redirect(`/auth/login?redirect=/meetings/${roomId}`);
   }
+
+  // Fetch Zego system settings (client-specific credentials)
+  const zegoSettings = await getZegoSystemSettings();
 
   // SECURITY: Verify authorization before rendering Jitsi
   const meeting = await prisma.meeting.findUnique({
@@ -51,6 +55,8 @@ export default async function MeetingPage({
       userDisplayName={user.name || user.email || "User"}
       userEmail={user.email}
       meetingTitle={meeting.title}
+      zegoAppId={zegoSettings.appId}
+      zegoServerSecret={zegoSettings.serverSecret}
     />
   );
 }

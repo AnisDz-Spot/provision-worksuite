@@ -31,6 +31,8 @@ interface MeetingRoomProps {
   userDisplayName: string;
   userEmail?: string;
   meetingTitle: string;
+  zegoAppId?: number | null;
+  zegoServerSecret?: string | null;
 }
 
 export function MeetingRoom({
@@ -39,6 +41,8 @@ export function MeetingRoom({
   userDisplayName,
   userEmail,
   meetingTitle,
+  zegoAppId,
+  zegoServerSecret,
 }: MeetingRoomProps) {
   const router = useRouter();
 
@@ -81,6 +85,8 @@ export function MeetingRoom({
           userId={userId}
           userName={userDisplayName}
           onMeetingEnd={handleMeetingEnd}
+          zegoAppId={zegoAppId}
+          zegoServerSecret={zegoServerSecret}
         />
       </div>
     </div>
