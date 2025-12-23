@@ -31,6 +31,10 @@ S3_PUBLIC_URL=https://cdn.yourdomain.com # Optional
 
 # If using Vercel Blob:
 BLOB_READ_WRITE_TOKEN=xxx
+
+# Video Conferencing (OPTIONAL - Can also be configured in UI)
+NEXT_PUBLIC_ZEGO_APP_ID=xxx
+NEXT_PUBLIC_ZEGO_SERVER_SECRET=xxx
 ```
 
 ## 2. Run with Docker Compose

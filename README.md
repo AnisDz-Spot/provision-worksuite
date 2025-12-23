@@ -1,6 +1,8 @@
 # ProVision WorkSuite
 
-A modern, production-ready project management platform built with Next.js 16, React 19, TypeScript 5, and TailwindCSS 4. Features a complete project tracking system with tasks, team management, analytics, and real-time collaboration.
+A modern, production-ready project management platform built with Next.js 16, React 19, TypeScript 5, and TailwindCSS 4.
+
+[**Full User Tutorial**](./docs/TUTORIAL.md) | [**Detailed Feature Guide**](./docs/FEATURES.md) | [**Deployment Setup**](./DEPLOYMENT.md) | [**Self-Hosting**](./SELF_HOSTING.md)
 
 ## Features
 
@@ -8,14 +10,16 @@ A modern, production-ready project management platform built with Next.js 16, Re
 - **Project Management**: Create, track, and manage projects with milestones and budgets
 - **Task Management**: Kanban board with drag-and-drop, task assignments, and time tracking
 - **Recurring Tasks**: Schedule daily, weekly, or monthly recurring tasks with RRULE support
-- **Team Collaboration**: User management, role-based access, and activity feeds
+- **Video Conferencing**: Integrated **ZegoCloud** video calls with managed infrastructure
+- **Advanced Chat**: Real-time group messaging with file attachments and member directory
 - **Calendar**: Event scheduling and deadline tracking
 - **Authentication**: Email/password, OAuth (Google, GitHub, Microsoft), 2FA support
 - **Account Linking**: Link multiple OAuth providers to a single account
 - **Export**: PDF, Excel, and CSV export for reports and invoices
 - **Dark/Light Theme**: Automatic theme detection with manual override
 - **Responsive Design**: Mobile-first, works seamlessly on all devices
-- **Database Storage**: PostgreSQL (Neon) for data, Vercel Blob for file uploads
+- **Database Storage**: Multi-database support (PostgreSQL, MySQL, SQLite) via Prisma
+- **Dynamic Configuration**: Securely manage database and video credentials via UI
 - **Auto Migration**: Database schema auto-syncs on deploy (Docker/Vercel)
 
 ## Tech Stack
