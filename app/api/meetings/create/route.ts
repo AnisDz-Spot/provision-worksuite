@@ -39,6 +39,48 @@ export async function POST(request: NextRequest) {
       new Set(Array.isArray(participantUids) ? participantUids : [])
     ).filter((uid) => uid && typeof uid === "string" && uid !== user.uid);
 
+    // Auto-resolve conversationId for 1-on-1 calls if missing
+    let finalConversationId = conversationId;
+    if (!finalConversationId && uniqueParticipantUids.length === 1) {
+      const recipientId = uniqueParticipantUids[0];
+
+      // Try to find existing direct conversation
+      const existingConv = await prisma.conversation.findFirst({
+        where: {
+          type: "direct",
+          AND: [
+            { members: { some: { userId: user.uid } } },
+            { members: { some: { userId: recipientId } } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (existingConv) {
+        finalConversationId = existingConv.id;
+      } else {
+        // Create new direct conversation
+        try {
+          const newConv = await prisma.conversation.create({
+            data: {
+              type: "direct",
+              members: {
+                create: [{ userId: user.uid }, { userId: recipientId }],
+              },
+            },
+            select: { id: true },
+          });
+          finalConversationId = newConv.id;
+        } catch (e) {
+          log.error(
+            { err: e },
+            "Failed to auto-create conversation for meeting"
+          );
+          // Continue without conversationId (logging will fail but meeting proceeds)
+        }
+      }
+    }
+
     // Create meeting with participants and invites in a transaction
     const { meeting, invites } = await prisma.$transaction(async (tx: any) => {
       const m = await tx.meeting.create({
@@ -48,7 +90,7 @@ export async function POST(request: NextRequest) {
           description: description?.trim() || null,
           createdBy: user.uid,
           type: type || "video",
-          conversationId: conversationId || null,
+          conversationId: finalConversationId || null,
           participants: {
             create: [
               { userId: user.uid, role: "host" },
