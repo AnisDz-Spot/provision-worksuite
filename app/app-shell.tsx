@@ -264,7 +264,8 @@ function MainContent({
 
     const checkCalls = async () => {
       try {
-        const res = await fetch("/api/presence/heartbeat", {
+        const { fetchWithCsrf } = await import("@/lib/csrf-client");
+        const res = await fetchWithCsrf("/api/presence/heartbeat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uid: currentUser.id, status: "available" }),
