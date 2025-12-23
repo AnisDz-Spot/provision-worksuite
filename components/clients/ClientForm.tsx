@@ -1,12 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { ChevronLeft, Save } from "lucide-react";
+import { ChevronLeft, Save, Upload, X, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { fetchWithCsrf } from "@/lib/csrf-client";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import {
+  getCountries,
+  getStates,
+  getCities,
+  type GeoOption,
+} from "@/app/actions/geo";
+
+// Common timezones list
+const TIMEZONES = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Vancouver",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Zurich",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Singapore",
+  "Asia/Dubai",
+  "Australia/Sydney",
+  "Australia/Melbourne",
+  "Pacific/Auckland",
+];
 
 type ClientData = {
   id?: string;
@@ -45,6 +75,13 @@ export default function ClientForm({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // Geo Data State
+  const [allCountries, setAllCountries] = useState<GeoOption[]>([]);
+  const [allStates, setAllStates] = useState<GeoOption[]>([]);
+  const [allCities, setAllCities] = useState<GeoOption[]>([]);
+
   const [formData, setFormData] = useState<ClientData>(
     initialData || {
       name: "",
@@ -52,8 +89,44 @@ export default function ClientForm({
       status: "active",
       defaultVisibility: "shared",
       currency: "USD",
+      country: "",
+      state: "",
+      city: "",
+      timezone: "",
     }
   );
+
+  // Load Countries on mount
+  useEffect(() => {
+    getCountries().then(setAllCountries);
+  }, []);
+
+  // Find ISO codes for selected country/state labels
+  const currentCountryIso = useMemo(() => {
+    return allCountries.find((c) => c.label === formData.country)?.value;
+  }, [allCountries, formData.country]);
+
+  // Load States when country changes
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllStates([]);
+      return;
+    }
+    getStates(currentCountryIso).then(setAllStates);
+  }, [currentCountryIso]);
+
+  const currentStateIso = useMemo(() => {
+    return allStates.find((s) => s.label === formData.state)?.value;
+  }, [allStates, formData.state]);
+
+  // Load Cities when state changes
+  useEffect(() => {
+    if (!currentCountryIso) {
+      setAllCities([]);
+      return;
+    }
+    getCities(currentCountryIso, currentStateIso).then(setAllCities);
+  }, [currentCountryIso, currentStateIso]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -63,6 +136,44 @@ export default function ClientForm({
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+      // Path strategy: clients/timestamp-filename
+      const filename = sanitizeFilename(file.name);
+      formDataUpload.append("path", `clients/${Date.now()}-${filename}`);
+
+      // Using the generic local upload endpoint
+      const res = await fetchWithCsrf("/api/upload-local", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      setFormData((prev) => ({ ...prev, logo: data.url }));
+    } catch (error) {
+      console.error("Logo upload error:", error);
+      alert("Failed to upload logo. Please try again.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Helper to sanitize filename for client-side usage if needed
+  function sanitizeFilename(name: string) {
+    return name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +187,8 @@ export default function ClientForm({
 
       const method = isEditing ? "PUT" : "POST";
 
-      const res = await fetch(url, {
+      // Use fetchWithCsrf for CSRF protection
+      const res = await fetchWithCsrf(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -87,7 +199,6 @@ export default function ClientForm({
       const data = await res.json();
       router.push("/projects/clients");
       router.refresh();
-      // toast.success("Client saved successfully");
     } catch (error) {
       console.error(error);
       alert("Something went wrong. Please try again.");
@@ -97,9 +208,9 @@ export default function ClientForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto pb-20">
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto py-20">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 ">
           <Link
             href="/projects/clients"
             className="p-2 hover:bg-accent rounded-full text-muted-foreground transition-colors"
@@ -172,16 +283,63 @@ export default function ClientForm({
                   <option value="archived">Archived</option>
                 </select>
               </div>
-              <div className="col-span-2">
-                <label className="text-sm font-medium mb-1 block">
-                  Logo URL
-                </label>
-                <Input
-                  name="logo"
-                  value={formData.logo || ""}
-                  onChange={handleChange}
-                  placeholder="https://example.com/logo.png"
-                />
+
+              {/* Logo Upload */}
+              <div className="col-span-2 space-y-2">
+                <label className="text-sm font-medium mb-1 block">Logo</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16 rounded-lg border bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                    {formData.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={formData.logo}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Upload className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
+                          disabled={uploadingLogo}
+                        />
+                        <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
+                          {uploadingLogo ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            "Upload Image"
+                          )}
+                        </div>
+                      </label>
+                      {formData.logo && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setFormData((p) => ({ ...p, logo: "" }))
+                          }
+                          title="Remove logo"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Recommended: Square JPG or PNG, max 2MB.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
@@ -268,24 +426,61 @@ export default function ClientForm({
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
+                {/* Country Selector */}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">City</label>
-                  <Input
-                    name="city"
-                    value={formData.city || ""}
-                    onChange={handleChange}
-                    placeholder="San Francisco"
+                  <label className="text-sm font-medium mb-1 block">
+                    Country
+                  </label>
+                  <SearchableSelect
+                    options={allCountries}
+                    value={currentCountryIso || ""}
+                    onChange={(iso) => {
+                      const country = allCountries.find((c) => c.value === iso);
+                      if (country) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          country: country.label,
+                          state: "",
+                          city: "",
+                        }));
+                      }
+                    }}
+                    placeholder="Select Country..."
                   />
                 </div>
+                {/* State Selector */}
                 <div>
                   <label className="text-sm font-medium mb-1 block">
                     State / Region
                   </label>
-                  <Input
-                    name="state"
-                    value={formData.state || ""}
-                    onChange={handleChange}
-                    placeholder="CA"
+                  <SearchableSelect
+                    options={allStates}
+                    value={currentStateIso || ""}
+                    onChange={(iso) => {
+                      const state = allStates.find((s) => s.value === iso);
+                      if (state) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          state: state.label,
+                          city: "",
+                        }));
+                      }
+                    }}
+                    placeholder="Select State..."
+                    disabled={!currentCountryIso}
+                  />
+                </div>
+                {/* City Selector */}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">City</label>
+                  <SearchableSelect
+                    options={allCities}
+                    value={formData.city || ""}
+                    onChange={(val) =>
+                      setFormData((prev) => ({ ...prev, city: val }))
+                    }
+                    placeholder="Select City..."
+                    disabled={!currentCountryIso}
                   />
                 </div>
                 <div>
@@ -299,29 +494,25 @@ export default function ClientForm({
                     placeholder="94103"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    Country
-                  </label>
-                  <Input
-                    name="country"
-                    value={formData.country || ""}
-                    onChange={handleChange}
-                    placeholder="USA"
-                  />
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-1 block">
                     Timezone
                   </label>
-                  <Input
+                  <select
                     name="timezone"
                     value={formData.timezone || ""}
                     onChange={handleChange}
-                    placeholder="America/Los_Angeles"
-                  />
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">Select Timezone</option>
+                    {TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>
+                        {tz}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-1 block">
