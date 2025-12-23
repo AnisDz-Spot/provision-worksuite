@@ -25,13 +25,14 @@ import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
 
 type Project = {
   id: string;
+  uid?: string;
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
   deadline: string;
   priority?: "low" | "medium" | "high";
   starred?: boolean;
-  members?: { name: string; avatarUrl?: string }[];
+  members?: any[]; // Allow flexibility for API response
   cover?: string;
   tags?: string[];
   isTemplate?: boolean;
@@ -373,6 +374,18 @@ export function ProjectGrid() {
       ) as string[],
     [projects]
   );
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="h-14 bg-card rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -428,25 +441,6 @@ export function ProjectGrid() {
             {allCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            id="filter-tag"
-            name="tag"
-            aria-label="Filter by Tag"
-            value={tagFilter}
-            onChange={(e) => {
-              setTagFilter(e.target.value);
-              updateUrl({ tag: e.target.value });
-            }}
-            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
-          >
-            <option value="all">Tag: All</option>
-            {allTags.map((t) => (
-              <option key={t} value={t}>
-                {t}
               </option>
             ))}
           </select>
@@ -731,7 +725,7 @@ export function ProjectGrid() {
                 <Card
                   key={p.id}
                   className="group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer border-2 border-transparent hover:border-primary/20"
-                  onClick={() => router.push(`/projects/${p.id}`)}
+                  onClick={() => router.push(`/projects/${p.uid || p.id}`)}
                 >
                   {selectMode && (
                     <div className="absolute top-2 left-2 z-20">
@@ -817,7 +811,7 @@ export function ProjectGrid() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setMenuOpen(null);
-                                  router.push(`/projects/${p.id}`);
+                                  router.push(`/projects/${p.uid || p.id}`);
                                 }}
                               >
                                 Open
@@ -992,31 +986,31 @@ export function ProjectGrid() {
                     {totalMembers > 0 && (
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
-                          {(p.members || []).slice(0, 4).map((m, idx) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              key={idx}
-                              src={
-                                m.avatarUrl ||
-                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                              }
-                              alt={m.name}
-                              className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border cursor-pointer hover:scale-110 transition-transform"
-                              title={m.name}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Find member uid from team members list or use name as fallback
-                                const member = teamMembers.find(
-                                  (tm) => tm.name === m.name
-                                );
-                                const memberId =
-                                  member?.id ||
-                                  member?.uid ||
-                                  encodeURIComponent(m.name);
-                                router.push(`/team/${memberId}`);
-                              }}
-                            />
-                          ))}
+                          {(p.members || []).slice(0, 4).map((m: any, idx) => {
+                            const name = m.user?.name || m.name || "Member";
+                            const avatar = m.user?.avatarUrl || m.avatarUrl;
+                            const uid = m.user?.uid || m.uid || m.id;
+
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={idx}
+                                src={
+                                  avatar ||
+                                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                                    name
+                                  )}`
+                                }
+                                alt={name}
+                                className="w-8 h-8 rounded-full border-2 border-card bg-white ring-1 ring-border cursor-pointer hover:scale-110 transition-transform"
+                                title={name}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (uid) router.push(`/team/${uid}`);
+                                }}
+                              />
+                            );
+                          })}
                           {totalMembers > 4 && (
                             <div className="w-8 h-8 rounded-full border-2 border-card bg-accent text-foreground text-xs flex items-center justify-center font-medium ring-1 ring-border">
                               +{totalMembers - 4}
@@ -1140,7 +1134,13 @@ export function ProjectGrid() {
                       <span
                         className={`font-medium ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
                       >
-                        {p.deadline || "No deadline"}
+                        {p.deadline
+                          ? new Date(p.deadline).toLocaleDateString("en-US", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              year: "numeric",
+                            })
+                          : "No deadline"}
                       </span>
                     </div>
                     {/* Completed flash overlay */}

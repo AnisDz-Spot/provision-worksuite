@@ -307,6 +307,7 @@ export default function NewProjectPage() {
         clientLogo: finalClientLogo,
         files: finalFiles, // API needs to handle this!
         members: draft.members.map((m) => m.uid), // Send member UIDs
+        categories: draft.categories,
       };
 
       const csrfToken = getCsrfToken();

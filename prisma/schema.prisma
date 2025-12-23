@@ -176,6 +176,7 @@ model Project {
   clientName  String?   @map("client_name")
   clientId    String?   @map("client_id")
   tags        String[]  @default([])
+  categories  String[]  @default([])
   visibility  String    @default("private") // public, private, team-only
   archivedAt  DateTime? @map("archived_at")
   color       String?

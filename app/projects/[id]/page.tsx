@@ -192,11 +192,34 @@ export default function ProjectDetailsPage() {
   const [templateCategory, setTemplateCategory] = React.useState("Other");
 
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      setProject(loadProject(projectId));
-      setAllProjects(loadAllProjects());
-      setIsLoading(false);
+    async function load() {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/projects/${projectId}`);
+        const data = await res.json();
+        if (data.success && data.project) {
+          // Normalize members for the UI
+          const p = data.project;
+          // Map Prisma members to UI members
+          if (p.members) {
+            p.members = p.members.map((m: any) => ({
+              uid: m.user?.uid,
+              name: m.user?.name || m.name || "Member",
+              avatarUrl: m.user?.avatarUrl || m.avatarUrl,
+            }));
+          }
+          setProject(p);
+        } else {
+          setProject(null);
+        }
+      } catch (err) {
+        console.error(err);
+        setProject(null);
+      } finally {
+        setIsLoading(false);
+      }
     }
+    load();
   }, [projectId]);
 
   if (isLoading) {
