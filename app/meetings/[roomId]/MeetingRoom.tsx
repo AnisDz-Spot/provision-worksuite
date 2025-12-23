@@ -58,7 +58,7 @@ export function MeetingRoom({
   };
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden z-[100]">
+    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden z-100">
       {/* Header */}
       <div className="bg-background/95 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between z-20 shadow-sm">
         <div className="flex items-center gap-3">

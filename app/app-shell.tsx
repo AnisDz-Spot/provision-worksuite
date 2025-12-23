@@ -12,6 +12,7 @@ import { setDataModePreference } from "@/lib/dataSource";
 import { AppLoader } from "@/components/ui/AppLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Modal } from "@/components/ui/Modal";
+import { CallRinging } from "@/components/meetings/CallRinging";
 import { Database, FlaskConical, ArrowRight, ShieldCheck } from "lucide-react";
 import {
   isDatabaseConfigured,
@@ -27,6 +28,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = React.useState<string | null>(null);
   const [showModeModal, setShowModeModal] = React.useState(false);
   const [isSyncing, setIsSyncing] = React.useState(true);
+  const [isNavBlocked, setIsNavBlocked] = React.useState(false);
+  const [activeCall, setActiveCall] = React.useState<any>(null);
 
   React.useEffect(() => {
     setIsClient(true);
@@ -247,6 +250,46 @@ function MainContent({
   const { currentUser, isAuthenticated, isLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [activeCall, setActiveCall] = React.useState<any>(null);
+
+  // Global Call Signaling Heartbeat
+  React.useEffect(() => {
+    if (
+      !currentUser?.id ||
+      !mode ||
+      mode === "mock" ||
+      pathname.startsWith("/meetings/")
+    )
+      return;
+
+    const checkCalls = async () => {
+      try {
+        const res = await fetch("/api/presence/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: currentUser.id, status: "available" }),
+        });
+        const json = await res.json();
+        if (json.success && json.pendingCalls && json.pendingCalls.length > 0) {
+          if (!activeCall) {
+            setActiveCall(json.pendingCalls[0]);
+          }
+        } else if (
+          json.success &&
+          (!json.pendingCalls || json.pendingCalls.length === 0)
+        ) {
+          setActiveCall(null);
+        }
+      } catch (e) {
+        console.error("Call signaling error", e);
+      }
+    };
+
+    const interval = setInterval(checkCalls, 5000);
+    checkCalls();
+
+    return () => clearInterval(interval);
+  }, [currentUser?.id, activeCall, pathname, mode]);
 
   // Redirect to login if not authenticated and not on auth pages
   React.useEffect(() => {
@@ -347,6 +390,10 @@ function MainContent({
           <TeamChat currentUser={currentUser.id} />
         )}
       </div>
+
+      {activeCall && (
+        <CallRinging invite={activeCall} onClose={() => setActiveCall(null)} />
+      )}
     </div>
   );
 }

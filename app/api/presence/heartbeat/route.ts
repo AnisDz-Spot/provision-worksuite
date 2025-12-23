@@ -50,11 +50,42 @@ export async function POST(request: Request) {
       lastSeen: presence.lastSeen,
     };
 
-    log.debug({ uid, status: stat }, "Presence heartbeat");
+    // Find pending call invites for this user
+    const pendingInvites = await prisma.callInvite.findMany({
+      where: {
+        recipientUid: uid,
+        status: "pending",
+        createdAt: {
+          gte: new Date(Date.now() - 60000), // Only show invites from last 60 seconds
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Resolve caller identities
+    const enhancedInvites = await Promise.all(
+      pendingInvites.map(async (invite: any) => {
+        const caller = await prisma.user.findUnique({
+          where: { uid: invite.callerUid },
+          select: { name: true, avatarUrl: true },
+        });
+        return {
+          ...invite,
+          callerName: caller?.name || "Someone",
+          callerAvatar: caller?.avatarUrl,
+        };
+      })
+    );
+
+    log.debug(
+      { uid, status: stat, pendingCount: enhancedInvites.length },
+      "Presence heartbeat"
+    );
 
     return NextResponse.json({
       success: true,
       data: mapped,
+      pendingCalls: enhancedInvites,
       serverTime: new Date().toISOString(),
     });
   } catch (error) {

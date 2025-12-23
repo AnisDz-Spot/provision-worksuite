@@ -607,6 +607,19 @@ model ChatGroup {
   @@map("chat_groups")
 }
 
+model CallInvite {
+  id           String   @id @default(cuid())
+  roomId       String   @map("room_id")
+  callerUid    String   @map("caller_uid")
+  recipientUid String   @map("recipient_uid")
+  status       String   @default("pending") // pending, accepted, rejected, missed
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([recipientUid, status])
+  @@map("call_invites")
+}
+
 model Presence {
   uid      String   @id
   status   String

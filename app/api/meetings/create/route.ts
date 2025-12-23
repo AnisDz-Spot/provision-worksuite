@@ -39,39 +39,55 @@ export async function POST(request: NextRequest) {
       new Set(Array.isArray(participantUids) ? participantUids : [])
     ).filter((uid) => uid && typeof uid === "string" && uid !== user.uid);
 
-    // Create meeting with participants
-    const meeting = await prisma.meeting.create({
-      data: {
-        roomId,
-        title: title.trim(),
-        description: description?.trim() || null,
-        createdBy: user.uid,
-        participants: {
-          create: [
-            // Creator is always the host
-            { userId: user.uid, role: "host" },
-            // Add other participants
-            ...uniqueParticipantUids.map((uid: string) => ({
-              userId: uid,
-              role: "participant",
-            })),
-          ],
+    // Create meeting with participants and invites in a transaction
+    const { meeting, invites } = await prisma.$transaction(async (tx: any) => {
+      const m = await tx.meeting.create({
+        data: {
+          roomId,
+          title: title.trim(),
+          description: description?.trim() || null,
+          createdBy: user.uid,
+          participants: {
+            create: [
+              { userId: user.uid, role: "host" },
+              ...uniqueParticipantUids.map((uid: string) => ({
+                userId: uid,
+                role: "participant",
+              })),
+            ],
+          },
         },
-      },
-      include: {
-        participants: {
-          include: {
-            user: {
-              select: {
-                uid: true,
-                name: true,
-                email: true,
-                avatarUrl: true,
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  uid: true,
+                  name: true,
+                  email: true,
+                  avatarUrl: true,
+                },
               },
             },
           },
         },
-      },
+      });
+
+      // Create invitations for all recipients
+      const invs = await Promise.all(
+        uniqueParticipantUids.map((uid: string) =>
+          tx.callInvite.create({
+            data: {
+              roomId,
+              callerUid: user.uid,
+              recipientUid: uid,
+              status: "pending",
+            },
+          })
+        )
+      );
+
+      return { meeting: m, invites: invs };
     });
 
     log.info(
