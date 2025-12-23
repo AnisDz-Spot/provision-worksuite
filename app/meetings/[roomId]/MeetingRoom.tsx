@@ -57,8 +57,8 @@ export function MeetingRoom({
     } catch (e) {
       console.error("Failed to finish meeting:", e);
     }
-    // Redirect to meetings list or dashboard
-    router.push("/");
+    // No redirection as per user request
+    // router.push("/");
   };
 
   const handleLeave = async () => {
@@ -73,7 +73,7 @@ export function MeetingRoom({
       } catch (e) {
         console.error("Failed to finish meeting on leave:", e);
       }
-      router.push("/");
+      // router.push("/");
     }
   };
 
