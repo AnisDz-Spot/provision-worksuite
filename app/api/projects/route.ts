@@ -107,13 +107,21 @@ export async function POST(req: Request) {
   }
 
   // AUTHORIZATION: Only admins and project-managers can create projects
-  const allowedRoles = ["admin", "global-admin", "project-manager"];
+  const allowedRoles = [
+    "admin",
+    "global-admin",
+    "project-manager",
+    "master-admin",
+    "master_admin",
+    "Master Admin",
+    "Administrator",
+  ];
   if (!allowedRoles.includes(currentUser.role)) {
     return NextResponse.json(
       {
         success: false,
         error:
-          "Forbidden: Only administrators and project managers can create projects",
+          "Forbidden: Only administrators, master admins, and project managers can create projects",
       },
       { status: 403 }
     );
