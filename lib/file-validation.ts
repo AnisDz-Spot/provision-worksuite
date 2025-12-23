@@ -129,14 +129,21 @@ export async function validateDocumentFile(
  * Validate general file upload
  */
 export async function validateFileUpload(
-  request: NextRequest,
+  input: NextRequest | FormData,
   options: {
     maxSize?: number;
     allowedTypes?: string[];
   } = {}
 ): Promise<FileValidationResult> {
   try {
-    const formData = await request.formData();
+    let formData: FormData;
+
+    if (input instanceof FormData) {
+      formData = input;
+    } else {
+      formData = await input.formData();
+    }
+
     const file = formData.get("file") as File;
 
     if (!file) {

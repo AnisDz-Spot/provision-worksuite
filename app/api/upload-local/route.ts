@@ -29,8 +29,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: Get form data once to avoid body consumption issues
+    const formData = await request.formData();
+
     // SECURITY: Validate file upload
-    const validation = await validateFileUpload(request, {
+    const validation = await validateFileUpload(formData, {
       maxSize: MAX_DOCUMENT_SIZE,
     });
 
@@ -39,7 +42,6 @@ export async function POST(request: NextRequest) {
     }
 
     const file = validation.file!;
-    const formData = await request.formData();
     const filePath = formData.get("path") as string;
 
     if (!filePath) {
