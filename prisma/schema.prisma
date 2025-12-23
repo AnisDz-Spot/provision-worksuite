@@ -161,7 +161,7 @@ model Role {
 model Project {
   id          Int       @id @default(autoincrement())
   uid         String    @unique @default(uuid())
-  slug        String    @unique @default(cuid()) // Temporary default for migration
+  slug        String?   @unique
   name        String
   description String?
   status      String    @default("active")

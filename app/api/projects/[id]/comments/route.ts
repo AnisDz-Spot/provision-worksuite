@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -14,7 +14,7 @@ export async function GET(
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // Resolve Project ID (handle Slug/UID)
   // We re-use logic or just do a findFirst.
@@ -82,7 +82,7 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -92,7 +92,7 @@ export async function POST(
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   // Resolve Project ID
   const project = await prisma.project.findFirst({
@@ -130,20 +130,23 @@ export async function POST(
       );
     }
 
+    const userRecord = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true },
+    });
+
+    if (!userRecord) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     const comment = await prisma.comment.create({
       data: {
         content,
         projectId: projectIdInt,
-        userId: parseInt(user.uid), // Assuming user.uid is parseable to Int as per schema usually? schema User.id is Int. User.uid is String unique.
-        // Wait, Schema check: `model Comment { userId Int ... user User @relation(...) }`
-        // User primary key is Int `id`. `uid` is string.
-        // We need the User's Int ID.
-        // `getAuthenticatedUser` returns `uid` string.
-        // We need to fetch User Int ID if we don't have it.
-        // Actually, `getAuthenticatedUser` usually fetches from DB.
-        // Let's verify `getAuthenticatedUser`.
-        // If it returns user object from DB, it might have `id`.
-        // If not, we fetch it.
+        userId: userRecord.id,
       },
       include: {
         user: {
