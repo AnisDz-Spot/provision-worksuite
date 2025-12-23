@@ -17,8 +17,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only allow in development or self-hosting mode
+    // Only block if explicitly set to another provider in production
     if (
+      process.env.NEXT_PUBLIC_STORAGE_PROVIDER &&
       process.env.NEXT_PUBLIC_STORAGE_PROVIDER !== "local" &&
       process.env.NODE_ENV === "production"
     ) {
@@ -66,8 +67,16 @@ export async function POST(request: NextRequest) {
     const fullPath = path.join(uploadDir, safePath);
 
     // SECURITY: Ensure normalized path is still within uploads directory
-    const normalizedPath = path.normalize(fullPath);
-    if (!normalizedPath.startsWith(uploadDir)) {
+    // Normalize and lowercase for consistent checking on Windows
+    const normalizedPath = path.normalize(fullPath).toLowerCase();
+    const normalizedUploadDir = path.normalize(uploadDir).toLowerCase();
+
+    if (!normalizedPath.startsWith(normalizedUploadDir)) {
+      console.error("[Upload] Path Traversal Attempt:", {
+        fullPath,
+        normalizedPath,
+        normalizedUploadDir,
+      });
       return NextResponse.json(
         { error: "Invalid path: directory traversal detected" },
         { status: 403 }
