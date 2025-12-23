@@ -707,7 +707,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   return (
     <>
       {/* Chat Button */}
-      {!activeChat && (
+      <div className={activeChat ? "hidden" : "block"}>
         <button
           onClick={() => {
             setShowConversations(!showConversations);
@@ -724,10 +724,10 @@ export function TeamChat({ currentUser }: TeamChatProps) {
             </span>
           )}
         </button>
-      )}
+      </div>
 
-      {/* Conversations List */}
-      {showConversations && !activeChat && (
+      {/* Conversations List - Persistent but hidden */}
+      <div className={showConversations && !activeChat ? "block" : "hidden"}>
         <Card className="fixed bottom-20 right-4 w-[calc(100vw-2rem)] md:w-80 max-h-96 z-50 shadow-2xl overflow-hidden">
           <div className="bg-primary text-primary-foreground p-3 flex items-center justify-between">
             <h3 className="font-semibold">Team Chat</h3>
@@ -802,9 +802,16 @@ export function TeamChat({ currentUser }: TeamChatProps) {
             )}
           </div>
         </Card>
-      )}
+      </div>
 
-      {/* Active Chat Window */}
+      {/* Active Chat Window - Persistent but conditionally hidden */}
+      {/* Note: We actually WANT to unmount ChatWindow when switching users to reset internal state, 
+          BUT users want persistence when toggling minimize. 
+          Current issue is likely opening/closing causing complete re-mount.
+          For now, let's keep conditional render for different users, but maybe wrap it? 
+          Actually, the user says "whenever I open the floating chat box it has to refetch". 
+          This implies opening/closing the widget entirely. 
+      */}
       {activeChat && (
         <ChatWindow
           currentUser={currentUser}
