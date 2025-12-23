@@ -37,8 +37,13 @@ export function ZegoMeeting({
         const config = getZegoConfig(roomId, userId, userName);
 
         if (!config.appID || !config.serverSecret) {
+          console.error("ZegoCloud Config Missing:", {
+            appID: !!config.appID,
+            secret: !!config.serverSecret,
+            rawAppID: process.env.NEXT_PUBLIC_ZEGO_APP_ID,
+          });
           setError(
-            "ZegoCloud is not properly configured. Please check environment variables."
+            "ZegoCloud is not properly configured. Please check environment variables (and restart your dev server)."
           );
           setIsLoading(false);
           return;

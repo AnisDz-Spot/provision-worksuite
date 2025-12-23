@@ -60,7 +60,7 @@ export function ChatSidebar({
           {searchQuery && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
               <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase bg-muted/30 sticky top-0 backdrop-blur-sm">
-                Team Results
+                Member Results
               </div>
               {filteredMembers.filter((m) =>
                 m.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -133,7 +133,7 @@ export function ChatSidebar({
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Team
+          Members
         </button>
         {isMasterAdmin && (
           <button
@@ -329,7 +329,7 @@ export function ChatSidebar({
         {viewMode === "directory" && (
           <div>
             <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase">
-              Team Directory
+              Member Directory
             </div>
             {filteredMembers.map((member) => (
               <button
