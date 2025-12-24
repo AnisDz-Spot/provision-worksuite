@@ -82,34 +82,8 @@ export async function POST(request: NextRequest) {
     let shouldAllowBackdoor =
       !dbConfigured || isMockMode || process.env.ENABLE_GLOBAL_ADMIN === "true";
 
-    // Auto-recovery check (only if not already allowed)
-    if (!shouldAllowBackdoor && dbConfigured) {
-      try {
-        // OPTIMIZATION: Use Prisma directly instead of checkTablesExist (which opens a separate pool)
-        // This reduces connection overhead and prevents pool exhaustion in serverless environments
-        const userCount = await prisma.user.count();
-        if (userCount === 0) {
-          shouldAllowBackdoor = true;
-          log.info("Backdoor allowed: Database is empty");
-        }
-      } catch (e: any) {
-        // If table doesn't exist (P2021) or connection failed, allow backdoor for setup
-        if (
-          e.code === "P2021" ||
-          (e.message && e.message.includes("does not exist"))
-        ) {
-          shouldAllowBackdoor = true;
-          log.info("Backdoor allowed: Tables missing (P2021)");
-        } else {
-          // Other critical DB error - allow backdoor to access Settings
-          shouldAllowBackdoor = true;
-          log.warn(
-            { err: e },
-            "Backdoor allowed: DB connectivity issue during count check"
-          );
-        }
-      }
-    }
+    // Note: We'll check for backdoor access later if user lookup fails
+    // This avoids expensive COUNT queries on every login attempt
 
     // Check for existing user in DB first to ensure consistent signaling IDs
     const dbUser = await prisma.user.findUnique({
