@@ -331,7 +331,7 @@ export function ProjectFiles({
           onClick={() => setPreviewFile(null)}
         >
           <div
-            className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-lg"
+            className="relative w-full max-w-5xl max-h-[90vh] bg-card rounded-lg shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-3 border-b flex items-center justify-between">
