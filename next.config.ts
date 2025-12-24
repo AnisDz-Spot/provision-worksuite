@@ -44,7 +44,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "X-Frame-Options",
-            value: "DENY",
+            value: "SAMEORIGIN",
           },
           {
             key: "X-Content-Type-Options",
@@ -78,8 +78,8 @@ const nextConfig: NextConfig = {
               "font-src 'self' data:",
               // Connect src: Allow ZegoCloud websockets and APIs
               "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.zegocloud.com wss://*.zegocloud.com https://*.zego.im wss://*.zego.im https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com",
-              // Frame src: Allow ZegoCloud framing
-              "frame-src 'self' https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
+              // Frame src: Allow ZegoCloud and data/blob sources for previews
+              "frame-src 'self' data: blob: https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
