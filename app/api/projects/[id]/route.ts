@@ -89,7 +89,35 @@ export async function GET(
     }
 
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "Project not found" },
+        { status: 404 }
+      );
+    }
+
+    // Auto-backfill slug if missing
+    if (!project.slug) {
+      const slug = project.name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      // Simple uniqueness check
+      let uniqueSlug = slug;
+      const existing = await prisma.project.findUnique({
+        where: { slug: uniqueSlug },
+      });
+      if (existing) {
+        uniqueSlug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+      }
+
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { slug: uniqueSlug },
+      });
+      project.slug = uniqueSlug;
     }
 
     return NextResponse.json({ success: true, project });

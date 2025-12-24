@@ -16,37 +16,40 @@ export async function GET(
 
   const { id } = await params;
 
-  // Resolve Project ID (handle Slug/UID)
-  // We re-use logic or just do a findFirst.
-  const project = await prisma.project.findFirst({
-    where: {
-      OR: [
-        { uid: id },
-        { slug: id },
-        {
-          id: id /* if id is used as string but actually it's int in DB? No, ID is Int */,
-        },
-      ],
-    },
+  // Resolve Project ID (handle Slug/UID/Int ID)
+  // 1. Try Slug
+  let project = await prisma.project.findUnique({
+    where: { slug: id },
     select: { id: true },
   });
 
-  // If ID is int (legacy URL support), we might need to parse.
-  // But our route is `[id]`.
-  // Safer to try finding by UID/Slug.
-  // If not found, try parsing int.
-  let projectIdInt = project?.id;
+  // 2. Try UID if not found
+  if (!project) {
+    project = await prisma.project.findUnique({
+      where: { uid: id },
+      select: { id: true },
+    });
+  }
 
-  if (!projectIdInt) {
+  // 3. Try Int ID (legacy) if not found
+  if (!project) {
     const parsed = parseInt(id);
     if (!isNaN(parsed)) {
-      const p2 = await prisma.project.findUnique({
+      project = await prisma.project.findUnique({
         where: { id: parsed },
         select: { id: true },
       });
-      if (p2) projectIdInt = p2.id;
     }
   }
+
+  if (!project) {
+    return NextResponse.json(
+      { success: false, error: "Project not found" },
+      { status: 404 }
+    );
+  }
+
+  const projectIdInt = project.id;
 
   if (!projectIdInt) {
     return NextResponse.json(
@@ -94,30 +97,40 @@ export async function POST(
 
   const { id } = await params;
 
-  // Resolve Project ID
-  const project = await prisma.project.findFirst({
-    where: { OR: [{ uid: id }, { slug: id }] },
+  // Resolve Project ID (handle Slug/UID/Int ID)
+  // 1. Try Slug
+  let project = await prisma.project.findUnique({
+    where: { slug: id },
     select: { id: true },
   });
 
-  let projectIdInt = project?.id;
-  if (!projectIdInt) {
+  // 2. Try UID if not found
+  if (!project) {
+    project = await prisma.project.findUnique({
+      where: { uid: id },
+      select: { id: true },
+    });
+  }
+
+  // 3. Try Int ID (legacy) if not found
+  if (!project) {
     const parsed = parseInt(id);
     if (!isNaN(parsed)) {
-      const p2 = await prisma.project.findUnique({
+      project = await prisma.project.findUnique({
         where: { id: parsed },
         select: { id: true },
       });
-      if (p2) projectIdInt = p2.id;
     }
   }
 
-  if (!projectIdInt) {
+  if (!project) {
     return NextResponse.json(
       { success: false, error: "Project not found" },
       { status: 404 }
     );
   }
+
+  const projectIdInt = project.id;
 
   try {
     const body = await req.json();

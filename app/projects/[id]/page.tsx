@@ -210,6 +210,7 @@ export default function ProjectDetailsPage() {
               avatarUrl: m.user?.avatarUrl || m.avatarUrl,
             }));
           }
+          if (p.coverUrl) p.cover = p.coverUrl;
           setProject(p);
         } else {
           setProject(null);

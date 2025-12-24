@@ -38,7 +38,14 @@ export async function uploadFile(
   // lib/storage/index.ts previous logic: const fullPath = `${path}/${file.name}`;
   // Let's keep that.
 
-  const fullPath = `${cleanPath}/${file.name}`;
+  const fileName = file.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const fullPath = `${cleanPath}/${fileName}`;
   return provider.uploadFile(file, fullPath, onProgress);
 }
 

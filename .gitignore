@@ -49,3 +49,6 @@ lint-report.txt
 # bundle analysis
 .next/analyze/
 
+
+# agent
+.agent/

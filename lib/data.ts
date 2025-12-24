@@ -83,8 +83,16 @@ export async function loadProjects(): Promise<Project[]> {
     try {
       const res = await fetch("/api/projects");
       const result = await res.json();
-      if (result.success) {
-        return result.data || [];
+      if (result.success && result.data) {
+        // Normalize members to avoid mock data display issues
+        return result.data.map((p: any) => ({
+          ...p,
+          members: (p.members || []).map((m: any) => ({
+            uid: m.user?.uid || m.uid,
+            name: m.user?.name || m.name || "Member",
+            avatarUrl: m.user?.avatarUrl || m.avatarUrl,
+          })),
+        }));
       }
       return [];
     } catch (error) {

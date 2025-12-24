@@ -45,7 +45,8 @@ export default function ProjectEditPage() {
   const { showToast } = useToast();
   const projectId = params.id as string;
   const [project, setProject] = React.useState<Project | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [users, setUsers] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [tagInput, setTagInput] = React.useState("");
   const [categoryInput, setCategoryInput] = React.useState("");
   const [allCategories, setAllCategories] = React.useState<string[]>(() => {
@@ -61,9 +62,10 @@ export default function ProjectEditPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectRes, clientsRes] = await Promise.all([
+        const [projectRes, clientsRes, usersRes] = await Promise.all([
           fetch(`/api/projects/${projectId}`),
           fetch("/api/clients"),
+          fetch("/api/users"),
         ]);
 
         if (projectRes.ok) {
@@ -98,11 +100,16 @@ export default function ProjectEditPage() {
           const data = await clientsRes.json();
           if (data.success) setClients(data.data);
         }
+
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          if (data.success) setUsers(data.data);
+        }
       } catch (error) {
         console.error(error);
         showToast("Failed to load data", "error");
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     fetchData();
@@ -146,7 +153,7 @@ export default function ProjectEditPage() {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <section className="flex flex-col gap-8 p-4 md:p-8">
         <Link href="/projects">
@@ -678,9 +685,7 @@ export default function ProjectEditPage() {
             <select
               className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
               onChange={(e) => {
-                const selected = usersData.find(
-                  (u) => u.name === e.target.value
-                );
+                const selected = users.find((u) => u.name === e.target.value);
                 if (
                   selected &&
                   !project.members?.find((m) => m.name === selected.name)
@@ -704,9 +709,9 @@ export default function ProjectEditPage() {
               }}
               value=""
             >
-              <option value="">+ Add Member</option>
-              {usersData.map((u) => (
-                <option key={u.id} value={u.name}>
+              <option value="">Select members…</option>
+              {users.map((u) => (
+                <option key={u.uid} value={u.name}>
                   {u.name} ({u.role})
                 </option>
               ))}
