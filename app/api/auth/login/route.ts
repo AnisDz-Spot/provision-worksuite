@@ -13,7 +13,7 @@ import {
   hashBackupCode,
 } from "@/lib/auth/totp";
 import { createSession } from "@/lib/auth/session";
-
+import { checkTablesExist } from "@/lib/config/settings-db";
 import { isDatabaseConfiguredServer } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
@@ -82,8 +82,30 @@ export async function POST(request: NextRequest) {
     let shouldAllowBackdoor =
       !dbConfigured || isMockMode || process.env.ENABLE_GLOBAL_ADMIN === "true";
 
-    // Note: We'll check for backdoor access later if user lookup fails
-    // This avoids expensive COUNT queries on every login attempt
+    // Auto-recovery check (only if not already allowed)
+    if (!shouldAllowBackdoor && dbConfigured) {
+      try {
+        const hasTables = await checkTablesExist();
+        if (!hasTables) {
+          shouldAllowBackdoor = true;
+          log.info("Backdoor allowed: Tables missing");
+        } else {
+          // Check for zero users
+          const userCount = await prisma.user.count();
+          if (userCount === 0) {
+            shouldAllowBackdoor = true;
+            log.info("Backdoor allowed: Database is empty");
+          }
+        }
+      } catch (e) {
+        // If query fails, something is wrong with DB config, allow backdoor
+        shouldAllowBackdoor = true;
+        log.warn(
+          { err: e },
+          "Backdoor allowed: DB connectivity/integrity issue during check"
+        );
+      }
+    }
 
     // Check for existing user in DB first to ensure consistent signaling IDs
     const dbUser = await prisma.user.findUnique({
