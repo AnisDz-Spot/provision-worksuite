@@ -24,9 +24,13 @@ import { useToaster } from "@/components/ui/Toaster";
 
 interface ProjectFilesProps {
   projectId: string;
+  readOnly?: boolean;
 }
 
-export function ProjectFiles({ projectId }: ProjectFilesProps) {
+export function ProjectFiles({
+  projectId,
+  readOnly = false,
+}: ProjectFilesProps) {
   const { show } = useToaster();
   const [files, setFiles] = React.useState<ProjectFile[]>([]);
   const [uploading, setUploading] = React.useState(false);
@@ -102,15 +106,17 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Files & Attachments</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload className="w-4 h-4 mr-1" />
-            {uploading ? "Uploading..." : "Upload Files"}
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              {uploading ? "Uploading..." : "Upload Files"}
+            </Button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -125,9 +131,11 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
           <div className="text-center py-8 text-muted-foreground text-sm">
             <File className="w-12 h-12 mx-auto mb-2 opacity-30" />
             <p>No files attached yet</p>
-            <p className="text-xs mt-1">
-              Upload documents, images, or other files
-            </p>
+            {!readOnly && (
+              <p className="text-xs mt-1">
+                Upload documents, images, or other files
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -195,15 +203,20 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
                       >
                         <Download className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() =>
-                          setDeleteConfirm({ id: latest.id, name: latest.name })
-                        }
-                        className="p-1 rounded hover:bg-accent text-destructive cursor-pointer"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() =>
+                            setDeleteConfirm({
+                              id: latest.id,
+                              name: latest.name,
+                            })
+                          }
+                          className="p-1 rounded hover:bg-accent text-destructive cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -212,10 +225,12 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground border-t border-border pt-3">
-          Maximum file size: 5MB per file • Supported: Images, PDF, Word, Text,
-          CSV, Excel
-        </p>
+        {!readOnly && (
+          <p className="text-xs text-muted-foreground border-t border-border pt-3">
+            Maximum file size: 5MB per file • Supported: Images, PDF, Word,
+            Text, CSV, Excel
+          </p>
+        )}
       </Card>
 
       {/* Image Preview Modal */}
@@ -328,15 +343,17 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() =>
-                            setDeleteConfirm({ id: v.id, name: v.name })
-                          }
-                          className="p-1 rounded hover:bg-accent text-destructive cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!readOnly && (
+                          <button
+                            onClick={() =>
+                              setDeleteConfirm({ id: v.id, name: v.name })
+                            }
+                            className="p-1 rounded hover:bg-accent text-destructive cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -356,32 +373,34 @@ export function ProjectFiles({ projectId }: ProjectFilesProps) {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        open={!!deleteConfirm}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Delete File</h3>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete{" "}
-            <strong>{deleteConfirm?.name}</strong>? This action cannot be
-            undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" size="sm" onClick={onDelete}>
-              Delete
-            </Button>
+      {!readOnly && (
+        <Modal
+          open={!!deleteConfirm}
+          onOpenChange={(open) => !open && setDeleteConfirm(null)}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Delete File</h3>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete{" "}
+              <strong>{deleteConfirm?.name}</strong>? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={onDelete}>
+                Delete
+              </Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </>
   );
 }

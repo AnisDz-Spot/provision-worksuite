@@ -16,6 +16,7 @@ import usersData from "@/data/users.json";
 import { shouldUseMockData } from "@/lib/dataSource";
 import { sanitizeMentions } from "@/lib/sanitize";
 import { getCsrfToken } from "@/lib/csrf-client";
+import { useToaster } from "@/components/ui/Toaster";
 
 function formatDate(ts: number) {
   const d = new Date(ts);
@@ -24,6 +25,7 @@ function formatDate(ts: number) {
 
 export function ProjectComments({ projectId }: { projectId: string }) {
   const router = useRouter();
+  const { show: showToast } = useToaster();
   const [comments, setComments] = React.useState<any[]>([]);
   const [draft, setDraft] = React.useState<string>("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -48,11 +50,25 @@ export function ProjectComments({ projectId }: { projectId: string }) {
     const clean = draft.trim();
     if (!clean || clean === "<p></p>") return;
 
-    setIsLoading(true);
-    try {
-      // Get CSRF token from cookie
-      const csrfToken = getCsrfToken();
+    // Optimistic UI Update
+    const tempId = `temp-${Date.now()}`;
+    const newComment = {
+      id: tempId,
+      content: clean,
+      createdAt: Date.now(),
+      user: {
+        name: "You", // Fallback for optimistic display
+        avatarUrl: undefined,
+      },
+      isOptimistic: true,
+    };
 
+    setComments((prev) => [newComment, ...prev]);
+    setDraft(""); // Clear input immediately
+    setIsLoading(true);
+
+    try {
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/projects/${projectId}/comments`, {
         method: "POST",
         headers: {
@@ -62,11 +78,15 @@ export function ProjectComments({ projectId }: { projectId: string }) {
         body: JSON.stringify({ content: clean }),
       });
       if (res.ok) {
-        setDraft("");
-        refresh();
+        refresh(); // Refresh to get the real ID and user data
+      } else {
+        // Rollback on error
+        setComments((prev) => prev.filter((c) => c.id !== tempId));
+        showToast("error", "Failed to post comment");
       }
     } catch (e) {
       console.error(e);
+      setComments((prev) => prev.filter((c) => c.id !== tempId));
     } finally {
       setIsLoading(false);
     }

@@ -139,14 +139,17 @@ export default function ProjectEditPage() {
           categories: project.categories,
           visibility: project.privacy,
           cover: project.cover,
+          sla: (project as any).sla,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to update");
+      const savedProject = await res.json();
+      const nextId = savedProject.project?.slug || projectId;
 
       logProjectEvent(project.id, "edit", { name: project.name });
       showToast("Project saved successfully", "success");
-      router.push(`/projects/${projectId}`);
+      router.push(`/projects/${nextId}`);
     } catch (error) {
       log.error({ err: error }, "Failed to save project");
       showToast("Failed to save project", "error");

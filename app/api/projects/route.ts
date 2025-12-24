@@ -157,7 +157,7 @@ export async function POST(req: Request) {
       budget,
       priority,
       clientName,
-      clientId, // NEW
+      clientId,
       tags,
       visibility,
       color,
@@ -165,6 +165,8 @@ export async function POST(req: Request) {
       clientLogo,
       files,
       members,
+      sla,
+      attachments,
     } = body;
 
     if (!name) {
@@ -236,6 +238,8 @@ export async function POST(req: Request) {
         color: color || null,
         coverUrl: cover || null,
         clientLogo: clientLogo || null,
+        sla: sla || null,
+        attachments: attachments || [],
       },
       include: {
         user: true,

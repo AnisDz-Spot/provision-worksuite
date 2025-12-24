@@ -20,11 +20,13 @@ type Project = {
 interface ProjectDependenciesProps {
   projectId: string;
   availableProjects: Project[];
+  readOnly?: boolean;
 }
 
 export function ProjectDependencies({
   projectId,
   availableProjects,
+  readOnly = false,
 }: ProjectDependenciesProps) {
   const [dependencies, setDependencies] = React.useState<string[]>([]);
   const [dependents, setDependents] = React.useState<string[]>([]);
@@ -72,7 +74,7 @@ export function ProjectDependencies({
           <ArrowRight className="w-5 h-5 text-primary" />
           Dependencies
         </h3>
-        {!addMode && (
+        {!addMode && !readOnly && (
           <Button variant="outline" size="sm" onClick={() => setAddMode(true)}>
             <Plus className="w-4 h-4 mr-1" />
             Add Dependency
@@ -102,13 +104,15 @@ export function ProjectDependencies({
                     </Badge>
                   )}
                 </div>
-                <button
-                  onClick={() => handleRemove(depId)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                  title="Remove dependency"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => handleRemove(depId)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title="Remove dependency"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             );
           })}

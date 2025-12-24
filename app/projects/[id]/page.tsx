@@ -604,10 +604,11 @@ export default function ProjectDetailsPage() {
               <ProjectDependencies
                 projectId={project.id}
                 availableProjects={allProjects}
+                readOnly={true}
               />
 
               {/* Files */}
-              <ProjectFiles projectId={project.id} />
+              <ProjectFiles projectId={project.id} readOnly={true} />
             </div>
 
             {/* Right Sidebar */}

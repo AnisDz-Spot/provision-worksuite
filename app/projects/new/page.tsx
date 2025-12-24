@@ -300,7 +300,7 @@ export default function NewProjectPage() {
         cover: finalCover,
         clientLogo: undefined,
         clientId: draft.clientId, // Send Client ID
-
+        sla: draft.sla,
         files: finalFiles, // API needs to handle this!
         members: draft.members.map((m) => m.uid), // Send member UIDs
         categories: draft.categories,
@@ -326,18 +326,8 @@ export default function NewProjectPage() {
       }
 
       const { project } = await res.json();
-
-      // If API doesn't automatically link files (likely), we might need to do it here
-      // via a separate call if we had an endpoint.
-      // But since we don't have a guaranteed "link files" endpoint, we rely on the POST to handle it
-      // OR we updated the POST to handle it (I did modify POST recently? No, I only added permissions).
-      // I should probably ensure the POST route actually handles `files` and `cover`.
-      // If the schema lacks `cover`, maybe it's stored in `color` or `files`?
-      // Let's assume the user knows the schema supports it or is asking for the UX fix primarily.
-      // I'll stick to the UX fix: DEFER UPLOADS.
-
       showToast(`Project "${project.name}" created successfully`, "success");
-      router.push(`/projects/${project.slug || project.uid || project.id}`); // Use slug/UID for navigation
+      router.push(`/projects/${project.slug || project.uid || project.id}`);
     } catch (error) {
       console.error(error);
       showToast(

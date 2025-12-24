@@ -183,11 +183,13 @@ model Project {
   color       String?
   coverUrl    String?   @map("cover_url")
   clientLogo  String?   @map("client_logo")
+  sla         String?
+  attachments Json?     @default("[]")
 
   // Creator/Owner reference (legacy support)
   userId Int     @map("user_id")
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id])
 
   // Relations - tasks linked via projectId=uid
   tasks      Task[]
