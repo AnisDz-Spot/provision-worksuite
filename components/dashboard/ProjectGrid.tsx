@@ -186,7 +186,8 @@ export function ProjectGrid() {
     loadTeam();
   }, [loadProjects]);
 
-  // Refresh data when the page becomes visible (e.g., returning from project detail page)
+  // Refresh data when the page becomes visible (commented out to reduce server load in Live Mode)
+  /*
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -206,6 +207,7 @@ export function ProjectGrid() {
       window.removeEventListener("focus", handleFocus);
     };
   }, [loadProjects]);
+  */
 
   const toggleStar = async (id: string) => {
     setProjects((prev) => {

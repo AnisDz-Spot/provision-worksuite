@@ -92,6 +92,7 @@ export async function loadProjects(): Promise<Project[]> {
             name: m.user?.name || m.name || "Member",
             avatarUrl: m.user?.avatarUrl || m.avatarUrl,
           })),
+          cover: p.coverUrl || p.cover,
         }));
       }
       return [];
