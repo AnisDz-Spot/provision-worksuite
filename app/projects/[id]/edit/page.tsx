@@ -13,6 +13,8 @@ import categoriesData from "@/data/categories.json";
 import { log } from "@/lib/logger";
 import Image from "next/image";
 import { getCsrfToken } from "@/lib/csrf-client";
+import { ProjectDependencies } from "@/components/projects/ProjectDependencies";
+import { ProjectFiles } from "@/components/projects/ProjectFiles";
 
 type Project = {
   id: string;
@@ -24,7 +26,6 @@ type Project = {
   deadline: string;
   priority?: "low" | "medium" | "high";
   starred?: boolean;
-  members?: { name: string; avatarUrl?: string }[];
   cover?: string;
   tags?: string[];
   privacy?: "public" | "team" | "private";
@@ -35,6 +36,7 @@ type Project = {
   clientId?: string;
   budget?: string;
   sla?: string;
+  members?: { uid: string; name: string; avatarUrl?: string }[];
 };
 
 // Local storage load removed
@@ -47,6 +49,8 @@ export default function ProjectEditPage() {
   const [project, setProject] = React.useState<Project | null>(null);
   const [users, setUsers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [allProjects, setAllProjects] = React.useState<any[]>([]);
   const [tagInput, setTagInput] = React.useState("");
   const [categoryInput, setCategoryInput] = React.useState("");
   const [allCategories, setAllCategories] = React.useState<string[]>(() => {
@@ -62,11 +66,13 @@ export default function ProjectEditPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectRes, clientsRes, usersRes] = await Promise.all([
-          fetch(`/api/projects/${projectId}`),
-          fetch("/api/clients"),
-          fetch("/api/users"),
-        ]);
+        const [projectRes, clientsRes, usersRes, allProjectsRes] =
+          await Promise.all([
+            fetch(`/api/projects/${projectId}`),
+            fetch("/api/clients"),
+            fetch("/api/users"),
+            fetch("/api/projects"),
+          ]);
 
         if (projectRes.ok) {
           const data = await projectRes.json();
@@ -90,10 +96,20 @@ export default function ProjectEditPage() {
               client: p.clientName,
               clientId: p.clientId,
               budget: p.budget ? p.budget.toString() : "",
-              sla: p.slaTargetDays ? p.slaTargetDays.toString() : "",
+              sla: p.sla ? p.sla.toString() : "",
               isTemplate: p.isTemplate,
+              members: (p.members || []).map((m: any) => ({
+                uid: m.user?.uid || "",
+                name: m.user?.name || "Member",
+                avatarUrl: m.user?.avatarUrl,
+              })),
             });
           }
+        }
+
+        if (allProjectsRes.ok) {
+          const data = await allProjectsRes.json();
+          if (data.success) setAllProjects(data.data);
         }
 
         if (clientsRes.ok) {
@@ -116,7 +132,8 @@ export default function ProjectEditPage() {
   }, [projectId]);
 
   const handleSave = async () => {
-    if (!project) return;
+    if (!project || isSaving) return;
+    setIsSaving(true);
     try {
       const csrfToken = getCsrfToken();
 
@@ -140,6 +157,7 @@ export default function ProjectEditPage() {
           visibility: project.privacy,
           cover: project.cover,
           sla: (project as any).sla,
+          members: (project.members || []).map((m) => m.uid).filter(Boolean),
         }),
       });
 
@@ -153,6 +171,8 @@ export default function ProjectEditPage() {
     } catch (error) {
       log.error({ err: error }, "Failed to save project");
       showToast("Failed to save project", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -691,7 +711,7 @@ export default function ProjectEditPage() {
                 const selected = users.find((u) => u.name === e.target.value);
                 if (
                   selected &&
-                  !project.members?.find((m) => m.name === selected.name)
+                  !project.members?.find((m) => m.uid === selected.uid)
                 ) {
                   setProject((p) =>
                     p
@@ -700,8 +720,11 @@ export default function ProjectEditPage() {
                           members: [
                             ...(p.members || []),
                             {
+                              uid: selected.uid,
                               name: selected.name,
-                              avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selected.name)}`,
+                              avatarUrl:
+                                selected.avatarUrl ||
+                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selected.name)}`,
                             },
                           ],
                         }
@@ -728,12 +751,25 @@ export default function ProjectEditPage() {
             >
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleSave}>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              loading={isSaving}
+              disabled={isSaving}
+            >
               Save Changes
             </Button>
           </div>
         </div>
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ProjectDependencies
+          projectId={project.id}
+          availableProjects={allProjects}
+        />
+        <ProjectFiles projectId={project.id} />
+      </div>
     </section>
   );
 }

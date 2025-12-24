@@ -181,6 +181,43 @@ export async function PUT(
       },
     });
 
+    // Handle members update if provided
+    if (Array.isArray(body.members)) {
+      // 1. Get current members to preserve "owner" if needed or just replace members
+      // The user usually wants to manage the list.
+      // We'll keep the owner (the project.userId) and replace the others.
+      const ownerId = project.userId;
+
+      // Delete existing non-owner members
+      await prisma.projectMember.deleteMany({
+        where: {
+          projectId: project.id,
+          userId: { not: ownerId },
+        },
+      });
+
+      // Find user IDs for the incoming UIDs
+      const memberUsers = await prisma.user.findMany({
+        where: { uid: { in: body.members } },
+        select: { id: true },
+      });
+
+      const memberIds = memberUsers
+        .map((u: { id: number }) => u.id)
+        .filter((id: number) => id !== ownerId);
+
+      if (memberIds.length > 0) {
+        await prisma.projectMember.createMany({
+          data: memberIds.map((uid: number) => ({
+            projectId: project.id,
+            userId: uid,
+            role: "member",
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
     console.error("Update error:", error);
