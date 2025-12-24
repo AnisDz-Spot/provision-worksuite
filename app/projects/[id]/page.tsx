@@ -32,6 +32,8 @@ import { useToaster } from "@/components/ui/Toaster";
 
 type Project = {
   id: string;
+  uid?: string;
+  slug?: string;
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
@@ -381,7 +383,9 @@ export default function ProjectDetailsPage() {
                   >
                     Save as Template
                   </Button>
-                  <Link href={`/projects/${project.id}/edit`}>
+                  <Link
+                    href={`/projects/${project.slug || project.uid || project.id}/edit`}
+                  >
                     <Button
                       variant="outline"
                       size="md"

@@ -12,9 +12,12 @@ import usersData from "@/data/users.json";
 import categoriesData from "@/data/categories.json";
 import { log } from "@/lib/logger";
 import Image from "next/image";
+import { getCsrfToken } from "@/lib/csrf-client";
 
 type Project = {
   id: string;
+  uid?: string;
+  slug?: string;
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
@@ -28,6 +31,10 @@ type Project = {
   categories?: string[] | string;
   description?: string;
   isTemplate?: boolean;
+  client?: string;
+  clientId?: string;
+  budget?: string;
+  sla?: string;
 };
 
 // Local storage load removed
@@ -65,7 +72,9 @@ export default function ProjectEditPage() {
             const p = data.project;
             // Map API response to local state structure
             setProject({
-              id: p.uid || p.id.toString(), // Prefer UID
+              id: p.id.toString(),
+              uid: p.uid,
+              slug: p.slug,
               name: p.name,
               owner: p.userId ? p.userId.toString() : "",
               status: p.status,
@@ -77,9 +86,11 @@ export default function ProjectEditPage() {
               categories: p.categories,
               description: p.description,
               client: p.clientName,
-              clientId: p.clientId, // Store ID
+              clientId: p.clientId,
               budget: p.budget ? p.budget.toString() : "",
-            } as any);
+              sla: p.slaTargetDays ? p.slaTargetDays.toString() : "",
+              isTemplate: p.isTemplate,
+            });
           }
         }
 
@@ -100,9 +111,14 @@ export default function ProjectEditPage() {
   const handleSave = async () => {
     if (!project) return;
     try {
+      const csrfToken = getCsrfToken();
+
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken || "",
+        },
         body: JSON.stringify({
           name: project.name,
           description: project.description,

@@ -15,6 +15,7 @@ import { Trash2 } from "lucide-react";
 import usersData from "@/data/users.json";
 import { shouldUseMockData } from "@/lib/dataSource";
 import { sanitizeMentions } from "@/lib/sanitize";
+import { getCsrfToken } from "@/lib/csrf-client";
 
 function formatDate(ts: number) {
   const d = new Date(ts);
@@ -49,9 +50,15 @@ export function ProjectComments({ projectId }: { projectId: string }) {
 
     setIsLoading(true);
     try {
+      // Get CSRF token from cookie
+      const csrfToken = getCsrfToken();
+
       const res = await fetch(`/api/projects/${projectId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken || "",
+        },
         body: JSON.stringify({ content: clean }),
       });
       if (res.ok) {

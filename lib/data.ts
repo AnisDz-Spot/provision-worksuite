@@ -26,6 +26,8 @@ function mapMockUsers(users: any[]): User[] {
 
 export interface Project {
   id: string;
+  uid?: string;
+  slug?: string;
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";

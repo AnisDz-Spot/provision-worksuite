@@ -31,6 +31,7 @@ declare module "@tanstack/react-table" {
 type Project = {
   id: string;
   uid?: string; // Database UID
+  slug?: string; // Human-readable slug
   name: string;
   owner: string;
   status: "Active" | "Completed" | "Paused" | "In Progress";
@@ -668,7 +669,7 @@ export function ProjectTable() {
                         <button
                           className="text-foreground hover:underline"
                           title="Open project"
-                          onClick={() => openProject(p.id)}
+                          onClick={() => openProject(p.slug || p.uid || p.id)}
                         >
                           {p.name}
                         </button>
@@ -769,7 +770,7 @@ export function ProjectTable() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openProject(p.id)}
+                          onClick={() => openProject(p.slug || p.uid || p.id)}
                         >
                           View
                         </Button>

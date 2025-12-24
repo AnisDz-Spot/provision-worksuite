@@ -337,7 +337,7 @@ export default function NewProjectPage() {
       // I'll stick to the UX fix: DEFER UPLOADS.
 
       showToast(`Project "${project.name}" created successfully`, "success");
-      router.push(`/projects/${project.uid}`); // Use UID for navigation
+      router.push(`/projects/${project.slug || project.uid || project.id}`); // Use slug/UID for navigation
     } catch (error) {
       console.error(error);
       showToast(
