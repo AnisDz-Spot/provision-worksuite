@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
-import { checkTablesExist } from "@/lib/config/settings-db";
 
 export const dynamic = "force-dynamic";
 
@@ -25,17 +24,25 @@ export async function GET() {
       );
     }
 
-    // 2. Check Database Connectivity
-    await prisma.$connect();
-
-    // 3. Check if tables exist
-    const hasTables = await checkTablesExist();
-
-    // 4. Check if at least one user exists (the first is always Master Admin)
+    // 2. Check Database Connectivity & Tables via Prisma
+    // Optimization: Use Prisma directly to avoid opening a second connection pool with `checkTablesExist`
+    let hasTables = false;
     let adminExists = false;
-    if (hasTables) {
+
+    try {
       const userCount = await prisma.user.count();
+      hasTables = true;
       adminExists = userCount > 0;
+    } catch (e: any) {
+      // P2021 is "Table does not exist"
+      if (
+        e.code === "P2021" ||
+        (e.message && e.message.includes("does not exist"))
+      ) {
+        hasTables = false;
+      } else {
+        throw e; // Rethrow connection errors to be caught by outer block
+      }
     }
 
     // 5. Check optional Storage
@@ -45,7 +52,7 @@ export async function GET() {
       ready: true,
       provider: storageProvider || "vercel-blob (default)",
       dbConfigured: true,
-      hasTables: !!hasTables,
+      hasTables,
       adminExists,
     });
   } catch (error: any) {
