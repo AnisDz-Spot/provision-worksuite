@@ -21,6 +21,7 @@ import {
   ProjectFile,
 } from "@/lib/utils";
 import { useToaster } from "@/components/ui/Toaster";
+import { getCsrfToken } from "@/lib/csrf-client";
 
 interface ProjectFilesProps {
   projectId: string;
@@ -95,9 +96,13 @@ export function ProjectFiles({
           reader.readAsDataURL(file);
         });
 
+        const csrfToken = getCsrfToken();
         await fetch(`/api/projects/${projectId}/files`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken || "",
+          },
           body: JSON.stringify({
             name: file.name,
             url: dataUrl,
@@ -120,8 +125,12 @@ export function ProjectFiles({
   const onDelete = async () => {
     if (!deleteConfirm) return;
     try {
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/files/${deleteConfirm.id}`, {
         method: "DELETE",
+        headers: {
+          "x-csrf-token": csrfToken || "",
+        },
       });
       if (res.ok) {
         show("success", "File deleted from server");
