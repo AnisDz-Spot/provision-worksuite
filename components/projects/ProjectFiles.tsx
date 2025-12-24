@@ -44,8 +44,29 @@ export function ProjectFiles({
   } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const refresh = React.useCallback(() => {
-    setFiles(getProjectFiles(projectId));
+  const refresh = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/files`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          // Map DB File model to Component structure
+          const mapped = json.data.map((f: any) => ({
+            id: f.id,
+            name: f.filename,
+            size: f.fileSize,
+            type: f.mimeType,
+            dataUrl: f.fileUrl,
+            uploadedAt: new Date(f.createdAt).getTime(),
+            uploadedBy: f.uploader?.name || "System",
+            version: 1, // Placeholder
+          }));
+          setFiles(mapped);
+        }
+      }
+    } catch (e) {
+      console.error("Refresh files error:", e);
+    }
   }, [projectId]);
 
   React.useEffect(() => {
@@ -60,15 +81,33 @@ export function ProjectFiles({
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        // Limit file size to 5MB for localStorage
-        if (file.size > 5 * 1024 * 1024) {
-          show("error", `${file.name} is too large (max 5MB)`);
+        if (file.size > 10 * 1024 * 1024) {
+          // Increased to 10MB
+          show("error", `${file.name} is too large (max 10MB)`);
           continue;
         }
-        await addProjectFile(projectId, file, "You");
+
+        // Convert to base64
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        await fetch(`/api/projects/${projectId}/files`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name,
+            url: dataUrl,
+            size: file.size,
+            type: file.type,
+          }),
+        });
       }
       refresh();
-      show("success", "Files uploaded successfully");
+      show("success", "Files uploaded and saved to database");
     } catch (error) {
       console.error("Upload failed:", error);
       show("error", "Failed to upload files");
@@ -78,18 +117,34 @@ export function ProjectFiles({
     }
   };
 
-  const onDelete = () => {
+  const onDelete = async () => {
     if (!deleteConfirm) return;
-    deleteProjectFile(deleteConfirm.id);
-    setDeleteConfirm(null);
-    refresh();
-    show("success", "File deleted");
+    try {
+      const res = await fetch(`/api/files/${deleteConfirm.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        show("success", "File deleted from server");
+        refresh();
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (e) {
+      show("error", "Failed to delete file");
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   const getFileIcon = (type: string) => {
     if (type.startsWith("image/"))
       return <Image className="w-5 h-5 text-blue-500" />;
-    if (type.includes("pdf") || type.includes("document"))
+    if (
+      type.includes("pdf") ||
+      type.includes("document") ||
+      type.includes("msword") ||
+      type.includes("wordprocessingml")
+    )
       return <FileText className="w-5 h-5 text-red-500" />;
     return <File className="w-5 h-5 text-muted-foreground" />;
   };

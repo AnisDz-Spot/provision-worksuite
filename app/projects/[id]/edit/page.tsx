@@ -149,14 +149,15 @@ export default function ProjectEditPage() {
           status: project.status,
           priority: project.priority,
           deadline: project.deadline,
-          budget: (project as any).budget,
-          clientId: (project as any).clientId,
-          clientName: (project as any).client,
+          budget: project.budget,
+          clientId: project.clientId,
+          clientName: project.client,
           tags: project.tags,
           categories: project.categories,
           visibility: project.privacy,
           cover: project.cover,
-          sla: (project as any).sla,
+          sla: project.sla,
+          isTemplate: project.isTemplate,
           members: (project.members || []).map((m) => m.uid).filter(Boolean),
         }),
       });
@@ -215,6 +216,18 @@ export default function ProjectEditPage() {
 
   return (
     <section className="flex flex-col gap-8 p-4 md:p-8 max-w-5xl mx-auto">
+      {isSaving && (
+        <div className="fixed inset-0 z-100 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+          <Card className="p-8 flex flex-col items-center gap-4 shadow-2xl scale-110">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="text-xl font-bold">Saving Changes...</div>
+            <p className="text-muted-foreground animate-pulse text-sm">
+              Updating project metadata and members
+            </p>
+          </Card>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <Link href={`/projects/${projectId}`}>
           <Button variant="ghost" size="sm">
@@ -407,14 +420,12 @@ export default function ProjectEditPage() {
               <label className="text-sm font-medium">Client</label>
               <select
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={(project as any).clientId || ""}
+                value={project.clientId || ""}
                 onChange={(e) => {
                   const cid = e.target.value;
                   const c = clients.find((cl) => cl.id === cid);
                   setProject((p) =>
-                    p
-                      ? ({ ...p, clientId: cid, client: c?.name || "" } as any)
-                      : p
+                    p ? { ...p, clientId: cid, client: c?.name || "" } : p
                   );
                 }}
               >
@@ -431,11 +442,9 @@ export default function ProjectEditPage() {
               <label className="text-sm font-medium">Budget (USD)</label>
               <input
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={(project as any).budget || ""}
+                value={project.budget || ""}
                 onChange={(e) =>
-                  setProject((p) =>
-                    p ? ({ ...p, budget: e.target.value } as any) : p
-                  )
+                  setProject((p) => (p ? { ...p, budget: e.target.value } : p))
                 }
                 placeholder="e.g., 50000"
               />
@@ -452,11 +461,9 @@ export default function ProjectEditPage() {
               </label>
               <input
                 className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={(project as any).sla || ""}
+                value={project.sla || ""}
                 onChange={(e) =>
-                  setProject((p) =>
-                    p ? ({ ...p, sla: e.target.value } as any) : p
-                  )
+                  setProject((p) => (p ? { ...p, sla: e.target.value } : p))
                 }
                 placeholder="e.g., 30"
               />

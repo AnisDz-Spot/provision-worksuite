@@ -175,6 +175,7 @@ export async function PUT(
         visibility: body.visibility || body.privacy, // Handle privacy mapped to visibility
         coverUrl: body.cover,
         sla: body.sla,
+        isTemplate: body.isTemplate,
         attachments: body.attachments,
         // clientLogo is removed as per requirement, but if passed and needed for fallback:
         // clientLogo: body.clientLogo

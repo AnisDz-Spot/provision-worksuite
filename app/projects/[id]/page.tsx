@@ -47,6 +47,10 @@ type Project = {
   categories?: string[] | string;
   description?: string;
   isTemplate?: boolean;
+  budget?: string;
+  sla?: string;
+  client?: string;
+  clientLogo?: string;
 };
 
 function loadProject(id: string): Project | null {
@@ -211,6 +215,8 @@ export default function ProjectDetailsPage() {
             }));
           }
           if (p.coverUrl) p.cover = p.coverUrl;
+          if (p.budget) p.budget = p.budget.toString();
+          if (p.sla) p.sla = p.sla.toString();
           setProject(p);
         } else {
           setProject(null);
@@ -295,19 +301,19 @@ export default function ProjectDetailsPage() {
               No thumbnail
             </div>
           )}
-          {(project as any).client && (
+          {project.client && (
             <div className="absolute top-4 right-4 flex items-center gap-3 bg-card/95 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-lg border border-border">
-              {(project as any).clientLogo && (
+              {project.clientLogo && (
                 <Image
-                  src={(project as any).clientLogo}
-                  alt={(project as any).client}
+                  src={project.clientLogo}
+                  alt={project.client}
                   width={32}
                   height={32}
                   className="w-8 h-8 rounded object-cover"
                 />
               )}
               <span className="text-lg font-bold text-foreground">
-                {(project as any).client}
+                {project.client}
               </span>
             </div>
           )}
@@ -435,12 +441,12 @@ export default function ProjectDetailsPage() {
                     Template
                   </Badge>
                 )}
-                {(project as any).budget && (
+                {project.budget && (
                   <Badge variant="info" pill>
-                    Budget: ${(project as any).budget}
+                    Budget: ${project.budget}
                   </Badge>
                 )}
-                {(project as any).sla && (
+                {project.sla && (
                   <Badge variant="info" pill>
                     <abbr
                       className="border-b border-dashed border-current no-underline cursor-help"
@@ -448,7 +454,7 @@ export default function ProjectDetailsPage() {
                     >
                       SLA
                     </abbr>
-                    : {(project as any).sla}d
+                    : {project.sla} days
                   </Badge>
                 )}
               </div>

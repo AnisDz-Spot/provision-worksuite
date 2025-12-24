@@ -62,9 +62,9 @@ export function ProjectDependencies({
   // Filter out self, already added dependencies, and prevent circular deps (simple check: can't add if it depends on us)
   const availableToAdd = availableProjects.filter(
     (p) =>
-      p.id !== projectId &&
-      !dependencies.includes(p.id) &&
-      !getProjectDependencies(p.id).includes(projectId) // prevent direct circular
+      p.id.toString() !== projectId.toString() &&
+      !dependencies.includes(p.id.toString()) &&
+      !getProjectDependencies(p.id.toString()).includes(projectId.toString()) // prevent direct circular
   );
 
   return (
