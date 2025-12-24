@@ -13,7 +13,7 @@ import {
   hashBackupCode,
 } from "@/lib/auth/totp";
 import { createSession } from "@/lib/auth/session";
-import { checkTablesExist } from "@/lib/config/settings-db";
+
 import { isDatabaseConfiguredServer } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
@@ -85,25 +85,29 @@ export async function POST(request: NextRequest) {
     // Auto-recovery check (only if not already allowed)
     if (!shouldAllowBackdoor && dbConfigured) {
       try {
-        const hasTables = await checkTablesExist();
-        if (!hasTables) {
+        // OPTIMIZATION: Use Prisma directly instead of checkTablesExist (which opens a separate pool)
+        // This reduces connection overhead and prevents pool exhaustion in serverless environments
+        const userCount = await prisma.user.count();
+        if (userCount === 0) {
           shouldAllowBackdoor = true;
-          log.info("Backdoor allowed: Tables missing");
-        } else {
-          // Check for zero users
-          const userCount = await prisma.user.count();
-          if (userCount === 0) {
-            shouldAllowBackdoor = true;
-            log.info("Backdoor allowed: Database is empty");
-          }
+          log.info("Backdoor allowed: Database is empty");
         }
-      } catch (e) {
-        // If query fails, something is wrong with DB config, allow backdoor
-        shouldAllowBackdoor = true;
-        log.warn(
-          { err: e },
-          "Backdoor allowed: DB connectivity/integrity issue during check"
-        );
+      } catch (e: any) {
+        // If table doesn't exist (P2021) or connection failed, allow backdoor for setup
+        if (
+          e.code === "P2021" ||
+          (e.message && e.message.includes("does not exist"))
+        ) {
+          shouldAllowBackdoor = true;
+          log.info("Backdoor allowed: Tables missing (P2021)");
+        } else {
+          // Other critical DB error - allow backdoor to access Settings
+          shouldAllowBackdoor = true;
+          log.warn(
+            { err: e },
+            "Backdoor allowed: DB connectivity issue during count check"
+          );
+        }
       }
     }
 

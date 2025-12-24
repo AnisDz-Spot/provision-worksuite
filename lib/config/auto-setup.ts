@@ -5,12 +5,7 @@
  */
 
 import { encrypt, decrypt } from "./encryption";
-import {
-  saveSetting,
-  getSetting,
-  checkTablesExist,
-  executeSql,
-} from "./settings-db";
+import { saveSetting, getSetting, getSetting, executeSql } from "./settings-db";
 import fs from "fs";
 import path from "path";
 
