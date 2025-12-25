@@ -210,31 +210,28 @@ export function ProjectGrid() {
   */
 
   const toggleStar = async (id: string) => {
-    setProjects((prev) => {
-      const next = prev.map((p) => {
-        if (p.id === id) {
-          const newStar = !p.starred;
-          // log event
-          try {
-            logProjectEvent(p.id, newStar ? "star" : "unstar");
-          } catch {}
-          return { ...p, starred: newStar };
-        }
-        return p;
+    // Optimistic Update
+    setProjects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, starred: !p.starred } : p))
+    );
+
+    try {
+      const response = await fetch(`/api/projects/${id}/star`, {
+        method: "POST",
       });
-
-      // Save to appropriate storage
-      (async () => {
-        try {
-          const { saveProjects } = await import("@/lib/data");
-          await saveProjects(next);
-        } catch (error) {
-          console.error("Failed to save projects:", error);
-        }
-      })();
-
-      return next;
-    });
+      if (!response.ok) {
+        throw new Error("Failed to star project");
+      }
+      // Assuming logProjectEvent is defined elsewhere or imported
+      // logProjectEvent(id, "star_toggle");
+    } catch (error) {
+      console.error("Star toggle failed:", error);
+      // Revert optimistic update
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, starred: !p.starred } : p))
+      );
+      showToast("Failed to star project", "error");
+    }
   };
 
   const deleteProject = async (id: string) => {
@@ -380,10 +377,13 @@ export function ProjectGrid() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="h-14 bg-card rounded-xl animate-pulse" />
+        <div className="h-14 bg-muted/50 border border-border rounded-xl animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="h-48 bg-muted/50 border border-border rounded-xl animate-pulse"
+            />
           ))}
         </div>
       </div>

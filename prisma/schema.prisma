@@ -93,6 +93,7 @@ model User {
   accounts            Account[]
   createdMeetings     Meeting[]            @relation("CreatedMeetings")
   meetingParticipants MeetingParticipant[]
+  starredProjects     StarredProject[]
 
   @@index([email])
   @@index([roleId])
@@ -201,6 +202,7 @@ model Project {
   events     CalendarEvent[]
   members    ProjectMember[]
   chatGroups ChatGroup[]
+  stars      StarredProject[]
 
   @@index([userId])
   @@index([clientId])
@@ -208,6 +210,21 @@ model Project {
   @@index([visibility])
   @@index([archivedAt])
   @@map("projects")
+}
+
+model StarredProject {
+  id        String   @id @default(uuid())
+  userId    Int      @map("user_id")
+  projectId Int      @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+  @@map("starred_projects")
 }
 
 model Client {

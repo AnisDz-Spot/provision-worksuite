@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { revalidateTag } from "next/cache";
+import { logProjectEvent } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +89,19 @@ export async function GET() {
             loggedHours: true,
           },
         },
+        stars: {
+          where: { userId: dbUser.id },
+          select: { id: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // Map starred status
+    const data = projects.map((p: any) => ({
+      ...p,
+      starred: p.stars.length > 0,
+    }));
 
     log.info(
       { count: projects.length, userId: currentUser.uid },
@@ -98,7 +110,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: projects,
+      data: data,
       source: "database",
     });
   } catch (error) {
@@ -303,6 +315,9 @@ export async function POST(req: Request) {
       },
       "Project created"
     );
+
+    // Clear projects cache
+    (revalidateTag as any)("projects");
 
     return NextResponse.json({ success: true, project });
   } catch (error) {

@@ -81,7 +81,9 @@ export interface User {
 export async function loadProjects(): Promise<Project[]> {
   if (shouldUseDatabaseData()) {
     try {
-      const res = await fetch("/api/projects");
+      const res = await fetch("/api/projects", {
+        next: { tags: ["projects"] },
+      });
       const result = await res.json();
       if (result.success && result.data) {
         // Normalize members to avoid mock data display issues
