@@ -48,27 +48,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Pre-resolve all project UIDs to handle numeric IDs from frontend
-    const projectIds = [...new Set(tasks.map((t: any) => t.projectId))];
+    const rawProjectIds = [
+      ...new Set(tasks.map((t: any) => String(t.projectId))),
+    ];
+    const projectNumericIds = rawProjectIds
+      .map((id) => parseInt(id))
+      .filter((id) => !isNaN(id));
+
     const projects = await prisma.project.findMany({
       where: {
-        OR: [
-          { uid: { in: projectIds } },
-          {
-            id: {
-              in: projectIds
-                .map((id) => parseInt(id))
-                .filter((id) => !isNaN(id)),
-            },
-          },
-        ],
+        OR: [{ uid: { in: rawProjectIds } }, { id: { in: projectNumericIds } }],
       },
       select: { id: true, uid: true },
     });
 
-    const projectIdToUidMap = new Map();
+    const projectIdToUidMap = new Map<string | number, string>();
     projects.forEach((p: { id: number; uid: string }) => {
       projectIdToUidMap.set(p.uid, p.uid);
       projectIdToUidMap.set(p.id.toString(), p.uid);
+      projectIdToUidMap.set(p.id, p.uid);
     });
 
     // Process each task sequentially to avoid transaction complexity

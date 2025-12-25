@@ -48,7 +48,7 @@ export function RichTextEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure(),
       Underline,
       TextStyle,
       FontSize.configure({ types: ["textStyle", "paragraph", "heading"] }),
