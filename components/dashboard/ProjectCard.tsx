@@ -146,12 +146,15 @@ export function ProjectCard({
                   ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
                   : project.status.toLowerCase() === "completed"
                     ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30"
-                    : project.status.toLowerCase() === "on_hold" ||
-                        project.status.toLowerCase() === "on-hold"
-                      ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"
-                      : project.status.toLowerCase() === "cancelled"
-                        ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"
-                        : "bg-background/80 text-muted-foreground border-muted"
+                    : project.status.toLowerCase() === "in progress" ||
+                        project.status.toLowerCase() === "in_progress"
+                      ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
+                      : project.status.toLowerCase() === "on_hold" ||
+                          project.status.toLowerCase() === "on-hold"
+                        ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"
+                        : project.status.toLowerCase() === "cancelled"
+                          ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"
+                          : "bg-background/80 text-muted-foreground border-muted"
               }`}
             >
               {project.status}
