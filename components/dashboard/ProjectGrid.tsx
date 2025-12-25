@@ -164,7 +164,9 @@ export function ProjectGrid() {
     loadTeam();
   }, [loadProjects]);
 
-  // Refresh data when the page becomes visible to catch updates from project detail pages
+  // Auto-refresh disabled to prevent excessive API calls
+  // Projects will refresh on initial load and manual navigation
+  /*
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -180,6 +182,7 @@ export function ProjectGrid() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [loadProjects]);
+  */
 
   const toggleStar = async (id: string) => {
     let updatedProject: Project | undefined;
