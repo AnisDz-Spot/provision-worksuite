@@ -52,12 +52,12 @@ export function ProjectFiles({
         const json = await res.json();
         if (json.success) {
           // Map DB File model to Component structure
-          const mapped = json.data.map((f: any) => ({
+          const mapped: ProjectFile[] = json.data.map((f: any) => ({
             id: f.id,
             name: f.filename,
-            size: f.fileSize,
             type: f.mimeType,
-            dataUrl: f.fileUrl,
+            size: f.fileSize,
+            dataUrl: `/api/files/${f.id}/serve`,
             uploadedAt: new Date(f.createdAt).getTime(),
             uploadedBy: f.uploader?.name || "System",
             version: 1, // Placeholder
@@ -82,37 +82,31 @@ export function ProjectFiles({
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        if (file.size > 10 * 1024 * 1024) {
-          // Increased to 10MB
-          show("error", `${file.name} is too large (max 10MB)`);
+        if (file.size > 5 * 1024 * 1024) {
+          // Strict 5MB limit
+          show("error", `${file.name} is too large (max 5MB)`);
           continue;
         }
 
-        // Convert to base64
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        const formData = new FormData();
+        formData.append("file", file);
 
         const csrfToken = getCsrfToken();
-        await fetch(`/api/projects/${projectId}/files`, {
+        const res = await fetch(`/api/projects/${projectId}/files`, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "x-csrf-token": csrfToken || "",
           },
-          body: JSON.stringify({
-            name: file.name,
-            url: dataUrl,
-            size: file.size,
-            type: file.type,
-          }),
+          body: formData,
         });
+
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || "Upload failed");
+        }
       }
       refresh();
-      show("success", "Files uploaded and saved to database");
+      show("success", "Files uploaded securely");
     } catch (error) {
       console.error("Upload failed:", error);
       show("error", "Failed to upload files");

@@ -17,15 +17,8 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "api.dicebear.com",
       },
-      // Allow any HTTPS image source to fix INVALID_IMAGE_OPTIMIZE_REQUEST
-      // This is necessary if users can paste/upload images from various sources
-      // or if using other external storages not listed.
-      {
-        protocol: "https",
-        hostname: "**",
-      },
     ],
-    dangerouslyAllowSVG: true,
+    dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ["image/avif", "image/webp"],
   },
@@ -64,22 +57,23 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=*, microphone=*, display-capture=*, geolocation=()",
+            value:
+              "camera=(self), microphone=(self), display-capture=(self), geolocation=()",
           },
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Script src: Allow ZegoCloud and other necessary scripts
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
+              // Script src: Restricted scripts
+              "script-src 'self' 'unsafe-inline' https://*.zegocloud.com https://*.zego.im",
               "style-src 'self' 'unsafe-inline'",
-              // Img src: Allow blob: and data: and external https sources
-              "img-src 'self' data: https: blob: https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
+              // Img src: STRICTLY 'self' and trusted uploads only
+              "img-src 'self' blob: data: https://*.public.blob.vercel-storage.com https://api.dicebear.com https://*.zegocloud.com https://*.zego.im",
               "font-src 'self' data:",
               // Connect src: Allow ZegoCloud websockets and APIs
-              "connect-src 'self' data: https://firebasestorage.googleapis.com https://*.googleapis.com https://*.zegocloud.com wss://*.zegocloud.com https://*.zego.im wss://*.zego.im https://*.coolbcloud.com wss://*.coolbcloud.com https://*.coolzcloud.com wss://*.coolzcloud.com https://*.coolfcloud.com wss://*.coolfcloud.com",
-              // Frame src: Allow ZegoCloud and data/blob sources for previews
-              "frame-src 'self' data: blob: https://*.zegocloud.com https://*.zego.im https://*.coolbcloud.com https://*.coolzcloud.com https://*.coolfcloud.com",
+              "connect-src 'self' data: https://*.zegocloud.com wss://*.zegocloud.com https://*.zego.im wss://*.zego.im https://firebasestorage.googleapis.com https://*.googleapis.com",
+              // Frame src: Allow internal framing and ZegoCloud
+              "frame-src 'self' data: blob: https://*.zegocloud.com https://*.zego.im",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

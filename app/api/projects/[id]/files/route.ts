@@ -74,17 +74,24 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const body = await request.json();
-    const { name, url, size, type } = body;
+    // 1. Parse Multipart/Form-Data
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
 
-    if (!name || !url) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Resolve numeric ID from UID
+    // 2. Validate File Content (Server-Side)
+    const { validateFile } = await import("@/lib/security-utils");
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const validation = await validateFile(buffer, file.type);
+
+    if (!validation.isValid) {
+      return NextResponse.json({ error: validation.error }, { status: 415 }); // 415 Unsupported Media Type
+    }
+
+    // 3. Resolve numeric ID from UID
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
       select: { id: true },
@@ -97,12 +104,16 @@ export async function POST(
       );
     }
 
-    const file = await prisma.file.create({
+    // Convert to Data URL for database storage (preserving current architecture)
+    // but ensured to be legitimate via validateFile above.
+    const dataUrl = `data:${validation.mimeType};base64,${buffer.toString("base64")}`;
+
+    const createdFile = await prisma.file.create({
       data: {
-        filename: name,
-        fileUrl: url,
-        fileSize: size || 0,
-        mimeType: type || "application/octet-stream",
+        filename: file.name,
+        fileUrl: dataUrl,
+        fileSize: buffer.length,
+        mimeType: validation.mimeType || file.type,
         projectId: project.id,
         uploadedBy: dbUser.id,
       },
@@ -113,7 +124,7 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ success: true, data: file });
+    return NextResponse.json({ success: true, data: createdFile });
   } catch (error) {
     console.error("Upload file error:", error);
     return NextResponse.json(
