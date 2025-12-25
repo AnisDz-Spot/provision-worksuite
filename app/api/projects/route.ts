@@ -80,6 +80,7 @@ export async function GET() {
           select: {
             tasks: true,
             milestones: true,
+            files: true,
           },
         },
         tasks: {

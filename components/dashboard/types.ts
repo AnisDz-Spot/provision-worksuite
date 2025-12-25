@@ -16,4 +16,10 @@ export type Project = {
   category?: string;
   categories?: string[];
   client?: string;
+  filesCount?: number;
+  _count?: {
+    tasks: number;
+    milestones: number;
+    files: number;
+  };
 };

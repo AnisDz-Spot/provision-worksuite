@@ -75,7 +75,7 @@ export function ProjectCard({
   const hasTasks = taskStats.total > 0;
 
   return (
-    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-card border-border">
+    <Card className="group relative transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-card border-border overflow-visible">
       {selectMode && (
         <div className="absolute top-2 left-2 z-20">
           <input
@@ -86,16 +86,18 @@ export function ProjectCard({
               onSelect(project.id, e.target.checked);
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4"
+            className="w-4 h-4 rounded border-primary focus:ring-primary"
           />
         </div>
       )}
       <div
-        className="cursor-pointer"
-        onClick={() => router.push(`/projects/${project.id}`)}
+        className="cursor-pointer rounded-xl overflow-hidden"
+        onClick={() =>
+          router.push(`/projects/${project.slug || project.uid || project.id}`)
+        }
       >
         {/* Cover Image */}
-        <div className="h-32 bg-muted relative">
+        <div className="h-32 bg-muted relative overflow-hidden rounded-t-xl">
           {project.cover ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -121,7 +123,7 @@ export function ProjectCard({
                     ? "default"
                     : "secondary"
               }
-              className="shadow-xs backdrop-blur-md bg-background/80"
+              className={`shadow-xs backdrop-blur-md ${project.status === "Active" ? "bg-blue-500/90 text-white hover:bg-blue-600/90" : "bg-background/80"}`}
               pill
             >
               {project.status}
@@ -169,19 +171,21 @@ export function ProjectCard({
               {menuOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-10"
+                    className="fixed inset-0 z-30"
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
                     }}
                   />
-                  <div className="absolute right-0 top-8 z-20 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px] flex flex-col">
+                  <div className="absolute right-0 top-8 z-40 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px] flex flex-col">
                     <button
                       className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         setMenuOpen(false);
-                        router.push(`/projects/${project.id}`);
+                        router.push(
+                          `/projects/${project.slug || project.uid || project.id}`
+                        );
                       }}
                     >
                       Open
@@ -254,32 +258,55 @@ export function ProjectCard({
             </div>
             <div className="text-center">
               <div
-                className={`text-lg font-bold ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-primary"}`}
+                className={`text-sm font-bold truncate ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
+                title={
+                  project.deadline
+                    ? new Date(project.deadline).toLocaleDateString()
+                    : ""
+                }
               >
-                {daysLeft !== null ? daysLeft : "—"}
+                {project.deadline
+                  ? new Date(project.deadline).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "—"}
               </div>
-              <div className="text-xs text-muted-foreground">Days left</div>
+              <div className="text-xs text-muted-foreground">Due Date</div>
             </div>
           </div>
 
           {/* Actions & Team */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-2 overflow-visible">
               {(project.members || []).slice(0, 4).map((m: any, idx) => {
                 const name = m.user?.name || m.name || "Member";
                 const avatar = m.user?.avatarUrl || m.avatarUrl;
+                const uid = m.user?.uid || m.uid || m.id; // Ensure we have an ID
                 return (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <div
                     key={idx}
-                    src={
-                      avatar ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-                    }
-                    alt={name}
-                    className="w-6 h-6 rounded-full border-2 border-card bg-background"
-                    title={name}
-                  />
+                    className="relative group/avatar cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Open member details in new tab
+                      if (uid)
+                        window.open(`/settings/users?uid=${uid}`, "_blank");
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        avatar ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+                      }
+                      alt={name}
+                      className="w-6 h-6 rounded-full border-2 border-card bg-background hover:scale-110 transition-transform relative z-10"
+                    />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-[10px] rounded shadow opacity-0 group-hover/avatar:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
+                      {name}
+                    </div>
+                  </div>
                 );
               })}
             </div>

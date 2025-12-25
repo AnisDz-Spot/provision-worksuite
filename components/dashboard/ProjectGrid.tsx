@@ -135,12 +135,9 @@ export function ProjectGrid() {
   }, []);
 
   React.useEffect(() => {
-    // If we have cached data, use it immediately to avoid skeleton
     if (cachedProjects) {
       setProjects(cachedProjects as Project[]);
       setLoading(false);
-      // Still fetch in background to ensure freshness
-      loadProjects();
     } else {
       loadProjects();
     }
@@ -478,7 +475,7 @@ export function ProjectGrid() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedProjects.map((p) => {
-              const filesCount = getProjectFiles(p.id).length;
+              const filesCount = p.filesCount || 0;
               return (
                 <ProjectCard
                   key={p.id}

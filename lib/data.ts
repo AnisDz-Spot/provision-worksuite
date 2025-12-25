@@ -95,6 +95,7 @@ export async function loadProjects(): Promise<Project[]> {
             avatarUrl: m.user?.avatarUrl || m.avatarUrl,
           })),
           cover: p.coverUrl || p.cover,
+          filesCount: p._count?.files || 0,
         }));
       }
       return [];
