@@ -47,6 +47,7 @@ export default function ProjectEditPage() {
   const { showToast } = useToast();
   const projectId = params.id as string;
   const [project, setProject] = React.useState<Project | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [users, setUsers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -66,13 +67,41 @@ export default function ProjectEditPage() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectRes, clientsRes, usersRes, allProjectsRes] =
+        const [authRes, projectRes, clientsRes, usersRes, allProjectsRes] =
           await Promise.all([
+            fetch("/api/auth/me"),
             fetch(`/api/projects/${projectId}`),
             fetch("/api/clients"),
             fetch("/api/users"),
             fetch("/api/projects"),
           ]);
+
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.success) {
+            const user = authData.user;
+            setCurrentUser(user);
+
+            // Check RBAC
+            const role = user.role?.toLowerCase() || "";
+            const isAuthorized =
+              [
+                "admin",
+                "administrator",
+                "master admin",
+                "project manager",
+              ].includes(role) || user.uid === "admin-global";
+
+            if (!isAuthorized) {
+              showToast(
+                "Unauthorized: Only admins and project managers can edit projects",
+                "error"
+              );
+              router.push(`/projects/${projectId}`);
+              return;
+            }
+          }
+        }
 
         if (projectRes.ok) {
           const data = await projectRes.json();

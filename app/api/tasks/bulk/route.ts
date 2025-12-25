@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
                 : null,
             boardColumn: task.status || "todo",
             estimateHours: task.estimateHours || null,
-            labels: task.tags || [],
+            labels: task.labels || task.tags || [],
           },
           update: {
             projectId: resolvedProjectId,
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
                 : null,
             boardColumn: task.status || "todo",
             estimateHours: task.estimateHours || null,
-            labels: task.tags || [],
+            labels: task.labels || task.tags || [],
           },
         });
         successCount++;

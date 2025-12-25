@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
-import { getProjectEvents, ProjectEvent } from "@/lib/utils";
-import { Clock } from "lucide-react";
+import { getProjectEventsDB, ProjectEvent } from "@/lib/utils";
+import { Clock, User } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 
@@ -10,24 +10,33 @@ function formatDate(ts: number) {
   return d.toLocaleString();
 }
 
-const typeLabel: Record<ProjectEvent["type"], string> = {
+const typeLabel: Record<string, string> = {
   create: "Project created",
   edit: "Project updated",
   star: "Starred",
   unstar: "Unstarred",
   delete: "Deleted",
+  created: "Project created",
+  updated: "Project updated",
+  deleted: "Project deleted",
+  task_created: "Task created",
+  task_updated: "Task updated",
 };
 
-// Restrict to allowed Badge variants (no 'destructive' in BadgeProps union)
 const typeColor: Record<
-  ProjectEvent["type"],
+  string,
   "info" | "secondary" | "warning" | "default" | "success"
 > = {
   create: "info",
   edit: "secondary",
   star: "warning",
   unstar: "secondary",
-  delete: "warning", // use warning for delete events
+  delete: "warning",
+  created: "info",
+  updated: "secondary",
+  deleted: "warning",
+  task_created: "info",
+  task_updated: "secondary",
 };
 
 export function ProjectTimeline({
@@ -37,15 +46,34 @@ export function ProjectTimeline({
   projectId: string;
   compact?: boolean;
 }) {
-  const [events, setEvents] = React.useState<ProjectEvent[]>([]);
+  const [events, setEvents] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchEvents = React.useCallback(async () => {
+    const data = await getProjectEventsDB(projectId);
+    setEvents(data);
+    setLoading(false);
+  }, [projectId]);
 
   React.useEffect(() => {
-    setEvents(getProjectEvents(projectId));
+    fetchEvents();
     const interval = setInterval(() => {
-      setEvents(getProjectEvents(projectId));
-    }, 4000); // lightweight live refresh
+      fetchEvents();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [projectId]);
+  }, [fetchEvents]);
+
+  if (loading) {
+    return (
+      <Card className="p-4 space-y-2 animate-pulse">
+        <div className="h-4 bg-accent/20 rounded w-1/4" />
+        <div className="space-y-3">
+          <div className="h-10 bg-accent/10 rounded" />
+          <div className="h-10 bg-accent/10 rounded" />
+        </div>
+      </Card>
+    );
+  }
 
   if (!events.length) {
     return (
@@ -64,26 +92,55 @@ export function ProjectTimeline({
         <Clock className="w-4 h-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Activity Timeline</h3>
       </div>
-      <ol className="space-y-3">
+      <ol className="space-y-4">
         {events.map((ev) => (
           <li key={ev.id} className="flex items-start gap-3">
-            <div className="mt-1 w-2 h-2 rounded-full bg-primary/70 shrink-0" />
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant={typeColor[ev.type]} pill>
-                  {typeLabel[ev.type]}
+            <div className="relative mt-1">
+              {ev.user?.avatarUrl ? (
+                <img
+                  src={ev.user.avatarUrl}
+                  alt={ev.user.name || "User"}
+                  className="w-8 h-8 rounded-full border-2 border-background shadow-sm shrink-0 object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center border-2 border-background shadow-sm shrink-0">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-sm font-semibold truncate leading-none">
+                  {ev.user?.name || "System"}
+                </span>
+                <Badge
+                  variant={typeColor[ev.type] || "default"}
+                  pill
+                  className="text-[10px] py-0 px-2 h-4"
+                >
+                  {typeLabel[ev.type] || ev.type}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground ml-auto whitespace-nowrap">
                   {formatDate(ev.timestamp)}
                 </span>
               </div>
-              {ev.data && (
-                <div className="text-xs text-muted-foreground">
-                  {Object.entries(ev.data).map(([k, v]) => (
-                    <div key={k}>
-                      <span className="font-medium">{k}:</span> {String(v)}
-                    </div>
-                  ))}
+              <div className="text-xs text-muted-foreground line-clamp-2 italic">
+                {ev.data?.title || ev.data?.name || "Activity logged"}
+              </div>
+              {ev.data && Object.keys(ev.data).length > 1 && (
+                <div className="mt-1 p-2 rounded bg-accent/5 text-[10px] grid grid-cols-2 gap-x-2">
+                  {Object.entries(ev.data)
+                    .slice(0, 4)
+                    .filter(([k]) => k !== "title" && k !== "name")
+                    .map(([k, v]) => (
+                      <div key={k} className="truncate">
+                        <span className="text-muted-foreground font-medium">
+                          {k}:
+                        </span>{" "}
+                        {String(v)}
+                      </div>
+                    ))}
                 </div>
               )}
             </div>

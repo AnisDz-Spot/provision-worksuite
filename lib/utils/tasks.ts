@@ -13,6 +13,8 @@ export type TaskItem = {
   milestoneId?: string;
   estimateHours?: number;
   loggedHours?: number;
+  description?: string;
+  labels?: string[];
 };
 
 function _readTasks(): TaskItem[] {

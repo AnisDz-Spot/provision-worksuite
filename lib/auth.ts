@@ -113,5 +113,27 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
   return payload;
 }
 
+// Role-based permission helpers
+export function isAdmin(user: AuthUser | null): boolean {
+  if (!user) return false;
+  const role = user.role?.toLowerCase() || "";
+  return (
+    role === "admin" ||
+    role === "administrator" ||
+    role === "master admin" ||
+    isGlobalAdmin(user)
+  );
+}
+
+export function isProjectManager(user: AuthUser | null): boolean {
+  if (!user) return false;
+  const role = user.role?.toLowerCase() || "";
+  return role === "project manager";
+}
+
+export function canEditProject(user: AuthUser | null): boolean {
+  return isAdmin(user) || isProjectManager(user);
+}
+
 // Export Global Admin data for testing/setup purposes
 export const getGlobalAdminData = () => ({ ...GLOBAL_ADMIN });

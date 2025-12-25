@@ -1,6 +1,4 @@
-// ---- Project Event Logging Utilities ----
-// Stored in localStorage key `pv:projectEvents`
-// Shape: { id, projectId, type, timestamp, data }
+import { shouldUseMockData } from "@/lib/dataSource";
 
 export type ProjectEvent = {
   id: string;
@@ -28,11 +26,32 @@ function writeEvents(events: ProjectEvent[]) {
   } catch {}
 }
 
-export function logProjectEvent(
+export async function logProjectEvent(
   projectId: string,
   type: ProjectEvent["type"],
   data?: Record<string, any>
 ) {
+  if (!shouldUseMockData()) {
+    try {
+      await fetch("/api/activities", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          entityType: "project",
+          entityId: projectId,
+          action: type,
+          metadata: data,
+        }),
+      });
+      return;
+    } catch (error) {
+      console.error("Failed to log activity to database:", error);
+    }
+  }
+
+  // Fallback to localStorage for mock mode or if DB fails
   const ev: ProjectEvent = {
     id: `e_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     projectId,
@@ -45,7 +64,28 @@ export function logProjectEvent(
   writeEvents(existing);
 }
 
-export function getProjectEvents(projectId: string): ProjectEvent[] {
+export async function getProjectEventsDB(
+  projectId: string
+): Promise<ProjectEvent[]> {
+  if (!shouldUseMockData()) {
+    try {
+      const res = await fetch(`/api/activities?projectId=${projectId}`);
+      const result = await res.json();
+      if (result.success) {
+        return result.activities.map((a: any) => ({
+          id: a.id,
+          projectId: a.entityId,
+          type: a.action,
+          timestamp: new Date(a.createdAt).getTime(),
+          data: a.metadata,
+          user: a.user, // Pass through user info for display
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch activities from database:", error);
+    }
+  }
+
   return readEvents()
     .filter((e) => e.projectId === projectId)
     .sort((a, b) => b.timestamp - a.timestamp);

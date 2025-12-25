@@ -212,6 +212,9 @@ export function KanbanBoard({
   };
   const [newTaskEstimate, setNewTaskEstimate] = useState<string>("");
   const [newTaskType, setNewTaskType] = useState<string>("feature");
+  const [newTaskDescription, setNewTaskDescription] = useState<string>("");
+  const [newTaskLabels, setNewTaskLabels] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [targetColumn, setTargetColumn] = useState<string | null>(null);
   const [milestoneId, setMilestoneId] = useState<string>("");
   const [detailOpen, setDetailOpen] = useState(false);
@@ -223,6 +226,8 @@ export function KanbanBoard({
   const [editPriority, setEditPriority] = useState("");
   const [editEstimate, setEditEstimate] = useState("");
   const [editMilestone, setEditMilestone] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editLabels, setEditLabels] = useState("");
   const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
     id: string;
     title: string;
@@ -263,6 +268,8 @@ export function KanbanBoard({
           estimateHours: t.estimateHours,
           loggedHours: t.loggedHours,
           milestoneId: t.milestoneId,
+          description: t.description || "",
+          labels: t.labels || [],
         }));
     } else {
       tasks = getTasksByProject(projectId);
@@ -286,6 +293,8 @@ export function KanbanBoard({
       milestoneTitle: t.milestoneId ? msLookup.get(t.milestoneId) || "" : "",
       estimateHours: t.estimateHours,
       loggedHours: t.loggedHours,
+      description: t.description || "",
+      labels: t.labels || [],
     });
 
     const statusMap: Record<string, string> = {
@@ -350,8 +359,26 @@ export function KanbanBoard({
         setColumns((prev) => prev.map((c) => ({ ...c, tasks: [] })));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setCurrentUser(data.user);
+      })
+      .catch((err) => console.error("Error fetching user:", err));
+  }, []);
+
+  const isAuthorized = useMemo(() => {
+    if (!currentUser) return false;
+    const role = currentUser.role?.toLowerCase() || "";
+    return (
+      ["admin", "administrator", "master admin", "project manager"].includes(
+        role
+      ) || currentUser.uid === "admin-global"
+    );
+  }, [currentUser]);
 
   useEffect(() => {
     if (!projectId) {
@@ -392,6 +419,13 @@ export function KanbanBoard({
   }
 
   function onDrop(e: React.DragEvent<HTMLDivElement>, targetColId: string) {
+    if (!isAuthorized) {
+      show(
+        "error",
+        "Unauthorized: Only admins and project managers can manage tasks"
+      );
+      return;
+    }
     e.preventDefault();
     const text = e.dataTransfer.getData("text/plain");
     if (!text) return;
@@ -479,6 +513,8 @@ export function KanbanBoard({
       task.estimateHours !== undefined ? task.estimateHours.toString() : ""
     );
     setEditMilestone((task as any).milestoneId || "");
+    setEditDescription(task.description || "");
+    setEditLabels(Array.isArray(task.labels) ? task.labels.join(", ") : "");
   }
 
   function saveTaskEdit() {
@@ -494,6 +530,11 @@ export function KanbanBoard({
       milestoneId: editMilestone || undefined,
       estimateHours: editEstimate ? parseFloat(editEstimate) : undefined,
       loggedHours: detailTask.loggedHours || 0,
+      description: editDescription,
+      labels: editLabels
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean),
     };
     if (!shouldUseMockData()) {
       saveTasks([updated as any]).then(() => {
@@ -605,16 +646,21 @@ export function KanbanBoard({
       const t: TaskItem = {
         id,
         projectId,
-        title: newTask.title,
+        title: newTaskTitle.trim(),
         status: targetColumn as TaskItem["status"],
-        assignee: newTask.assignee,
-        due: newTask.due,
-        priority: newTask.priority,
+        assignee: newTaskAssignee,
+        due: newTaskDue,
+        priority: newTaskPriority as "high" | "medium" | "low",
         milestoneId: milestoneId || undefined,
         estimateHours: newTaskEstimate
           ? parseFloat(newTaskEstimate)
           : undefined,
         loggedHours: 0,
+        description: newTaskDescription,
+        labels: newTaskLabels
+          .split(",")
+          .map((l) => l.trim())
+          .filter(Boolean),
       };
 
       if (!shouldUseMockData()) {
@@ -815,13 +861,15 @@ export function KanbanBoard({
                 <span className="text-xs font-medium px-2 py-1 rounded-full bg-background/50">
                   {col.tasks.length}
                 </span>
-                <button
-                  onClick={() => openAddModal(col.id)}
-                  className="p-1 rounded hover:bg-background/50 transition-colors cursor-pointer"
-                  title="Add task"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+                {isAuthorized && (
+                  <button
+                    onClick={() => openAddModal(col.id)}
+                    className="p-1 rounded hover:bg-background/50 transition-colors cursor-pointer"
+                    title="Add task"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-3 flex-1">
@@ -846,7 +894,7 @@ export function KanbanBoard({
                       y: -2,
                       boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
                     }}
-                    draggable={!selectMode}
+                    draggable={isAuthorized && !selectMode}
                     onDragStart={(e) =>
                       onDragStart(
                         e as any as React.DragEvent<HTMLDivElement>,
@@ -1106,6 +1154,25 @@ export function KanbanBoard({
                 <option value="low">Low</option>
               </select>
             </div>
+            <div className="space-y-3 md:col-span-2">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                placeholder="Detailed description..."
+                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-h-24"
+              />
+            </div>
+            <div className="space-y-3 md:col-span-2">
+              <label className="text-sm font-medium">
+                Labels (comma separated)
+              </label>
+              <Input
+                value={newTaskLabels}
+                onChange={(e) => setNewTaskLabels(e.target.value)}
+                placeholder="e.g. bug, high-priority, frontend"
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button
@@ -1150,7 +1217,7 @@ export function KanbanBoard({
               ) : (
                 <h3 className="text-2xl font-bold">{detailTask.title}</h3>
               )}
-              {!editMode && projectId && (
+              {!editMode && projectId && isAuthorized && (
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -1275,6 +1342,54 @@ export function KanbanBoard({
                     <span className="font-medium capitalize">
                       {detailTask.priority}
                     </span>
+                  </div>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Description
+                </div>
+                {editMode ? (
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Detailed description..."
+                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-h-24"
+                  />
+                ) : (
+                  <div className="text-sm border border-border rounded-md p-3 bg-accent/5 overflow-auto max-h-48 whitespace-pre-wrap">
+                    {detailTask.description || (
+                      <span className="text-muted-foreground italic">
+                        No description provided.
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <div className="text-xs text-muted-foreground mb-1">Labels</div>
+                {editMode ? (
+                  <Input
+                    value={editLabels}
+                    onChange={(e) => setEditLabels(e.target.value)}
+                    placeholder="e.g. bug, high-priority (comma separated)"
+                  />
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {detailTask.labels && detailTask.labels.length > 0 ? (
+                      detailTask.labels.map((label: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider"
+                        >
+                          {label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">
+                        No labels
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
