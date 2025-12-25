@@ -51,6 +51,7 @@ type Project = {
   sla?: string;
   client?: string;
   clientLogo?: string;
+  tasks?: any[];
 };
 
 function loadProject(id: string): Project | null {
@@ -201,7 +202,9 @@ export default function ProjectDetailsPage() {
     async function load() {
       setIsLoading(true);
       try {
-        const res = await fetch(`/api/projects/${projectId}`);
+        const res = await fetch(`/api/projects/${projectId}`, {
+          next: { tags: ["projects", "tasks"] },
+        });
         const data = await res.json();
         if (data.success && data.project) {
           // Normalize members for the UI
@@ -461,11 +464,14 @@ export default function ProjectDetailsPage() {
 
               {/* Health Score with popover and history */}
               {(() => {
-                const health = calculateProjectHealth({
-                  id: project.id,
-                  deadline: project.deadline,
-                  status: project.status,
-                });
+                const health = calculateProjectHealth(
+                  {
+                    id: project.id,
+                    deadline: project.deadline,
+                    status: project.status,
+                  },
+                  project.tasks
+                );
                 try {
                   snapshotHealth(project.id, health.score);
                 } catch {}
@@ -567,7 +573,7 @@ export default function ProjectDetailsPage() {
 
               {/* Time Rollup */}
               {(() => {
-                const r = getProjectTimeRollup(project.id);
+                const r = getProjectTimeRollup(project.id, project.tasks);
                 return (
                   <div className="flex items-center gap-2 text-xs mt-2">
                     <Badge variant="secondary" pill>
@@ -621,7 +627,7 @@ export default function ProjectDetailsPage() {
             <div className="space-y-4 sticky top-4 self-start">
               {/* Recent Time Logs Ticker */}
               {(() => {
-                const tasks = getTasksByProject(project.id);
+                const tasks = project.tasks || getTasksByProject(project.id);
                 if (tasks.length === 0) return null;
                 const titleMap = new Map(tasks.map((t) => [t.id, t.title]));
                 const allLogs = tasks.flatMap((t) => getTimeLogsForTask(t.id));
@@ -772,6 +778,7 @@ export default function ProjectDetailsPage() {
             <h3 className="text-sm font-semibold mb-2">Tasks</h3>
             <KanbanBoard
               projectId={project.id}
+              projectUid={project.uid}
               projectMembers={members}
               onTaskUpdate={() => setRefreshKey((k) => k + 1)}
             />
@@ -784,7 +791,7 @@ export default function ProjectDetailsPage() {
 
           {/* Recent Time Logs */}
           {(() => {
-            const tasks = getTasksByProject(project.id);
+            const tasks = project.tasks || getTasksByProject(project.id);
             if (tasks.length === 0) return null;
             const titleMap = new Map(tasks.map((t) => [t.id, t.title]));
             const allLogs = tasks.flatMap((t) => getTimeLogsForTask(t.id));

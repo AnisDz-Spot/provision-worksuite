@@ -47,11 +47,14 @@ export function setHealthWeights(weights: HealthWeights) {
   } catch {}
 }
 
-export function calculateProjectHealth(project: {
-  id: string;
-  deadline?: string;
-  status?: string;
-}): HealthScore {
+export function calculateProjectHealth(
+  project: {
+    id: string;
+    deadline?: string;
+    status?: string;
+  },
+  providedTasks?: any[]
+): HealthScore {
   let score = 100;
   const factors = {
     deadline: 100,
@@ -92,7 +95,7 @@ export function calculateProjectHealth(project: {
   }
 
   // Completion factor (30% weight)
-  const taskStats = getTaskCompletionForProject(project.id);
+  const taskStats = getTaskCompletionForProject(project.id, providedTasks);
   if (taskStats.total > 0) {
     factors.completion = taskStats.percent; // 0..100
     const completionPenalty = Math.round((100 - taskStats.percent) * 0.3); // 30% weight
@@ -131,7 +134,7 @@ export function calculateProjectHealth(project: {
   }
 
   // Overdue tasks penalty
-  const overdue = getOverdueTaskCount(project.id);
+  const overdue = getOverdueTaskCount(project.id, providedTasks);
   const overduePenaltyPerTask = getHealthWeights().overduePenaltyPerTask ?? 2;
   const overduePenaltyCap = getHealthWeights().overduePenaltyCap ?? 20;
   if (overdue > 0) {
@@ -210,8 +213,11 @@ export function getHealthSeries(projectId: string, days = 14): number[] {
   });
 }
 
-export function getOverdueTaskCount(projectId: string): number {
-  const tasks = getTasksByProject(projectId);
+export function getOverdueTaskCount(
+  projectId: string,
+  providedTasks?: any[]
+): number {
+  const tasks = providedTasks || getTasksByProject(projectId);
   const today = new Date().toISOString().slice(0, 10);
   return tasks.filter((t) => t.status !== "done" && t.due && t.due < today)
     .length;

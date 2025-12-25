@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -223,6 +224,9 @@ export async function POST(req: Request) {
       },
       "Task created"
     );
+
+    (revalidateTag as any)("projects");
+    (revalidateTag as any)("tasks");
 
     return NextResponse.json({ success: true, task });
   } catch (error) {

@@ -59,12 +59,15 @@ export function deleteTask(taskId: string) {
   writeTasks(all.filter((t) => t.id !== taskId));
 }
 
-export function getTaskCompletionForProject(projectId: string): {
+export function getTaskCompletionForProject(
+  projectId: string,
+  providedTasks?: TaskItem[]
+): {
   total: number;
   done: number;
   percent: number;
 } {
-  const tasks = getTasksByProject(projectId);
+  const tasks = providedTasks || getTasksByProject(projectId);
   const total = tasks.length;
   const done = tasks.filter((t) => t.status === "done").length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +39,13 @@ export async function GET(
           },
         },
         files: true,
+        tasks: {
+          select: {
+            status: true,
+            estimateHours: true,
+            loggedHours: true,
+          },
+        },
       },
     });
 
@@ -59,6 +67,13 @@ export async function GET(
             },
           },
           files: true,
+          tasks: {
+            select: {
+              status: true,
+              estimateHours: true,
+              loggedHours: true,
+            },
+          },
         },
       });
     }
@@ -83,6 +98,13 @@ export async function GET(
               },
             },
             files: true,
+            tasks: {
+              select: {
+                status: true,
+                estimateHours: true,
+                loggedHours: true,
+              },
+            },
           },
         });
       }
@@ -264,6 +286,8 @@ export async function PUT(
         }
       }
     }
+
+    (revalidateTag as any)("projects");
 
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {

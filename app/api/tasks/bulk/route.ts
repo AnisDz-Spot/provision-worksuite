@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,6 +125,9 @@ export async function POST(request: NextRequest) {
       { count: successCount, errors: errors.length, userId: user.uid },
       "Bulk saved tasks"
     );
+
+    (revalidateTag as any)("projects");
+    (revalidateTag as any)("tasks");
 
     return NextResponse.json({
       success: errors.length === 0,

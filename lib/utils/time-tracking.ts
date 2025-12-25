@@ -1,7 +1,7 @@
 // ---- Time Tracking Utilities ----
 // Per-task simple time logs stored within tasks (aggregate only)
 
-import { readTasks, getTasksByProject } from "./tasks";
+import { readTasks, getTasksByProject, TaskItem } from "./tasks";
 
 export type TimeLog = {
   id: string;
@@ -80,12 +80,15 @@ export function addTimeLog(
   return log;
 }
 
-export function getProjectTimeRollup(projectId: string): {
+export function getProjectTimeRollup(
+  projectId: string,
+  providedTasks?: TaskItem[]
+): {
   estimate: number;
   logged: number;
   remaining: number;
 } {
-  const tasks = getTasksByProject(projectId);
+  const tasks = providedTasks || getTasksByProject(projectId);
   const estimate = tasks.reduce((sum, t) => sum + (t.estimateHours || 0), 0);
   const logged = tasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
   const remaining = Math.max(0, parseFloat((estimate - logged).toFixed(2)));

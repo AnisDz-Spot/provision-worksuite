@@ -31,6 +31,7 @@ import {
   addTimeLog,
   getTimeLogsForTask,
 } from "@/lib/utils";
+import { loadTasks, saveTasks } from "@/lib/data";
 
 const MOCK_BOARD = [
   {
@@ -120,6 +121,7 @@ const priorityColors: Record<string, string> = {
 
 type KanbanBoardProps = {
   projectId?: string;
+  projectUid?: string;
   projectMembers?: { name: string; avatarUrl?: string }[];
   onTaskUpdate?: () => void;
 };
@@ -130,6 +132,7 @@ import { shouldUseMockData } from "@/lib/dataSource";
 
 export function KanbanBoard({
   projectId,
+  projectUid,
   projectMembers = [],
   onTaskUpdate,
 }: KanbanBoardProps) {
@@ -238,29 +241,40 @@ export function KanbanBoard({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [blocked, setBlocked] = useState(false);
 
-  const refreshFromStorage = () => {
+  const refreshFromStorage = async () => {
     if (!projectId) return; // No persistence without project context
-    const tasks = getTasksByProject(projectId);
+
+    let tasks: TaskItem[] = [];
+    if (!shouldUseMockData()) {
+      const dbTasks = await loadTasks();
+      // Filter by projectId and map to TaskItem format
+      tasks = dbTasks
+        .filter(
+          (t: any) => t.projectId === projectId || t.projectId === projectUid
+        )
+        .map((t: any) => ({
+          id: t.uid || t.id,
+          projectId: t.projectId,
+          title: t.title,
+          status: t.status as any,
+          assignee: t.assignee?.name || t.assignee || "Unassigned",
+          due: t.due ? new Date(t.due).toISOString().split("T")[0] : "",
+          priority: t.priority as any,
+          estimateHours: t.estimateHours,
+          loggedHours: t.loggedHours,
+          milestoneId: t.milestoneId,
+        }));
+    } else {
+      tasks = getTasksByProject(projectId);
+    }
+
     const msLookup = new Map<string, string>();
     try {
       const ms = getMilestonesByProject(projectId);
       ms.forEach((m) => msLookup.set(m.id, m.title));
     } catch {}
-    const toCardTask = (
-      t: TaskItem
-    ): {
-      id: string;
-      title: string;
-      assignee: string;
-      avatar: string;
-      due: string;
-      priority: string;
-      status: string;
-      milestoneId: string;
-      milestoneTitle: string;
-      estimateHours?: number;
-      loggedHours?: number;
-    } => ({
+
+    const toCardTask = (t: TaskItem) => ({
       id: t.id,
       title: t.title,
       assignee: t.assignee || "Unassigned",
@@ -273,14 +287,26 @@ export function KanbanBoard({
       estimateHours: t.estimateHours,
       loggedHours: t.loggedHours,
     });
+
+    const statusMap: Record<string, string> = {
+      todo: "todo",
+      "in-progress": "in-progress",
+      in_progress: "in-progress",
+      review: "review",
+      done: "done",
+    };
+
     const byStatus = {
-      todo: tasks.filter((t) => t.status === "todo").map(toCardTask),
+      todo: tasks.filter((t) => statusMap[t.status] === "todo").map(toCardTask),
       "in-progress": tasks
-        .filter((t) => t.status === "in-progress")
+        .filter((t) => statusMap[t.status] === "in-progress")
         .map(toCardTask),
-      review: tasks.filter((t) => t.status === "review").map(toCardTask),
-      done: tasks.filter((t) => t.status === "done").map(toCardTask),
+      review: tasks
+        .filter((t) => statusMap[t.status] === "review")
+        .map(toCardTask),
+      done: tasks.filter((t) => statusMap[t.status] === "done").map(toCardTask),
     } as const;
+
     setColumns([
       {
         id: "todo",
@@ -398,8 +424,15 @@ export function KanbanBoard({
               (moved.priority as "high" | "medium" | "low") || undefined,
             milestoneId: (moved as any).milestoneId || undefined,
           };
-          upsertTask(updated);
-          queueMicrotask(() => onTaskUpdate?.());
+
+          if (!shouldUseMockData()) {
+            saveTasks([updated as any]).then(() => {
+              onTaskUpdate?.();
+            });
+          } else {
+            upsertTask(updated);
+            queueMicrotask(() => onTaskUpdate?.());
+          }
         }
       }
       return next;
@@ -462,29 +495,42 @@ export function KanbanBoard({
       estimateHours: editEstimate ? parseFloat(editEstimate) : undefined,
       loggedHours: detailTask.loggedHours || 0,
     };
-    upsertTask(updated);
-    setEditMode(false);
-    refreshFromStorage();
-    // Update detailTask from storage to reflect saved changes
-    const savedTask = getTasksByProject(projectId).find(
-      (t) => t.id === updated.id
-    );
-    if (savedTask) {
-      setDetailTask({
-        ...detailTask,
-        title: savedTask.title,
-        assignee: savedTask.assignee || "Unassigned",
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(savedTask.assignee || "User")}`,
-        due: savedTask.due,
-        priority: savedTask.priority,
-        status: savedTask.status,
-        estimateHours: savedTask.estimateHours,
-        loggedHours: savedTask.loggedHours,
-        milestoneId: savedTask.milestoneId,
+    if (!shouldUseMockData()) {
+      saveTasks([updated as any]).then(() => {
+        refreshFromStorage();
+        show("success", "Task updated successfully");
+        if (onTaskUpdate) onTaskUpdate();
       });
+    } else {
+      upsertTask(updated);
+      refreshFromStorage();
+      show("success", "Task updated successfully");
+      if (onTaskUpdate) onTaskUpdate();
     }
-    show("success", "Task updated successfully");
-    if (onTaskUpdate) onTaskUpdate();
+
+    setEditMode(false);
+
+    // Update detailTask from storage to reflect saved changes
+    // (This part might be slightly delayed in Live mode, but UI state is already updated)
+    if (shouldUseMockData()) {
+      const savedTask = getTasksByProject(projectId).find(
+        (t) => t.id === updated.id
+      );
+      if (savedTask) {
+        setDetailTask({
+          ...detailTask,
+          title: savedTask.title,
+          assignee: savedTask.assignee || "Unassigned",
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(savedTask.assignee || "User")}`,
+          due: savedTask.due,
+          priority: savedTask.priority,
+          status: savedTask.status,
+          estimateHours: savedTask.estimateHours,
+          loggedHours: savedTask.loggedHours,
+          milestoneId: savedTask.milestoneId,
+        });
+      }
+    }
   }
 
   function cancelEditTask() {
@@ -570,9 +616,17 @@ export function KanbanBoard({
           : undefined,
         loggedHours: 0,
       };
-      upsertTask(t);
-      refreshFromStorage();
-      if (onTaskUpdate) onTaskUpdate();
+
+      if (!shouldUseMockData()) {
+        saveTasks([t as any]).then(() => {
+          refreshFromStorage();
+          if (onTaskUpdate) onTaskUpdate();
+        });
+      } else {
+        upsertTask(t);
+        refreshFromStorage();
+        if (onTaskUpdate) onTaskUpdate();
+      }
     } else {
       setColumns((prev) =>
         prev.map((col) =>
@@ -1465,6 +1519,3 @@ export function KanbanBoard({
     </>
   );
 }
-
-
-

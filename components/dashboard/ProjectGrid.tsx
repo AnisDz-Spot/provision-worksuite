@@ -19,9 +19,6 @@ import { QuickTaskModal } from "./QuickTaskModal";
 import { Project } from "./types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// Simple client-side cache singleton
-let cachedProjects: any[] | null = null;
-
 /* Project type moved to ./types.ts */
 
 export function ProjectGrid() {
@@ -114,7 +111,6 @@ export function ProjectGrid() {
 
       if (Array.isArray(data) && data.length > 0) {
         setProjects(data as Project[]);
-        cachedProjects = data; // Update cache
       } else if (isMock) {
         // Only if we are EXPLICITLY in mock mode and get empty data, maybe then use internal seed?
         // But lib/data usually returns mock data if in mock mode.
@@ -135,12 +131,7 @@ export function ProjectGrid() {
   }, []);
 
   React.useEffect(() => {
-    if (cachedProjects) {
-      setProjects(cachedProjects as Project[]);
-      setLoading(false);
-    } else {
-      loadProjects();
-    }
+    loadProjects();
 
     // Load team members for task assignment
     async function loadTeam() {
@@ -170,8 +161,7 @@ export function ProjectGrid() {
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        // Clear cache and reload to get fresh data
-        cachedProjects = null;
+        // Reload to get fresh data
         loadProjects();
       }
     };
@@ -194,7 +184,6 @@ export function ProjectGrid() {
         }
         return p;
       });
-      cachedProjects = next; // Update cache with optimistic state
       return next;
     });
 
@@ -217,7 +206,6 @@ export function ProjectGrid() {
         const reverted = prev.map((p) =>
           p.id === id ? { ...p, starred: !p.starred } : p
         );
-        cachedProjects = reverted;
         return reverted;
       });
       showToast(error.message || "Failed to star project", "error");
@@ -229,7 +217,6 @@ export function ProjectGrid() {
     const nextProjects = projects.filter((p) => p.id !== id);
 
     setProjects(nextProjects);
-    cachedProjects = nextProjects; // Update cache immediately
 
     try {
       const response = await fetch(`/api/projects/${id}`, {
@@ -356,7 +343,6 @@ export function ProjectGrid() {
         const next = prev.map((pr) =>
           pr.id === project.id ? { ...pr, status: newStatus } : pr
         );
-        cachedProjects = next;
         return next;
       });
 
