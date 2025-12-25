@@ -164,28 +164,22 @@ export function ProjectGrid() {
     loadTeam();
   }, [loadProjects]);
 
-  // Refresh data when the page becomes visible (commented out to reduce server load in Live Mode)
-  /*
+  // Refresh data when the page becomes visible to catch updates from project detail pages
   React.useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
+        // Clear cache and reload to get fresh data
+        cachedProjects = null;
         loadProjects();
       }
     };
 
-    const handleFocus = () => {
-      loadProjects();
-    };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
     };
   }, [loadProjects]);
-  */
 
   const toggleStar = async (id: string) => {
     let updatedProject: Project | undefined;

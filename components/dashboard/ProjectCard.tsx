@@ -141,21 +141,29 @@ export function ProjectCard({
           {/* Status badge */}
           <div className="absolute top-3 left-3 flex gap-2">
             <span
-              className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-md ${
-                project.status.toLowerCase() === "active"
-                  ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
-                  : project.status.toLowerCase() === "completed"
-                    ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30"
-                    : project.status.toLowerCase() === "in progress" ||
-                        project.status.toLowerCase() === "in_progress"
-                      ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
-                      : project.status.toLowerCase() === "on_hold" ||
-                          project.status.toLowerCase() === "on-hold"
-                        ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"
-                        : project.status.toLowerCase() === "cancelled"
-                          ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"
-                          : "bg-background/80 text-muted-foreground border-muted"
-              }`}
+              className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-md ${(() => {
+                const statusLower = (project.status || "")
+                  .toLowerCase()
+                  .replace(/\s+/g, "");
+                if (statusLower === "active")
+                  return "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30";
+                if (statusLower === "completed")
+                  return "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30";
+                if (
+                  statusLower === "inprogress" ||
+                  statusLower === "in_progress"
+                )
+                  return "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30";
+                if (
+                  statusLower === "onhold" ||
+                  statusLower === "on_hold" ||
+                  statusLower === "paused"
+                )
+                  return "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30";
+                if (statusLower === "cancelled")
+                  return "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30";
+                return "bg-background/80 text-muted-foreground border-muted";
+              })()}`}
             >
               {project.status}
             </span>
