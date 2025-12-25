@@ -64,11 +64,35 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
 
   useEffect(() => {
-    // Load from localStorage on mount
-    const u = loadUserSettings();
-    if (u) setUser({ ...defaultUser, ...u });
-    const w = loadWorkspaceSettings();
-    if (w) setWorkspace({ ...defaultWorkspace, ...w });
+    // Initial Load logic
+    const mode =
+      typeof window !== "undefined"
+        ? localStorage.getItem("pv:dataMode")
+        : "mock";
+
+    if (mode === "real") {
+      // Load from DB
+      import("@/app/actions/workspace-settings").then(
+        ({ getWorkspaceSettingsAction }) => {
+          getWorkspaceSettingsAction().then((dbSettings) => {
+            if (dbSettings) {
+              setWorkspace((prev) => ({ ...prev, ...dbSettings }));
+            }
+          });
+        }
+      );
+      // Attempt to load user settings from DB? (Current scope is workspace settings only for DB persistence yet)
+      // For user settings, we might still be using local storage or need another action.
+      // The user request specified workspace settings.
+      const u = loadUserSettings();
+      if (u) setUser({ ...defaultUser, ...u });
+    } else {
+      // Load from localStorage
+      const u = loadUserSettings();
+      if (u) setUser({ ...defaultUser, ...u });
+      const w = loadWorkspaceSettings();
+      if (w) setWorkspace({ ...defaultWorkspace, ...w });
+    }
   }, []);
 
   useEffect(() => {
@@ -80,12 +104,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--sidebar-primary", workspace.primaryColor);
     root.style.setProperty("--primary-foreground", fgColor);
     root.style.setProperty("--sidebar-primary-foreground", fgColor);
-
-    // Debug: Log to verify values are being set
-    console.log("Theme updated:", {
-      primary: workspace.primaryColor,
-      foreground: fgColor,
-    });
   }, [workspace.primaryColor]);
 
   const updateUser = useCallback(
@@ -100,17 +118,36 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 
   const updateWorkspace = useCallback(
-    (data: WorkspaceSettingsData) => {
+    async (data: WorkspaceSettingsData) => {
       setWorkspace(data);
-      const res: WorkspaceSaveResult = saveWorkspaceSettings(data);
-      if (res.saved) {
-        if (res.truncatedLogo) {
-          showToast(res.error || "Logo omitted due to size", "warning");
+
+      const mode =
+        typeof window !== "undefined"
+          ? localStorage.getItem("pv:dataMode")
+          : "mock";
+
+      if (mode === "real") {
+        // Save to DB
+        const { saveWorkspaceSettingsAction } =
+          await import("@/app/actions/workspace-settings");
+        const res = await saveWorkspaceSettingsAction(data);
+        if (res.success) {
+          showToast("Workspace settings saved to database", "success");
         } else {
-          showToast("Workspace settings saved", "success");
+          showToast(res.error || "Failed to save to database", "error");
         }
       } else {
-        showToast(res.error || "Failed to save workspace settings", "error");
+        // Save to localStorage
+        const res: WorkspaceSaveResult = saveWorkspaceSettings(data);
+        if (res.saved) {
+          if (res.truncatedLogo) {
+            showToast(res.error || "Logo omitted due to size", "warning");
+          } else {
+            showToast("Workspace settings saved locally", "success");
+          }
+        } else {
+          showToast(res.error || "Failed to save workspace settings", "error");
+        }
       }
     },
     [showToast]

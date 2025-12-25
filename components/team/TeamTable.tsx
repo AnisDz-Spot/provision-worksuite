@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth, addUser } from "@/components/auth/AuthContext";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { Input } from "@/components/ui/Input";
@@ -95,6 +96,7 @@ type TeamTableProps = {
 };
 
 export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
+  const searchParams = useSearchParams();
   const { isAdmin, isMasterAdmin, currentUser } = useAuth();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
@@ -109,6 +111,17 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [memberActivities, setMemberActivities] = useState<Map<string, any>>(
     new Map()
   );
+
+  // Auto-open member from URL
+  useEffect(() => {
+    const uid = searchParams.get("uid");
+    if (uid && membersData.length > 0 && !editMemberId) {
+      const member = membersData.find((m) => m.id === uid);
+      if (member) {
+        openEdit(member);
+      }
+    }
+  }, [searchParams, membersData, editMemberId]);
 
   // Add/Edit Form State
   const [addOpen, setAddOpen] = useState(false);

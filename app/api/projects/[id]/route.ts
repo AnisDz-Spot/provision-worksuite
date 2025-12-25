@@ -189,6 +189,15 @@ export async function PUT(
       // We'll keep the owner (the project.userId) and replace the others.
       const ownerId = project.userId;
 
+      // Get existing members to identify NEW members for notifications
+      const existingMembers = await prisma.projectMember.findMany({
+        where: { projectId: project.id },
+        select: { userId: true },
+      });
+      const existingMemberIds = new Set(
+        existingMembers.map((m: { userId: number }) => m.userId)
+      );
+
       // Delete existing non-owner members
       await prisma.projectMember.deleteMany({
         where: {
@@ -200,7 +209,7 @@ export async function PUT(
       // Find user IDs for the incoming UIDs
       const memberUsers = await prisma.user.findMany({
         where: { uid: { in: body.members } },
-        select: { id: true },
+        select: { id: true, email: true, name: true },
       });
 
       const memberIds = memberUsers
@@ -216,6 +225,43 @@ export async function PUT(
           })),
           skipDuplicates: true,
         });
+
+        // Notify NEW members
+        const addedUsers = memberUsers.filter(
+          (u: { id: number }) =>
+            !existingMemberIds.has(u.id) && u.id !== ownerId
+        );
+
+        if (addedUsers.length > 0) {
+          // Import email sender dynamically to avoid circular deps if any
+          const { sendProjectInvitationEmail } = await import("@/lib/email");
+
+          // Get project URL (using slug if available, else uid)
+          const projectUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/projects/${project.slug || project.uid}`;
+
+          await Promise.all(
+            addedUsers.map(async (user: { email: string; id: number }) => {
+              // 1. Send Email
+              await sendProjectInvitationEmail(
+                user.email,
+                project.name,
+                projectUrl
+              );
+
+              // 2. Create In-App Notification
+              await prisma.notification.create({
+                data: {
+                  userId: user.id,
+                  type: "project_invitation",
+                  title: "New Project Assignment",
+                  message: `You have been added to the project "${project.name}"`,
+                  link: `/projects/${project.slug || project.uid}`,
+                  isRead: false,
+                },
+              });
+            })
+          );
+        }
       }
     }
 

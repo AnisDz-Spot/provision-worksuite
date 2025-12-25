@@ -15,18 +15,34 @@ export async function GET() {
   }
 
   try {
-    const isAdmin = user.role === "admin" || user.role === "global-admin";
-    const userUidInt = parseInt(user.uid) || 0;
+    // Fetch full user from DB to get the Integer ID
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true, role: true },
+    });
+
+    if (!dbUser) {
+      // If user exists in token but not in DB (edge case), return empty stats
+      return NextResponse.json({
+        success: true,
+        data: {
+          totalProjects: 0,
+          completedTasks: 0,
+          activeUsers: 0,
+          upcomingDeadlines: 0,
+        },
+      });
+    }
+
+    const isAdmin = dbUser.role === "admin" || dbUser.role === "global-admin";
+    const userId = dbUser.id;
 
     // 1. Projects Count
     const totalProjects = await prisma.project.count({
       where: isAdmin
         ? { archivedAt: null }
         : {
-            OR: [
-              { userId: userUidInt },
-              { members: { some: { userId: userUidInt } } },
-            ],
+            OR: [{ userId: userId }, { members: { some: { userId: userId } } }],
             archivedAt: null,
           },
     });
@@ -38,9 +54,9 @@ export async function GET() {
         ? {}
         : {
             OR: [
-              { project: { userId: userUidInt } },
-              { project: { members: { some: { userId: userUidInt } } } },
-              { assigneeId: userUidInt },
+              { project: { userId: userId } },
+              { project: { members: { some: { userId: userId } } } },
+              { assigneeId: userId },
             ],
           },
       _count: true,
@@ -63,8 +79,8 @@ export async function GET() {
           ? {}
           : {
               OR: [
-                { userId: userUidInt },
-                { members: { some: { userId: userUidInt } } },
+                { userId: userId },
+                { members: { some: { userId: userId } } },
               ],
             }),
         archivedAt: null,

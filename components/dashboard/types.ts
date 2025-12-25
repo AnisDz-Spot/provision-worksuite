@@ -22,4 +22,9 @@ export type Project = {
     milestones: number;
     files: number;
   };
+  tasks?: {
+    status: string;
+    estimateHours?: number;
+    loggedHours?: number;
+  }[];
 };

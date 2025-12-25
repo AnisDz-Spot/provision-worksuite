@@ -22,6 +22,11 @@ export interface WorkspaceSettingsData {
   website: string;
   timezone: string;
   primaryColor: string; // hex
+  // Contact & Billing
+  email?: string;
+  phone?: string;
+  address?: string;
+  taxId?: string;
 }
 
 export function loadUserSettings(): UserSettingsData | null {

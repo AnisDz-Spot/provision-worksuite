@@ -86,25 +86,8 @@ export function TasksCharts() {
   }, [chartData]);
 
   const teamProductivityData: ProductivityPoint[] = useMemo(() => {
-    // This is still a sample structure, but avoiding massive task fetch
-    const now = new Date();
-    const weeks: string[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i * 7);
-      weeks.push(`Wk ${d.getMonth() + 1}/${d.getDate()}`);
-    }
-
-    // Sample productivity data
-    const members = ["Alice", "Bob", "Carol", "David"];
-    return weeks.map((w, idx) => {
-      const row: ProductivityPoint = { week: w };
-      members.forEach((m, mIdx) => {
-        row[m] = Math.floor(Math.random() * 5) + 2 + mIdx;
-      });
-      return row;
-    });
-  }, []);
+    return chartData?.teamProductivity || [];
+  }, [chartData]);
 
   const renderCompletionChart = () => {
     const commonProps = {
@@ -317,6 +300,21 @@ export function TasksCharts() {
   };
 
   const renderProductivityChart = () => {
+    // Extract member names dynamically from data
+    const memberNames =
+      teamProductivityData.length > 0
+        ? Object.keys(teamProductivityData[0]).filter((k) => k !== "week")
+        : [];
+
+    const colors = [
+      "#3b82f6",
+      "#10b981",
+      "#f59e0b",
+      "#8b5cf6",
+      "#ef4444",
+      "#06b6d4",
+    ];
+
     switch (productivityChartType) {
       case "bar":
         return (
@@ -330,10 +328,13 @@ export function TasksCharts() {
             <YAxis stroke="currentColor" opacity={0.6} />
             <Tooltip {...chartTooltipStyle} />
             <Legend />
-            <Bar dataKey="Alice" fill="#3b82f6" />
-            <Bar dataKey="Bob" fill="#10b981" />
-            <Bar dataKey="Carol" fill="#f59e0b" />
-            <Bar dataKey="David" fill="#8b5cf6" />
+            {memberNames.map((name, idx) => (
+              <Bar
+                key={name}
+                dataKey={name}
+                fill={colors[idx % colors.length]}
+              />
+            ))}
           </BarChart>
         );
       case "line":
@@ -348,52 +349,42 @@ export function TasksCharts() {
             <YAxis stroke="currentColor" opacity={0.6} />
             <Tooltip {...chartTooltipStyle} />
             <Legend />
-            <Line
-              type="monotone"
-              dataKey="Alice"
-              stroke="#3b82f6"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="Bob"
-              stroke="#10b981"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="Carol"
-              stroke="#f59e0b"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="David"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-            />
+            {memberNames.map((name, idx) => (
+              <Line
+                key={name}
+                type="monotone"
+                dataKey={name}
+                stroke={colors[idx % colors.length]}
+                strokeWidth={2}
+              />
+            ))}
           </LineChart>
         );
       case "area":
         return (
           <AreaChart data={teamProductivityData}>
             <defs>
-              <linearGradient id="colorAlice" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="colorBob" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="colorCarol" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
-              </linearGradient>
-              <linearGradient id="colorDavid" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
-              </linearGradient>
+              {memberNames.map((name, idx) => (
+                <linearGradient
+                  key={name}
+                  id={`color${name}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor={colors[idx % colors.length]}
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={colors[idx % colors.length]}
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
@@ -404,38 +395,17 @@ export function TasksCharts() {
             <YAxis stroke="currentColor" opacity={0.6} />
             <Tooltip {...chartTooltipStyle} />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="Alice"
-              stackId="1"
-              stroke="#3b82f6"
-              fillOpacity={1}
-              fill="url(#colorAlice)"
-            />
-            <Area
-              type="monotone"
-              dataKey="Bob"
-              stackId="1"
-              stroke="#10b981"
-              fillOpacity={1}
-              fill="url(#colorBob)"
-            />
-            <Area
-              type="monotone"
-              dataKey="Carol"
-              stackId="1"
-              stroke="#f59e0b"
-              fillOpacity={1}
-              fill="url(#colorCarol)"
-            />
-            <Area
-              type="monotone"
-              dataKey="David"
-              stackId="1"
-              stroke="#8b5cf6"
-              fillOpacity={1}
-              fill="url(#colorDavid)"
-            />
+            {memberNames.map((name, idx) => (
+              <Area
+                key={name}
+                type="monotone"
+                dataKey={name}
+                stackId="1"
+                stroke={colors[idx % colors.length]}
+                fillOpacity={1}
+                fill={`url(#color${name})`}
+              />
+            ))}
           </AreaChart>
         );
       default:

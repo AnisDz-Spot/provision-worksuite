@@ -44,6 +44,22 @@ export function ProjectCard({
   const [completedFlash, setCompletedFlash] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
+  // Handle click outside to close menu
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = () => {
+      setMenuOpen(false);
+    };
+    // Use setTimeout to avoid immediate trigger from the opening click
+    const timer = setTimeout(() => {
+      window.addEventListener("click", handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("click", handleClickOutside);
+    };
+  }, [menuOpen]);
+
   const daysLeft = project.deadline
     ? Math.ceil(
         (new Date(project.deadline).getTime() - Date.now()) /
@@ -55,14 +71,23 @@ export function ProjectCard({
     () => calculateProjectHealth(project),
     [project]
   );
-  const taskStats = React.useMemo(
-    () => getTaskCompletionForProject(project.id),
-    [project.id]
-  );
+  const taskStats = React.useMemo(() => {
+    if (project.tasks && project.tasks.length > 0) {
+      const total = project.tasks.length;
+      const done = project.tasks.filter(
+        (t) => t.status === "done" || t.status === "completed"
+      ).length;
+      return { total, done };
+    }
+    return getTaskCompletionForProject(project.id);
+  }, [project.id, project.tasks]);
+
   const progress =
     taskStats.total > 0
       ? Math.round((taskStats.done / taskStats.total) * 100)
-      : 0;
+      : project.status === "Completed"
+        ? 100
+        : 0;
 
   // Create health snapshot if healthy
   React.useEffect(() => {
@@ -123,7 +148,7 @@ export function ProjectCard({
                     ? "default"
                     : "secondary"
               }
-              className={`shadow-xs backdrop-blur-md ${project.status === "Active" ? "bg-blue-500/90 text-white hover:bg-blue-600/90" : "bg-background/80"}`}
+              className={`shadow-xs backdrop-blur-md ${project.status === "Active" ? "bg-green-500/90 text-white hover:bg-green-600/90" : "bg-background/80"}`}
               pill
             >
               {project.status}
@@ -169,42 +194,36 @@ export function ProjectCard({
               </button>
 
               {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
+                <div
+                  className="absolute right-0 top-8 z-40 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuOpen(false);
+                      router.push(
+                        `/projects/${project.slug || project.uid || project.id}`
+                      );
                     }}
-                  />
-                  <div className="absolute right-0 top-8 z-40 bg-card border border-border rounded-lg shadow-xl py-1 min-w-[140px] flex flex-col">
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpen(false);
-                        router.push(
-                          `/projects/${project.slug || project.uid || project.id}`
-                        );
-                      }}
-                    >
-                      Open
-                    </button>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpen(false);
-                        setDeleteConfirm({
-                          id: project.id,
-                          name: project.name,
-                        });
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </>
+                  >
+                    Open
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-accent text-destructive transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      setDeleteConfirm({
+                        id: project.id,
+                        name: project.name,
+                      });
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -246,17 +265,17 @@ export function ProjectCard({
 
           {/* Stats grid */}
           <div className="grid grid-cols-3 gap-3 py-3 border-t border-b border-border">
-            <div className="text-center">
+            <div className="flex flex-col items-center justify-center text-center">
               <div className="text-lg font-bold text-primary">
                 {totalMembers}
               </div>
               <div className="text-xs text-muted-foreground">Members</div>
             </div>
-            <div className="text-center border-l border-r border-border">
+            <div className="flex flex-col items-center justify-center text-center border-l border-r border-border">
               <div className="text-lg font-bold text-primary">{filesCount}</div>
               <div className="text-xs text-muted-foreground">Files</div>
             </div>
-            <div className="text-center">
+            <div className="flex flex-col items-center justify-center text-center">
               <div
                 className={`text-sm font-bold truncate ${daysLeft !== null && daysLeft < 7 ? "text-destructive" : "text-foreground"}`}
                 title={
@@ -289,9 +308,8 @@ export function ProjectCard({
                     className="relative group/avatar cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Open member details in new tab
-                      if (uid)
-                        window.open(`/settings/users?uid=${uid}`, "_blank");
+                      // Open member details in Team page
+                      if (uid) window.open(`/team?uid=${uid}`, "_blank");
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}

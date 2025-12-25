@@ -160,6 +160,50 @@ export function WorkspaceSettingsForm() {
                 placeholder="https://"
               />
             </div>
+
+            {/* Contact & Billing */}
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium mb-1 block">
+                Contact Email
+              </label>
+              <Input
+                type="email"
+                value={form.email || ""}
+                onChange={(e) => update("email", e.target.value)}
+                placeholder="contact@agency.com"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="text-xs font-medium mb-1 block">
+                Phone Number
+              </label>
+              <Input
+                type="tel"
+                value={form.phone || ""}
+                onChange={(e) => update("phone", e.target.value)}
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium mb-1 block">
+                Business Address
+              </label>
+              <Input
+                value={form.address || ""}
+                onChange={(e) => update("address", e.target.value)}
+                placeholder="123 Business St, City, Country"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-medium mb-1 block">
+                Tax ID / VAT Number
+              </label>
+              <Input
+                value={form.taxId || ""}
+                onChange={(e) => update("taxId", e.target.value)}
+                placeholder="US-123456789"
+              />
+            </div>
             <div>
               <label className="text-xs font-medium mb-1 block">Timezone</label>
               <select

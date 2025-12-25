@@ -85,6 +85,25 @@ type SendEmailOptions = {
   html: string;
 };
 
+// Import server action to get workspace settings
+import { getWorkspaceSettingsAction } from "@/app/actions/workspace-settings";
+
+async function getSenderAddress(defaultFrom: string): Promise<string> {
+  try {
+    const settings = await getWorkspaceSettingsAction();
+    if (settings?.email) {
+      // If we have a name, format it as "Name <email>"
+      if (settings.name) {
+        return `"${settings.name}" <${settings.email}>`;
+      }
+      return settings.email;
+    }
+  } catch (e) {
+    // Fail silently and use default
+  }
+  return defaultFrom;
+}
+
 /**
  * Send an email using the configured provider
  */
@@ -96,6 +115,9 @@ export async function sendEmail(
   if (!config) {
     return { success: false, error: "Email not configured" };
   }
+
+  // Override from address with workspace setting if available
+  const fromAddress = await getSenderAddress(config.fromAddress);
 
   try {
     switch (config.provider) {
@@ -115,7 +137,7 @@ export async function sendEmail(
         });
 
         await transporter.sendMail({
-          from: config.fromAddress,
+          from: fromAddress,
           to: options.to,
           subject: options.subject,
           text: options.text,
@@ -138,7 +160,7 @@ export async function sendEmail(
           },
           body: JSON.stringify({
             personalizations: [{ to: [{ email: options.to }] }],
-            from: { email: config.fromAddress },
+            from: { email: fromAddress }, // SendGrid might require verification of this email
             subject: options.subject,
             content: [
               { type: "text/plain", value: options.text },
@@ -161,7 +183,7 @@ export async function sendEmail(
         }
 
         const formData = new URLSearchParams();
-        formData.append("from", config.fromAddress);
+        formData.append("from", fromAddress);
         formData.append("to", options.to);
         formData.append("subject", options.subject);
         formData.append("text", options.text);
@@ -198,7 +220,7 @@ export async function sendEmail(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: config.fromAddress,
+            from: fromAddress,
             to: [options.to],
             subject: options.subject,
             text: options.text,
@@ -281,6 +303,58 @@ If you didn't request this, you can safely ignore this email.
     <p style="color: #999; font-size: 12px; margin-bottom: 0;">
       If the button doesn't work, copy and paste this link into your browser:<br>
       <a href="${resetUrl}" style="color: #667eea; word-break: break-all;">${resetUrl}</a>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+  return sendEmail({ to: email, subject, text, html });
+}
+
+export async function sendProjectInvitationEmail(
+  email: string,
+  projectName: string,
+  projectUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  const subject = `You've been added to project: ${projectName}`;
+  const text = `
+You have been added to the project "${projectName}" on Provision WorkSuite.
+
+View the project here:
+${projectUrl}
+
+--
+Provision WorkSuite Team
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">New Project Assignment</h1>
+  </div>
+  
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+    <h2 style="color: #333; margin-top: 0;">You've been added to a project</h2>
+    
+    <p>You are now a member of <strong>${projectName}</strong>.</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${projectUrl}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+        View Project
+      </a>
+    </div>
+    
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+    
+    <p style="color: #999; font-size: 12px; margin-bottom: 0;">
+      <a href="${projectUrl}" style="color: #10b981; word-break: break-all;">${projectUrl}</a>
     </p>
   </div>
 </body>
