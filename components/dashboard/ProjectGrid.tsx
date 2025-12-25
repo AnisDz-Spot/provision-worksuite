@@ -290,15 +290,16 @@ export function ProjectGrid() {
       const f = query.toLowerCase();
       const matches =
         !f ||
-        p.name.toLowerCase().includes(f) ||
-        p.owner.toLowerCase().includes(f) ||
+        (p.name || "").toLowerCase().includes(f) ||
+        (p.owner || "").toLowerCase().includes(f) ||
         (p.status || "").toLowerCase().includes(f);
       const statusOk =
         status === "all" || (p.status || "").toLowerCase() === status;
       const starOk = !starredOnly || !!p.starred;
       const clientOk =
         clientFilter === "all" ||
-        ((p as any).client || "").toLowerCase() === clientFilter.toLowerCase();
+        ((p as any).client || (p as any).clientName || "").toLowerCase() ===
+          clientFilter.toLowerCase();
 
       const categoryOk =
         categoryFilter === "all" ||
@@ -403,7 +404,11 @@ export function ProjectGrid() {
   const allClients = React.useMemo(
     () =>
       Array.from(
-        new Set(projects.map((p) => (p as any).client).filter(Boolean))
+        new Set(
+          projects
+            .map((p) => (p as any).client || (p as any).clientName)
+            .filter(Boolean)
+        )
       ) as string[],
     [projects]
   );

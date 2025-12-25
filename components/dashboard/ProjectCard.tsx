@@ -138,21 +138,24 @@ export function ProjectCard({
             </div>
           )}
 
-          {/* Status Badge */}
+          {/* Status badge */}
           <div className="absolute top-3 left-3 flex gap-2">
-            <Badge
-              variant={
-                project.status === "Completed"
-                  ? "success"
-                  : project.status === "Active"
-                    ? "default"
-                    : "secondary"
-              }
-              className={`shadow-xs backdrop-blur-md ${project.status === "Active" ? "bg-green-500/90 text-white hover:bg-green-600/90" : "bg-background/80"}`}
-              pill
+            <span
+              className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-md ${
+                project.status.toLowerCase() === "active"
+                  ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
+                  : project.status.toLowerCase() === "completed"
+                    ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30"
+                    : project.status.toLowerCase() === "on_hold" ||
+                        project.status.toLowerCase() === "on-hold"
+                      ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"
+                      : project.status.toLowerCase() === "cancelled"
+                        ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"
+                        : "bg-background/80 text-muted-foreground border-muted"
+              }`}
             >
               {project.status}
-            </Badge>
+            </span>
           </div>
 
           {/* Star Button */}
@@ -308,8 +311,11 @@ export function ProjectCard({
                     className="relative group/avatar cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Open member details in Team page
-                      if (uid) window.open(`/team?uid=${uid}`, "_blank");
+                      // Open member details in Team page using name slug
+                      if (name) {
+                        const slug = name.toLowerCase().split(" ")[0];
+                        router.push(`/team/${slug}`);
+                      }
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
