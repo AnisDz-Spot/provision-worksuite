@@ -18,6 +18,7 @@ import { ProjectWatch } from "@/components/notifications/ProjectWatch";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
+import { getCsrfToken } from "@/lib/csrf-client";
 import {
   isDatabaseConfigured,
   markSetupComplete,
@@ -127,7 +128,12 @@ function DataSourceTab() {
 
     // 1. Clear Server-side session
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "x-csrf-token": getCsrfToken() || "",
+        },
+      });
     } catch (e) {
       console.error("Logout API failed", e);
     }

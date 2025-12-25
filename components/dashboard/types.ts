@@ -1,0 +1,19 @@
+export type Project = {
+  id: string;
+  uid?: string;
+  slug?: string;
+  name: string;
+  owner: string;
+  status: "Active" | "Completed" | "Paused" | "In Progress";
+  deadline: string;
+  priority?: "low" | "medium" | "high";
+  starred?: boolean;
+  members?: any[]; // Allow flexibility for API response
+  cover?: string;
+  tags?: string[];
+  isTemplate?: boolean;
+  archived?: boolean;
+  category?: string;
+  categories?: string[];
+  client?: string;
+};

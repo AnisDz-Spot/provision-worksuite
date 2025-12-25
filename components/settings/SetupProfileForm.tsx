@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { getCsrfToken } from "@/lib/csrf-client";
 
 interface SetupProfileFormProps {
   onComplete?: () => void;
@@ -69,6 +70,9 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
         formData.append("file", avatarFile);
         const response = await fetch("/api/setup/upload-avatar", {
           method: "POST",
+          headers: {
+            "x-csrf-token": getCsrfToken() || "",
+          },
           body: formData,
         });
         const data = await response.json();
@@ -87,7 +91,10 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
       // Create user in database
       const response = await fetch("/api/setup/create-admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": getCsrfToken() || "",
+        },
         body: JSON.stringify({
           username: form.username,
           name: form.fullName,
@@ -113,7 +120,12 @@ export function SetupProfileForm({ onComplete }: SetupProfileFormProps) {
 
         // Force server-side logout before redirecting
         try {
-          await fetch("/api/auth/logout", { method: "POST" });
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: {
+              "x-csrf-token": getCsrfToken() || "",
+            },
+          });
         } catch (e) {
           console.error("Post-setup logout failed:", e);
         }

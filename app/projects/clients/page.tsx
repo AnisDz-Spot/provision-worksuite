@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCsrfToken } from "@/lib/csrf-client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -91,7 +92,10 @@ export default function ClientsPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": getCsrfToken() || "",
+        },
         body: JSON.stringify(formData),
       });
 
@@ -110,7 +114,12 @@ export default function ClientsPage() {
     if (!confirm("Are you sure you want to delete this client?")) return;
 
     try {
-      await fetch(`/api/clients/${id}`, { method: "DELETE" });
+      await fetch(`/api/clients/${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-csrf-token": getCsrfToken() || "",
+        },
+      });
       fetchClients();
     } catch (error) {
       console.error("Failed to delete client", error);
