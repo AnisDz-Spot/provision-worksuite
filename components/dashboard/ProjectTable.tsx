@@ -20,6 +20,7 @@ import {
   getTaskCompletionForProject,
   getProjectTimeRollup,
 } from "@/lib/utils";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 // Extend TableMeta to include custom methods
 declare module "@tanstack/react-table" {
@@ -156,12 +157,12 @@ const columns: ColumnDef<Project>[] = [
       // Calculate from API tasks if available, else fallback
       let estimate = 0,
         logged = 0;
-      if (p.tasks) {
+      if (p.tasks && p.tasks.length > 0) {
         p.tasks.forEach((t) => {
           estimate += t.estimateHours || 0;
           logged += t.loggedHours || 0;
         });
-      } else {
+      } else if (!shouldUseDatabaseData()) {
         const r = getProjectTimeRollup(p.id);
         estimate = r.estimate;
         logged = r.logged;
@@ -194,13 +195,13 @@ const columns: ColumnDef<Project>[] = [
         done = 0,
         percent = 0;
 
-      if (p.tasks) {
+      if (p.tasks && p.tasks.length > 0) {
         total = p.tasks.length;
         done = p.tasks.filter(
           (t) => t.status === "done" || t.status === "completed"
         ).length;
         percent = total > 0 ? Math.round((done / total) * 100) : 0;
-      } else {
+      } else if (!shouldUseDatabaseData()) {
         const t = getTaskCompletionForProject(p.id);
         total = t.total;
         done = t.done;
@@ -216,7 +217,14 @@ const columns: ColumnDef<Project>[] = [
               ? 40
               : 20;
 
-      const displayPercent = total > 0 ? percent : fallback;
+      const displayPercent =
+        total > 0
+          ? percent
+          : shouldUseDatabaseData()
+            ? p.status === "Completed"
+              ? 100
+              : 0
+            : fallback;
 
       return (
         <div className="min-w-40">

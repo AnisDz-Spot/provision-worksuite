@@ -83,6 +83,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Resolve project UID if numeric
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [{ uid: projectId }, { id: parseInt(projectId) || -1 }],
+      },
+      select: { uid: true },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Resolve assignee numeric ID if UID
+    let resolvedAssigneeId = null;
+    if (assigneeId) {
+      const assignee = await prisma.user.findFirst({
+        where: {
+          OR: [{ uid: assigneeId }, { id: parseInt(assigneeId) || -1 }],
+        },
+        select: { id: true },
+      });
+      if (assignee) resolvedAssigneeId = assignee.id;
+    }
+
     // Calculate first run date
     const nextRun = getNextOccurrence(recurrenceRule, new Date());
 
@@ -90,8 +114,8 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        projectId,
-        assigneeId: assigneeId ? parseInt(assigneeId) : null,
+        projectId: project.uid,
+        assigneeId: resolvedAssigneeId,
         priority: priority || "medium",
         labels: labels || [],
         estimateHours: estimateHours ? parseFloat(estimateHours) : null,

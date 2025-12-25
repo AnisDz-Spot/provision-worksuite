@@ -46,17 +46,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Pre-resolve all project UIDs to handle numeric IDs from frontend
+    const projectIds = [...new Set(tasks.map((t: any) => t.projectId))];
+    const projects = await prisma.project.findMany({
+      where: {
+        OR: [
+          { uid: { in: projectIds } },
+          {
+            id: {
+              in: projectIds
+                .map((id) => parseInt(id))
+                .filter((id) => !isNaN(id)),
+            },
+          },
+        ],
+      },
+      select: { id: true, uid: true },
+    });
+
+    const projectIdToUidMap = new Map();
+    projects.forEach((p: { id: number; uid: string }) => {
+      projectIdToUidMap.set(p.uid, p.uid);
+      projectIdToUidMap.set(p.id.toString(), p.uid);
+    });
+
     // Process each task sequentially to avoid transaction complexity
     let successCount = 0;
     const errors: string[] = [];
 
     for (const task of tasks) {
       try {
+        const resolvedProjectId = projectIdToUidMap.get(task.projectId);
+        if (!resolvedProjectId) {
+          errors.push(`Task ${task.id || task.title}: Project not found`);
+          continue;
+        }
+
         await prisma.task.upsert({
           where: { uid: task.id || task.uid || "" },
           create: {
             uid: task.id || task.uid,
-            projectId: task.projectId,
+            projectId: resolvedProjectId,
             title: task.title || "Untitled Task",
             description: task.description || null,
             status: task.status || "todo",
@@ -70,7 +100,7 @@ export async function POST(request: NextRequest) {
             labels: task.tags || [],
           },
           update: {
-            projectId: task.projectId,
+            projectId: resolvedProjectId,
             title: task.title || "Untitled Task",
             description: task.description || null,
             status: task.status || "todo",

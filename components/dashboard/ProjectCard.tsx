@@ -13,6 +13,7 @@ import {
   snapshotHealth,
   getHealthSeries,
 } from "@/lib/utils";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 interface ProjectCardProps {
   project: Project;
@@ -72,6 +73,7 @@ export function ProjectCard({
     [project]
   );
   const taskStats = React.useMemo(() => {
+    // If we have API-provided tasks, use them (priority)
     if (project.tasks && project.tasks.length > 0) {
       const total = project.tasks.length;
       const done = project.tasks.filter(
@@ -79,6 +81,14 @@ export function ProjectCard({
       ).length;
       return { total, done };
     }
+
+    // In Live Mode (database), if no tasks were returned by the API,
+    // we assume there are no tasks. Do NOT fallback to localStorage.
+    if (shouldUseDatabaseData()) {
+      return { total: 0, done: 0 };
+    }
+
+    // In Mock Mode, fallback to localStorage for legacy browser-only demo support
     return getTaskCompletionForProject(project.id);
   }, [project.id, project.tasks]);
 

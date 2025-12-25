@@ -22,21 +22,38 @@ export async function GET() {
   }
 
   try {
-    const currentUserId = parseInt(currentUser.uid) || 0;
+    // Fetch user from DB to get Int ID
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: currentUser.uid },
+      select: { id: true, role: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ success: true, data: [], source: "database" });
+    }
+
+    const currentUserId = dbUser.id;
 
     // Build where clause based on role
-    const whereClause =
-      currentUser.role === "admin" || currentUser.role === "global-admin"
-        ? {} // Admins see all tasks
-        : {
-            // Regular users see tasks from their projects or assigned to them
-            OR: [
-              { project: { userId: currentUserId } },
-              { project: { members: { some: { userId: currentUserId } } } },
-              { assigneeId: currentUserId },
-              { watchers: { has: currentUser.uid } },
-            ],
-          };
+    const isAdmin = [
+      "admin",
+      "global-admin",
+      "master-admin",
+      "Administrator",
+      "Master Admin",
+    ].includes(dbUser.role);
+
+    const whereClause = isAdmin
+      ? {} // Admins see all tasks
+      : {
+          // Regular users see tasks from their projects or assigned to them
+          OR: [
+            { project: { userId: currentUserId } },
+            { project: { members: { some: { userId: currentUserId } } } },
+            { assigneeId: currentUserId },
+            { watchers: { has: currentUser.uid } },
+          ],
+        };
 
     const tasks = await prisma.task.findMany({
       where: whereClause,
@@ -118,12 +135,33 @@ export async function POST(req: Request) {
       );
     }
 
-    const currentUserId = parseInt(currentUser.uid) || 0;
+    // Fetch user from DB to get Int ID
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: currentUser.uid },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const currentUserId = dbUser.id;
 
     // SECURITY: Verify user owns the project, is a member, or is admin
-    const project = await prisma.project.findUnique({
-      where: { uid: projectId },
+    const project = await prisma.project.findFirst({
+      where: {
+        OR: [
+          { uid: projectId },
+          { id: parseInt(projectId) || -1 },
+          { slug: projectId },
+        ],
+      },
       select: {
+        id: true,
+        uid: true,
         userId: true,
         members: {
           where: { userId: currentUserId },
@@ -156,7 +194,7 @@ export async function POST(req: Request) {
 
     const task = await prisma.task.create({
       data: {
-        projectId,
+        projectId: project.uid,
         title,
         description: description || null,
         status: status || "todo",
