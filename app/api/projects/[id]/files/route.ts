@@ -82,16 +82,35 @@ export async function POST(
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // 2. Validate File Content (Server-Side)
-    const { validateFile } = await import("@/lib/security-utils");
-    const buffer = Buffer.from(await file.arrayBuffer());
+    // 2. Validate File Content (Magic Bytes)
+    const { validateFile, processImage } = await import("@/lib/security-utils");
+    let buffer = Buffer.from((await file.arrayBuffer()) as any);
+
+    // Avatars MUST be images
     const validation = await validateFile(buffer, file.type);
 
     if (!validation.isValid) {
       return NextResponse.json({ error: validation.error }, { status: 415 }); // 415 Unsupported Media Type
     }
 
-    // 3. Resolve numeric ID from UID
+    // 3. Re-encode images to neutralize payloads and strip metadata
+    let finalMime = validation.mimeType || file.type;
+    if (finalMime.startsWith("image/") && finalMime !== "image/gif") {
+      try {
+        buffer = await processImage(buffer);
+        finalMime = "image/webp"; // Normalizing to WebP
+      } catch (e) {
+        console.error("Image processing failed:", e);
+        // Fallback to original buffer if processing fails but validation passed?
+        // Actually, for maximum security, if processing fails we should probably reject.
+        return NextResponse.json(
+          { error: "Failed to process image safely." },
+          { status: 422 }
+        );
+      }
+    }
+
+    // 4. Resolve numeric ID from UID
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
       select: { id: true },
@@ -105,15 +124,16 @@ export async function POST(
     }
 
     // Convert to Data URL for database storage (preserving current architecture)
-    // but ensured to be legitimate via validateFile above.
-    const dataUrl = `data:${validation.mimeType};base64,${buffer.toString("base64")}`;
+    const dataUrl = `data:${finalMime};base64,${buffer.toString("base64")}`;
 
     const createdFile = await prisma.file.create({
       data: {
-        filename: file.name,
+        filename:
+          file.name.replace(/\.[^/.]+$/, "") +
+          (finalMime === "image/webp" ? ".webp" : ""),
         fileUrl: dataUrl,
         fileSize: buffer.length,
-        mimeType: validation.mimeType || file.type,
+        mimeType: finalMime,
         projectId: project.id,
         uploadedBy: dbUser.id,
       },

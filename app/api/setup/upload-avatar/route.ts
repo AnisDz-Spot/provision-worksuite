@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     }
 
     // 2. Validate File Content (Magic Bytes)
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const { validateFile, processImage } = await import("@/lib/security-utils");
+    let buffer = Buffer.from((await file.arrayBuffer()) as any);
 
     // Avatars MUST be images
     if (!file.type.startsWith("image/")) {
@@ -34,10 +35,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: validation.error }, { status: 415 });
     }
 
-    // 3. Upload to Vercel Blob (keeping as public for now if needed, but we'll proxy serve it soon)
-    const blob = await put(file.name, buffer, {
+    // 3. Re-encode to strip metadata and normalize
+    let finalMime = validation.mimeType || file.type;
+    if (finalMime !== "image/gif") {
+      try {
+        buffer = await processImage(buffer);
+        finalMime = "image/webp";
+      } catch (e) {
+        console.error("Avatar processing failed:", e);
+        return NextResponse.json(
+          { error: "Failed to process image safely." },
+          { status: 422 }
+        );
+      }
+    }
+
+    // 4. Upload to Vercel Blob
+    const finalFilename =
+      file.name.replace(/\.[^/.]+$/, "") +
+      (finalMime === "image/webp" ? ".webp" : "");
+    const blob = await put(finalFilename, buffer, {
       access: "public",
-      contentType: validation.mimeType,
+      contentType: finalMime,
     });
 
     return NextResponse.json({ success: true, url: blob.url });
