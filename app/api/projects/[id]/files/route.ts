@@ -95,7 +95,7 @@ export async function POST(
 
     // 3. Re-encode images to neutralize payloads and strip metadata
     let finalMime = validation.mimeType || file.type;
-    if (finalMime.startsWith("image/") && finalMime !== "image/gif") {
+    if (finalMime.startsWith("image/")) {
       try {
         buffer = await processImage(buffer);
         finalMime = "image/webp"; // Normalizing to WebP

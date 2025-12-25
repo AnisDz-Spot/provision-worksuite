@@ -62,15 +62,14 @@ export async function GET(
     }
 
     // 4. Content-Disposition Logic
-    // Inline for images/pdfs, attachment for everything else
-    const isViewable = [
+    // Inline for images, attachment for PDFs and everything else
+    const isImage = [
       "image/jpeg",
       "image/png",
       "image/webp",
       "image/gif",
-      "application/pdf",
     ].includes(mimeType);
-    const disposition = isViewable ? "inline" : "attachment";
+    const disposition = isImage ? "inline" : "attachment";
 
     // 5. Serve with strict security headers
     return new NextResponse(buffer as any, {

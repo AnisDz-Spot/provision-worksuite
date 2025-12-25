@@ -37,17 +37,15 @@ export async function POST(request: Request) {
 
     // 3. Re-encode to strip metadata and normalize
     let finalMime = validation.mimeType || file.type;
-    if (finalMime !== "image/gif") {
-      try {
-        buffer = await processImage(buffer);
-        finalMime = "image/webp";
-      } catch (e) {
-        console.error("Avatar processing failed:", e);
-        return NextResponse.json(
-          { error: "Failed to process image safely." },
-          { status: 422 }
-        );
-      }
+    try {
+      buffer = await processImage(buffer);
+      finalMime = "image/webp";
+    } catch (e) {
+      console.error("Avatar processing failed:", e);
+      return NextResponse.json(
+        { error: "Failed to process image safely." },
+        { status: 422 }
+      );
     }
 
     // 4. Upload to Vercel Blob

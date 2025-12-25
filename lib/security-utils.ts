@@ -55,7 +55,24 @@ export async function validateFile(
   const detectedMime = detected?.mime.toLowerCase();
   const normalizedClaimed = claimedMime.toLowerCase();
 
-  // 3. Prevent SVG polyglots and execution
+  // 3. Decompression Bomb Protection (Pixel Limit)
+  // Max 4M pixels (e.g., 2048x2048)
+  if (detectedMime && detectedMime.startsWith("image/")) {
+    try {
+      const metadata = await sharp(buffer).metadata();
+      const pixels = (metadata.width || 0) * (metadata.height || 0);
+      if (pixels > 4000000) {
+        return {
+          isValid: false,
+          error: "Image dimensions are too large (max 4M pixels).",
+        };
+      }
+    } catch (e) {
+      return { isValid: false, error: "Failed to inspect image header." };
+    }
+  }
+
+  // 4. Prevent SVG polyglots and execution
   if (
     normalizedClaimed.includes("svg") ||
     (detectedMime && detectedMime.includes("svg")) ||
@@ -67,7 +84,7 @@ export async function validateFile(
     };
   }
 
-  // 4. MIME Trust Boundary: Compare detected vs claimed
+  // 5. MIME Trust Boundary: Compare detected vs claimed
   // Special case: some browsers send generic application/octet-stream for downloads
   const isGeneric = normalizedClaimed === "application/octet-stream";
 
