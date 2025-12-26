@@ -1,22 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  CalendarDays,
-  GripVertical,
-  Plus,
-  X,
-  Lock,
-  AlertTriangle,
-  Play,
-  Edit2,
-  Save,
-  Trash2,
-} from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
-import { Dropdown } from "@/components/ui/Dropdown";
 import users from "@/data/users.json";
 import { useTimeTracker } from "@/components/timetracking/TimeTrackingWidget";
 import { useToaster } from "@/components/ui/Toaster";
@@ -31,6 +15,11 @@ import {
   getTimeLogsForTask,
 } from "@/lib/utils";
 import { loadTasks, saveTasks } from "@/lib/data";
+import { BoardColumn } from "./board/BoardColumn";
+import { CreateTaskModal } from "./board/CreateTaskModal";
+import { TaskDetailsModal } from "./board/TaskDetailsModal";
+import { TimeLogsModal } from "./board/TimeLogsModal";
+import { ConfirmModal } from "./board/ConfirmModal";
 
 const MOCK_BOARD = [
   {
@@ -126,8 +115,6 @@ type KanbanBoardProps = {
 };
 
 import { shouldUseMockData } from "@/lib/dataSource";
-
-// ... existing imports
 
 export function KanbanBoard({
   projectId,
@@ -237,6 +224,7 @@ export function KanbanBoard({
     taskTitle: string;
   } | null>(null);
   const [timeLogInput, setTimeLogInput] = useState("");
+  const [timeLogNote, setTimeLogNote] = useState("");
   const [viewLogsOpen, setViewLogsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
@@ -587,42 +575,39 @@ export function KanbanBoard({
     if (onTaskUpdate) onTaskUpdate();
   }
 
-  function handleLogTime() {
+  async function handleLogTime() {
     if (!detailTask || !projectId || !timeLogInput.trim()) return;
     const value = parseFloat(timeLogInput);
     if (isNaN(value) || value <= 0) {
       show("error", "Please enter a valid number of hours");
       return;
     }
-    const result = addTimeLog(
+    if (!timeLogNote.trim()) {
+      show("error", "Please enter a note for this time log");
+      return;
+    }
+    const result = await addTimeLog(
       detailTask.id,
       projectId,
       value,
-      undefined,
+      timeLogNote.trim(),
       detailTask.assignee
     );
     if (result) {
       show("success", `Logged ${value} hours`);
       setTimeLogInput("");
-      // Update detailTask from storage to reflect the logged hours
-      const updatedTask = getTasksByProject(projectId).find(
-        (t) => t.id === detailTask.id
-      );
-      if (updatedTask) {
-        setDetailTask({
-          ...detailTask,
-          title: updatedTask.title,
-          assignee: updatedTask.assignee || "Unassigned",
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(updatedTask.assignee || "User")}`,
-          due: updatedTask.due,
-          priority: updatedTask.priority,
-          status: updatedTask.status,
-          milestoneId: updatedTask.milestoneId,
-          estimateHours: updatedTask.estimateHours,
-          loggedHours: updatedTask.loggedHours,
-        });
-      }
+      setTimeLogNote("");
+
+      // Update detailTask state immediately if possible
+      setDetailTask({
+        ...detailTask,
+        loggedHours: parseFloat(
+          ((detailTask.loggedHours || 0) + value).toFixed(2)
+        ),
+      });
+
       refreshFromStorage();
+      window.dispatchEvent(new Event("pv:timeUpdated"));
       if (onTaskUpdate) onTaskUpdate();
     } else {
       show("error", "Failed to log time");
@@ -843,796 +828,169 @@ export function KanbanBoard({
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {columns.map((col) => (
-          <div
+          <BoardColumn
             key={col.id}
-            className={`${col.bgColor} border-2 ${col.color} rounded-xl shadow-md p-4 flex flex-col min-h-80`}
+            col={col}
+            filterAssignee={filterAssignee}
+            filterMilestone={filterMilestone}
+            isAuthorized={isAuthorized}
+            selectMode={selectMode}
+            selectedIds={selectedIds}
+            draggedTask={draggedTask}
+            priorityColors={priorityColors}
+            isBlocked={false} // Placeholder, will fix below
             onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, col.id)}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold tracking-tight text-lg flex items-center gap-2">
-                <span
-                  className={`w-3 h-3 rounded-full ${col.color.replace("border", "bg")}`}
-                />
-                {col.title}
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-background/50">
-                  {col.tasks.length}
-                </span>
-                {isAuthorized && (
-                  <button
-                    onClick={() => openAddModal(col.id)}
-                    className="p-1 rounded hover:bg-background/50 transition-colors cursor-pointer"
-                    title="Add task"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 flex-1">
-              {col.tasks
-                .filter((task: any) =>
-                  filterAssignee === "all"
-                    ? true
-                    : task.assignee === filterAssignee
-                )
-                .filter((task: any) =>
-                  filterMilestone === "all"
-                    ? true
-                    : (task.milestoneId || "") === filterMilestone
-                )
-                .map((task) => (
-                  <motion.div
-                    key={task.id}
-                    className={`rounded-lg border-2 bg-card px-4 py-3 shadow-sm flex flex-col gap-2 cursor-pointer hover:shadow-lg transition-shadow ${
-                      draggedTask === task.id ? "opacity-50" : ""
-                    }`}
-                    whileHover={{
-                      y: -2,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
-                    }}
-                    draggable={isAuthorized && !selectMode}
-                    onDragStart={(e) =>
-                      onDragStart(
-                        e as any as React.DragEvent<HTMLDivElement>,
-                        col.id,
-                        task.id
-                      )
-                    }
-                    onDragEnd={onDragEnd}
-                    onClick={() => {
-                      if (selectMode) {
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(task.id)) next.delete(task.id);
-                          else next.add(task.id);
-                          return next;
-                        });
-                      } else {
-                        setDetailTask(task);
-                        setDetailOpen(true);
-                      }
-                    }}
-                  >
-                    {selectMode && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(task.id)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(task.id);
-                              else next.delete(task.id);
-                              return next;
-                            });
-                          }}
-                        />
-                        <span className="text-muted-foreground">Select</span>
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 font-medium text-base">
-                        {task.title}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteCardConfirm({
-                              columnId: col.id,
-                              taskId: task.id,
-                              taskTitle: task.title,
-                            });
-                          }}
-                          className="p-1 rounded hover:bg-accent transition-colors cursor-pointer"
-                          title="Delete task"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                        <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={
-                            task.avatar ||
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(task.assignee || "U")}`
-                          }
-                          alt={task.assignee}
-                          className="w-5 h-5 rounded-full bg-accent"
-                          title={task.assignee}
-                        />
-                        <span
-                          className={`flex items-center gap-1 ${task.due && task.due < new Date().toISOString().slice(0, 10) && col.id !== "done" ? "text-destructive" : ""}`}
-                        >
-                          <CalendarDays className="w-3 h-3" />
-                          {task.due}
-                          {task.due &&
-                            task.due < new Date().toISOString().slice(0, 10) &&
-                            col.id !== "done" && (
-                              <span title="Overdue">
-                                <AlertTriangle className="w-3 h-3 text-destructive" />
-                              </span>
-                            )}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {blocked && col.id !== "done" && (
-                          <span title="Blocked by dependencies">
-                            <Lock className="w-3 h-3 text-muted-foreground" />
-                          </span>
-                        )}
-                        <span
-                          className={`${priorityColors[task.priority]} w-2 h-2 rounded-full`}
-                          title={task.priority}
-                        />
-                      </div>
-                    </div>
-                    {task.milestoneTitle && (
-                      <div className="mt-1 text-[10px] text-muted-foreground">
-                        Milestone: {task.milestoneTitle}
-                      </div>
-                    )}
-                    {projectId && col.id !== "done" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startTimer(
-                            task.id,
-                            task.title,
-                            projectId,
-                            task.assignee
-                          );
-                        }}
-                        className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-colors"
-                      >
-                        <Play className="w-3 h-3" />
-                        Start Timer
-                      </button>
-                    )}
-                  </motion.div>
-                ))}
-            </div>
-          </div>
+            onDrop={onDrop}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onTaskClick={(task: any) => {
+              if (selectMode) {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(task.id)) next.delete(task.id);
+                  else next.add(task.id);
+                  return next;
+                });
+              } else {
+                setDetailTask(task);
+                setDetailOpen(true);
+              }
+            }}
+            onSelectToggle={(taskId: string, selected: boolean) => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (selected) next.add(taskId);
+                else next.delete(taskId);
+                return next;
+              });
+            }}
+            onDeleteTaskClick={(
+              columnId: string,
+              taskId: string,
+              taskTitle: string
+            ) => {
+              setDeleteCardConfirm({ columnId, taskId, taskTitle });
+            }}
+            onAddTaskClick={openAddModal}
+            checkIsBlocked={(taskId: string) => {
+              if (!projectId) return false;
+              // Project dependency check
+              const incomplete = getIncompleteDependencyIds(projectId);
+              return incomplete.length > 0;
+            }}
+          />
         ))}
       </div>
 
-      <Modal
-        open={modalOpen}
-        onOpenChange={(open) => {
-          setModalOpen(open);
-          if (!open) {
-            // Reset form when modal closes
-            setNewTaskTitle("");
-            setNewTaskAssignee("You");
-            setNewTaskDue("");
-            setNewTaskPriority("medium");
-            setNewTaskEstimate("");
-            setMilestoneId("");
-            setTargetColumn(null);
-          }
-        }}
-        size="xl"
-        className="md:min-w-[42vw]"
-      >
-        <div className="space-y-8">
-          <h3 className="text-xl font-semibold">Create Task</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="e.g. Implement OAuth flow"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Assignee</label>
-              <Dropdown
-                align="start"
-                trigger={
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                  >
-                    {(() => {
-                      const m = memberList.find(
-                        (u) => u.name === newTaskAssignee
-                      );
-                      const cls = getAvatarColorClass((m as any)?.avatarColor);
-                      return (
-                        <>
-                          <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
-                          >
-                            {newTaskAssignee.charAt(0)}
-                          </div>
-                          <span className="text-sm">{newTaskAssignee}</span>
-                        </>
-                      );
-                    })()}
-                  </Button>
-                }
-                items={memberList.map((m) => ({
-                  label: m.name,
-                  icon: (
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass((m as any).avatarColor)}`}
-                    >
-                      {m.name.charAt(0)}
-                    </div>
-                  ),
-                  onClick: () => setNewTaskAssignee(m.name),
-                }))}
-                searchable
-                searchPlaceholder="Search members..."
-              />
-            </div>
-            {projectId && (
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Milestone</label>
-                <select
-                  value={milestoneId}
-                  onChange={(e) => setMilestoneId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm cursor-pointer"
-                >
-                  <option value="">None</option>
-                  {getMilestonesByProject(projectId).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {projectId && (
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Estimate (hours)</label>
-                <Input
-                  value={newTaskEstimate}
-                  onChange={(e) => setNewTaskEstimate(e.target.value)}
-                  placeholder="e.g. 3.5"
-                />
-              </div>
-            )}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Task Type</label>
-              <select
-                value={newTaskType}
-                onChange={(e) => setNewTaskType(e.target.value)}
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm cursor-pointer"
-              >
-                <option value="feature">Feature</option>
-                <option value="bug">Bug</option>
-                <option value="improvement">Improvement</option>
-                <option value="documentation">Documentation</option>
-                <option value="research">Research</option>
-              </select>
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Due Date</label>
-              <input
-                type="date"
-                value={newTaskDue}
-                onChange={(e) => setNewTaskDue(e.target.value)}
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Priority</label>
-              <select
-                value={newTaskPriority}
-                onChange={(e) => setNewTaskPriority(e.target.value)}
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm cursor-pointer"
-              >
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-            <div className="space-y-3 md:col-span-2">
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                value={newTaskDescription}
-                onChange={(e) => setNewTaskDescription(e.target.value)}
-                placeholder="Detailed description..."
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-h-24"
-              />
-            </div>
-            <div className="space-y-3 md:col-span-2">
-              <label className="text-sm font-medium">
-                Labels (comma separated)
-              </label>
-              <Input
-                value={newTaskLabels}
-                onChange={(e) => setNewTaskLabels(e.target.value)}
-                placeholder="e.g. bug, high-priority, frontend"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={addTask}
-              disabled={!newTaskTitle.trim()}
-            >
-              Add Task
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <CreateTaskModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        newTaskTitle={newTaskTitle}
+        setNewTaskTitle={setNewTaskTitle}
+        newTaskAssignee={newTaskAssignee}
+        setNewTaskAssignee={setNewTaskAssignee}
+        newTaskDue={newTaskDue}
+        setNewTaskDue={setNewTaskDue}
+        newTaskPriority={newTaskPriority}
+        setNewTaskPriority={setNewTaskPriority}
+        newTaskEstimate={newTaskEstimate}
+        setNewTaskEstimate={setNewTaskEstimate}
+        newTaskDescription={newTaskDescription}
+        setNewTaskDescription={setNewTaskDescription}
+        newTaskLabels={newTaskLabels}
+        setNewTaskLabels={setNewTaskLabels}
+        newTaskType={newTaskType}
+        setNewTaskType={setNewTaskType}
+        milestoneId={milestoneId}
+        setMilestoneId={setMilestoneId}
+        memberList={memberList}
+        projectId={projectId}
+        milestones={projectId ? getMilestonesByProject(projectId) : []}
+        addTask={addTask}
+        getAvatarColorClass={getAvatarColorClass}
+      />
 
-      <Modal
-        open={detailOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditMode(false);
-          }
-          setDetailOpen(open);
+      <TaskDetailsModal
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        task={detailTask}
+        projectId={projectId}
+        isAuthorized={isAuthorized}
+        memberList={memberList}
+        priorityColors={priorityColors}
+        editMode={editMode}
+        setEditMode={setEditMode}
+        startEditTask={startEditTask}
+        saveTaskEdit={saveTaskEdit}
+        cancelEditTask={cancelEditTask}
+        setDeleteTaskConfirm={(confirmed: any) => {
+          setDeleteTaskConfirm(confirmed);
         }}
-        size="lg"
-        className="md:min-w-[40vw]"
-      >
-        {detailTask && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              {editMode ? (
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="text-xl font-bold"
-                />
-              ) : (
-                <h3 className="text-2xl font-bold">{detailTask.title}</h3>
-              )}
-              {!editMode && projectId && isAuthorized && (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => startEditTask(detailTask)}
-                  >
-                    <Edit2 className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() =>
-                      setDeleteTaskConfirm({
-                        id: detailTask.id,
-                        title: detailTask.title,
-                      })
-                    }
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">
-                  Assigned to
-                </div>
-                {editMode ? (
-                  <Dropdown
-                    align="start"
-                    trigger={
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start gap-2"
-                      >
-                        {(() => {
-                          const m = memberList.find(
-                            (u) => u.name === editAssignee
-                          );
-                          const cls = getAvatarColorClass(
-                            (m as any)?.avatarColor
-                          );
-                          return (
-                            <>
-                              <div
-                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
-                              >
-                                {editAssignee ? editAssignee.charAt(0) : "?"}
-                              </div>
-                              <span className="text-sm">
-                                {editAssignee || "Unassigned"}
-                              </span>
-                            </>
-                          );
-                        })()}
-                      </Button>
-                    }
-                    items={memberList.map((m) => ({
-                      label: m.name,
-                      icon: (
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass((m as any).avatarColor)}`}
-                        >
-                          {m.name.charAt(0)}
-                        </div>
-                      ),
-                      onClick: () => setEditAssignee(m.name),
-                    }))}
-                    searchable
-                    searchPlaceholder="Search members..."
-                  />
-                ) : (
-                  <div className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={detailTask.avatar}
-                      alt={detailTask.assignee}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div className="font-medium">{detailTask.assignee}</div>
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">
-                  Due Date
-                </div>
-                {editMode ? (
-                  <Input
-                    type="date"
-                    value={editDue}
-                    onChange={(e) => setEditDue(e.target.value)}
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{detailTask.due}</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">
-                  Priority
-                </div>
-                {editMode ? (
-                  <select
-                    value={editPriority}
-                    onChange={(e) => setEditPriority(e.target.value)}
-                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                  >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`${priorityColors[detailTask.priority]} w-3 h-3 rounded-full`}
-                    />
-                    <span className="font-medium capitalize">
-                      {detailTask.priority}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground mb-1">
-                  Description
-                </div>
-                {editMode ? (
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Detailed description..."
-                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-h-24"
-                  />
-                ) : (
-                  <div className="text-sm border border-border rounded-md p-3 bg-accent/5 overflow-auto max-h-48 whitespace-pre-wrap">
-                    {detailTask.description || (
-                      <span className="text-muted-foreground italic">
-                        No description provided.
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground mb-1">Labels</div>
-                {editMode ? (
-                  <Input
-                    value={editLabels}
-                    onChange={(e) => setEditLabels(e.target.value)}
-                    placeholder="e.g. bug, high-priority (comma separated)"
-                  />
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {detailTask.labels && detailTask.labels.length > 0 ? (
-                      detailTask.labels.map((label: string, idx: number) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider"
-                        >
-                          {label}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">
-                        No labels
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              {projectId && editMode && (
-                <>
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">
-                      Milestone
-                    </div>
-                    <select
-                      value={editMilestone}
-                      onChange={(e) => setEditMilestone(e.target.value)}
-                      className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                    >
-                      <option value="">None</option>
-                      {getMilestonesByProject(projectId).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground mb-1">
-                      Estimate (hours)
-                    </div>
-                    <Input
-                      value={editEstimate}
-                      onChange={(e) => setEditEstimate(e.target.value)}
-                      placeholder="e.g. 3.5"
-                    />
-                  </div>
-                </>
-              )}
-              {projectId && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">
-                    Time Tracking
-                  </div>
-                  <div className="flex items-center gap-3 text-sm mb-2">
-                    <span className="px-2 py-1 rounded bg-accent/50 font-medium">
-                      Est:{" "}
-                      {typeof detailTask.estimateHours === "number"
-                        ? detailTask.estimateHours
-                        : 0}
-                      h
-                    </span>
-                    <span className="px-2 py-1 rounded bg-primary/10 text-primary font-medium">
-                      Logged:{" "}
-                      {typeof detailTask.loggedHours === "number"
-                        ? detailTask.loggedHours
-                        : 0}
-                      h
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium">Quick Log Time:</div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Log hours (e.g. 1.25)"
-                        value={timeLogInput}
-                        onChange={(e) => setTimeLogInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleLogTime();
-                          }
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        onClick={handleLogTime}
-                        disabled={!timeLogInput.trim()}
-                      >
-                        Log
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setViewLogsOpen(true)}
-                      >
-                        View Logs ({getTimeLogsForTask(detailTask.id).length})
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              {editMode ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={cancelEditTask}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={saveTaskEdit}
-                    disabled={!editTitle.trim()}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Save
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setDetailOpen(false)}
-                >
-                  Close
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
+        editTitle={editTitle}
+        setEditTitle={setEditTitle}
+        editAssignee={editAssignee}
+        setEditAssignee={setEditAssignee}
+        editDue={editDue}
+        setEditDue={setEditDue}
+        editPriority={editPriority}
+        setEditPriority={setEditPriority}
+        editDescription={editDescription}
+        setEditDescription={setEditDescription}
+        editLabels={editLabels}
+        setEditLabels={setEditLabels}
+        editEstimate={editEstimate}
+        setEditEstimate={setEditEstimate}
+        editMilestone={editMilestone}
+        setEditMilestone={setEditMilestone}
+        milestones={projectId ? getMilestonesByProject(projectId) : []}
+        timeLogInput={timeLogInput}
+        setTimeLogInput={setTimeLogInput}
+        timeLogNote={timeLogNote}
+        setTimeLogNote={setTimeLogNote}
+        handleLogTime={handleLogTime}
+        getTimeLogsCount={(taskId: string) => getTimeLogsForTask(taskId).length}
+        onViewLogs={() => setViewLogsOpen(true)}
+        getAvatarColorClass={getAvatarColorClass}
+      />
 
-      {/* Delete Task Confirmation Modal */}
-      <Modal
-        open={!!deleteTaskConfirm}
-        onOpenChange={(open) => !open && setDeleteTaskConfirm(null)}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Delete Task</h3>
-          <p className="text-sm text-muted-foreground">
+      <ConfirmModal
+        isOpen={!!deleteTaskConfirm}
+        onClose={() => setDeleteTaskConfirm(null)}
+        onConfirm={confirmDeleteTask}
+        title="Delete Task"
+        message={
+          <>
             Are you sure you want to delete{" "}
             <strong>{deleteTaskConfirm?.title}</strong>? This action cannot be
             undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteTaskConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" size="sm" onClick={confirmDeleteTask}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+      />
 
-      {/* View Time Logs Modal */}
-      <Modal open={viewLogsOpen} onOpenChange={setViewLogsOpen} size="md">
-        {detailTask && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">
-              Time Logs for {detailTask.title}
-            </h3>
-            {(() => {
-              const logs = getTimeLogsForTask(detailTask.id);
-              if (logs.length === 0) {
-                return (
-                  <p className="text-sm text-muted-foreground py-8 text-center">
-                    No time logs for this task yet.
-                  </p>
-                );
-              }
-              return (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {logs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-3 border rounded-lg bg-accent/50"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-primary">
-                            {log.hours}h
-                          </span>
-                          {log.loggedBy && (
-                            <span className="text-xs text-muted-foreground">
-                              by {log.loggedBy}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(log.loggedAt).toLocaleString()}
-                        </span>
-                      </div>
-                      {log.note && (
-                        <p className="text-sm text-muted-foreground">
-                          {log.note}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-            <div className="flex justify-end">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setViewLogsOpen(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <TimeLogsModal
+        isOpen={viewLogsOpen}
+        onClose={() => setViewLogsOpen(false)}
+        task={detailTask}
+        logs={detailTask ? getTimeLogsForTask(detailTask.id) : []}
+      />
 
-      {/* Delete Card Confirmation Modal */}
-      <Modal
-        open={!!deleteCardConfirm}
-        onOpenChange={(open) => !open && setDeleteCardConfirm(null)}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Delete Task</h3>
-          <p className="text-sm text-muted-foreground">
+      <ConfirmModal
+        isOpen={!!deleteCardConfirm}
+        onClose={() => setDeleteCardConfirm(null)}
+        onConfirm={() => {
+          if (deleteCardConfirm) {
+            deleteTask(deleteCardConfirm.columnId, deleteCardConfirm.taskId);
+          }
+        }}
+        title="Delete Task"
+        message={
+          <>
             Are you sure you want to delete{" "}
             <strong>{deleteCardConfirm?.taskTitle}</strong>? This action cannot
             be undone.
-          </p>
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteCardConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() =>
-                deleteCardConfirm &&
-                deleteTask(deleteCardConfirm.columnId, deleteCardConfirm.taskId)
-              }
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+      />
     </>
   );
 }

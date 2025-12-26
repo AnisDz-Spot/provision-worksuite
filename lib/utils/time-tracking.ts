@@ -1,7 +1,6 @@
-// ---- Time Tracking Utilities ----
-// Per-task simple time logs stored within tasks (aggregate only)
-
 import { readTasks, getTasksByProject, TaskItem } from "./tasks";
+import { logProjectEvent } from "./project-events";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 export type TimeLog = {
   id: string;
@@ -39,15 +38,16 @@ export function getTimeLogsForTask(taskId: string): TimeLog[] {
     .sort((a, b) => b.loggedAt - a.loggedAt);
 }
 
-export function addTimeLog(
+export async function addTimeLog(
   taskId: string,
   projectId: string,
   hours: number,
   note?: string,
   loggedBy?: string
-): TimeLog | null {
+): Promise<TimeLog | null> {
   if (!hours || hours <= 0) return null;
-  const log: TimeLog = {
+
+  const logEntry: TimeLog = {
     id: `tl_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     taskId,
     projectId,
@@ -56,8 +56,41 @@ export function addTimeLog(
     loggedAt: Date.now(),
     loggedBy: loggedBy || "Unknown",
   };
+
+  if (!shouldUseMockData()) {
+    try {
+      // 1. Fetch current task to get current loggedHours
+      const res = await fetch(`/api/tasks/${taskId}`);
+      const data = await res.json();
+      if (data.success && data.task) {
+        const currentLogged = data.task.loggedHours || 0;
+        const newLogged = parseFloat((currentLogged + hours).toFixed(2));
+
+        // 2. Update task in DB
+        await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ loggedHours: newLogged }),
+        });
+
+        // 3. Log activity
+        await logProjectEvent(projectId, "timelog", {
+          taskId,
+          taskTitle: data.task.title,
+          hours,
+          note,
+        });
+
+        return logEntry;
+      }
+    } catch (error) {
+      console.error("Failed to add time log to database:", error);
+    }
+  }
+
+  // Fallback to localStorage for mock mode or if DB fails
   const all = readTimeLogs();
-  all.push(log);
+  all.push(logEntry);
   writeTimeLogs(all);
 
   // Also update the task's aggregate loggedHours
@@ -70,14 +103,20 @@ export function addTimeLog(
       ...current,
       loggedHours: parseFloat((currentLogged + hours).toFixed(2)),
     };
-    // Note: writeTasks is not exported, need to use upsertTask
-    // For now, directly write - will fix with proper import
     if (typeof window !== "undefined") {
       localStorage.setItem("pv:tasks", JSON.stringify(tasks));
     }
+
+    // Log activity in localStorage
+    logProjectEvent(projectId, "timelog", {
+      taskId,
+      taskTitle: current.title,
+      hours,
+      note,
+    });
   }
 
-  return log;
+  return logEntry;
 }
 
 export function getProjectTimeRollup(

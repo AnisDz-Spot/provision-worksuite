@@ -199,6 +199,12 @@ export default function ProjectDetailsPage() {
   const [templateCategory, setTemplateCategory] = React.useState("Other");
 
   React.useEffect(() => {
+    const handler = () => setRefreshKey((k) => k + 1);
+    window.addEventListener("pv:timeUpdated", handler);
+    return () => window.removeEventListener("pv:timeUpdated", handler);
+  }, []);
+
+  React.useEffect(() => {
     async function load() {
       setIsLoading(true);
       try {
@@ -232,7 +238,7 @@ export default function ProjectDetailsPage() {
       }
     }
     load();
-  }, [projectId]);
+  }, [projectId, refreshKey]);
 
   if (isLoading) {
     return (

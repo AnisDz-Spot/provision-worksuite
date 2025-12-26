@@ -3,7 +3,7 @@ import { shouldUseMockData } from "@/lib/dataSource";
 export type ProjectEvent = {
   id: string;
   projectId: string;
-  type: "create" | "edit" | "star" | "unstar" | "delete";
+  type: "create" | "edit" | "star" | "unstar" | "delete" | "timelog";
   timestamp: number;
   data?: Record<string, any>;
 };

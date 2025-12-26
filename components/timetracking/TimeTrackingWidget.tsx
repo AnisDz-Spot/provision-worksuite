@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Play, Pause, StopCircle, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { addTimeLog, getTasksByProject } from "@/lib/utils";
+import { addTimeLog, getTasksByProject, cn } from "@/lib/utils";
 
 type ActiveTimer = {
   taskId: string;
@@ -91,12 +91,12 @@ export function TimeTrackingWidget() {
     });
   }
 
-  function stopTimer() {
+  async function stopTimer() {
     if (!activeTimer) return;
 
     const hours = parseFloat((elapsed / 3600).toFixed(2));
     if (hours > 0) {
-      addTimeLog(
+      await addTimeLog(
         activeTimer.taskId,
         activeTimer.projectId,
         hours,
@@ -110,6 +110,7 @@ export function TimeTrackingWidget() {
     setNote("");
     if (typeof window !== "undefined") {
       localStorage.removeItem("pv:activeTimer");
+      window.dispatchEvent(new Event("pv:timeUpdated"));
     }
   }
 
@@ -209,14 +210,18 @@ export function TimeTrackingWidget() {
 
         {/* Note Input */}
         <div>
-          <label className="block text-xs font-medium mb-1">
-            Note (optional)
+          <label className="text-xs font-medium mb-1 flex justify-between">
+            <span>Note</span>
+            <span className="text-destructive font-bold">*Required</span>
           </label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Add a note about this time entry..."
-            className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-h-16 resize-none"
+            placeholder="What did you work on? (required)"
+            className={cn(
+              "w-full rounded-md border bg-card text-foreground px-3 py-2 text-sm min-h-16 resize-none",
+              !note.trim() && "border-destructive/50 focus:ring-destructive"
+            )}
           />
         </div>
 
@@ -233,7 +238,13 @@ export function TimeTrackingWidget() {
               Pause
             </Button>
           )}
-          <Button variant="primary" className="flex-1" onClick={stopTimer}>
+          <Button
+            variant="primary"
+            className="flex-1"
+            onClick={stopTimer}
+            disabled={!note.trim()}
+            title={!note.trim() ? "Note is required to save" : ""}
+          >
             <StopCircle className="w-4 h-4 mr-2" />
             Stop & Save
           </Button>

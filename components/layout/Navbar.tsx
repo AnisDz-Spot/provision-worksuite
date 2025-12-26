@@ -49,11 +49,18 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
   useEffect(() => {
     if (!currentUser || !canNavigate) return;
 
-    const trackActivity = () => {
+    let lastTracked = 0;
+    const MIN_INTERVAL = 60000; // 1 minute throttle for interactions
+
+    const trackActivity = (isForced = false) => {
+      const now = Date.now();
+      if (!isForced && now - lastTracked < MIN_INTERVAL) return;
+
+      lastTracked = now;
       if (currentUser.name) {
         updateMemberActivity({
           memberName: currentUser.name,
-          lastActive: Date.now(),
+          lastActive: now,
           status: "online",
         });
       }
@@ -69,18 +76,19 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
       } catch {}
     };
 
-    // Track on mount and on user interaction
-    trackActivity();
+    // Track on mount
+    trackActivity(true);
 
     const events = ["mousedown", "keydown", "touchstart"];
-    events.forEach((event) => window.addEventListener(event, trackActivity));
+    const throttledHandler = () => trackActivity();
+    events.forEach((event) => window.addEventListener(event, throttledHandler));
 
-    // Track every 30 seconds
-    const interval = setInterval(trackActivity, 30000);
+    // Track every 30 seconds explicitly
+    const interval = setInterval(() => trackActivity(true), 30000);
 
     return () => {
       events.forEach((event) =>
-        window.removeEventListener(event, trackActivity)
+        window.removeEventListener(event, throttledHandler)
       );
       clearInterval(interval);
     };

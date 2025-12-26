@@ -21,6 +21,7 @@ const typeLabel: Record<string, string> = {
   deleted: "Project deleted",
   task_created: "Task created",
   task_updated: "Task updated",
+  timelog: "Logged time",
 };
 
 const typeColor: Record<
@@ -37,6 +38,7 @@ const typeColor: Record<
   deleted: "warning",
   task_created: "info",
   task_updated: "secondary",
+  timelog: "success",
 };
 
 export function ProjectTimeline({
@@ -59,8 +61,15 @@ export function ProjectTimeline({
     fetchEvents();
     const interval = setInterval(() => {
       fetchEvents();
-    }, 10000);
-    return () => clearInterval(interval);
+    }, 30000); // refresh every 30s
+
+    const handler = () => fetchEvents();
+    window.addEventListener("pv:timeUpdated", handler);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("pv:timeUpdated", handler);
+    };
   }, [fetchEvents]);
 
   if (loading) {
