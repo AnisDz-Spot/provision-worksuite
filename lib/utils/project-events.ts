@@ -90,3 +90,9 @@ export async function getProjectEventsDB(
     .filter((e) => e.projectId === projectId)
     .sort((a, b) => b.timestamp - a.timestamp);
 }
+
+export function getProjectEvents(projectId: string): ProjectEvent[] {
+  return readEvents()
+    .filter((e) => e.projectId === projectId)
+    .sort((a, b) => b.timestamp - a.timestamp);
+}
