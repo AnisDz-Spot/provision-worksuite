@@ -19,7 +19,6 @@ type BoardColumnProps = {
   selectedIds: Set<string>;
   draggedTask: string | null;
   priorityColors: Record<string, string>;
-  isBlocked: boolean; // This might need to be per-task, let's refine
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>, targetColId: string) => void;
   onDragStart: (

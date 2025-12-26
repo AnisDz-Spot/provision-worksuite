@@ -838,7 +838,6 @@ export function KanbanBoard({
             selectedIds={selectedIds}
             draggedTask={draggedTask}
             priorityColors={priorityColors}
-            isBlocked={false} // Placeholder, will fix below
             onDragOver={onDragOver}
             onDrop={onDrop}
             onDragStart={onDragStart}
