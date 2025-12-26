@@ -47,26 +47,27 @@ enum InvoiceStatus {
 // =============================================================================
 
 model User {
-  id            Int      @id @default(autoincrement())
-  uid           String   @unique @default(uuid())
-  email         String   @unique
-  name          String
-  avatarUrl     String?  @map("avatar_url")
-  role          String   @default("member")
-  passwordHash  String?  @map("password_hash")
-  phone         String?
-  bio           String?
-  addressLine1  String?
-  addressLine2  String?
-  city          String?
-  state         String?
-  country       String?
-  postalCode    String?
-  socials       Json?    @default("{}") @map("socials")
-  statusMessage String?  @map("status_message")
-  statusEmoji   String?  @map("status_emoji")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  uid               String   @unique @default(uuid())
+  email             String   @unique
+  name              String
+  avatarUrl         String?  @map("avatar_url")
+  uploadedAvatarUrl String?  @map("uploaded_avatar_url")
+  role              String   @default("member")
+  passwordHash      String?  @map("password_hash")
+  phone             String?
+  bio               String?
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  country           String?
+  postalCode        String?
+  socials           Json?    @default("{}") @map("socials")
+  statusMessage     String?  @map("status_message")
+  statusEmoji       String?  @map("status_emoji")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   // Two-Factor Authentication
   twoFactorEnabled    Boolean   @default(false) @map("two_factor_enabled")

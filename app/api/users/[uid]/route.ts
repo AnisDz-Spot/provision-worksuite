@@ -22,6 +22,7 @@ export async function GET(
     const user = await prisma.user.findUnique({
       where: { uid },
       select: {
+        uploadedAvatarUrl: true,
         id: true,
         uid: true,
         email: true,
@@ -64,6 +65,7 @@ export async function GET(
         email: user.email,
         name: user.name,
         avatar_url: user.avatarUrl,
+        uploaded_avatar_url: user.uploadedAvatarUrl,
         role: isMasterAdmin ? "Master Admin" : user.role,
         phone: user.phone,
         bio: user.bio,
@@ -136,6 +138,7 @@ export async function PATCH(
       name,
       email,
       avatar_url,
+      uploaded_avatar_url,
       password,
       phone,
       bio,
@@ -175,7 +178,20 @@ export async function PATCH(
 
     if (typeof name === "string") updateData.name = name.trim();
     if (typeof email === "string") updateData.email = email.trim();
-    if (typeof avatar_url === "string") updateData.avatarUrl = avatar_url;
+    if (typeof email === "string") updateData.email = email.trim();
+    if (typeof avatar_url === "string") {
+      updateData.avatarUrl = avatar_url;
+      // If it's a custom upload (not DiceBear), also save as "uploadedAvatarUrl"
+      // to allow reverting later.
+      if (!avatar_url.includes("api.dicebear.com")) {
+        updateData.uploadedAvatarUrl = avatar_url;
+      }
+    }
+    // Allow explicit restore of uploaded avatar
+    if (typeof uploaded_avatar_url === "string") {
+      updateData.uploadedAvatarUrl = uploaded_avatar_url;
+    }
+
     if (typeof phone === "string") updateData.phone = phone.trim();
     if (typeof bio === "string") updateData.bio = bio.trim();
     if (typeof addressLine1 === "string")
@@ -217,6 +233,7 @@ export async function PATCH(
       where: { uid },
       data: updateData,
       select: {
+        uploadedAvatarUrl: true,
         uid: true,
         email: true,
         name: true,
@@ -246,6 +263,7 @@ export async function PATCH(
         email: user.email,
         name: user.name,
         avatar_url: user.avatarUrl,
+        uploaded_avatar_url: user.uploadedAvatarUrl,
         role: user.role,
         phone: user.phone,
         bio: user.bio,

@@ -45,6 +45,9 @@ export function UserProfileSettings() {
   const [profileError, setProfileError] = useState("");
   const [imgError, setImgError] = useState(false);
   const [diceStyle, setDiceStyle] = useState("avataaars");
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(
+    null
+  );
 
   // Load style from current avatar if it's a dicebear one
   useEffect(() => {
@@ -107,6 +110,7 @@ export function UserProfileSettings() {
           const data = await res.json();
           if (data?.success && data?.user) {
             const dbUser = data.user;
+            setUploadedAvatarUrl(dbUser.uploaded_avatar_url || null);
             const updatedForm: UserSettingsData = {
               fullName: dbUser.name || "",
               email: dbUser.email || "",
@@ -159,6 +163,13 @@ export function UserProfileSettings() {
     setImgError(false);
   }
 
+  function handleRestoreAvatar() {
+    if (uploadedAvatarUrl) {
+      update("avatarDataUrl", uploadedAvatarUrl);
+      setImgError(false);
+    }
+  }
+
   async function handleSave() {
     setProfileError("");
     setSaving(true);
@@ -208,6 +219,9 @@ export function UserProfileSettings() {
         };
         // Note: Role is not updated here to prevent privilege escalation
         if (avatarUrlToSet) payload.avatar_url = avatarUrlToSet;
+        if (uploadedAvatarUrl && form.avatarDataUrl === uploadedAvatarUrl) {
+          payload.uploaded_avatar_url = uploadedAvatarUrl;
+        }
 
         const resp = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
           method: "PATCH",
@@ -294,6 +308,18 @@ export function UserProfileSettings() {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Randomize
               </Button>
+              {uploadedAvatarUrl &&
+                form.avatarDataUrl !== uploadedAvatarUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full bg-background/50 backdrop-blur-sm border-primary/20 hover:bg-primary/10 transition-all text-xs"
+                    onClick={handleRestoreAvatar}
+                  >
+                    <RefreshCw className="w-3 h-3 mr-2 rotate-180" />
+                    Restore Uploaded
+                  </Button>
+                )}
             </div>
 
             <div className="flex-1 w-full">
