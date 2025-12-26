@@ -961,9 +961,12 @@ export function KanbanBoard({
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={task.avatar}
+                          src={
+                            task.avatar ||
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(task.assignee || "U")}`
+                          }
                           alt={task.assignee}
-                          className="w-5 h-5 rounded-full"
+                          className="w-5 h-5 rounded-full bg-accent"
                           title={task.assignee}
                         />
                         <span

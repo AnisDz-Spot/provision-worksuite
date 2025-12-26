@@ -23,6 +23,18 @@ import {
 } from "@/app/actions/geo";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { RefreshCw, Dice5 } from "lucide-react";
+
+const DICEBEAR_STYLES = [
+  { label: "Avatars", value: "avataaars" },
+  { label: "Robots", value: "bottts" },
+  { label: "Pixel Art", value: "pixel-art" },
+  { label: "Lorelei", value: "lorelei" },
+  { label: "Mini Avs", value: "miniavs" },
+  { label: "Notionists", value: "notionists" },
+  { label: "Adventurer", value: "adventurer" },
+  { label: "Initials", value: "initials" },
+];
 
 export function UserProfileSettings() {
   const { user, updateUser } = useSettings();
@@ -32,6 +44,15 @@ export function UserProfileSettings() {
   const [dirty, setDirty] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [imgError, setImgError] = useState(false);
+  const [diceStyle, setDiceStyle] = useState("avataaars");
+
+  // Load style from current avatar if it's a dicebear one
+  useEffect(() => {
+    if (user.avatarDataUrl?.includes("api.dicebear.com")) {
+      const match = user.avatarDataUrl.match(/\/7\.x\/([^/]+)\//);
+      if (match) setDiceStyle(match[1]);
+    }
+  }, [user.avatarDataUrl]);
 
   // Async Options State
   const [allCountries, setAllCountries] = useState<GeoOption[]>([]);
@@ -128,6 +149,14 @@ export function UserProfileSettings() {
       update("avatarDataUrl", reader.result as string);
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleDiceBearGenerate(style?: string) {
+    const s = style || diceStyle;
+    const seed = Math.random().toString(36).substring(7);
+    const url = `https://api.dicebear.com/7.x/${s}/svg?seed=${seed}`;
+    update("avatarDataUrl", url);
+    setImgError(false);
   }
 
   async function handleSave() {
@@ -252,6 +281,32 @@ export function UserProfileSettings() {
                 Upload
               </span>
             </label>
+
+            <div className="flex flex-col gap-2 w-full mt-2">
+              <select
+                className="text-[10px] bg-background border rounded px-2 py-1 outline-none"
+                value={diceStyle}
+                onChange={(e) => {
+                  setDiceStyle(e.target.value);
+                  handleDiceBearGenerate(e.target.value);
+                }}
+              >
+                {DICEBEAR_STYLES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="xs"
+                className="w-full text-[10px] h-7 gap-1"
+                onClick={() => handleDiceBearGenerate()}
+              >
+                <RefreshCw className="w-3 h-3" />
+                Randomize
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
             <div>

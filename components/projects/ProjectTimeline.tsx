@@ -96,17 +96,26 @@ export function ProjectTimeline({
         {events.map((ev) => (
           <li key={ev.id} className="flex items-start gap-3">
             <div className="relative mt-1">
-              {ev.user?.avatarUrl ? (
-                <img
-                  src={ev.user.avatarUrl}
-                  alt={ev.user.name || "User"}
-                  className="w-8 h-8 rounded-full border-2 border-background shadow-sm shrink-0 object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center border-2 border-background shadow-sm shrink-0">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
+              {(() => {
+                const avatarUrl = ev.user?.avatarUrl || ev.user?.avatar_url;
+                if (avatarUrl) {
+                  return (
+                    <img
+                      src={avatarUrl}
+                      alt={ev.user.name || "User"}
+                      className="w-8 h-8 rounded-full border-2 border-background shadow-sm shrink-0 object-cover"
+                    />
+                  );
+                }
+                const fallbackUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(ev.user?.name || "System")}`;
+                return (
+                  <img
+                    src={fallbackUrl}
+                    alt={ev.user?.name || "User"}
+                    className="w-8 h-8 rounded-full border-2 border-background shadow-sm shrink-0 object-cover"
+                  />
+                );
+              })()}
               <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
             </div>
             <div className="flex-1 min-w-0">
