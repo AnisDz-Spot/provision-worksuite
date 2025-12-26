@@ -218,7 +218,16 @@ export function UserProfileSettings() {
           postalCode: form.postalCode,
         };
         // Note: Role is not updated here to prevent privilege escalation
-        if (avatarUrlToSet) payload.avatar_url = avatarUrlToSet;
+        if (avatarUrlToSet) {
+          payload.avatar_url = avatarUrlToSet;
+        } else if (
+          form.avatarDataUrl &&
+          !form.avatarDataUrl.startsWith("data:")
+        ) {
+          // If we have an avatar URL and it's NOT a data URI (e.g. dicebear or existing blob), send it
+          payload.avatar_url = form.avatarDataUrl;
+        }
+
         if (uploadedAvatarUrl && form.avatarDataUrl === uploadedAvatarUrl) {
           payload.uploaded_avatar_url = uploadedAvatarUrl;
         }
