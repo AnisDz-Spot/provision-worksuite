@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { getProjectEventsDB, ProjectEvent } from "@/lib/utils";
-import { Clock, User } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 

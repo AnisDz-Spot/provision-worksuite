@@ -23,7 +23,7 @@ import {
 } from "@/app/actions/geo";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { fetchWithCsrf } from "@/lib/csrf-client";
-import { RefreshCw, Dice5 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 const DICEBEAR_STYLES = [
   { label: "Avatars", value: "avataaars" },
@@ -299,7 +299,7 @@ export function UserProfileSettings() {
               </select>
               <Button
                 variant="outline"
-                size="xs"
+                size="sm"
                 className="w-full text-[10px] h-7 gap-1"
                 onClick={() => handleDiceBearGenerate()}
               >
