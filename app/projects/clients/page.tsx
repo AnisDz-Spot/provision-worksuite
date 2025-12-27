@@ -21,6 +21,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { log } from "@/lib/logger";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 type Client = {
   id: string;
@@ -48,6 +49,7 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isMock, setIsMock] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -66,6 +68,9 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     setIsLoading(true);
     try {
+      const isMockMode = shouldUseMockData();
+      setIsMock(isMockMode);
+
       const res = await fetch(`/api/clients?search=${search}`);
       const data = await res.json();
       if (data.success) {
@@ -174,12 +179,14 @@ export default function ClientsPage() {
             </p>
           </div>
         </div>
-        <Link href="/projects/clients/new">
-          <Button variant="primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Client
-          </Button>
-        </Link>
+        {!isMock && (
+          <Link href="/projects/clients/new">
+            <Button variant="primary">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Client
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
@@ -330,22 +337,24 @@ export default function ClientsPage() {
                   {client._count?.projects || 0} Project
                   {(client._count?.projects || 0) !== 1 ? "s" : ""}
                 </span>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Link
-                    href={`/projects/clients/${client.id}/edit`}
-                    className="p-1.5 hover:bg-background rounded-md shadow-sm border border-transparent hover:border-border text-muted-foreground hover:text-foreground transition-all"
-                    title="Edit"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(client.id)}
-                    className="p-1.5 hover:bg-destructive/10 rounded-md shadow-sm border border-transparent hover:border-destructive/20 text-muted-foreground hover:text-destructive transition-all"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {!isMock && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link
+                      href={`/projects/clients/${client.id}/edit`}
+                      className="p-1.5 hover:bg-background rounded-md shadow-sm border border-transparent hover:border-border text-muted-foreground hover:text-foreground transition-all"
+                      title="Edit"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(client.id)}
+                      className="p-1.5 hover:bg-destructive/10 rounded-md shadow-sm border border-transparent hover:border-destructive/20 text-muted-foreground hover:text-destructive transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </Card>
           ))

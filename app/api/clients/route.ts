@@ -18,9 +18,23 @@ export async function GET(req: Request) {
 
   // In demo mode or for global admin, return mock clients
   if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search");
+
+    let filteredClients = MOCK_CLIENTS;
+    if (search) {
+      const q = search.toLowerCase();
+      filteredClients = MOCK_CLIENTS.filter(
+        (c: any) =>
+          c.name.toLowerCase().includes(q) ||
+          c.primaryEmail?.toLowerCase().includes(q) ||
+          c.primaryContact?.toLowerCase().includes(q)
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      data: MOCK_CLIENTS,
+      data: filteredClients,
       source: "mock",
     });
   }
