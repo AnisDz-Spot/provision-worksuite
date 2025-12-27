@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { getBurndownData, type BurndownPoint } from "@/lib/utils";
 import { Calendar, TrendingDown, AlertTriangle, Download } from "lucide-react";
+import { useDataMode } from "@/lib/dataSource";
 
 type EnhancedBurndownChartProps = {
   projectId: string;
@@ -57,15 +58,11 @@ export function EnhancedBurndownChart({
   }, [projectId, scopeMarkers]);
 
   const [data, setData] = useState<BurndownPoint[]>([]);
-  const [isMock, setIsMock] = useState(false);
+  const { isMock } = useDataMode();
 
   useEffect(() => {
-    async function checkMode() {
-      const { shouldUseMockData } = await import("@/lib/dataSource");
-      const currentIsMock = shouldUseMockData();
-      setIsMock(currentIsMock);
-
-      if (currentIsMock) {
+    async function updateData() {
+      if (isMock) {
         // Generate realistic mock data
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -83,8 +80,10 @@ export function EnhancedBurndownChart({
           const ideal = totalTasks - (totalTasks * i) / totalDays;
 
           let actual;
-          if (i < totalDays / 2) {
-            actual = totalTasks - (totalTasks * i) / (totalDays * 1.5);
+          if (i <= 3) {
+            actual = totalTasks; // Start flat
+          } else if (i < totalDays / 2) {
+            actual = totalTasks - (totalTasks * (i - 3)) / (totalDays * 1.5);
           } else {
             actual = ideal + (Math.random() * 2 - 1);
           }
@@ -102,8 +101,8 @@ export function EnhancedBurndownChart({
         setData(result);
       }
     }
-    checkMode();
-  }, [projectId, startDate, endDate]);
+    updateData();
+  }, [projectId, startDate, endDate, isMock]);
 
   const comparisonData = useMemo(() => {
     if (!showComparison || compareProjects.length === 0) return [];

@@ -88,6 +88,8 @@ const getMockMilestones = () => {
   ];
 };
 
+import { useDataMode } from "@/lib/dataSource";
+
 export function MilestoneGantt({
   milestones: initialMilestones,
 }: MilestoneGanttProps) {
@@ -98,6 +100,7 @@ export function MilestoneGantt({
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
     new Set()
   );
+  const { isMock } = useDataMode();
 
   useEffect(() => {
     // If props provided, use them
@@ -108,8 +111,7 @@ export function MilestoneGantt({
     }
 
     async function loadData() {
-      const { shouldUseMockData } = await import("@/lib/dataSource");
-      if (shouldUseMockData()) {
+      if (isMock) {
         setMilestones(getMockMilestones());
         setLoading(false);
         return;
@@ -152,7 +154,7 @@ export function MilestoneGantt({
       }
     }
     loadData();
-  }, [initialMilestones]);
+  }, [initialMilestones, isMock]);
 
   const { projectGroups, timeRange } = useMemo(() => {
     // Group milestones by project

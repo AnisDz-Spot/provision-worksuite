@@ -33,6 +33,8 @@ import {
   RiskLevelConfig,
 } from "@/lib/risks";
 
+import { useDataMode } from "@/lib/dataSource";
+
 type RiskLevel = "critical" | "high" | "medium" | "low" | string;
 type BlockerStatus = "open" | "in-progress" | "resolved" | "deferred";
 
@@ -59,97 +61,35 @@ type RiskBlockerDashboardProps = {
 const BLOCKERS: Blocker[] = [
   {
     id: "b1",
-    title: "API authentication endpoint not ready",
+    title: "Database Migration Failure",
     description:
-      "Backend team has not completed the OAuth2 implementation needed for user login flow.",
+      "Critical failure during Prisma migration in staging environment. Production deployment on hold.",
     level: "critical",
     status: "open",
-    impactedTasks: ["User Login", "Session Management", "Profile Settings"],
-    assignedTo: "Bob Smith",
-    reportedBy: "Anis Dzed",
-    reportedDate: "2025-12-01",
-    category: "dependency",
+    impactedTasks: ["Environment Setup", "DB Deployment"],
+    assignedTo: "Anis Dzed",
+    reportedBy: "System",
+    reportedDate: "2025-12-25",
+    category: "technical",
   },
   {
     id: "b2",
-    title: "Database performance degradation",
+    title: "AWS S3 Rate Limiting",
     description:
-      "Query response times have increased by 300% over the past week affecting all features.",
+      "Storage provider is hitting rate limits for avatar uploads. Need to implement local fallback.",
     level: "high",
     status: "in-progress",
-    impactedTasks: [
-      "Dashboard Load",
-      "Reports Generation",
-      "Search Functionality",
-    ],
+    impactedTasks: ["Profile Settings", "Avatar Upload"],
     assignedTo: "Bob Smith",
     reportedBy: "Carol Davis",
-    reportedDate: "2025-11-28",
-    category: "technical",
-  },
-  {
-    id: "b3",
-    title: "Design system components incomplete",
-    description:
-      "Missing UI components for forms and modals causing frontend delays.",
-    level: "medium",
-    status: "open",
-    impactedTasks: ["Settings Page", "User Profile Edit", "Project Creation"],
-    assignedTo: "Alice Johnson",
-    reportedBy: "Anis Dzed",
-    reportedDate: "2025-11-30",
-    category: "resource",
-  },
-  {
-    id: "b4",
-    title: "Third-party API rate limits",
-    description: "Payment processor API hitting rate limits during peak hours.",
-    level: "high",
-    status: "open",
-    impactedTasks: ["Checkout Flow", "Subscription Management"],
-    reportedBy: "David Lee",
-    reportedDate: "2025-12-02",
+    reportedDate: "2025-12-26",
     category: "external",
-  },
-  {
-    id: "b5",
-    title: "Security audit findings",
-    description:
-      "Critical vulnerabilities found in authentication module requiring immediate fix.",
-    level: "critical",
-    status: "in-progress",
-    impactedTasks: ["Login", "Registration", "Password Reset"],
-    assignedTo: "David Lee",
-    reportedBy: "Carol Davis",
-    reportedDate: "2025-11-29",
-    category: "technical",
-  },
-  {
-    id: "b6",
-    title: "Mobile testing devices unavailable",
-    description: "QA team lacks physical devices for iOS testing.",
-    level: "medium",
-    status: "deferred",
-    impactedTasks: ["Mobile Responsive Testing"],
-    reportedBy: "Carol Davis",
-    reportedDate: "2025-11-25",
-    category: "resource",
-  },
-  {
-    id: "b7",
-    title: "Stakeholder approval pending",
-    description: "Waiting for product owner sign-off on new feature scope.",
-    level: "low",
-    status: "open",
-    impactedTasks: ["Feature X Development"],
-    reportedBy: "Anis Dzed",
-    reportedDate: "2025-12-03",
-    category: "decision",
   },
 ];
 
 export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   const [blockers, setBlockers] = useState<Blocker[]>([]);
+  const { isMock } = useDataMode();
   const [filter, setFilter] = useState<{
     level?: RiskLevel;
     status?: BlockerStatus;
@@ -168,24 +108,17 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   const [riskLevels, setRiskLevels] =
     useState<RiskLevelConfig[]>(DEFAULT_RISK_LEVELS);
   const [graphExpanded, setGraphExpanded] = useState(false);
-  const [isMock, setIsMock] = useState(false);
 
   React.useEffect(() => {
     loadCategoryConfigs().then(setRuntimeCategories);
     loadRiskLevels().then(setRiskLevels);
 
-    async function init() {
-      const { shouldUseMockData } = await import("@/lib/dataSource");
-      const isMockMode = shouldUseMockData();
-      setIsMock(isMockMode);
-      if (isMockMode) {
-        setBlockers(BLOCKERS);
-      } else {
-        loadBlockersFromDB();
-      }
+    if (isMock) {
+      setBlockers(BLOCKERS);
+    } else {
+      loadBlockersFromDB();
     }
-    init();
-  }, []);
+  }, [isMock, projectId]);
 
   const loadBlockersFromDB = async () => {
     try {

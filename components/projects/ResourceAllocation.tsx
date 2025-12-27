@@ -2,6 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Users, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
+import { useDataMode } from "@/lib/dataSource";
 
 type TeamMember = {
   id: string;
@@ -19,37 +20,48 @@ type ResourceAllocationProps = {
 const defaultMembers: TeamMember[] = [
   {
     id: "u1",
-    name: "Alice",
+    name: "Alice Johnson",
     role: "Project Manager",
     capacity: 40,
     projects: [
-      { projectId: "p1", projectName: "Project Alpha", allocated: 20 },
-      { projectId: "p2", projectName: "Project Beta", allocated: 15 },
+      { projectId: "p1", projectName: "Website Redesign", allocated: 20 },
+      { projectId: "p2", projectName: "Mobile App MVP", allocated: 15 },
+    ],
+  },
+  {
+    id: "u2",
+    name: "Anis Dzed",
+    role: "Full Stack Developer",
+    capacity: 40,
+    projects: [
+      { projectId: "p1", projectName: "Website Redesign", allocated: 35 },
+      { projectId: "p3", projectName: "API Integration", allocated: 10 },
+    ],
+  },
+  {
+    id: "u3",
+    name: "Bob Smith",
+    role: "Backend Lead",
+    capacity: 40,
+    projects: [
+      { projectId: "p3", projectName: "API Integration", allocated: 25 },
+      { projectId: "p4", projectName: "Security Audit", allocated: 10 },
     ],
   },
 ];
 
-export function ResourceAllocation({
-  members = defaultMembers,
-}: ResourceAllocationProps) {
+export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
     "all"
   );
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isMock, setIsMock] = useState(false);
+  const { isMock, isDatabase } = useDataMode();
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
-      const { shouldUseMockData } = await import("@/lib/dataSource");
-      const currentIsMock = shouldUseMockData();
-
-      if (isMounted) {
-        setIsMock(currentIsMock);
-      }
-
-      if (currentIsMock) {
+      if (isMock) {
         if (isMounted) {
           setTeamMembers(
             members && members.length > 0 ? members : defaultMembers
@@ -113,7 +125,7 @@ export function ResourceAllocation({
     return () => {
       isMounted = false;
     };
-  }, [members]);
+  }, [members, isMock, isDatabase]);
 
   const memberStats = useMemo(() => {
     return teamMembers.map((member) => {

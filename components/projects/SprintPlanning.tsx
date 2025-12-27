@@ -107,6 +107,8 @@ const columns = [
   { id: "done", title: "Done", color: "bg-green-500" },
 ] as const;
 
+import { useDataMode } from "@/lib/dataSource";
+
 export function SprintPlanning() {
   const [sprint, setSprint] = useState<Sprint>({
     id: "sprint-loading",
@@ -122,31 +124,22 @@ export function SprintPlanning() {
   const [editTask, setEditTask] = useState<SprintTask | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("You");
-  const [isMock, setIsMock] = useState(false);
+  const { isMock } = useDataMode();
 
   useEffect(() => {
-    async function init() {
-      const { shouldUseMockData } = await import("@/lib/dataSource");
-      const currentIsMock = shouldUseMockData();
-      setIsMock(currentIsMock);
-
-      if (currentIsMock) {
-        setSprint(defaultSprint);
-      } else {
-        setSprint({
-          id: "sprint-empty",
-          name: "Current Sprint",
-          startDate: new Date().toISOString(),
-          endDate: new Date(
-            Date.now() + 14 * 24 * 60 * 60 * 1000
-          ).toISOString(),
-          capacity: 0,
-          tasks: [],
-        });
-      }
+    if (isMock) {
+      setSprint(defaultSprint);
+    } else {
+      setSprint({
+        id: "sprint-empty",
+        name: "Current Sprint",
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        capacity: 0,
+        tasks: [],
+      });
     }
-    init();
-  }, []);
+  }, [isMock]);
 
   const memberList = useMemo(() => {
     return (isMock ? users : []) as Array<{
