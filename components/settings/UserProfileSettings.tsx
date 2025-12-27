@@ -190,13 +190,16 @@ export function UserProfileSettings() {
             // Convert data URL to Blob and upload to blob storage via existing endpoint
             const res = await fetch(form.avatarDataUrl);
             const blob = await res.blob();
+            const uniqueFilename = `avatar-${currentUser.id}-${Date.now()}.png`;
             const fd = new FormData();
             fd.append(
               "file",
-              new File([blob], "avatar.png", { type: blob.type || "image/png" })
+              new File([blob], uniqueFilename, {
+                type: blob.type || "image/png",
+              })
             );
             const upload = await fetch(
-              `/api/setup/upload-avatar?filename=${encodeURIComponent("avatar.png")}`,
+              `/api/setup/upload-avatar?filename=${encodeURIComponent(uniqueFilename)}`,
               {
                 method: "POST",
                 body: fd,
@@ -256,20 +259,25 @@ export function UserProfileSettings() {
         }
       }
 
-      // Always persist UI settings locally
-      updateUser(form);
-      setDirty(false);
-
-      // Update local state for uploadedAvatarUrl if we just saved a new custom upload
+      // 1. Update form with the REAL url if we uploaded one
       if (avatarUrlToSet) {
         setUploadedAvatarUrl(avatarUrlToSet);
+        update("avatarDataUrl", avatarUrlToSet);
       }
+
+      // Always persist UI settings locally
+      const finalFormState = {
+        ...form,
+        avatarDataUrl: avatarUrlToSet || form.avatarDataUrl,
+      };
+      updateUser(finalFormState);
+      setDirty(false);
 
       // Sync with Auth Context (Header/Session) in ALL modes
       updateCurrentUser({
         name: form.fullName,
         email: form.email,
-        avatarUrl: form.avatarDataUrl,
+        avatarUrl: finalFormState.avatarDataUrl,
       });
     } catch (e: any) {
       console.error("Profile save error:", e);
