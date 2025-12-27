@@ -33,7 +33,7 @@ import {
   RiskLevelConfig,
 } from "@/lib/risks";
 
-import { useDataMode } from "@/lib/dataSource";
+import { useDataMode } from "@/lib/hooks/useDataMode";
 
 type RiskLevel = "critical" | "high" | "medium" | "low" | string;
 type BlockerStatus = "open" | "in-progress" | "resolved" | "deferred";

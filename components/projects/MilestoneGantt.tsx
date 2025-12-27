@@ -88,7 +88,7 @@ const getMockMilestones = () => {
   ];
 };
 
-import { useDataMode } from "@/lib/dataSource";
+import { useDataMode } from "@/lib/hooks/useDataMode";
 
 export function MilestoneGantt({
   milestones: initialMilestones,

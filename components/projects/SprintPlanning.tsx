@@ -107,7 +107,7 @@ const columns = [
   { id: "done", title: "Done", color: "bg-green-500" },
 ] as const;
 
-import { useDataMode } from "@/lib/dataSource";
+import { useDataMode } from "@/lib/hooks/useDataMode";
 
 export function SprintPlanning() {
   const [sprint, setSprint] = useState<Sprint>({

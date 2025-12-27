@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { getBurndownData, type BurndownPoint } from "@/lib/utils";
 import { Calendar, TrendingDown, AlertTriangle, Download } from "lucide-react";
-import { useDataMode } from "@/lib/dataSource";
+import { useDataMode } from "@/lib/hooks/useDataMode";
 
 type EnhancedBurndownChartProps = {
   projectId: string;

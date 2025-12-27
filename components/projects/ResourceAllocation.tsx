@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Users, AlertTriangle, TrendingUp, Calendar } from "lucide-react";
-import { useDataMode } from "@/lib/dataSource";
+import { useDataMode } from "@/lib/hooks/useDataMode";
 
 type TeamMember = {
   id: string;

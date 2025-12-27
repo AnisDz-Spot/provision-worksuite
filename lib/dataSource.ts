@@ -1,6 +1,5 @@
 // Data source utilities - determines whether to use database or mock data
 
-import { useState, useEffect, useCallback } from "react";
 import { isGlobalAdmin } from "./auth-utils";
 import {
   isDatabaseConfigured,
@@ -27,49 +26,6 @@ export function setDataModePreference(mode: "real" | "mock") {
     // Dispatch event for same-tab reactivity
     window.dispatchEvent(new Event("pv:dataModeChanged"));
   } catch {}
-}
-
-/**
- * Reactive hook for data mode detection
- */
-export function useDataMode() {
-  const [isDatabase, setIsDatabase] = useState(shouldUseDatabaseData());
-  const [mounted, setMounted] = useState(false);
-
-  const refresh = useCallback(() => {
-    setIsDatabase(shouldUseDatabaseData());
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-    refresh();
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "pv:dataMode" || e.key === "pv:currentUser") {
-        refresh();
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("pv:dataModeChanged", refresh);
-
-    // Also poll slightly for the first few seconds to catch late auth
-    const poll = setInterval(refresh, 1000);
-    const timeout = setTimeout(() => clearInterval(poll), 5000);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("pv:dataModeChanged", refresh);
-      clearInterval(poll);
-      clearTimeout(timeout);
-    };
-  }, [refresh]);
-
-  return {
-    isDatabase: mounted ? isDatabase : false,
-    isMock: mounted ? !isDatabase : true,
-    refresh,
-  };
 }
 
 export function shouldUseDatabaseData(): boolean {
