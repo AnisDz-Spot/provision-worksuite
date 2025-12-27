@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { shouldReturnMockData } from "@/lib/mock-helper";
 
 // Define explicit interfaces for the specific query results
 interface ConversationWithDetails {
@@ -22,16 +23,17 @@ interface MembershipWithConversation {
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json({ success: true, data: [] });
-  }
-
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // In demo mode or for global admin, return mock conversations
+  if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    return NextResponse.json({ success: true, data: [], source: "mock" });
   }
 
   try {

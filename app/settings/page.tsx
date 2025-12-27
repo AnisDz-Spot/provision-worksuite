@@ -36,7 +36,10 @@ import {
 } from "./database/actions";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { Alert, AlertDescription } from "@/components/ui/Alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
+import { useAuth } from "@/components/auth/AuthContext";
+import { isGlobalAdmin } from "@/lib/auth";
+import { Info } from "lucide-react";
 
 type TabKey =
   | "profile"
@@ -54,6 +57,8 @@ type TabKey =
   | "support";
 
 function DataSourceTab() {
+  const { currentUser } = useAuth();
+  const isAdminGlobal = currentUser ? isGlobalAdmin(currentUser as any) : false;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
@@ -194,6 +199,21 @@ function DataSourceTab() {
     <div className="max-w-2xl space-y-6">
       {/* Hide left navbar during mode selection */}
       <style>{`.sidebar, .Navbar { display: none !important; }`}</style>
+
+      {isAdminGlobal && (
+        <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-800 dark:text-blue-200">
+            Global Admin Override Active
+          </AlertTitle>
+          <AlertDescription className="text-blue-700 dark:text-blue-300">
+            You are logged in as the Global Admin. For safety and compatibility
+            during the initial setup phase, your session is{" "}
+            <strong>always using Dummy Mode (Mock Data)</strong> regardless of
+            the settings below.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div>
         <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>

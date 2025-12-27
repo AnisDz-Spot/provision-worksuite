@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { revalidateTag } from "next/cache";
+import { shouldReturnMockData } from "@/lib/mock-helper";
+import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export async function GET(
   request: NextRequest,
@@ -11,6 +14,15 @@ export async function GET(
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // In demo mode or for global admin, return mock project
+    if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+      const { id } = await params;
+      const project =
+        MOCK_PROJECTS.find((p) => p.uid === id || p.slug === id) ||
+        MOCK_PROJECTS[0];
+      return NextResponse.json({ success: true, project, source: "mock" });
     }
 
     const { id } = await params;

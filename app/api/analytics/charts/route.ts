@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
+import { shouldReturnMockData } from "@/lib/mock-helper";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,22 @@ export async function GET() {
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // In demo mode or for global admin, return mock chart data
+  if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    return NextResponse.json({
+      success: true,
+      data: {
+        projectStatus: [],
+        projectHealth: [],
+        taskPriority: [],
+        teamMetrics: { activeMembers: 1, utilization: 0 },
+        completionTrend: [],
+        teamProductivity: [],
+      },
+      source: "mock",
+    });
   }
 
   try {

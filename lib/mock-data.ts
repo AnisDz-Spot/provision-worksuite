@@ -122,3 +122,37 @@ export const MOCK_USERS = [
     avatarUrl: null,
   },
 ];
+
+export const MOCK_CLIENTS = [
+  {
+    id: 1,
+    uid: "client-1",
+    name: "Acme Corp",
+    email: "contact@acme.com",
+    industry: "Technology",
+    projectsCount: 3,
+    totalBilled: 25000,
+    status: "active",
+  },
+  {
+    id: 2,
+    uid: "client-2",
+    name: "LogiTech Solutions",
+    email: "info@logitech.com",
+    industry: "Logistics",
+    projectsCount: 1,
+    totalBilled: 45000,
+    status: "active",
+  },
+];
+
+export const MOCK_DASHBOARD_STATS = {
+  totalProjects: 12,
+  activeProjects: 8,
+  totalTasks: 145,
+  completedTasks: 112,
+  totalRevenue: 158000,
+  monthlyGrowth: 12.5,
+  pendingInvoices: 5,
+  teamUtilization: 85,
+};
