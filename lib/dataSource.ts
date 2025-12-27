@@ -35,6 +35,17 @@ export function shouldUseDatabaseData(): boolean {
   if (pref === "mock") return false;
   if (pref === "real") return true;
 
+  // Global Admin (dummy mode) defaults to mock data unless explicitly overridden
+  try {
+    const userJson = localStorage.getItem("pv:currentUser");
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      if (user.id === "admin-global" || user.email === "admin@provision.com") {
+        return false;
+      }
+    }
+  } catch {}
+
   // Default priority: If setup is complete, default to DB. Otherwise default to mock.
   if (isSetupComplete()) return true;
 

@@ -147,7 +147,24 @@ const columns: ColumnDef<Project>[] = [
       );
     },
   },
-  { accessorKey: "deadline", header: "Deadline" },
+  {
+    accessorKey: "deadline",
+    header: "Deadline",
+    cell: ({ row }) => {
+      const dateStr = row.original.deadline;
+      if (!dateStr) return "—";
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      } catch {
+        return dateStr;
+      }
+    },
+  },
   {
     id: "time",
     header: () => "Time",
@@ -698,7 +715,23 @@ export function ProjectTable() {
                         {p.status}
                       </Badge>
                     </td>
-                    <td className="p-4">{p.deadline}</td>
+                    <td className="p-4">
+                      {(() => {
+                        if (!p.deadline) return "—";
+                        try {
+                          return new Date(p.deadline).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          );
+                        } catch {
+                          return p.deadline;
+                        }
+                      })()}
+                    </td>
                     {/* Time rollup */}
                     <td className="p-4">
                       {(() => {
