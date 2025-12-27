@@ -1,12 +1,22 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import {
+  AuthUser,
+  GLOBAL_ADMIN_UID,
+  GLOBAL_ADMIN_EMAIL,
+  isGlobalAdmin as isGlobalAdminShared,
+  isAdmin as isAdminShared,
+  isProjectManager as isProjectManagerShared,
+  canEditProject as canEditProjectShared,
+} from "./auth-utils";
 
 const COOKIE_NAME = "auth-token";
 
 // Global Admin credentials for testing (no database required)
+// sensitive parts kept here, merged with shared constants
 const GLOBAL_ADMIN = {
-  uid: "admin-global",
-  email: "admin@provision.com",
+  uid: GLOBAL_ADMIN_UID,
+  email: GLOBAL_ADMIN_EMAIL,
   password: "password123578951",
   role: "Administrator",
   name: "Global Admin",
@@ -25,12 +35,7 @@ const getJwtSecret = () => {
   return secret;
 };
 
-export type AuthUser = {
-  uid: string;
-  email: string;
-  role: string;
-  name?: string;
-};
+export type { AuthUser };
 
 export async function signToken(payload: AuthUser): Promise<string> {
   const secret = new TextEncoder().encode(getJwtSecret());
@@ -57,10 +62,7 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
 /**
  * Check if user is Global Admin (test mode, no database required)
  */
-export function isGlobalAdmin(user: AuthUser | null): boolean {
-  if (!user) return false;
-  return user.uid === GLOBAL_ADMIN.uid || user.email === GLOBAL_ADMIN.email;
-}
+export const isGlobalAdmin = isGlobalAdminShared;
 
 export async function getAuthenticatedUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies();
@@ -114,26 +116,9 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
 }
 
 // Role-based permission helpers
-export function isAdmin(user: AuthUser | null): boolean {
-  if (!user) return false;
-  const role = user.role?.toLowerCase() || "";
-  return (
-    role === "admin" ||
-    role === "administrator" ||
-    role === "master admin" ||
-    isGlobalAdmin(user)
-  );
-}
-
-export function isProjectManager(user: AuthUser | null): boolean {
-  if (!user) return false;
-  const role = user.role?.toLowerCase() || "";
-  return role === "project manager";
-}
-
-export function canEditProject(user: AuthUser | null): boolean {
-  return isAdmin(user) || isProjectManager(user);
-}
+export const isAdmin = isAdminShared;
+export const isProjectManager = isProjectManagerShared;
+export const canEditProject = canEditProjectShared;
 
 // Export Global Admin data for testing/setup purposes
 export const getGlobalAdminData = () => ({ ...GLOBAL_ADMIN });

@@ -38,7 +38,7 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import { useAuth } from "@/components/auth/AuthContext";
-import { isGlobalAdmin } from "@/lib/auth";
+import { isGlobalAdmin } from "@/lib/auth-utils";
 import { Info } from "lucide-react";
 
 type TabKey =

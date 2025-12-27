@@ -3,7 +3,7 @@
  * Detects if request is from global admin (dummy mode)
  */
 
-import { AuthUser, isGlobalAdmin } from "@/lib/auth";
+import { AuthUser, isGlobalAdmin } from "./auth-utils";
 
 /**
  * Should return mock data for this user?
