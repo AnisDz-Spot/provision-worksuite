@@ -37,10 +37,11 @@ export function shouldUseDatabaseData(): boolean {
 
   // Global Admin (dummy mode) defaults to mock data unless explicitly overridden
   try {
+    const { isGlobalAdmin } = require("./auth-utils");
     const userJson = localStorage.getItem("pv:currentUser");
     if (userJson) {
       const user = JSON.parse(userJson);
-      if (user.id === "admin-global" || user.email === "admin@provision.com") {
+      if (isGlobalAdmin(user)) {
         return false;
       }
     }

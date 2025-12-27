@@ -22,7 +22,12 @@ export function isGlobalAdmin(user: any): boolean {
   // Handle both uid and id for compatibility with different user models
   const uid = user.uid || user.id;
   const email = user.email;
-  return uid === GLOBAL_ADMIN_UID || email === GLOBAL_ADMIN_EMAIL;
+  const role = user.role?.toUpperCase();
+  return (
+    uid === GLOBAL_ADMIN_UID ||
+    email === GLOBAL_ADMIN_EMAIL ||
+    role === "GLOBAL_ADMIN"
+  );
 }
 
 /**

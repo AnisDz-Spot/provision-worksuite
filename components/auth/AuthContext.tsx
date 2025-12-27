@@ -339,7 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: "admin-global",
           name: "Admin",
           email,
-          role: "Administrator",
+          role: "GLOBAL_ADMIN",
           isAdmin: true,
           avatarUrl: undefined,
           password: undefined,

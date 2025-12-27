@@ -1,11 +1,10 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Columns3, Plus, ChevronRight, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import users from "@/data/users.json";
-import { shouldUseMockData } from "@/lib/dataSource";
 
 type SprintTask = {
   id: string;
@@ -109,11 +108,32 @@ const columns = [
 ] as const;
 
 export function SprintPlanning() {
-  // Strict Mode: Use empty sprint if not in mock mode
-  const [sprint, setSprint] = useState<Sprint>(
-    shouldUseMockData()
-      ? defaultSprint
-      : {
+  const [sprint, setSprint] = useState<Sprint>({
+    id: "sprint-loading",
+    name: "Loading...",
+    startDate: new Date().toISOString(),
+    endDate: new Date().toISOString(),
+    capacity: 0,
+    tasks: [],
+  });
+  const [draggedTask, setDraggedTask] = useState<string | null>(null);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
+  const [editTask, setEditTask] = useState<SprintTask | null>(null);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("You");
+  const [isMock, setIsMock] = useState(false);
+
+  useEffect(() => {
+    async function init() {
+      const { shouldUseMockData } = await import("@/lib/dataSource");
+      const currentIsMock = shouldUseMockData();
+      setIsMock(currentIsMock);
+
+      if (currentIsMock) {
+        setSprint(defaultSprint);
+      } else {
+        setSprint({
           id: "sprint-empty",
           name: "Current Sprint",
           startDate: new Date().toISOString(),
@@ -122,28 +142,21 @@ export function SprintPlanning() {
           ).toISOString(),
           capacity: 0,
           tasks: [],
-        }
-  );
-  const [draggedTask, setDraggedTask] = useState<string | null>(null);
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [editTaskId, setEditTaskId] = useState<string | null>(null);
-  const [editTask, setEditTask] = useState<SprintTask | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskAssignee, setNewTaskAssignee] = useState("You");
-  const memberList = (shouldUseMockData() ? users : []) as Array<{
-    id: string;
-    name: string;
-    avatarColor?: string;
-  }>;
+        });
+      }
+    }
+    init();
+  }, []);
+
+  const memberList = useMemo(() => {
+    return (isMock ? users : []) as Array<{
+      id: string;
+      name: string;
+      avatarColor?: string;
+    }>;
+  }, [isMock]);
 
   const [newTaskPoints, setNewTaskPoints] = useState(3);
-  const [isMock, setIsMock] = useState(false);
-
-  useState(() => {
-    if (typeof window !== "undefined") {
-      setIsMock(shouldUseMockData());
-    }
-  });
 
   const getAvatarColorClass = (color?: string) => {
     switch (color) {

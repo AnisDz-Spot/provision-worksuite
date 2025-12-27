@@ -26,61 +26,67 @@ type MilestoneGanttProps = {
 };
 
 // Mock milestones for demonstration
-const defaultMilestones: Milestone[] = [
-  {
-    id: "m1",
-    title: "Requirements Gathering",
-    projectId: "p1",
-    projectName: "Project Alpha",
-    dueDate: "2025-01-15",
-    status: "completed",
-    progress: 100,
-    tasks: [
-      { id: "t1", title: "Stakeholder interviews", completed: true },
-      { id: "t2", title: "Document requirements", completed: true },
-    ],
-  },
-  {
-    id: "m2",
-    title: "Design Phase",
-    projectId: "p1",
-    projectName: "Project Alpha",
-    dueDate: "2025-02-10",
-    status: "in-progress",
-    progress: 65,
-    tasks: [
-      { id: "t3", title: "UI mockups", completed: true },
-      { id: "t4", title: "UX testing", completed: false },
-    ],
-  },
-  {
-    id: "m3",
-    title: "Development Sprint 1",
-    projectId: "p1",
-    projectName: "Project Alpha",
-    dueDate: "2025-03-15",
-    status: "pending",
-    progress: 0,
-  },
-  {
-    id: "m4",
-    title: "Beta Launch",
-    projectId: "p2",
-    projectName: "Project Beta",
-    dueDate: "2025-02-20",
-    status: "in-progress",
-    progress: 40,
-  },
-  {
-    id: "m5",
-    title: "Production Deployment",
-    projectId: "p2",
-    projectName: "Project Beta",
-    dueDate: "2025-03-30",
-    status: "pending",
-    progress: 0,
-  },
-];
+const getMockMilestones = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  return [
+    {
+      id: "m1",
+      title: "Requirements Gathering",
+      projectId: "p1",
+      projectName: "Project Alpha",
+      dueDate: new Date(year, month, 15).toISOString().slice(0, 10),
+      status: "completed" as const,
+      progress: 100,
+      tasks: [
+        { id: "t1", title: "Stakeholder interviews", completed: true },
+        { id: "t2", title: "Document requirements", completed: true },
+      ],
+    },
+    {
+      id: "m2",
+      title: "Design Phase",
+      projectId: "p1",
+      projectName: "Project Alpha",
+      dueDate: new Date(year, month + 1, 10).toISOString().slice(0, 10),
+      status: "in-progress" as const,
+      progress: 65,
+      tasks: [
+        { id: "t3", title: "UI mockups", completed: true },
+        { id: "t4", title: "UX testing", completed: false },
+      ],
+    },
+    {
+      id: "m3",
+      title: "Development Sprint 1",
+      projectId: "p1",
+      projectName: "Project Alpha",
+      dueDate: new Date(year, month + 2, 15).toISOString().slice(0, 10),
+      status: "pending" as const,
+      progress: 0,
+    },
+    {
+      id: "m4",
+      title: "Beta Launch",
+      projectId: "p2",
+      projectName: "Project Beta",
+      dueDate: new Date(year, month + 1, 20).toISOString().slice(0, 10),
+      status: "in-progress" as const,
+      progress: 40,
+    },
+    {
+      id: "m5",
+      title: "Production Deployment",
+      projectId: "p2",
+      projectName: "Project Beta",
+      dueDate: new Date(year, month + 2, 30).toISOString().slice(0, 10),
+      status: "pending" as const,
+      progress: 0,
+    },
+  ];
+};
 
 export function MilestoneGantt({
   milestones: initialMilestones,
@@ -104,7 +110,7 @@ export function MilestoneGantt({
     async function loadData() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
       if (shouldUseMockData()) {
-        setMilestones(defaultMilestones);
+        setMilestones(getMockMilestones());
         setLoading(false);
         return;
       }

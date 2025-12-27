@@ -36,19 +36,24 @@ export function ResourceAllocation({
     "all"
   );
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [isMock, setIsMock] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+
     async function loadData() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
-      // Initial state based on mode
-      if (shouldUseMockData()) {
+      const currentIsMock = shouldUseMockData();
+
+      if (isMounted) {
+        setIsMock(currentIsMock);
+      }
+
+      if (currentIsMock) {
         if (isMounted) {
-          if (members && members.length > 0) {
-            setTeamMembers(members);
-          } else {
-            setTeamMembers(defaultMembers);
-          }
+          setTeamMembers(
+            members && members.length > 0 ? members : defaultMembers
+          );
         }
         return;
       }
@@ -62,8 +67,6 @@ export function ResourceAllocation({
           loadProjects(),
         ]);
 
-        // Calculate allocation based on tasks
-        // Simplified logic: Each active task = 5 hours/week allocation (placeholder logic)
         const newMembers: TeamMember[] = users.map((u) => {
           const userTasks = tasks.filter(
             (t) =>
@@ -72,7 +75,6 @@ export function ResourceAllocation({
               t.status !== "Completed"
           );
 
-          // Group by project
           const projectAllocations: Record<string, number> = {};
           userTasks.forEach((t) => {
             const pid = t.projectId || "unknown";
@@ -94,12 +96,11 @@ export function ResourceAllocation({
             id: u.uid,
             name: u.name,
             role: u.role || "Team Member",
-            capacity: 40, // Default capacity
+            capacity: 40,
             projects: allocationList,
           };
         });
 
-        // In live mode, we overwrite mock data even if empty
         if (isMounted) {
           setTeamMembers(newMembers);
         }
