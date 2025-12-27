@@ -3,8 +3,11 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
 import { Message } from "@prisma/client";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export const dynamic = "force-dynamic";
+
+import { shouldReturnMockData } from "@/lib/mock-helper";
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();
@@ -13,6 +16,11 @@ export async function GET(request: NextRequest) {
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // In demo mode or for global admin, return empty/success to prevent DB errors
+  if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    return NextResponse.json({ success: true, data: [], source: "mock" });
   }
 
   const searchParams = request.nextUrl.searchParams;

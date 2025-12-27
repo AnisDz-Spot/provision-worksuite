@@ -6,12 +6,20 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+import { shouldReturnMockData } from "@/lib/mock-helper";
+
 export async function POST(request: Request) {
-  // In demo mode, return success without database operation
-  if (!shouldUseDatabaseData()) {
+  const user = await getAuthenticatedUser();
+
+  // In demo mode or for global admin, return success without database operation
+  if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
     return NextResponse.json({
       success: true,
-      data: { uid: "demo", status: "available", lastSeen: new Date() },
+      data: {
+        uid: user?.uid || "demo",
+        status: "available",
+        lastSeen: new Date(),
+      },
       serverTime: new Date().toISOString(),
     });
   }

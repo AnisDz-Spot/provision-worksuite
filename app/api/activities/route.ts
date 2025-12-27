@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
+import { shouldReturnMockData } from "@/lib/mock-helper";
+import { MOCK_ACTIVITIES } from "@/lib/mock-data";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +14,15 @@ export async function GET(request: NextRequest) {
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
+    }
+
+    // In demo mode or for global admin, return mock activities
+    if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+      return NextResponse.json({
+        success: true,
+        activities: MOCK_ACTIVITIES,
+        source: "mock",
+      });
     }
 
     const { searchParams } = new URL(request.url);

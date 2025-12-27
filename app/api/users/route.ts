@@ -4,25 +4,31 @@ import bcrypt from "bcryptjs";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { shouldReturnMockData } from "@/lib/mock-helper";
+import { MOCK_USERS } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // In demo mode, return empty users
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json({ success: true, data: [], source: "demo" });
+  // SECURITY: Require authentication to list users
+  const currentUser = await getAuthenticatedUser();
+  if (!currentUser) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  // In demo mode or for global admin, return mock users
+  if (!shouldUseDatabaseData() || shouldReturnMockData(currentUser)) {
+    return NextResponse.json({
+      success: true,
+      data: MOCK_USERS,
+      source: "mock",
+    });
   }
 
   try {
-    // SECURITY: Require authentication to list users
-    const currentUser = await getAuthenticatedUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const users = await prisma.user.findMany({
       select: {
         id: true,

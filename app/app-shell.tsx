@@ -345,9 +345,12 @@ function MainContent({
     pathname !== "/setup/account";
 
   const showSetupBanner =
+    !isSyncing &&
     !isLoading &&
     isAuthenticated &&
-    currentUser?.isAdmin &&
+    currentUser &&
+    currentUser.isAdmin &&
+    !currentUser.id.includes("admin-global") &&
     mode === "real" &&
     !isSetupComplete() &&
     pathname !== "/onboarding" &&

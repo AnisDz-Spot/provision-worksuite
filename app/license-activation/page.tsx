@@ -42,7 +42,7 @@ export default function LicenseActivationPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
       <div className="max-w-md w-full">
         {/* Logo/Branding */}
         <div className="text-center mb-8">
@@ -84,7 +84,7 @@ export default function LicenseActivationPage() {
 
             {error && (
               <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
                 <p className="text-sm text-red-600 dark:text-red-400">
                   {error}
                 </p>

@@ -4,15 +4,12 @@ import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { revalidateTag } from "next/cache";
+import { shouldReturnMockData } from "@/lib/mock-helper";
+import { MOCK_TASKS } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // In demo mode, return empty tasks
-  if (!shouldUseDatabaseData()) {
-    return NextResponse.json({ success: true, data: [], source: "demo" });
-  }
-
   // SECURITY: Require authentication to view tasks
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -20,6 +17,15 @@ export async function GET() {
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // In demo mode or for global admin, return mock tasks
+  if (!shouldUseDatabaseData() || shouldReturnMockData(currentUser)) {
+    return NextResponse.json({
+      success: true,
+      data: MOCK_TASKS,
+      source: "mock",
+    });
   }
 
   try {
