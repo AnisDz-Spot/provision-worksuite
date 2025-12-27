@@ -20,6 +20,33 @@ export async function GET(
   }
 
   try {
+    // Global Admin Fallback (Dummy Mode)
+    if (uid === "admin-global") {
+      return NextResponse.json({
+        success: true,
+        user: {
+          uid: "admin-global",
+          email: "admin@provision.com",
+          name: "Global Admin",
+          avatar_url: null,
+          uploaded_avatar_url: null,
+          role: "Administrator",
+          phone: null,
+          bio: "System Administrator",
+          addressLine1: null,
+          addressLine2: null,
+          city: null,
+          state: null,
+          country: null,
+          postalCode: null,
+          socials: {},
+          statusMessage: "Demo Mode",
+          statusEmoji: "🎭",
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }
+
     const user = await prisma.user.findUnique({
       where: { uid },
       select: {

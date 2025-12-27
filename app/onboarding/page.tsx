@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthContext";
 import { log } from "@/lib/logger";
 import { initializeSchema } from "@/app/settings/database/actions";
 import { markDatabaseConfigured } from "@/lib/setup";
+import { hasValidLicense } from "@/lib/license";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -18,6 +19,12 @@ export default function OnboardingPage() {
   const [detectedData, setDetectedData] = useState<any>(null);
 
   useEffect(() => {
+    // Check for valid license first
+    if (!hasValidLicense()) {
+      router.replace("/license-activation");
+      return;
+    }
+
     // Wait for auth to initialize before checking setup state
     // This prevents race conditions where isAuthenticated is false temporarily
     const timer = setTimeout(() => {
