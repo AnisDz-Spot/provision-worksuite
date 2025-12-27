@@ -199,9 +199,14 @@ export function UserProfileSettings() {
             const upData = await upload.json();
             if (upData?.success && upData?.url) {
               avatarUrlToSet = upData.url as string;
+            } else {
+              throw new Error(upData?.error || "Avatar upload failed");
             }
-          } catch (e) {
-            // Non-fatal; keep going without avatar update
+          } catch (e: any) {
+            console.error("Avatar upload failed:", e);
+            setProfileError(`Failed to upload avatar: ${e.message}`);
+            setSaving(false);
+            return;
           }
         }
 

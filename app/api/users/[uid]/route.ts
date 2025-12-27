@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import bcrypt from "bcryptjs";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { del } from "@vercel/blob";
 
 export const dynamic = "force-dynamic";
 
@@ -226,6 +227,35 @@ export async function PATCH(
         { success: false, error: "No valid fields to update" },
         { status: 400 }
       );
+    }
+
+    // AVATAR CLEANUP: If we are replacing the uploaded avatar, delete the old file from Blob storage
+    if (updateData.uploadedAvatarUrl) {
+      try {
+        const oldUser = await prisma.user.findUnique({
+          where: { uid },
+          select: { uploadedAvatarUrl: true },
+        });
+
+        if (
+          oldUser?.uploadedAvatarUrl &&
+          oldUser.uploadedAvatarUrl !== updateData.uploadedAvatarUrl &&
+          // Only delete if it looks like a Vercel Blob URL to avoid deleting external resources
+          oldUser.uploadedAvatarUrl.includes("public.blob.vercel-storage.com")
+        ) {
+          log.info(
+            { uid, url: oldUser.uploadedAvatarUrl },
+            "Deleting old avatar blob"
+          );
+          // Fire and forget - don't block the response
+          del(oldUser.uploadedAvatarUrl).catch((e) =>
+            console.error("Failed to delete old avatar blob", e)
+          );
+        }
+      } catch (e) {
+        // Ignore errors during cleanup check
+        console.error("Error checking for old avatar cleanup", e);
+      }
     }
 
     // Update user with Prisma
