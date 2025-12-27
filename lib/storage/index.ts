@@ -3,17 +3,43 @@ import { VercelBlobProvider } from "./vercel-provider";
 import { S3StorageProvider } from "./s3-provider";
 import { StorageProvider, UploadProgress } from "./types";
 
-// Factory to get the active provider
+// Factory to get the active provider with smart auto-detection
 const getProvider = (): StorageProvider => {
-  const provider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
+  // 1. Check for explicit provider configuration (highest priority)
+  const explicitProvider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
 
-  if (provider === "local") {
-    return new LocalStorageProvider();
+  if (explicitProvider) {
+    if (explicitProvider === "local") {
+      return new LocalStorageProvider();
+    }
+    if (explicitProvider === "s3") {
+      return new S3StorageProvider();
+    }
+    if (explicitProvider === "vercel" || explicitProvider === "blob") {
+      return new VercelBlobProvider();
+    }
   }
-  if (provider === "s3") {
+
+  // 2. Auto-detect based on available credentials
+  // Check for Vercel Blob credentials
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    console.log("[Storage] Auto-detected Vercel Blob provider");
+    return new VercelBlobProvider();
+  }
+
+  // Check for S3 credentials
+  if (
+    process.env.S3_BUCKET_NAME &&
+    process.env.S3_ACCESS_KEY_ID &&
+    process.env.S3_SECRET_ACCESS_KEY
+  ) {
+    console.log("[Storage] Auto-detected S3 provider");
     return new S3StorageProvider();
   }
-  return new VercelBlobProvider();
+
+  // 3. Safe fallback to Local Storage (always works, no credentials needed)
+  console.log("[Storage] Using Local Storage provider (default fallback)");
+  return new LocalStorageProvider();
 };
 
 const provider = getProvider();

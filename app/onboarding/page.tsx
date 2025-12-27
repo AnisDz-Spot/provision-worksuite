@@ -99,7 +99,19 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleSave(dbUrl: string, dbType: string) {
+  async function handleSave(
+    dbUrl: string,
+    dbType: string,
+    storageConfig?: {
+      provider: string;
+      s3Bucket?: string;
+      s3Region?: string;
+      s3AccessKey?: string;
+      s3SecretKey?: string;
+      s3Endpoint?: string;
+      blobToken?: string;
+    }
+  ) {
     setError(null);
     setIsSaving(true);
 
@@ -107,7 +119,11 @@ export default function OnboardingPage() {
       const res = await fetch("/api/setup/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postgresUrl: dbUrl, dbType }),
+        body: JSON.stringify({
+          postgresUrl: dbUrl,
+          dbType,
+          storageConfig,
+        }),
       });
 
       const data = await res.json();
@@ -129,6 +145,12 @@ export default function OnboardingPage() {
         "pv:dbConfig",
         JSON.stringify({ dbType, configured: true })
       );
+
+      // Save storage config to localStorage
+      if (storageConfig) {
+        localStorage.setItem("pv:storageConfig", JSON.stringify(storageConfig));
+      }
+
       markDatabaseConfigured(true);
       localStorage.setItem("pv:dataMode", "live");
 
