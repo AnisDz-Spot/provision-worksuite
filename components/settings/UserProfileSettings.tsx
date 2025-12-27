@@ -233,17 +233,19 @@ export function UserProfileSettings() {
         };
         // Note: Role is not updated here to prevent privilege escalation
         if (avatarUrlToSet) {
+          // New custom avatar upload
           payload.avatar_url = avatarUrlToSet;
+          payload.uploaded_avatar_url = avatarUrlToSet;
         } else if (
           form.avatarDataUrl &&
           !form.avatarDataUrl.startsWith("data:")
         ) {
           // If we have an avatar URL and it's NOT a data URI (e.g. dicebear or existing blob), send it
           payload.avatar_url = form.avatarDataUrl;
-        }
-
-        if (uploadedAvatarUrl && form.avatarDataUrl === uploadedAvatarUrl) {
-          payload.uploaded_avatar_url = uploadedAvatarUrl;
+          // If user is reverting to uploaded avatar, preserve it
+          if (uploadedAvatarUrl && form.avatarDataUrl === uploadedAvatarUrl) {
+            payload.uploaded_avatar_url = uploadedAvatarUrl;
+          }
         }
 
         const resp = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
@@ -259,17 +261,22 @@ export function UserProfileSettings() {
         }
       }
 
-      // 1. Update form with the REAL url if we uploaded one
+      // Update local state for uploadedAvatarUrl if we just saved a new custom upload
       if (avatarUrlToSet) {
         setUploadedAvatarUrl(avatarUrlToSet);
-        update("avatarDataUrl", avatarUrlToSet);
       }
 
-      // Always persist UI settings locally
+      // Always persist UI settings locally with the final blob URL
       const finalFormState = {
         ...form,
         avatarDataUrl: avatarUrlToSet || form.avatarDataUrl,
       };
+
+      // Update form state to replace data URI with blob URL
+      if (avatarUrlToSet) {
+        setForm(finalFormState);
+      }
+
       updateUser(finalFormState);
       setDirty(false);
 
