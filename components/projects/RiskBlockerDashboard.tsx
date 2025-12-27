@@ -168,6 +168,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   const [riskLevels, setRiskLevels] =
     useState<RiskLevelConfig[]>(DEFAULT_RISK_LEVELS);
   const [graphExpanded, setGraphExpanded] = useState(false);
+  const [isMock, setIsMock] = useState(false);
 
   React.useEffect(() => {
     loadCategoryConfigs().then(setRuntimeCategories);
@@ -175,7 +176,9 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
 
     async function init() {
       const { shouldUseMockData } = await import("@/lib/dataSource");
-      if (shouldUseMockData()) {
+      const isMockMode = shouldUseMockData();
+      setIsMock(isMockMode);
+      if (isMockMode) {
         setBlockers(BLOCKERS);
       } else {
         loadBlockersFromDB();
@@ -421,10 +424,12 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
             </p>
           </div>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          Report Blocker
-        </Button>
+        {!isMock && (
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Report Blocker
+          </Button>
+        )}
       </div>
 
       {/* Critical Alert */}
@@ -537,8 +542,9 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
           filteredBlockers.map((blocker) => (
             <div
               key={blocker.id}
-              className="border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
+              className={`border rounded-lg p-4 transition-all ${isMock ? "cursor-default" : "hover:shadow-md cursor-pointer"}`}
               onClick={() => {
+                if (isMock) return;
                 setSelectedBlocker(blocker);
                 setNewBlocker({
                   title: blocker.title,
@@ -615,7 +621,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
                 </div>
               )}
 
-              {blocker.status !== "resolved" && (
+              {!isMock && blocker.status !== "resolved" && (
                 <div className="mt-3 flex gap-2">
                   {blocker.status === "open" && (
                     <Button

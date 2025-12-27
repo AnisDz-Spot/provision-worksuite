@@ -5,6 +5,7 @@ import { Columns3, Plus, ChevronRight, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dropdown } from "@/components/ui/Dropdown";
 import users from "@/data/users.json";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 type SprintTask = {
   id: string;
@@ -107,8 +108,6 @@ const columns = [
   { id: "done", title: "Done", color: "bg-green-500" },
 ] as const;
 
-import { shouldUseMockData } from "@/lib/dataSource";
-
 export function SprintPlanning() {
   // Strict Mode: Use empty sprint if not in mock mode
   const [sprint, setSprint] = useState<Sprint>(
@@ -137,6 +136,15 @@ export function SprintPlanning() {
     avatarColor?: string;
   }>;
 
+  const [newTaskPoints, setNewTaskPoints] = useState(3);
+  const [isMock, setIsMock] = useState(false);
+
+  useState(() => {
+    if (typeof window !== "undefined") {
+      setIsMock(shouldUseMockData());
+    }
+  });
+
   const getAvatarColorClass = (color?: string) => {
     switch (color) {
       case "indigo":
@@ -156,7 +164,6 @@ export function SprintPlanning() {
   const [newTaskPriority, setNewTaskPriority] = useState<
     "low" | "medium" | "high"
   >("medium");
-  const [newTaskPoints, setNewTaskPoints] = useState(3);
 
   const tasksByColumn = useMemo(() => {
     return columns.reduce(
@@ -280,14 +287,16 @@ export function SprintPlanning() {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddTask(true)}
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          Add Task
-        </Button>
+        {!isMock && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddTask(true)}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add Task
+          </Button>
+        )}
       </div>
 
       {/* Sprint stats */}
@@ -366,10 +375,11 @@ export function SprintPlanning() {
               {tasksByColumn[column.id]?.map((task, idx) => (
                 <div
                   key={task.id}
-                  draggable
-                  onDragStart={() => handleDragStart(task.id)}
-                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 cursor-pointer hover:shadow-md transition-all group relative ${draggedTask === task.id ? "opacity-50" : ""}`}
+                  draggable={!isMock}
+                  onDragStart={() => !isMock && handleDragStart(task.id)}
+                  className={`border-l-4 ${getPriorityColor(task.priority)} rounded-lg p-3 transition-all group relative ${draggedTask === task.id ? "opacity-50" : ""} ${isMock ? "cursor-default" : "cursor-pointer hover:shadow-md"}`}
                   onClick={() => {
+                    if (isMock) return;
                     setEditTaskId(task.id);
                     setEditTask(task);
                   }}
@@ -406,34 +416,36 @@ export function SprintPlanning() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                    title="Delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm("Delete this task?")) {
-                        setSprint((prev) => ({
-                          ...prev,
-                          tasks: prev.tasks.filter((t) => t.id !== task.id),
-                        }));
-                      }
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                  {!isMock && (
+                    <button
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("Delete this task?")) {
+                          setSprint((prev) => ({
+                            ...prev,
+                            tasks: prev.tasks.filter((t) => t.id !== task.id),
+                          }));
+                        }
+                      }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ))}
 

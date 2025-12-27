@@ -57,6 +57,39 @@ export function EnhancedBurndownChart({
   }, [projectId, scopeMarkers]);
 
   const data = useMemo(() => {
+    const { shouldUseMockData } = require("@/lib/dataSource");
+    if (shouldUseMockData()) {
+      // Generate some realistic-looking burndown data for demonstration
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const totalDays = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const totalTasks = 25;
+      const points: BurndownPoint[] = [];
+
+      for (let i = 0; i <= totalDays; i++) {
+        const currentDate = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+        const dateStr = currentDate.toISOString().slice(0, 10);
+        const ideal = totalTasks - (totalTasks * i) / totalDays;
+
+        // Actual lags behind ideal initially, then catches up or slightly varies
+        let actual;
+        if (i < totalDays / 2) {
+          actual = totalTasks - (totalTasks * i) / (totalDays * 1.5);
+        } else {
+          actual = ideal + (Math.random() * 2 - 1);
+        }
+
+        points.push({
+          date: dateStr,
+          ideal: parseFloat(ideal.toFixed(2)),
+          actual: Math.max(0, Math.round(actual)),
+          completed: totalTasks - Math.round(actual),
+        });
+      }
+      return points;
+    }
     return getBurndownData(projectId, startDate, endDate);
   }, [projectId, startDate, endDate]);
 

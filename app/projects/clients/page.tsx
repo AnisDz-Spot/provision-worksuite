@@ -8,7 +8,6 @@ import {
   Users,
   Search,
   Plus,
-  MoreVertical,
   Mail,
   Phone,
   Building,
