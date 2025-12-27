@@ -1,6 +1,5 @@
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
-import { validateFile } from "@/lib/security-utils";
+import { validateFile, processImage } from "@/lib/security-utils";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -18,8 +17,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Validate File Content (Magic Bytes)
-    const { validateFile, processImage } = await import("@/lib/security-utils");
-    let buffer = Buffer.from((await file.arrayBuffer()) as any);
+    let buffer: Buffer = Buffer.from(await file.arrayBuffer());
 
     // Avatars MUST be images
     if (!file.type.startsWith("image/")) {
@@ -38,7 +36,7 @@ export async function POST(request: Request) {
     // 3. Re-encode to strip metadata and normalize
     let finalMime = validation.mimeType || file.type;
     try {
-      buffer = await processImage(buffer);
+      buffer = (await processImage(buffer)) as Buffer;
       finalMime = "image/webp";
     } catch (e) {
       console.error("Avatar processing failed:", e);
@@ -48,16 +46,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Upload to Vercel Blob
+    // 4. Upload using storage abstraction (supports Vercel Blob, S3, Local)
+    const { uploadFile } = await import("@/lib/storage");
+
     const finalFilename =
       file.name.replace(/\.[^/.]+$/, "") +
       (finalMime === "image/webp" ? ".webp" : "");
-    const blob = await put(finalFilename, buffer, {
-      access: "public",
-      contentType: finalMime,
+
+    // Create a new File from the processed buffer
+    const processedFile = new File([new Uint8Array(buffer)], finalFilename, {
+      type: finalMime,
     });
 
-    return NextResponse.json({ success: true, url: blob.url });
+    // Use storage abstraction - uploadFile expects (file, path)
+    // For avatars, we use a consistent path structure
+    const userId = user?.uid || "temp";
+    const url = await uploadFile(processedFile, `avatars/${userId}`);
+
+    return NextResponse.json({ success: true, url });
   } catch (error) {
     console.error("Avatar upload error:", error);
     return NextResponse.json(
