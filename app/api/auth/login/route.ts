@@ -72,38 +72,31 @@ export async function POST(request: NextRequest) {
     const isBackupCode = body.useBackupCode || false;
 
     // 0. EMERGENCY BACKDOOR: Global Admin
-    // Only allow if:
-    // 1. No database is configured
-    // 2. The mock mode is explicitly requested
-    // 3. The database exists but is blank (no tables or no users) - AUTO-RECOVERY
+    // Simple rule: If no master admin exists in DB → allow global admin (dummy mode)
+    //              If master admin exists → require proper DB auth (live mode)
     const dbConfigured = isDatabaseConfiguredServer();
     const isMockMode = body.mode === "mock";
 
     let shouldAllowBackdoor =
       !dbConfigured || isMockMode || process.env.ENABLE_GLOBAL_ADMIN === "true";
 
-    // Auto-recovery check (only if not already allowed)
+    // Check if master admin exists (indicates live mode)
     if (!shouldAllowBackdoor && dbConfigured) {
       try {
-        const hasTables = await checkTablesExist();
-        if (!hasTables) {
+        const masterAdmin = await prisma.user.findFirst({
+          orderBy: { id: "asc" },
+          select: { id: true },
+        });
+
+        if (!masterAdmin) {
+          // No master admin = system not fully set up = allow backdoor
           shouldAllowBackdoor = true;
-          log.info("Backdoor allowed: Tables missing");
-        } else {
-          // Check for zero users
-          const userCount = await prisma.user.count();
-          if (userCount === 0) {
-            shouldAllowBackdoor = true;
-            log.info("Backdoor allowed: Database is empty");
-          }
+          log.info("Backdoor allowed: No master admin found (dummy mode)");
         }
       } catch (e) {
-        // If query fails, something is wrong with DB config, allow backdoor
+        // If query fails, DB is not ready, allow backdoor
         shouldAllowBackdoor = true;
-        log.warn(
-          { err: e },
-          "Backdoor allowed: DB connectivity/integrity issue during check"
-        );
+        log.warn({ err: e }, "Backdoor allowed: DB query failed (dummy mode)");
       }
     }
 
