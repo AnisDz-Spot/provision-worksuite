@@ -38,7 +38,7 @@ const DICEBEAR_STYLES = [
 
 export function UserProfileSettings() {
   const { user, updateUser } = useSettings();
-  const { currentUser, updateCurrentUser } = useAuth();
+  const { currentUser, updateCurrentUser, logout } = useAuth();
   const [form, setForm] = useState<UserSettingsData>(user);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -107,6 +107,13 @@ export function UserProfileSettings() {
       const fetchProfile = async () => {
         try {
           const res = await fetch(`/api/users/${currentUser.id}`);
+
+          if (res.status === 401) {
+            logout();
+            window.location.href = "/auth/login";
+            return;
+          }
+
           const data = await res.json();
           if (data?.success && data?.user) {
             const dbUser = data.user;
@@ -129,7 +136,7 @@ export function UserProfileSettings() {
             // Also sync the settings context so other components (navbar) update
             updateUser(updatedForm, { silent: true });
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error("Failed to sync profile with database", e);
         }
       };
@@ -173,12 +180,11 @@ export function UserProfileSettings() {
   async function handleSave() {
     setProfileError("");
     setSaving(true);
+    let avatarUrlToSet: string | undefined = undefined;
 
     try {
       // If database is configured and a user is logged in, persist to DB
       if (shouldUseDatabaseData() && currentUser) {
-        let avatarUrlToSet: string | undefined = undefined;
-
         if (form.avatarDataUrl && form.avatarDataUrl.startsWith("data:")) {
           try {
             // Convert data URL to Blob and upload to blob storage via existing endpoint
@@ -254,6 +260,11 @@ export function UserProfileSettings() {
       updateUser(form);
       setDirty(false);
 
+      // Update local state for uploadedAvatarUrl if we just saved a new custom upload
+      if (avatarUrlToSet) {
+        setUploadedAvatarUrl(avatarUrlToSet);
+      }
+
       // Sync with Auth Context (Header/Session) in ALL modes
       updateCurrentUser({
         name: form.fullName,
@@ -261,6 +272,12 @@ export function UserProfileSettings() {
         avatarUrl: form.avatarDataUrl,
       });
     } catch (e: any) {
+      console.error("Profile save error:", e);
+      if (e.message?.includes("Unauthorized") || e.message?.includes("401")) {
+        logout(); // Auto-disconnect on invalid token
+        window.location.href = "/auth/login";
+        return;
+      }
       setProfileError(e?.message || "Failed to save profile");
     } finally {
       setSaving(false);
@@ -360,7 +377,7 @@ export function UserProfileSettings() {
                         : "bg-background/40 border-border hover:border-primary/50"
                     )}
                   >
-                    <div className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                    <div className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition-colors truncate">
                       {s.label}
                     </div>
                     {/* Tiny Preview Icon logic could go here, but style text is safer for now */}
