@@ -611,56 +611,65 @@ export function TeamChat({ currentUser }: TeamChatProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
   const [simulatedUnread, setSimulatedUnread] = useState(0);
+  const consecutiveErrors = useRef(0);
 
   // Track if we're on chat page (for conditional rendering, NOT for hooks)
   const isOnChatPage = pathname?.startsWith("/chat");
 
   const loadConversations = useCallback(async () => {
     if (shouldUseDatabaseData()) {
-      const [convs, presenceRes] = await Promise.all([
-        dbFetchConversations(currentUser),
-        fetch("/api/presence", { cache: "no-store" }).then((res) => res.json()),
-      ]);
+      try {
+        const [convs, presenceRes] = await Promise.all([
+          dbFetchConversations(currentUser),
+          fetch("/api/presence", { cache: "no-store" }).then((res) =>
+            res.json()
+          ),
+        ]);
 
-      const presenceData = presenceRes.success ? presenceRes.data : [];
+        const presenceData = presenceRes.success ? presenceRes.data : [];
 
-      // Update conversations with live presence
-      const updatedConvs = convs.map((conv) => {
-        const p = presenceData.find((item: any) => item.uid === conv.withUser);
-        let isOnline = false;
-        if (p) {
-          const threshold = Date.now() - 5 * 60 * 1000;
-          const lastSeen = new Date(p.lastSeen).getTime();
-          isOnline = lastSeen >= threshold;
-        }
-        return { ...conv, isOnline };
-      });
+        // Update conversations with live presence
+        const updatedConvs = convs.map((conv) => {
+          const p = presenceData.find(
+            (item: any) => item.uid === conv.withUser
+          );
+          let isOnline = false;
+          if (p) {
+            const threshold = Date.now() - 5 * 60 * 1000;
+            const lastSeen = new Date(p.lastSeen).getTime();
+            isOnline = lastSeen >= threshold;
+          }
+          return { ...conv, isOnline };
+        });
 
-      // Play sound if unread count increased globally
-      const prevUnread = conversations.reduce(
-        (sum, c) => sum + c.unreadCount,
-        0
-      );
-      const newUnread = updatedConvs.reduce((sum, c) => sum + c.unreadCount, 0);
-
-      if (newUnread > prevUnread && !activeChat) {
-        playMessageTone();
-        window.dispatchEvent(new CustomEvent("chatNotification"));
+        setConversations(updatedConvs);
+        consecutiveErrors.current = 0;
+      } catch (e) {
+        consecutiveErrors.current++;
+        console.error(
+          `[TeamChat] loadConversations error (${consecutiveErrors.current}):`,
+          e
+        );
       }
-
-      setConversations(updatedConvs);
     } else {
       const convs = getChatConversations(currentUser);
       setConversations(convs);
     }
-  }, [currentUser, conversations.length, activeChat]); // conversations.length is enough to check for changes if we just want to avoid redundant re-renders
+  }, [currentUser]); // Remove conversations.length and activeChat to prevent loops
 
   useEffect(() => {
     // Don't load conversations if on chat page
     if (isOnChatPage) return;
 
     loadConversations();
-    const interval = setInterval(loadConversations, 3000);
+    const interval = setInterval(() => {
+      // Back off if we're seeing repeated errors
+      if (consecutiveErrors.current > 5) {
+        if (consecutiveErrors.current % 5 === 0) loadConversations();
+        return;
+      }
+      loadConversations();
+    }, 3000);
 
     // Listen for chat open requests from other components
     const handleOpenChat = (event: CustomEvent) => {

@@ -303,6 +303,11 @@ function MainContent({
   const pathname = usePathname();
   const router = useRouter();
   const [activeCall, setActiveCall] = React.useState<any>(null);
+  const activeCallRef = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
 
   // Global Call Signaling Heartbeat
   React.useEffect(() => {
@@ -325,14 +330,16 @@ function MainContent({
         const json = await res.json();
         if (json.success && json.pendingCalls && json.pendingCalls.length > 0) {
           console.log(`[AppShell] Pending calls found:`, json.pendingCalls);
-          if (!activeCall) {
+          if (!activeCallRef.current) {
             setActiveCall(json.pendingCalls[0]);
           }
         } else if (
           json.success &&
           (!json.pendingCalls || json.pendingCalls.length === 0)
         ) {
-          setActiveCall(null);
+          if (activeCallRef.current) {
+            setActiveCall(null);
+          }
         }
       } catch (e) {
         console.error("Call signaling error", e);
@@ -343,7 +350,7 @@ function MainContent({
     checkCalls();
 
     return () => clearInterval(interval);
-  }, [currentUser?.id, activeCall, pathname, mode]);
+  }, [currentUser?.id, pathname, mode]);
 
   // Redirect to login if not authenticated and not on auth pages
   React.useEffect(() => {
