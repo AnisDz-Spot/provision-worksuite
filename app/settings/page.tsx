@@ -40,6 +40,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import { useAuth } from "@/components/auth/AuthContext";
 import { isGlobalAdmin } from "@/lib/auth-utils";
 import { Info } from "lucide-react";
+import { hasValidLicense } from "@/lib/license";
 
 type TabKey =
   | "profile"
@@ -125,6 +126,11 @@ function DataSourceTab() {
         `Switch to ${mode === "real" ? "Live" : "Demo"} mode? You will be logged out to apply changes.`
       )
     ) {
+      return;
+    }
+
+    if (mode === "real" && !hasValidLicense()) {
+      router.push("/license-activation");
       return;
     }
 
@@ -336,7 +342,13 @@ function DataSourceTab() {
                     <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
                       <Button
                         variant="primary"
-                        onClick={() => router.push("/setup/account")}
+                        onClick={() => {
+                          if (!hasValidLicense()) {
+                            router.push("/license-activation");
+                          } else {
+                            router.push("/setup/account");
+                          }
+                        }}
                         className="w-full sm:w-auto"
                       >
                         Complete Setup Now →
