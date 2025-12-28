@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache";
 import { shouldReturnMockData } from "@/lib/mock-helper";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { recordActivity } from "@/lib/activity";
 
 export async function GET(
   request: NextRequest,
@@ -301,11 +302,86 @@ export async function PUT(
 
     (revalidateTag as any)("projects");
 
+    // Record Activity
+    await recordActivity(
+      project.userId, // Using existing project owner or current user? usually owner/admin can update.
+      "project",
+      project.uid,
+      "updated",
+      { name: updated.name }
+    );
+
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
     console.error("Update error:", error);
     return NextResponse.json(
       { error: "Failed to update project" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Resolve project (Slug -> UID -> ID)
+    let project = await prisma.project.findFirst({ where: { slug: id } });
+    if (!project)
+      project = await prisma.project.findFirst({ where: { uid: id } });
+    if (!project) {
+      const idAsInt = parseInt(id);
+      if (!isNaN(idAsInt)) {
+        project = await prisma.project.findUnique({ where: { id: idAsInt } });
+      }
+    }
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // SECURITY: Only owner or admin can delete
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true, role: true },
+    });
+
+    const isAdmin = ["admin", "global-admin", "master-admin"].includes(
+      dbUser?.role || ""
+    );
+    if (!isAdmin && project.userId !== dbUser?.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const projectName = project.name;
+    const projectUid = project.uid;
+
+    await prisma.project.delete({
+      where: { id: project.id },
+    });
+
+    (revalidateTag as any)("projects");
+
+    // Record Activity
+    if (dbUser) {
+      await recordActivity(dbUser.id, "project", projectUid, "deleted", {
+        name: projectName,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: "Project deleted" });
+  } catch (error) {
+    console.error("Delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete project" },
       { status: 500 }
     );
   }

@@ -79,14 +79,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const isMaster = currentUser.isMasterAdmin || isGlobalAdmin(currentUser);
 
       if (isMaster) {
-        // Master Admin gets to choose
-        if (!pref && !isDatabaseConfigured()) {
+        const setupDone = isDatabaseConfigured() && isSetupComplete();
+
+        if (setupDone) {
+          // If setup is fully done (Master Admin exists), FORCE real mode
+          if (pref !== "real") {
+            setDataModePreference("real");
+            setMode("real");
+          } else if (mode !== "real") {
+            setMode("real");
+          }
+          setShowModeModal(false);
+        } else if (!pref && !isDatabaseConfigured()) {
+          // No setup yet, default to mock but let them choose (via sidebar/onboarding)
           setDataModePreference("mock");
           setMode("mock");
           localStorage.setItem("pv:onboardingDone", "true");
           setShowModeModal(false);
         } else if (!pref && isDatabaseConfigured()) {
-          // DB exists but no choice made, show modal
+          // DB configured but no profile yet, ask for mode or continue setup
           setShowModeModal(true);
         } else if (pref) {
           setMode(pref);

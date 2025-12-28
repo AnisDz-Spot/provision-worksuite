@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { revalidateTag } from "next/cache";
 import { logProjectEvent } from "@/lib/utils";
+import { recordActivity } from "@/lib/activity";
 import { shouldReturnMockData } from "@/lib/mock-helper";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
 
@@ -322,6 +323,11 @@ export async function POST(req: Request) {
       },
       "Project created"
     );
+
+    // Record Activity
+    await recordActivity(projectUserId, "project", project.uid, "created", {
+      name: project.name,
+    });
 
     // Clear projects cache
     (revalidateTag as any)("projects");

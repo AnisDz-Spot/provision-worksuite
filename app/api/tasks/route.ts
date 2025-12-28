@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { revalidateTag } from "next/cache";
 import { shouldReturnMockData } from "@/lib/mock-helper";
+import { recordActivity } from "@/lib/activity";
 import { MOCK_TASKS } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -235,6 +236,12 @@ export async function POST(req: Request) {
       },
       "Task created"
     );
+
+    // Record Activity
+    await recordActivity(currentUserId, "task", task.uid, "created", {
+      title: task.title,
+      projectId: project.uid,
+    });
 
     (revalidateTag as any)("projects");
     (revalidateTag as any)("tasks");

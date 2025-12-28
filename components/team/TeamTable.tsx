@@ -21,6 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { MemberForm } from "./MemberForm";
+import { StatusPicker } from "./StatusPicker";
 import { Card } from "@/components/ui/Card";
 import { getMemberActivity, updateMemberActivity } from "@/lib/utils";
 import {
@@ -60,6 +61,8 @@ type TeamMember = {
   };
   bio?: string;
   isMasterAdmin?: boolean;
+  statusMessage?: string;
+  statusEmoji?: string;
 };
 
 // ENRICH constant removed as we now fetch real data
@@ -111,6 +114,56 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [memberActivities, setMemberActivities] = useState<Map<string, any>>(
     new Map()
   );
+
+  // Status Picker State
+  const [isStatusPickerOpen, setIsStatusPickerOpen] = useState(false);
+
+  const handleStatusSave = async (emoji: string, message: string) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusEmoji: emoji, statusMessage: message }),
+      });
+
+      if (res.ok) {
+        // Optimistic update
+        setMembersData((prev) =>
+          prev.map((m) =>
+            m.id === currentUser.id
+              ? { ...m, statusEmoji: emoji, statusMessage: message }
+              : m
+          )
+        );
+      }
+    } catch (e) {
+      console.error("Failed to save status", e);
+    }
+  };
+
+  const handleStatusClear = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusEmoji: "", statusMessage: "" }),
+      });
+
+      if (res.ok) {
+        setMembersData((prev) =>
+          prev.map((m) =>
+            m.id === currentUser.id
+              ? { ...m, statusEmoji: "", statusMessage: "" }
+              : m
+          )
+        );
+      }
+    } catch (e) {
+      console.error("Failed to clear status", e);
+    }
+  };
 
   // Auto-open member from URL
   useEffect(() => {
@@ -775,13 +828,34 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
 
                   {/* Status Column */}
                   <td className="px-4 py-3">
-                    {(m as any).statusMessage ? (
+                    {currentUser?.id === m.id ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsStatusPickerOpen(true);
+                        }}
+                        className="flex items-center gap-2 text-xs hover:bg-accent/50 p-1.5 rounded-lg transition-colors w-full text-left group/status"
+                      >
+                        {m.statusMessage ? (
+                          <>
+                            <span className="text-sm">
+                              {m.statusEmoji || "💬"}
+                            </span>
+                            <span className="text-muted-foreground truncate max-w-[150px]">
+                              {m.statusMessage}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground group-hover/status:text-primary transition-colors italic">
+                            Set status...
+                          </span>
+                        )}
+                      </button>
+                    ) : m.statusMessage ? (
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-sm">
-                          {(m as any).statusEmoji || "💬"}
-                        </span>
+                        <span className="text-sm">{m.statusEmoji || "💬"}</span>
                         <span className="text-muted-foreground truncate max-w-[150px]">
-                          {(m as any).statusMessage}
+                          {m.statusMessage}
                         </span>
                       </div>
                     ) : (
@@ -1142,6 +1216,20 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {isStatusPickerOpen && currentUser && (
+        <StatusPicker
+          currentStatus={
+            membersData.find((m) => m.id === currentUser.id)?.statusMessage
+          }
+          currentEmoji={
+            membersData.find((m) => m.id === currentUser.id)?.statusEmoji
+          }
+          onSave={handleStatusSave}
+          onClear={handleStatusClear}
+          onClose={() => setIsStatusPickerOpen(false)}
+        />
       )}
     </div>
   );
