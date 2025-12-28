@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         passwordHash,
         name,
         avatarUrl: avatarUrl || null,
+        uploadedAvatarUrl: avatarUrl || null,
         role: "admin",
       },
       select: {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { hasValidLicense } from "@/lib/license";
 
 export default function DatabaseSettingsPage() {
   const router = useRouter();
@@ -16,6 +17,12 @@ export default function DatabaseSettingsPage() {
   );
 
   useEffect(() => {
+    // Strict license check
+    if (!hasValidLicense()) {
+      router.replace("/license-activation");
+      return;
+    }
+
     // Basic check if data mode is real
     const mode = localStorage.getItem("pv:dataMode");
     if (mode === "mock") {
