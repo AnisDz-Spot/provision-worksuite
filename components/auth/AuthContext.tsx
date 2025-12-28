@@ -341,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
           role: "GLOBAL_ADMIN",
           isAdmin: true,
+          isMasterAdmin: true,
           avatarUrl: undefined,
           password: undefined,
         };

@@ -19,6 +19,8 @@ import {
   isSetupComplete,
   hasDatabaseTables,
 } from "@/lib/setup";
+import { hasValidLicense } from "@/lib/license";
+import { isGlobalAdmin } from "@/lib/auth-utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -74,8 +76,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // 2. DETERMINE MODE & SETUP FLAGS
     if (isAuthenticated && currentUser) {
       const pref = localStorage.getItem("pv:dataMode");
+      const isMaster = currentUser.isMasterAdmin || isGlobalAdmin(currentUser);
 
-      if (currentUser.isMasterAdmin) {
+      if (isMaster) {
         // Master Admin gets to choose
         if (!pref && !isDatabaseConfigured()) {
           setDataModePreference("mock");
@@ -108,6 +111,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const setupComplete = isSetupComplete();
       const onboardingComplete =
         localStorage.getItem("pv:onboardingDone") === "true";
+      const hasLicense = hasValidLicense();
+
+      // IF in REAL mode but NO license, we must force them to activate or fallback to mock
+      if (currentMode === "real" && !hasLicense) {
+        // If they are not on the license page, send them there or force mock mode
+        if (pathname !== "/license-activation" && pathname !== "/onboarding") {
+          console.log(
+            "[AppShell] Real mode active without license, forcing mock mode fallback"
+          );
+          setDataModePreference("mock");
+          setMode("mock");
+          localStorage.removeItem("pv:dbConfig");
+          return;
+        } else if (pathname !== "/license-activation") {
+          // If they managed to get to onboarding somehow, send them to license
+          router.replace("/license-activation");
+        }
+        return;
+      }
 
       // Redirect logic for Real mode setup
       if (
@@ -117,6 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         pathname !== "/onboarding" &&
         pathname !== "/setup/account" &&
         pathname !== "/settings/database" &&
+        pathname !== "/license-activation" &&
         !pathname.includes("setup=true")
       ) {
         // Only redirect if database is configured (which we checked during sync)

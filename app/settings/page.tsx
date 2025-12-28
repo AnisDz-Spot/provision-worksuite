@@ -346,6 +346,9 @@ function DataSourceTab() {
                           if (!hasValidLicense()) {
                             router.push("/license-activation");
                           } else {
+                            // Set mode to real before redirecting
+                            setDataModePreference("real");
+                            setDataMode("real");
                             router.push("/setup/account");
                           }
                         }}
