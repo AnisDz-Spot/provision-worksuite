@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Key, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import { validateLicense, storeLicense, DEV_LICENSES } from "@/lib/license";
+import { setDataModePreference } from "@/lib/dataSource";
 
 export default function LicenseActivationPage() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function LicenseActivationPage() {
     if (validation.valid) {
       // Store license
       storeLicense(licenseKey);
+
+      // Set mode to real since we just activated
+      setDataModePreference("real");
 
       // Redirect to onboarding
       setTimeout(() => {

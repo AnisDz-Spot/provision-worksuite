@@ -19,7 +19,7 @@ import {
   isSetupComplete,
   hasDatabaseTables,
 } from "@/lib/setup";
-import { hasValidLicense } from "@/lib/license";
+import { hasValidLicense, clearLicense } from "@/lib/license";
 import { isGlobalAdmin } from "@/lib/auth-utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -129,6 +129,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           router.replace("/license-activation");
         }
         return;
+      }
+
+      // IF in REAL mode but setup is NOT finished, check for abandonment
+      if (currentMode === "real" && !setupComplete && hasLicense) {
+        const isAtSetup =
+          pathname === "/onboarding" ||
+          pathname === "/setup/account" ||
+          pathname === "/license-activation" ||
+          pathname === "/settings/database" ||
+          pathname.includes("setup=true");
+
+        if (!isAtSetup) {
+          console.log("[AppShell] Setup abandoned, resetting to mock mode");
+          setDataModePreference("mock");
+          setMode("mock");
+          clearLicense();
+          return;
+        }
       }
 
       // Redirect logic for Real mode setup
