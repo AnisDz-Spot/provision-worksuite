@@ -129,11 +129,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         // If they are not on the license page, send them there or force mock mode
         if (pathname !== "/license-activation" && pathname !== "/onboarding") {
           console.log(
-            "[AppShell] Real mode active without license, forcing mock mode fallback"
+            "[AppShell] Real mode active without license, forcing license activation link"
           );
-          setDataModePreference("mock");
-          setMode("mock");
-          localStorage.removeItem("pv:dbConfig");
+          // 🛡️ SECURITY: Only Master Admin can fallback to mock mode or perform setup
+          // Standard users (Admins, Members) should stay in REAL mode and just see the license blocker
+          if (isMaster) {
+            setDataModePreference("mock");
+            setMode("mock");
+            localStorage.removeItem("pv:dbConfig");
+          } else {
+            router.replace("/license-activation");
+          }
           return;
         } else if (pathname !== "/license-activation") {
           // If they managed to get to onboarding somehow, send them to license
@@ -152,10 +158,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           pathname.includes("setup=true");
 
         if (!isAtSetup) {
-          console.log("[AppShell] Setup abandoned, resetting to mock mode");
-          setDataModePreference("mock");
-          setMode("mock");
-          clearLicense();
+          console.log("[AppShell] Setup or profile missing for real mode");
+          if (isMaster) {
+            console.log("[AppShell] Master Admin: resetting to mock mode");
+            setDataModePreference("mock");
+            setMode("mock");
+            clearLicense();
+          } else {
+            // Standard user on a configured DB but with no profile yet
+            console.log("[AppShell] Redirecting to profile setup");
+            router.replace("/setup/account");
+          }
           return;
         }
       }
