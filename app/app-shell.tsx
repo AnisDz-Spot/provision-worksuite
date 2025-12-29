@@ -132,15 +132,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             "[AppShell] Real mode active without license, forcing license activation link"
           );
           // 🛡️ SECURITY: Only Master Admin can fallback to mock mode or perform setup
-          // Standard users (Admins, Members) should stay in REAL mode and just see the license blocker
+          // Standard users (Admins, Members) should stay in REAL mode.
+          // Since license validation is client-side (localStorage), regular users won't have it.
+          // We assume if the system is live (isDatabaseConfigured), it is licensed.
           if (isMaster) {
             setDataModePreference("mock");
             setMode("mock");
             localStorage.removeItem("pv:dbConfig");
+            return;
           } else {
-            router.replace("/license-activation");
+            // Non-master users: Do NOT redirect to license page.
+            // Just log and let them fall through to profile setup or main app.
+            console.log(
+              "[AppShell] Non-master user, skipping license check (client-side only)"
+            );
           }
-          return;
+          // Do NOT return for non-master users, let flow continue
         } else if (pathname !== "/license-activation") {
           // If they managed to get to onboarding somehow, send them to license
           router.replace("/license-activation");
