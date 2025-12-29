@@ -34,6 +34,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
   const pathname = usePathname();
   const { user, workspace } = useSettings();
   const { currentUser, logout } = useAuth();
+  const { setMobileOpen } = useSidebar();
   const [profileOpen, setProfileOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -118,7 +119,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
       <header className="sticky top-0 z-30 bg-background/95 dark:bg-[#111743]/95 shadow-sm border-b h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-sm overflow-visible">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
-            onClick={() => useSidebar().setMobileOpen(true)}
+            onClick={() => setMobileOpen(true)}
             className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
           >
             <Menu className="w-6 h-6" />

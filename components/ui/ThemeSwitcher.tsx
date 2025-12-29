@@ -24,7 +24,7 @@ export function ThemeSwitcher() {
         aria-label="Light mode"
       >
         <SunIcon width={16} height={16} />
-        <span className="text-xs font-medium">Light</span>
+        <span className="text-xs font-medium hidden md:inline">Light</span>
       </button>
       <button
         onClick={() => setTheme("dark")}
@@ -36,7 +36,7 @@ export function ThemeSwitcher() {
         aria-label="Dark mode"
       >
         <MoonIcon width={16} height={16} />
-        <span className="text-xs font-medium">Dark</span>
+        <span className="text-xs font-medium hidden md:inline">Dark</span>
       </button>
     </div>
   );

@@ -345,7 +345,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       open={isOpen}
       onOpenChange={onClose}
       size="full"
-      className="p-0! overflow-hidden max-w-[60vw]!"
+      className="p-0! overflow-hidden w-full max-w-[calc(100vw-2rem)] md:max-w-2xl lg:max-w-3xl"
     >
       <div className="flex flex-col max-h-[85vh]">
         {/* Search Input */}
