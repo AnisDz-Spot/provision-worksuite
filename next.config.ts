@@ -67,13 +67,13 @@ const nextConfig: NextConfig = {
               // Script src: Restricted scripts
               "script-src 'self' 'unsafe-inline' https://*.zegocloud.com https://*.zego.im",
               "style-src 'self' 'unsafe-inline'",
-              // Img src: STRICTLY 'self' and trusted uploads only
-              "img-src 'self' blob: data: https://*.public.blob.vercel-storage.com https://api.dicebear.com https://*.zegocloud.com https://*.zego.im",
+              // Img src: Allow all secure images to prevent blocking user uploads or external avatars
+              "img-src 'self' blob: data: https:",
               "font-src 'self' data:",
-              // Connect src: Allow ZegoCloud websockets and APIs
-              "connect-src 'self' data: https://*.zegocloud.com wss://*.zegocloud.com https://*.zego.im wss://*.zego.im https://firebasestorage.googleapis.com https://*.googleapis.com",
-              // Frame src: Allow internal framing and ZegoCloud
-              "frame-src 'self' data: blob: https://*.zegocloud.com https://*.zego.im",
+              // Connect src: Allow all secure connections to prevent blocking third-party APIs (video, analytics, etc.)
+              "connect-src 'self' data: https: wss:",
+              // Frame src: Allow internal framing and secure external embeds
+              "frame-src 'self' data: blob: https:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
