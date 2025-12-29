@@ -752,7 +752,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Mail className="w-5 h-5" />
@@ -764,12 +764,19 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowSettings(true)}>
+        <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <Button
+            variant="outline"
+            onClick={() => setShowSettings(true)}
+            className="flex-1 sm:flex-none"
+          >
             <Settings className="w-4 h-4 mr-1" />
             Configure
           </Button>
-          <Button onClick={() => setShowPreview(true)}>
+          <Button
+            onClick={() => setShowPreview(true)}
+            className="flex-1 sm:flex-none"
+          >
             <Eye className="w-4 h-4 mr-1" />
             Preview
           </Button>
@@ -780,7 +787,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       <div
         className={`p-4 rounded-lg border mb-6 ${schedule.enabled ? "bg-green-500/10 border-green-500/20" : "bg-gray-500/10 border-gray-500/20"}`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div
               className={`w-2 h-2 rounded-full ${schedule.enabled ? "bg-green-500" : "bg-gray-400"}`}

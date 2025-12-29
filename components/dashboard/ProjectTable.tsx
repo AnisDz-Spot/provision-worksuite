@@ -468,7 +468,7 @@ export function ProjectTable() {
   return (
     <div className="rounded-xl border shadow-md bg-card">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 border-b">
+      <div className="flex flex-wrap items-center gap-3 p-3 md:p-4 border-b">
         <Input
           value={globalFilter}
           onChange={(e) => {
@@ -476,7 +476,7 @@ export function ProjectTable() {
             setPageIndex(0);
           }}
           placeholder="Search projects..."
-          className="w-64"
+          className="w-full sm:w-64"
         />
         <select
           value={statusFilter}

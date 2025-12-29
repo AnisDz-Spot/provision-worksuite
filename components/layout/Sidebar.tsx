@@ -82,7 +82,7 @@ const isNavGroup = (item: NavItem | NavGroup): item is NavGroup => {
 // Workspace name now comes from settings context
 
 export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
-  const { collapsed, setCollapsed } = useSidebar();
+  const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const { workspace } = useSettings();
   const pathname = usePathname();
   const WORKSPACE_NAME = workspace.name;
@@ -100,61 +100,147 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
   };
 
   return (
-    <aside
-      className={cn(
-        // Main sidebar with dark mode dark-blue color
-        "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-40 overflow-hidden",
-        collapsed ? "w-16" : "w-60"
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
       )}
-    >
-      <button
-        onClick={() => setCollapsed(!collapsed)}
+
+      <aside
         className={cn(
-          "flex items-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full",
-          collapsed && "justify-center"
-        )}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        <span className="inline-flex items-center justify-center">
-          <Menu className="w-6 h-6" />
-        </span>
-        {!collapsed && (
-          <span className="truncate select-none">{WORKSPACE_NAME}</span>
-        )}
-      </button>
-      {/* Scrollable nav area */}
-      <div
-        className={cn(
-          "flex-1 overflow-y-auto scrollbar-hide",
-          collapsed ? "" : "overflow-x-hidden"
+          // Fixed positioning for both mobile and desktop
+          "fixed left-0 top-0 h-screen border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col bg-sidebar dark:bg-[#111743] z-40 overflow-hidden",
+          // Mobile: slide-out logic
+          mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          // Widths: 64 on mobile, variable on desktop
+          "w-64",
+          collapsed ? "md:w-16" : "md:w-60"
         )}
       >
-        <nav
+        <button
+          onClick={() => {
+            // If on mobile, this button closes the drawer
+            if (window.innerWidth < 768) {
+              setMobileOpen(false);
+            } else {
+              setCollapsed(!collapsed);
+            }
+          }}
           className={cn(
-            "flex flex-col mt-4 pb-2",
-            collapsed ? "gap-3 px-3" : "gap-4 px-2"
+            "flex items-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full",
+            collapsed && "justify-center"
+          )}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className="inline-flex items-center justify-center">
+            <Menu className="w-6 h-6" />
+          </span>
+          {(!collapsed || mobileOpen) && (
+            <span className="truncate select-none">{WORKSPACE_NAME}</span>
+          )}
+        </button>
+        {/* Scrollable nav area */}
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto scrollbar-hide",
+            collapsed ? "" : "overflow-x-hidden"
           )}
         >
-          {canNavigate ? (
-            navItems.map((item) => {
-              if (isNavGroup(item)) {
-                const isExpanded = expandedGroups.includes(item.label);
-                const hasActive = isActiveInGroup(item.items);
-                return (
-                  <div key={item.label} className="relative group">
-                    <button
-                      onClick={() => toggleGroup(item.label)}
-                      className={cn(
-                        "w-full flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
-                        collapsed ? "justify-center" : "justify-between",
-                        hasActive
-                          ? "bg-primary/5 text-primary"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          <nav
+            className={cn(
+              "flex flex-col mt-4 pb-2",
+              collapsed ? "gap-3 px-3" : "gap-4 px-2"
+            )}
+          >
+            {canNavigate ? (
+              navItems.map((item) => {
+                if (isNavGroup(item)) {
+                  const isExpanded = expandedGroups.includes(item.label);
+                  const hasActive = isActiveInGroup(item.items);
+                  return (
+                    <div key={item.label} className="relative group">
+                      <button
+                        onClick={() => toggleGroup(item.label)}
+                        className={cn(
+                          "w-full flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                          collapsed ? "justify-center" : "justify-between",
+                          hasActive
+                            ? "bg-primary/5 text-primary"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        )}
+                        disabled={!canNavigate}
+                      >
+                        <div className="flex items-center gap-2">
+                          <item.icon
+                            className={cn(
+                              "transition-all shrink-0",
+                              collapsed ? "w-5 h-5" : "w-4 h-4"
+                            )}
+                          />
+                          {!collapsed && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                        </div>
+                        {!collapsed &&
+                          (isExpanded ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          ))}
+                      </button>
+                      {!collapsed && isExpanded && (
+                        <div className="ml-6 mt-1 space-y-1">
+                          {item.items.map((subItem) => {
+                            const isActive = pathname === subItem.href;
+                            return (
+                              <Link
+                                key={subItem.href}
+                                href={canNavigate ? subItem.href : "#"}
+                                className={cn(
+                                  "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                                  isActive
+                                    ? "bg-primary/10 text-primary font-medium"
+                                    : "text-sidebar-foreground",
+                                  !canNavigate &&
+                                    "opacity-50 pointer-events-none"
+                                )}
+                                tabIndex={canNavigate ? 0 : -1}
+                                title={collapsed ? subItem.label : undefined}
+                              >
+                                <subItem.icon className="w-4 h-4 shrink-0" />
+                                <span className="truncate">
+                                  {subItem.label}
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
                       )}
-                      disabled={!canNavigate}
-                    >
-                      <div className="flex items-center gap-2">
+                    </div>
+                  );
+                } else {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname?.startsWith(item.href));
+                  return (
+                    <div key={item.href} className="relative group w-full">
+                      <Link
+                        href={canNavigate ? item.href : "#"}
+                        className={cn(
+                          "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
+                          collapsed ? "justify-center" : "",
+                          isActive
+                            ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
+                            : "text-sidebar-foreground",
+                          !canNavigate && "opacity-50 pointer-events-none"
+                        )}
+                        tabIndex={canNavigate ? 0 : -1}
+                        title={collapsed ? item.label : undefined}
+                      >
                         <item.icon
                           className={cn(
                             "transition-all shrink-0",
@@ -164,81 +250,19 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                         {!collapsed && (
                           <span className="truncate">{item.label}</span>
                         )}
-                      </div>
-                      {!collapsed &&
-                        (isExpanded ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        ))}
-                    </button>
-                    {!collapsed && isExpanded && (
-                      <div className="ml-6 mt-1 space-y-1">
-                        {item.items.map((subItem) => {
-                          const isActive = pathname === subItem.href;
-                          return (
-                            <Link
-                              key={subItem.href}
-                              href={canNavigate ? subItem.href : "#"}
-                              className={cn(
-                                "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
-                                isActive
-                                  ? "bg-primary/10 text-primary font-medium"
-                                  : "text-sidebar-foreground",
-                                !canNavigate && "opacity-50 pointer-events-none"
-                              )}
-                              tabIndex={canNavigate ? 0 : -1}
-                              title={collapsed ? subItem.label : undefined}
-                            >
-                              <subItem.icon className="w-4 h-4 shrink-0" />
-                              <span className="truncate">{subItem.label}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              } else {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/" && pathname?.startsWith(item.href));
-                return (
-                  <div key={item.href} className="relative group w-full">
-                    <Link
-                      href={canNavigate ? item.href : "#"}
-                      className={cn(
-                        "flex items-center gap-2 py-2.5 px-2 rounded-lg transition-all duration-200 text-sm hover:translate-x-1",
-                        collapsed ? "justify-center" : "",
-                        isActive
-                          ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
-                          : "text-sidebar-foreground",
-                        !canNavigate && "opacity-50 pointer-events-none"
-                      )}
-                      tabIndex={canNavigate ? 0 : -1}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <item.icon
-                        className={cn(
-                          "transition-all shrink-0",
-                          collapsed ? "w-5 h-5" : "w-4 h-4"
-                        )}
-                      />
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                    </Link>
-                  </div>
-                );
-              }
-            })
-          ) : (
-            <div className="text-xs text-muted-foreground px-2 py-4">
-              Please select a mode to unlock navigation.
-            </div>
-          )}
-        </nav>
-      </div>
-    </aside>
+                      </Link>
+                    </div>
+                  );
+                }
+              })
+            ) : (
+              <div className="text-xs text-muted-foreground px-2 py-4">
+                Please select a mode to unlock navigation.
+              </div>
+            )}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }

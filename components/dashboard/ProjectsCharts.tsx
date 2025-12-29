@@ -408,7 +408,7 @@ export function ProjectsCharts() {
     <div className="grid grid-cols-1 gap-6">
       {/* Projects Timeline */}
       <Card className="p-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-semibold text-foreground">
             Projects Timeline (Last 6 Weeks)
           </h3>
@@ -426,7 +426,7 @@ export function ProjectsCharts() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project Status Distribution */}
         <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-semibold text-foreground">
               Project Status Distribution
             </h3>
@@ -443,7 +443,7 @@ export function ProjectsCharts() {
 
         {/* Project Health Score */}
         <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-semibold text-foreground">
               Project Health Scores
             </h3>

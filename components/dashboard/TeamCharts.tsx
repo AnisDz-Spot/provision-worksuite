@@ -203,7 +203,7 @@ export function TeamCharts() {
 
   return (
     <Card className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-foreground">
           Team Utilization & Capacity
         </h3>

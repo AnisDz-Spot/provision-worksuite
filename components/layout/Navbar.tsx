@@ -2,12 +2,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { User, Building2, LogOut, Search } from "lucide-react";
+import { User, Building2, LogOut, Search, Menu } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { Logo } from "@/components/ui/Logo";
 import { useSettings } from "@/components/settings/SettingsProvider";
 import { useAuth } from "@/components/auth/AuthContext";
+import { useSidebar } from "@/components/layout/SidebarContext";
 import { updateMemberActivity } from "@/lib/utils";
 import { shouldUseMockData, shouldUseDatabaseData } from "@/lib/dataSource";
 import {
@@ -116,6 +117,12 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
     <>
       <header className="sticky top-0 z-30 bg-background/95 dark:bg-[#111743]/95 shadow-sm border-b h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-sm overflow-visible">
         <div className="flex items-center gap-4 flex-1 min-w-0">
+          <button
+            onClick={() => useSidebar().setMobileOpen(true)}
+            className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
           <span className="font-semibold text-xl text-foreground truncate">
             {currentRoute}
           </span>
