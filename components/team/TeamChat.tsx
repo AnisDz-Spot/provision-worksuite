@@ -28,6 +28,8 @@ import {
 } from "@/lib/utils";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { playMessageTone } from "@/lib/notificationSound";
+import { useCall } from "@/components/meetings/CallContext";
+import { Loader2 } from "lucide-react";
 
 // DB-backed helpers are now imported from @/lib/utils/chat-db-utilities
 import {
@@ -272,67 +274,18 @@ function ChatWindow({
     setShowEmojiPicker(false);
   };
 
+  const { startCall, isCallPending } = useCall();
+
   const handleStartCall = async (type: "video" | "audio") => {
     if (!targetUser) return;
 
-    try {
-      // 1. Determine title and participants
-      // In floating chat, we might not have all context, but we can try to guess
-      const isGroup = conversations.some(
-        (c) => c.withUser === targetUser && c.type === "group"
-      );
-      const conv = conversations.find((c) => c.withUser === targetUser);
+    // Determine if this is a group chat based on conversations list
+    const isGroup = conversations.some(
+      (c) => c.withUser === targetUser && c.type === "group"
+    );
 
-      let title = targetName || "Meeting";
-      let participantUids: string[] = [];
-
-      if (isGroup) {
-        // Fetch group members
-        const res = await fetch(`/api/chat-groups/${targetUser}/members`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.members)) {
-            participantUids = data.members.map((m: any) => m.uid);
-          }
-        }
-      } else {
-        // Direct chat - targetUser is usually the UID in DB mode
-        // If not a UUID, we try to find it in conversations
-        const uid = targetUser;
-        if (uid) {
-          participantUids = [uid];
-        }
-      }
-
-      // 2. Create meeting via API
-      if (shouldUseDatabaseData()) {
-        const response = await fetchWithCsrf("/api/meetings/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            description: `Started from chat`,
-            participantUids,
-            type,
-            conversationId,
-          }),
-        });
-
-        const data = await response.json();
-        if (data.success && data.meeting) {
-          window.open(`/meetings/${data.meeting.roomId}`, "_blank");
-        } else {
-          alert("Failed to start meeting: " + (data.error || "Unknown error"));
-        }
-      } else {
-        // Demo mode
-        const mockRoomId = `demo-${Date.now()}`;
-        window.open(`/meetings/${mockRoomId}`, "_blank");
-      }
-    } catch (error) {
-      console.error("Error starting meeting:", error);
-      alert("Failed to start meeting.");
-    }
+    // Context handles the API calls and state
+    await startCall(type, targetUser, targetName, conversationId, isGroup);
   };
 
   const getStatusColor = (status?: string) => {
@@ -389,17 +342,27 @@ function ChatWindow({
         <div className="flex items-center gap-1">
           <button
             onClick={() => handleStartCall("audio")}
-            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
+            disabled={isCallPending}
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Audio call"
           >
-            <Phone className="w-4 h-4" />
+            {isCallPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Phone className="w-4 h-4" />
+            )}
           </button>
           <button
             onClick={() => handleStartCall("video")}
-            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors"
+            disabled={isCallPending}
+            className="p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Video call"
           >
-            <Video className="w-4 h-4" />
+            {isCallPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Video className="w-4 h-4" />
+            )}
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}

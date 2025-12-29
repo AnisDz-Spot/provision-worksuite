@@ -13,6 +13,7 @@ import { AppLoader } from "@/components/ui/AppLoader";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { Modal } from "@/components/ui/Modal";
 import { CallRinging } from "@/components/meetings/CallRinging";
+import { CallProvider } from "@/components/meetings/CallContext";
 import { Database, FlaskConical, ArrowRight, ShieldCheck } from "lucide-react";
 import {
   isDatabaseConfigured,
@@ -299,7 +300,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         mode={mode}
         onSelectMode={handleSelectMode}
       >
-        {children}
+        <CallProvider>{children}</CallProvider>
       </MainContent>
     </>
   );
