@@ -42,11 +42,19 @@ export async function fetchWithCsrf(
     headers.set("x-csrf-token", csrfToken);
   }
 
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers,
     credentials: "include", // Ensure cookies are sent
   });
+
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth:logout"));
+    }
+  }
+
+  return response;
 }
 
 /**

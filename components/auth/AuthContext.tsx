@@ -192,6 +192,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isAuthenticated]);
 
+  // Listen for auto-logout events (e.g. from 401 responses)
+  useEffect(() => {
+    const handleAutoLogout = () => {
+      logout();
+      if (typeof window !== "undefined") {
+        window.location.href = "/auth/login?error=session_expired";
+      }
+    };
+
+    window.addEventListener("auth:logout", handleAutoLogout);
+    return () => window.removeEventListener("auth:logout", handleAutoLogout);
+  }, []);
+
   const login = async (
     email: string,
     password: string,
