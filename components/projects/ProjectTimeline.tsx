@@ -135,16 +135,16 @@ export function ProjectTimeline({
                 <Badge
                   variant={typeColor[ev.type] || "default"}
                   pill
-                  className="text-[10px] py-0 px-2 h-4"
+                  className="text-[10px] py-0 px-2 h-4 max-w-[200px] truncate"
                 >
-                  {typeLabel[ev.type] || ev.type}
+                  {ev.data?.title || ev.data?.name || "Project"}
                 </Badge>
                 <span className="text-[10px] text-muted-foreground ml-auto whitespace-nowrap">
                   {formatDate(ev.timestamp)}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground line-clamp-2 italic">
-                {ev.data?.title || ev.data?.name || "Activity logged"}
+                {typeLabel[ev.type] || ev.type}
               </div>
               {ev.data && Object.keys(ev.data).length > 1 && (
                 <div className="mt-1 p-2 rounded bg-accent/5 text-[10px] grid grid-cols-2 gap-x-2">
