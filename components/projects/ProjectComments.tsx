@@ -15,7 +15,7 @@ import { Trash2 } from "lucide-react";
 import usersData from "@/data/users.json";
 import { shouldUseMockData } from "@/lib/dataSource";
 import { sanitizeMentions } from "@/lib/sanitize";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { useToaster } from "@/components/ui/Toaster";
 
 function formatDate(ts: number) {
@@ -68,12 +68,10 @@ export function ProjectComments({ projectId }: { projectId: string }) {
     setIsLoading(true);
 
     try {
-      const csrfToken = getCsrfToken();
-      const res = await fetch(`/api/projects/${projectId}/comments`, {
+      const res = await fetchWithCsrf(`/api/projects/${projectId}/comments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": csrfToken || "",
         },
         body: JSON.stringify({ content: clean }),
       });

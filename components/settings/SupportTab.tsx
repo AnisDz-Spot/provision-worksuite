@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { HelpCircle, Mail, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export function SupportTab() {
   const [supportStatus, setSupportStatus] = useState<{
@@ -149,7 +150,7 @@ export function SupportTab() {
             };
 
             try {
-              const res = await fetch("/api/support/email", {
+              const res = await fetchWithCsrf("/api/support/email", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),

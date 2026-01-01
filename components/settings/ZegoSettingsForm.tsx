@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import {
   AlertCircle,
   CheckCircle2,
@@ -53,11 +53,10 @@ export function ZegoSettingsForm() {
     setSuccess(false);
 
     try {
-      const res = await fetch("/api/settings/video", {
+      const res = await fetchWithCsrf("/api/settings/video", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": getCsrfToken() || "",
         },
         body: JSON.stringify({ appId, serverSecret }),
       });
@@ -88,11 +87,8 @@ export function ZegoSettingsForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/settings/video", {
+      const res = await fetchWithCsrf("/api/settings/video", {
         method: "DELETE",
-        headers: {
-          "x-csrf-token": getCsrfToken() || "",
-        },
       });
       if (res.ok) {
         setAppId("");

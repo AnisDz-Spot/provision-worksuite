@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthContext";
 import { loadUsers } from "@/lib/data";
 import { shouldUseMockData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type ChatGroup = {
   id: string;
@@ -124,7 +125,7 @@ export function ChatGroupSettings() {
       saveGroups([...groups, group]);
     } else {
       try {
-        const res = await fetch("/api/chat-groups", {
+        const res = await fetchWithCsrf("/api/chat-groups", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(groupPayload),
@@ -153,7 +154,7 @@ export function ChatGroupSettings() {
       saveGroups(groups.filter((g) => g.id !== id));
     } else {
       try {
-        const res = await fetch(`/api/chat-groups/${id}`, {
+        const res = await fetchWithCsrf(`/api/chat-groups/${id}`, {
           method: "DELETE",
         });
         if (res.ok) {

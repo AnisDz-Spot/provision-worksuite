@@ -198,7 +198,7 @@ export function UserProfileSettings() {
                 type: blob.type || "image/png",
               })
             );
-            const upload = await fetch(
+            const upload = await fetchWithCsrf(
               `/api/setup/upload-avatar?filename=${encodeURIComponent(uniqueFilename)}`,
               {
                 method: "POST",

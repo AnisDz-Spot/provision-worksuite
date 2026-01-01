@@ -12,7 +12,7 @@ import usersData from "@/data/users.json";
 import categoriesData from "@/data/categories.json";
 import { log } from "@/lib/logger";
 import Image from "next/image";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { ProjectDependencies } from "@/components/projects/ProjectDependencies";
 import { ProjectFiles } from "@/components/projects/ProjectFiles";
 
@@ -164,13 +164,10 @@ export default function ProjectEditPage() {
     if (!project || isSaving) return;
     setIsSaving(true);
     try {
-      const csrfToken = getCsrfToken();
-
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await fetchWithCsrf(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": csrfToken || "",
         },
         body: JSON.stringify({
           name: project.name,

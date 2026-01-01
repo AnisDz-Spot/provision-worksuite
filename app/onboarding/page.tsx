@@ -8,6 +8,7 @@ import { log } from "@/lib/logger";
 import { initializeSchema } from "@/app/settings/database/actions";
 import { markDatabaseConfigured } from "@/lib/setup";
 import { hasValidLicense } from "@/lib/license";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -123,7 +124,7 @@ export default function OnboardingPage() {
     setIsSaving(true);
 
     try {
-      const res = await fetch("/api/setup/config", {
+      const res = await fetchWithCsrf("/api/setup/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

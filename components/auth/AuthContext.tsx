@@ -11,6 +11,7 @@ import {
   shouldUseDatabaseData,
   setDataModePreference,
 } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { boolean } from "zod";
 
 type User = {
@@ -243,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If we're trying a real login, we should prefer "real" mode if successful
         const modePref = "real";
 
-        const response = await fetch("/api/auth/login", {
+        const response = await fetchWithCsrf("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

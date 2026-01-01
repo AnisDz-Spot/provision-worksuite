@@ -1,4 +1,5 @@
 import { shouldUseMockData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export type ProjectEvent = {
   id: string;
@@ -33,7 +34,7 @@ export async function logProjectEvent(
 ) {
   if (!shouldUseMockData()) {
     try {
-      await fetch("/api/activities", {
+      await fetchWithCsrf("/api/activities", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

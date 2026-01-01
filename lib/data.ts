@@ -4,7 +4,7 @@
  */
 
 import { shouldUseDatabaseData } from "./dataSource";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 // Mock data imports
 import PROJECTS from "@/data/projects.json";
@@ -122,13 +122,11 @@ export async function loadProjects(): Promise<Project[]> {
 export async function saveProjects(projects: Project[]): Promise<boolean> {
   if (shouldUseDatabaseData()) {
     try {
-      const res = await fetch("/api/projects/bulk", {
+      const res = await fetchWithCsrf("/api/projects/bulk", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": getCsrfToken() || "",
         },
-        credentials: "include",
         body: JSON.stringify({ projects }),
       });
 
@@ -189,13 +187,11 @@ export async function loadTasks(): Promise<Task[]> {
 export async function saveTasks(tasks: Task[]): Promise<boolean> {
   if (shouldUseDatabaseData()) {
     try {
-      const res = await fetch("/api/tasks/bulk", {
+      const res = await fetchWithCsrf("/api/tasks/bulk", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": getCsrfToken() || "",
         },
-        credentials: "include",
         body: JSON.stringify({ tasks }),
       });
 

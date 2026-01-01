@@ -21,6 +21,7 @@ import {
   FileText,
   DollarSign,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type DigestSchedule = {
   enabled: boolean;
@@ -575,7 +576,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     try {
       setSending({ target: "slack", status: "idle" });
       const payload = buildSlackPayload();
-      const res = await fetch("/api/webhook", {
+      const res = await fetchWithCsrf("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -611,7 +612,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     setSending({ target: "teams", status: "idle" });
     try {
       const payload = buildTeamsCard();
-      const res = await fetch("/api/webhook", {
+      const res = await fetchWithCsrf("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

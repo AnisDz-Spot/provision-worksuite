@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { SectionHeader } from "@/components/finance/SectionHeader";
 import { MetricCard } from "@/components/finance/MetricCard";
 import { exportToPDF, exportToExcel, generateInvoicePDF } from "@/lib/export";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 // Assuming types are defined elsewhere or need to be included here for the component to work
 type Project = {
@@ -85,7 +86,7 @@ export default function InvoicesPage() {
     };
     try {
       // Try API first
-      const res = await fetch("/api/invoices", {
+      const res = await fetchWithCsrf("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(invoiceObj),

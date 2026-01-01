@@ -10,7 +10,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type Note = {
   id?: string;
@@ -131,11 +131,10 @@ export default function CalendarPage() {
 
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
       if (shouldUseDatabaseData()) {
-        fetch("/api/calendar/events", {
+        fetchWithCsrf("/api/calendar/events", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-csrf-token": getCsrfToken() || "",
           },
           body: JSON.stringify({
             title: draftText.trim(),
@@ -183,11 +182,8 @@ export default function CalendarPage() {
 
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
       if (shouldUseDatabaseData() && note.id) {
-        fetch(`/api/calendar/events?id=${note.id}`, {
+        fetchWithCsrf(`/api/calendar/events?id=${note.id}`, {
           method: "DELETE",
-          headers: {
-            "x-csrf-token": getCsrfToken() || "",
-          },
         }).then((res) => {
           if (res.ok) {
             removeNoteFromState(iso, idx);

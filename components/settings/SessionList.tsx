@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button"; // Check if Button exists at th
 import { Card } from "@/components/ui/Card";
 import { Laptop, Smartphone, Globe, AlertCircle, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 // Mock data type until API is ready/working
 type Session = {
@@ -48,7 +49,7 @@ export function SessionList() {
 
   const handleRevoke = async (sessionId: string) => {
     try {
-      const res = await fetch(`/api/auth/sessions/${sessionId}`, {
+      const res = await fetchWithCsrf(`/api/auth/sessions/${sessionId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to revoke session");
@@ -64,7 +65,7 @@ export function SessionList() {
     if (!confirm("Are you sure? This will log you out of all other devices."))
       return;
     try {
-      const res = await fetch(`/api/auth/sessions`, {
+      const res = await fetchWithCsrf(`/api/auth/sessions`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });

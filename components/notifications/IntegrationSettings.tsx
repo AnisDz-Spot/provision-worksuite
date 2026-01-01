@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/components/auth/AuthContext";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type EmailProvider =
   | "smtp"
@@ -205,7 +206,7 @@ export function IntegrationSettings({
     setTesting({ ...testing, email: true });
     setTestResults({ ...testResults, email: undefined });
     try {
-      const res = await fetch("/api/integrations/test-email", {
+      const res = await fetchWithCsrf("/api/integrations/test-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -239,7 +240,7 @@ export function IntegrationSettings({
     setTesting({ ...testing, slack: true });
     setTestResults({ ...testResults, slack: undefined });
     try {
-      const res = await fetch("/api/integrations/test-slack", {
+      const res = await fetchWithCsrf("/api/integrations/test-slack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

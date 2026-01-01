@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { useToaster } from "@/components/ui/Toaster";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type Notification = {
   id: string;
@@ -104,7 +105,7 @@ export function NotificationBell() {
   async function markAsRead(id: string) {
     if (shouldUseDatabaseData()) {
       try {
-        await fetch(`/api/notifications/${id}/read`, { method: "PUT" });
+        await fetchWithCsrf(`/api/notifications/${id}/read`, { method: "PUT" });
       } catch (e) {
         console.error("Failed to mark notification as read", e);
       }
@@ -123,7 +124,7 @@ export function NotificationBell() {
   async function deleteNotification(id: string) {
     if (shouldUseDatabaseData()) {
       try {
-        await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+        await fetchWithCsrf(`/api/notifications/${id}`, { method: "DELETE" });
       } catch (e) {
         console.error("Failed to delete notification", e);
       }
@@ -139,7 +140,7 @@ export function NotificationBell() {
 
   async function handleAccept(id: string) {
     try {
-      const res = await fetch(`/api/notifications/${id}/accept`, {
+      const res = await fetchWithCsrf(`/api/notifications/${id}/accept`, {
         method: "POST",
       });
       if (res.ok) {
@@ -156,7 +157,7 @@ export function NotificationBell() {
 
   async function handleReject(id: string) {
     try {
-      const res = await fetch(`/api/notifications/${id}/reject`, {
+      const res = await fetchWithCsrf(`/api/notifications/${id}/reject`, {
         method: "POST",
         body: JSON.stringify({ note: "Declined by user" }),
       });

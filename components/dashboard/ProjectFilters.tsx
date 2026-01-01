@@ -4,7 +4,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/Button";
 import { Project } from "./types";
 import { SavedView } from "@/lib/utils";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import { useToast } from "@/components/ui/Toast";
 
 interface ProjectFiltersProps {
@@ -225,8 +225,6 @@ export function ProjectFilters({
                   if (!val) return;
 
                   const selectedProjectIds = Array.from(selectedIds);
-                  const csrfToken = getCsrfToken() || "";
-
                   try {
                     // Optimistic update - this bypasses cache update in parent module but updates state
                     setProjects((prev) => {
@@ -242,11 +240,10 @@ export function ProjectFilters({
                     // API call for each selected project
                     await Promise.all(
                       selectedProjectIds.map((id) =>
-                        fetch(`/api/projects/${id}`, {
+                        fetchWithCsrf(`/api/projects/${id}`, {
                           method: "PUT", // Assuming PUT for status update
                           headers: {
                             "Content-Type": "application/json",
-                            "x-csrf-token": csrfToken,
                           },
                           body: JSON.stringify({ status: val }),
                         })
@@ -278,8 +275,6 @@ export function ProjectFilters({
                 size="sm"
                 onClick={async () => {
                   const selectedProjectIds = Array.from(selectedIds);
-                  const csrfToken = getCsrfToken() || "";
-
                   try {
                     // Optimistic update
                     setProjects((prev) => {
@@ -292,11 +287,10 @@ export function ProjectFilters({
                     // API call for each selected project
                     await Promise.all(
                       selectedProjectIds.map((id) =>
-                        fetch(`/api/projects/${id}`, {
+                        fetchWithCsrf(`/api/projects/${id}`, {
                           method: "PUT", // Assuming PUT for archiving
                           headers: {
                             "Content-Type": "application/json",
-                            "x-csrf-token": csrfToken,
                           },
                           body: JSON.stringify({ archived: true }),
                         })

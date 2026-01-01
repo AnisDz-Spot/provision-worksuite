@@ -1,4 +1,5 @@
 import { shouldUseDatabaseData } from "./dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export type BlockerCategory =
   | "technical"
@@ -122,7 +123,7 @@ export async function saveCategoryConfigs(cfgs: CategoryConfig[]) {
         sla_days: c.slaDays,
         icon_emoji: c.iconName,
       }));
-      await fetch("/api/blocker-categories", {
+      await fetchWithCsrf("/api/blocker-categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

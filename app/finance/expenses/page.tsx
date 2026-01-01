@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { log } from "@/lib/logger";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 // Types
 type Project = { id: string; name: string };
@@ -95,7 +96,7 @@ export default function ExpensesPage() {
 
     try {
       // Try API first
-      const res = await fetch("/api/expenses", {
+      const res = await fetchWithCsrf("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(expenseObj),

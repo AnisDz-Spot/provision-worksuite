@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { Chrome, Github, Unlink, Link2, Loader2 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type LinkedAccount = {
   id: string;
@@ -113,7 +114,7 @@ export function LinkedAccountsSettings() {
 
     setUnlinking(provider);
     try {
-      const res = await fetch(
+      const res = await fetchWithCsrf(
         `/api/auth/linked-accounts?provider=${provider}`,
         {
           method: "DELETE",

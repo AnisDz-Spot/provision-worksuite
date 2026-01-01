@@ -103,7 +103,8 @@ export async function saveRoles(
           color_hex: role.colorHex || null,
           order: role.order ?? 0,
         }));
-        const res = await fetch("/api/roles", {
+        const { fetchWithCsrf } = await import("@/lib/csrf-client");
+        const res = await fetchWithCsrf("/api/roles", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

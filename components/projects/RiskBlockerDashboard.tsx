@@ -20,6 +20,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 import {
   CATEGORY_OPTIONS,
   getCategoryConfig,
@@ -231,7 +232,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       if (shouldUseDatabaseData()) {
         if (selectedBlocker) {
           // Update existing blocker
-          await fetch(`/api/blockers/${selectedBlocker.id}`, {
+          await fetchWithCsrf(`/api/blockers/${selectedBlocker.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -243,7 +244,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
           });
         } else {
           // Create new blocker
-          await fetch("/api/blockers", {
+          await fetchWithCsrf("/api/blockers", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -310,7 +311,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
     try {
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
       if (shouldUseDatabaseData()) {
-        await fetch(`/api/blockers/${blockerId}`, {
+        await fetchWithCsrf(`/api/blockers/${blockerId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

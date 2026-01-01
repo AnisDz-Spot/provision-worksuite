@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export interface AuthUser {
   uid: string;
@@ -65,10 +66,9 @@ export async function signInWithEmailAndPassword(
   password: string
 ): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetchWithCsrf("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
 
@@ -93,10 +93,9 @@ export async function createUserWithEmailAndPassword(
   name: string
 ): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
-    const response = await fetch("/api/auth/register", {
+    const response = await fetchWithCsrf("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ email, password, name }),
     });
 
@@ -117,9 +116,8 @@ export async function createUserWithEmailAndPassword(
  */
 export async function signOut(): Promise<void> {
   try {
-    await fetch("/api/auth/logout", {
+    await fetchWithCsrf("/api/auth/logout", {
       method: "POST",
-      credentials: "include",
     });
     // Reload to clear state
     window.location.href = "/auth/login";
@@ -136,7 +134,7 @@ export async function sendPasswordResetEmail(email: string): Promise<{
   error: string | null;
 }> {
   try {
-    const response = await fetch("/api/auth/forgot-password", {
+    const response = await fetchWithCsrf("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

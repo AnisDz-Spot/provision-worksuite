@@ -1,6 +1,7 @@
 import { readTasks, getTasksByProject, TaskItem } from "./tasks";
 import { logProjectEvent } from "./project-events";
 import { shouldUseMockData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export type TimeLog = {
   id: string;
@@ -67,7 +68,7 @@ export async function addTimeLog(
         const newLogged = parseFloat((currentLogged + hours).toFixed(2));
 
         // 2. Update task in DB
-        await fetch(`/api/tasks/${taskId}`, {
+        await fetchWithCsrf(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ loggedHours: newLogged }),

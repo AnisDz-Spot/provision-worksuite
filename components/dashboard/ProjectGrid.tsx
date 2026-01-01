@@ -10,7 +10,7 @@ import {
   SavedView,
   getProjectFiles,
 } from "@/lib/utils";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 import { ProjectCard } from "./ProjectCard";
 import { ProjectFilters } from "./ProjectFilters";
@@ -188,11 +188,8 @@ export function ProjectGrid() {
     });
 
     try {
-      const response = await fetch(`/api/projects/${id}/star`, {
+      const response = await fetchWithCsrf(`/api/projects/${id}/star`, {
         method: "POST",
-        headers: {
-          "x-csrf-token": getCsrfToken() || "",
-        },
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -219,11 +216,8 @@ export function ProjectGrid() {
     setProjects(nextProjects);
 
     try {
-      const response = await fetch(`/api/projects/${id}`, {
+      const response = await fetchWithCsrf(`/api/projects/${id}`, {
         method: "DELETE",
-        headers: {
-          "x-csrf-token": getCsrfToken() || "",
-        },
       });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -336,7 +330,6 @@ export function ProjectGrid() {
     project: Project,
     newStatus: Project["status"]
   ) => {
-    const csrfToken = getCsrfToken() || "";
     try {
       // Optimistic update
       setProjects((prev) => {
@@ -346,11 +339,10 @@ export function ProjectGrid() {
         return next;
       });
 
-      const response = await fetch(`/api/projects/${project.id}`, {
+      const response = await fetchWithCsrf(`/api/projects/${project.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-csrf-token": csrfToken,
         },
         body: JSON.stringify({ status: newStatus }),
       });

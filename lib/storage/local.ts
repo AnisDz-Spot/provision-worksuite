@@ -1,3 +1,4 @@
+import { getCsrfToken, fetchWithCsrf } from "../csrf-client";
 import { StorageProvider, UploadProgress } from "./types";
 
 export class LocalStorageProvider implements StorageProvider {
@@ -17,6 +18,7 @@ export class LocalStorageProvider implements StorageProvider {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/upload-local");
+      xhr.setRequestHeader("x-csrf-token", getCsrfToken() || "");
 
       if (onProgress) {
         xhr.upload.onprogress = (event) => {
@@ -45,7 +47,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async deleteFile(url: string): Promise<void> {
-    await fetch("/api/upload-local", {
+    await fetchWithCsrf("/api/upload-local", {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",

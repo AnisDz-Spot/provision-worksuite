@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useState, useEffect } from "react";
 import categoriesData from "@/data/categories.json";
 import Image from "next/image";
-import { getCsrfToken } from "@/lib/csrf-client";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type ProjectFile = {
   name: string;
@@ -131,15 +131,8 @@ export default function NewProjectPage() {
     formData.append("file", file);
     formData.append("path", path);
 
-    const csrfToken = getCsrfToken();
-    const headers: HeadersInit = {};
-    if (csrfToken) {
-      headers["x-csrf-token"] = csrfToken;
-    }
-
-    const res = await fetch("/api/uploads", {
+    const res = await fetchWithCsrf("/api/uploads", {
       method: "POST",
-      headers,
       body: formData,
     });
 
@@ -306,17 +299,11 @@ export default function NewProjectPage() {
         categories: draft.categories,
       };
 
-      const csrfToken = getCsrfToken();
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
-      }
-
-      const res = await fetch("/api/projects", {
+      const res = await fetchWithCsrf("/api/projects", {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       });
 

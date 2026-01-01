@@ -14,6 +14,7 @@ import {
   type RecurrenceFrequency,
 } from "@/lib/recurring";
 import { useToaster } from "@/components/ui/Toaster";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface RecurringTemplate {
   id: string;
@@ -99,7 +100,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
     });
 
     try {
-      const res = await fetch("/api/tasks/recurring", {
+      const res = await fetchWithCsrf("/api/tasks/recurring", {
         method: editingId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -136,7 +137,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
     if (!confirm("Delete this recurring task template?")) return;
 
     try {
-      const res = await fetch(`/api/tasks/recurring?id=${id}`, {
+      const res = await fetchWithCsrf(`/api/tasks/recurring?id=${id}`, {
         method: "DELETE",
       });
       const data = await res.json();

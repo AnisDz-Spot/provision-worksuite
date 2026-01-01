@@ -20,6 +20,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export function SecuritySettings() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
@@ -89,10 +90,9 @@ export function SecuritySettings() {
 
     setPasswordUpdating(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await fetchWithCsrf("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           currentPassword: passwords.current,
           newPassword: passwords.new,
@@ -123,10 +123,9 @@ export function SecuritySettings() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/2fa/disable", {
+      const res = await fetchWithCsrf("/api/auth/2fa/disable", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ password: "" }),
       });
 
@@ -150,10 +149,9 @@ export function SecuritySettings() {
 
     setRegenerating(true);
     try {
-      const res = await fetch("/api/auth/2fa/regenerate-codes", {
+      const res = await fetchWithCsrf("/api/auth/2fa/regenerate-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ password: passwordConfirm }),
       });
 
