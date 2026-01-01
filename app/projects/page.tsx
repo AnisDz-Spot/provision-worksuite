@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { ProjectTable } from "@/components/dashboard/ProjectTable";
 import { ProjectGrid } from "@/components/dashboard/ProjectGrid";
@@ -9,62 +10,33 @@ import { RiskBlockerDashboard } from "@/components/projects/RiskBlockerDashboard
 import { MilestoneGantt } from "@/components/projects/MilestoneGantt";
 import { SprintPlanning } from "@/components/projects/SprintPlanning";
 import { ResourceAllocation } from "@/components/projects/ResourceAllocation";
+import { ProjectStats } from "@/components/dashboard/ProjectStats";
+import {
+  ProjectsProvider,
+  useProjects,
+} from "@/components/context/ProjectsContext";
 import { Button } from "@/components/ui/Button";
 import {
   FolderKanbanIcon,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
   LayoutGrid,
   List,
-  Upload,
-  TrendingUp,
   GanttChartIcon,
 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
-import { Modal } from "@/components/ui/Modal";
-import { Input } from "@/components/ui/Input";
+import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
 import { getProjectDependencies } from "@/lib/utils";
-import { log } from "@/lib/logger";
 
-export default function ProjectsPage() {
+function ProjectsContent() {
+  const { projects, isLoading, refreshProjects } = useProjects();
   const [view, setView] = useState<"grid" | "list" | "gantt">("grid");
-  const [mounted, setMounted] = useState(false);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const saved = localStorage.getItem("pv:projectsView");
     if (saved === "list" || saved === "grid" || saved === "gantt") {
       setView(saved);
     }
-    // Load projects for Gantt chart
-    async function fetchProjects() {
-      try {
-        const { loadProjects } = await import("@/lib/data");
-        const data = await loadProjects();
-        setProjects(Array.isArray(data) ? data : []);
-      } catch (error) {
-        log.error({ err: error }, "Failed to load projects");
-        setProjects([]);
-      }
-    }
-    fetchProjects();
   }, []);
-  const [addOpen, setAddOpen] = useState(false);
-  const [draft, setDraft] = useState({
-    title: "",
-    thumbnail: "",
-    description: "",
-    priority: "medium",
-    status: "In Progress",
-    deadline: "",
-    privacy: "team",
-    categories: "",
-    tags: "",
-    members: "",
-    files: [] as File[],
-  });
+
   return (
     <section className="p-4 md:p-8 flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -80,6 +52,15 @@ export default function ProjectsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Temporary Refresh Button for debugging/verification */}
+          <Button
+            variant="outline"
+            onClick={() => refreshProjects()}
+            title="Refresh Data"
+          >
+            Refresh
+          </Button>
+
           <Button
             variant={view === "grid" ? "primary" : "outline"}
             onClick={() => {
@@ -120,207 +101,8 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Completed Projects Card */}
-        <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
-          <div className="absolute inset-0 bg-linear-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Completed
-                </p>
-                <p className="text-4xl font-bold text-green-600">
-                  {
-                    projects.filter((p) =>
-                      ["Completed", "Done", "completed", "done"].includes(
-                        p.status
-                      )
-                    ).length
-                  }
-                </p>
-                <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>+0% this month</span>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-green-500/10">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-            {/* Mini bar chart */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-muted-foreground w-8">Nov</div>
-                <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500/60 rounded-full"
-                    style={{ width: "60%" }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-muted-foreground w-8">Dec</div>
-                <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500 rounded-full"
-                    style={{ width: "100%" }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Active Projects Card */}
-        <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
-          <div className="absolute inset-0 bg-linear-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Active
-                </p>
-                <p className="text-4xl font-bold text-blue-600">
-                  {
-                    projects.filter(
-                      (p) =>
-                        !p.status ||
-                        [
-                          "Active",
-                          "In Progress",
-                          "active",
-                          "in_progress",
-                        ].includes(p.status)
-                    ).length
-                  }
-                </p>
-                <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>On track</span>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-blue-500/10">
-                <Clock className="w-8 h-8 text-blue-600" />
-              </div>
-            </div>
-            {/* Mini progress rings */}
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <svg className="w-12 h-12 transform -rotate-90">
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-accent"
-                  />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-blue-500"
-                    strokeDasharray="126"
-                    strokeDashoffset="38"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600">
-                  75%
-                </div>
-              </div>
-              <div className="relative">
-                <svg className="w-12 h-12 transform -rotate-90">
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-accent"
-                  />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-blue-500"
-                    strokeDasharray="126"
-                    strokeDashoffset="63"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-blue-600">
-                  50%
-                </div>
-              </div>
-              <div className="text-xs text-muted-foreground">Avg progress</div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Paused Projects Card */}
-        <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
-          <div className="absolute inset-0 bg-linear-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
-                  Paused
-                </p>
-                <p className="text-4xl font-bold text-amber-600">
-                  {
-                    projects.filter((p) =>
-                      [
-                        "Paused",
-                        "On Hold",
-                        "Blocked",
-                        "paused",
-                        "on_hold",
-                        "blocked",
-                      ].includes(p.status)
-                    ).length
-                  }
-                </p>
-                <div className="flex items-center gap-1 text-xs text-amber-600 mt-1">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>Needs attention</span>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-amber-500/10">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-              </div>
-            </div>
-            {/* Mini timeline */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <div className="text-xs text-muted-foreground">
-                  Pending review
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-accent" />
-                <div className="text-xs text-muted-foreground">
-                  Awaiting review
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-accent" />
-                <div className="text-xs text-muted-foreground">
-                  Team reassignment
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Dynamic Stats Section */}
+      <ProjectStats projects={projects} />
 
       {view === "gantt" ? (
         <GanttChart
@@ -337,35 +119,54 @@ export default function ProjectsPage() {
       )}
 
       {/* Advanced Project Management Features */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-        <CompletionPrediction projects={projects} />
-        <ResourceAllocation />
-      </div>
+      {/* Only show these if we have projects, to avoid clutter if empty */}
+      {projects.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+            <CompletionPrediction projects={projects} />
+            <ResourceAllocation />
+          </div>
 
-      <div className="mt-8">
-        <EnhancedBurndownChart
-          projectId="p1"
-          projectName="Website Redesign"
-          compareProjects={[
-            { id: "p2", name: "Mobile App MVP", color: "#f59e0b" },
-            { id: "p3", name: "API Integration", color: "#10b981" },
-          ]}
-        />
-      </div>
+          <div className="mt-8">
+            <EnhancedBurndownChart
+              projectId="p1"
+              projectName="Website Redesign"
+              compareProjects={[
+                { id: "p2", name: "Mobile App MVP", color: "#f59e0b" },
+                { id: "p3", name: "API Integration", color: "#10b981" },
+              ]}
+            />
+          </div>
 
-      <div className="mt-8">
-        <RiskBlockerDashboard />
-      </div>
+          <div className="mt-8">
+            <RiskBlockerDashboard />
+          </div>
 
-      <div className="mt-8">
-        <MilestoneGantt />
-      </div>
+          <div className="mt-8">
+            <MilestoneGantt />
+          </div>
 
-      <div className="mt-8">
-        <SprintPlanning />
-      </div>
+          <div className="mt-8">
+            <SprintPlanning />
+          </div>
+        </>
+      )}
 
-      {/* Removed modal; new project has a dedicated page */}
+      {/* Hidden Quick Task Modal controlled by other components if needed, or kept for consistency */}
+      <QuickTaskModal
+        open={addOpen}
+        setOpen={setAddOpen}
+        projectId={null}
+        teamMembers={[]}
+      />
     </section>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <ProjectsProvider>
+      <ProjectsContent />
+    </ProjectsProvider>
   );
 }

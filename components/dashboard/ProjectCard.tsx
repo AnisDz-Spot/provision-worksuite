@@ -332,10 +332,12 @@ export function ProjectCard({
                     className="relative group/avatar cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Open member details in Team page using name slug
-                      if (name) {
-                        const slug = name.toLowerCase().split(" ")[0];
-                        router.push(`/team/${slug}`);
+                      // Priority: UID -> ID -> Name Slug
+                      const targetId =
+                        uid ||
+                        (name ? name.toLowerCase().replace(/\s+/g, "-") : null);
+                      if (targetId) {
+                        router.push(`/team/${targetId}`);
                       }
                     }}
                   >
