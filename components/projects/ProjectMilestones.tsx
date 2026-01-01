@@ -13,6 +13,7 @@ import {
   getMilestoneTaskProgress,
 } from "@/lib/utils";
 import { useToaster } from "@/components/ui/Toaster";
+import { useLoading } from "@/context/LoadingContext";
 
 export function ProjectMilestones({ projectId }: { projectId: string }) {
   const { show } = useToaster();
@@ -29,6 +30,8 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     id: string;
     title: string;
   } | null>(null);
+  const { showLoader, hideLoader } = useLoading();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     const data = await getMilestonesByProject(projectId);
@@ -41,20 +44,30 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
 
   const onAdd = async () => {
     if (!title.trim()) return;
-    const m: Milestone = {
-      id: `m_${Date.now()}`,
-      projectId,
-      title: title.trim(),
-      start: start || undefined,
-      target: target || undefined,
-    };
-    await upsertMilestone(m);
-    setTitle("");
-    setStart("");
-    setTarget("");
-    setAdding(false);
-    refresh();
-    show("success", "Milestone created successfully");
+    setIsSubmitting(true);
+    showLoader("Creating milestone...");
+    try {
+      const m: Milestone = {
+        id: `m_${Date.now()}`,
+        projectId,
+        title: title.trim(),
+        start: start || undefined,
+        target: target || undefined,
+      };
+      await upsertMilestone(m);
+      setTitle("");
+      setStart("");
+      setTarget("");
+      setAdding(false);
+      await refresh();
+      show("success", "Milestone created successfully");
+    } catch (error) {
+      console.error(error);
+      show("error", "Failed to create milestone");
+    } finally {
+      setIsSubmitting(false);
+      hideLoader();
+    }
   };
 
   const startEdit = (m: Milestone) => {
@@ -66,17 +79,27 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
 
   const saveEdit = async () => {
     if (!editingId || !editTitle.trim()) return;
-    const m: Milestone = {
-      id: editingId,
-      projectId,
-      title: editTitle.trim(),
-      start: editStart || undefined,
-      target: editTarget || undefined,
-    };
-    await upsertMilestone(m);
-    setEditingId(null);
-    refresh();
-    show("success", "Milestone updated successfully");
+    setIsSubmitting(true);
+    showLoader("Updating milestone...");
+    try {
+      const m: Milestone = {
+        id: editingId,
+        projectId,
+        title: editTitle.trim(),
+        start: editStart || undefined,
+        target: editTarget || undefined,
+      };
+      await upsertMilestone(m);
+      setEditingId(null);
+      await refresh();
+      show("success", "Milestone updated successfully");
+    } catch (error) {
+      console.error(error);
+      show("error", "Failed to update milestone");
+    } finally {
+      setIsSubmitting(false);
+      hideLoader();
+    }
   };
 
   const cancelEdit = () => {
@@ -88,10 +111,18 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
 
   const onDelete = async () => {
     if (!deleteConfirm) return;
-    await deleteMilestone(deleteConfirm.id);
-    setDeleteConfirm(null);
-    refresh();
-    show("success", "Milestone deleted");
+    showLoader("Deleting milestone...");
+    try {
+      await deleteMilestone(deleteConfirm.id);
+      setDeleteConfirm(null);
+      await refresh();
+      show("success", "Milestone deleted");
+    } catch (error) {
+      console.error(error);
+      show("error", "Failed to delete milestone");
+    } finally {
+      hideLoader();
+    }
   };
 
   return (
@@ -123,9 +154,9 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
               variant="primary"
               size="sm"
               onClick={onAdd}
-              disabled={!title.trim()}
+              disabled={!title.trim() || isSubmitting}
             >
-              Save
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         )}
@@ -231,9 +262,10 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                           <X className="w-4 h-4" />
                         </button>
                         <button
-                          className="p-1 rounded hover:bg-accent text-primary cursor-pointer"
+                          className="p-1 rounded hover:bg-accent text-primary cursor-pointer disabled:opacity-50"
                           onClick={saveEdit}
                           title="Save"
+                          disabled={isSubmitting}
                         >
                           <Save className="w-4 h-4" />
                         </button>

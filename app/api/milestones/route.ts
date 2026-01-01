@@ -90,8 +90,10 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
+    const isNew = !id || id.startsWith("m_");
+
     const milestone = await prisma.milestone.upsert({
-      where: { id: id || "" },
+      where: { id: isNew ? "non-existent" : id },
       update: {
         name: title,
         description: description || null,
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
         order: order || 0,
       },
       create: {
-        id: id || undefined,
+        id: isNew ? undefined : id,
         projectId: project.id,
         name: title,
         description: description || null,
@@ -113,24 +115,32 @@ export async function POST(request: NextRequest) {
 
     // Record Activity
     if (dbUser) {
-      const { recordActivity } = await import("@/lib/activity");
-      await recordActivity(
-        dbUser.id,
-        "milestone",
-        milestone.id,
-        id ? "updated" : "created",
-        {
-          title: milestone.name,
-          projectId: project.uid,
-        }
-      );
+      try {
+        const { recordActivity } = await import("@/lib/activity");
+        await recordActivity(
+          dbUser.id,
+          "milestone",
+          milestone.id,
+          isNew ? "created" : "updated",
+          {
+            title: milestone.name,
+            projectId: project.uid,
+          }
+        );
+      } catch (activityError) {
+        console.error("Failed to record activity:", activityError);
+      }
     }
 
     return NextResponse.json({ success: true, data: milestone });
   } catch (error) {
+    console.error("API Error in POST /api/milestones:", error);
     log.error({ err: error }, "Failed to save milestone");
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      {
+        error: "Internal Server Error",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
