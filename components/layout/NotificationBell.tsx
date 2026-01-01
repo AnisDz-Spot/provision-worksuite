@@ -1,18 +1,26 @@
 "use client";
+import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { BellIcon, X, Check, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { useToaster } from "@/components/ui/Toaster";
 
 type Notification = {
   id: string;
-  type: "info" | "success" | "warning" | "error";
+  userId?: number;
+  type: string;
   title: string;
   message: string;
-  timestamp: string;
-  read: boolean;
-  projectId?: string;
-  projectName?: string;
+  link?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  requiresAcceptance?: boolean;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  // Legacy support for mock data icons
+  severity?: "info" | "success" | "warning" | "error";
 };
 
 export function NotificationBell() {
@@ -33,15 +41,41 @@ export function NotificationBell() {
     return () => clearInterval(interval);
   }, []);
 
-  const loadNotifications = () => {
+  const { show } = useToaster();
+
+  const loadNotifications = async () => {
     if (typeof window === "undefined") return;
+
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await fetch("/api/notifications");
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success) {
+            setNotifications(result.data);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching notifications from DB:", error);
+      }
+    }
+
     try {
       const stored = localStorage.getItem("pv:notifications");
       if (stored) {
-        setNotifications(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        // Map old format to new format if needed
+        const mapped = parsed.map((n: any) => ({
+          ...n,
+          isRead: n.read ?? n.isRead,
+          createdAt: n.timestamp ?? n.createdAt,
+          severity: n.type, // Map 'warning/info' to severity for icon rendering
+        }));
+        setNotifications(mapped);
       }
     } catch (error) {
-      console.error("Error loading notifications:", error);
+      console.error("Error loading notifications from localStorage:", error);
     }
   };
 
@@ -67,21 +101,79 @@ export function NotificationBell() {
     }
   }, [open]);
 
-  function markAsRead(id: string) {
-    const updated = notifications.map((n) =>
-      n.id === id ? { ...n, read: true } : n
+  async function markAsRead(id: string) {
+    if (shouldUseDatabaseData()) {
+      try {
+        await fetch(`/api/notifications/${id}/read`, { method: "PUT" });
+      } catch (e) {
+        console.error("Failed to mark notification as read", e);
+      }
+    }
+
+    const updated = notifications.map((n: Notification) =>
+      n.id === id ? { ...n, isRead: true } : n
     );
     setNotifications(updated);
-    localStorage.setItem("pv:notifications", JSON.stringify(updated));
+
+    if (!shouldUseDatabaseData()) {
+      localStorage.setItem("pv:notifications", JSON.stringify(updated));
+    }
   }
 
-  function deleteNotification(id: string) {
-    const updated = notifications.filter((n) => n.id !== id);
+  async function deleteNotification(id: string) {
+    if (shouldUseDatabaseData()) {
+      try {
+        await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+      } catch (e) {
+        console.error("Failed to delete notification", e);
+      }
+    }
+
+    const updated = notifications.filter((n: Notification) => n.id !== id);
     setNotifications(updated);
-    localStorage.setItem("pv:notifications", JSON.stringify(updated));
+
+    if (!shouldUseDatabaseData()) {
+      localStorage.setItem("pv:notifications", JSON.stringify(updated));
+    }
+  }
+
+  async function handleAccept(id: string) {
+    try {
+      const res = await fetch(`/api/notifications/${id}/accept`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        show("success", "Invitation accepted");
+        loadNotifications();
+      } else {
+        show("error", "Failed to accept invitation");
+      }
+    } catch (error) {
+      console.error("Accept error:", error);
+      show("error", "An error occurred");
+    }
+  }
+
+  async function handleReject(id: string) {
+    try {
+      const res = await fetch(`/api/notifications/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ note: "Declined by user" }),
+      });
+      if (res.ok) {
+        show("success", "Invitation declined");
+        loadNotifications();
+      } else {
+        show("error", "Failed to decline invitation");
+      }
+    } catch (error) {
+      console.error("Reject error:", error);
+      show("error", "An error occurred");
+    }
   }
 
   const formatTimestamp = (timestamp: string) => {
+    if (!timestamp) return "";
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -98,20 +190,23 @@ export function NotificationBell() {
 
   if (!mounted) return null;
 
-  // Filter notifications to only show those unread for 10+ minutes
-  const now = new Date().getTime();
-  const filteredNotifications = notifications.filter((n) => {
-    if (n.read) return true; // Always show read notifications
+  // Filter notifications to only show those unread for 10+ minutes (if not important)
+  const nowTime = new Date().getTime();
+  const filteredNotifications = notifications.filter((n: Notification) => {
+    if (n.isRead) return true; // Always show read notifications
+    if (n.requiresAcceptance) return true; // Always show important actions
 
-    const notifTime = new Date(n.timestamp).getTime();
-    const ageMinutes = (now - notifTime) / (1000 * 60);
+    const notifTime = new Date(n.createdAt).getTime();
+    const ageMinutes = (nowTime - notifTime) / (1000 * 60);
 
     // Only show unread notifications if they're 10+ minutes old
     return ageMinutes >= 10;
   });
 
-  const unreadCount = filteredNotifications.filter((n) => !n.read).length;
-  const recentNotifications = filteredNotifications.slice(0, 5);
+  const unreadCount = filteredNotifications.filter(
+    (n: Notification) => !n.isRead
+  ).length;
+  const recentNotifications = filteredNotifications.slice(0, 10);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -158,31 +253,67 @@ export function NotificationBell() {
               </div>
             ) : (
               <>
-                {recentNotifications.map((n) => (
+                {recentNotifications.map((n: Notification) => (
                   <div
                     key={n.id}
                     className={cn(
                       "p-4 border-b last:border-b-0 hover:bg-accent/10 transition-colors",
-                      !n.read && "bg-accent/5"
+                      !n.isRead && "bg-accent/5"
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-sm">{n.title}</span>
-                          {!n.read && (
+                          {!n.isRead && (
                             <span className="w-2 h-2 bg-blue-500 rounded-full" />
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground mb-2">
                           {n.message}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatTimestamp(n.timestamp)}
+
+                        {n.requiresAcceptance &&
+                          !n.acceptedAt &&
+                          !n.rejectedAt && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAccept(n.id);
+                                }}
+                                className="px-3 py-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-md hover:opacity-90 transition-opacity"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReject(n.id);
+                                }}
+                                className="px-3 py-1 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-md hover:bg-secondary/80 transition-colors"
+                              >
+                                Decline
+                              </button>
+                            </div>
+                          )}
+
+                        <div className="text-xs text-muted-foreground flex items-center justify-between">
+                          <span>{formatTimestamp(n.createdAt)}</span>
+                          {n.acceptedAt && (
+                            <span className="text-green-500 font-medium">
+                              Accepted
+                            </span>
+                          )}
+                          {n.rejectedAt && (
+                            <span className="text-red-500 font-medium">
+                              Declined
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        {!n.read && (
+                        {!n.isRead && (
                           <button
                             onClick={() => markAsRead(n.id)}
                             className="p-1 hover:bg-accent rounded"
