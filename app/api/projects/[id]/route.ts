@@ -177,6 +177,12 @@ export async function PUT(
 
     const { id } = await params;
 
+    // Fetch user from DB to get ID for activity logging
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true },
+    });
+
     // Resolve project (Slug -> UID -> ID)
     let project = await prisma.project.findFirst({ where: { slug: id } });
     if (!project)
@@ -303,13 +309,21 @@ export async function PUT(
     (revalidateTag as any)("projects");
 
     // Record Activity
-    await recordActivity(
-      project.userId, // Using existing project owner or current user? usually owner/admin can update.
-      "project",
-      project.uid,
-      "updated",
-      { name: updated.name }
-    );
+    if (dbUser) {
+      const activityData: any = { name: updated.name };
+      if (project.status !== updated.status) {
+        activityData.status = updated.status;
+        activityData.oldStatus = project.status;
+      }
+
+      await recordActivity(
+        dbUser.id,
+        "project",
+        project.uid,
+        project.status !== updated.status ? "status_changed" : "updated",
+        activityData
+      );
+    }
 
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {

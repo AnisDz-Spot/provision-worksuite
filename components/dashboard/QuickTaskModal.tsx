@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { getMilestonesByProject, upsertTask } from "@/lib/utils";
+import { upsertTask, getMilestonesByProject } from "@/lib/utils";
+import { shouldUseMockData } from "@/lib/dataSource";
+import { CreateTaskModal } from "@/components/tasks/board/CreateTaskModal";
+import { saveTasks } from "@/lib/data";
 
 interface QuickTaskModalProps {
   open: boolean;
@@ -29,7 +30,27 @@ export function QuickTaskModal({
   const [newTaskAssignee, setNewTaskAssignee] = React.useState("You");
   const [newTaskDue, setNewTaskDue] = React.useState("");
   const [newTaskPriority, setNewTaskPriority] = React.useState("medium");
-  const [newTaskMilestone, setNewTaskMilestone] = React.useState("");
+  const [newTaskEstimate, setNewTaskEstimate] = React.useState("");
+  const [newTaskDescription, setNewTaskDescription] = React.useState("");
+  const [newTaskLabels, setNewTaskLabels] = React.useState("");
+  const [newTaskType, setNewTaskType] = React.useState("feature");
+  const [milestoneId, setMilestoneId] = React.useState("");
+
+  // Transform teamMembers to match memberList prop
+  const memberList = React.useMemo(() => {
+    return [
+      { id: "current", name: "You" },
+      ...teamMembers.map((m) => ({
+        id: m.uid || m.id || m.name,
+        name: m.name,
+        avatarColor: undefined, // or derive if needed
+      })),
+    ];
+  }, [teamMembers]);
+
+  const milestones = React.useMemo(() => {
+    return projectId ? getMilestonesByProject(projectId) : [];
+  }, [projectId]);
 
   React.useEffect(() => {
     if (open) {
@@ -41,129 +62,103 @@ export function QuickTaskModal({
           .slice(0, 10)
       );
       setNewTaskPriority("medium");
-      setNewTaskMilestone("");
+      setNewTaskEstimate("");
+      setNewTaskDescription("");
+      setNewTaskLabels("");
+      setNewTaskType("feature");
+      setMilestoneId("");
     }
   }, [open]);
 
-  const handleCreate = () => {
+  const getAvatarColorClass = (color?: string) => {
+    // Simple helper since we don't have access to the one in KanbanBoard
+    // but CreateTaskModal expects it.
+    switch (color) {
+      case "indigo":
+        return "bg-indigo-500/10 text-indigo-600";
+      case "green":
+        return "bg-green-500/10 text-green-600";
+      default:
+        return "bg-primary/10 text-primary";
+    }
+  };
+
+  const handleCreate = async () => {
     if (!projectId || !newTaskTitle.trim()) return;
+
     try {
       const id = `task-${Date.now()}`;
-      upsertTask({
+
+      const taskData = {
         id,
         projectId: projectId,
         title: newTaskTitle.trim(),
-        status: "todo",
-        assignee: newTaskAssignee || "You",
+        status: "todo" as const,
+        assignee: newTaskAssignee,
         due: newTaskDue,
-        priority: newTaskPriority as any,
-        milestoneId: newTaskMilestone || undefined,
-      });
-      showToast("Task created", "success");
-      setOpen(false);
-    } catch {
-      showToast("Failed to create task", "error");
+        priority: newTaskPriority as "low" | "medium" | "high",
+        milestoneId: milestoneId || undefined,
+        estimateHours: newTaskEstimate
+          ? parseFloat(newTaskEstimate)
+          : undefined,
+        description: newTaskDescription,
+        labels: newTaskLabels
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        boardColumn: "todo",
+        loggedHours: 0,
+      };
+
+      if (!shouldUseMockData()) {
+        // Live Mode: Use API
+        const success = await saveTasks([taskData as any]);
+        if (success) {
+          showToast("Task created successfully", "success");
+          setOpen(false);
+          // Optional: trigger refresh if needed
+        } else {
+          showToast("Failed to create task", "error");
+        }
+      } else {
+        // Mock Mode: Local Storage
+        upsertTask(taskData);
+        showToast("Task created (Mock)", "success");
+        setOpen(false);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("An error occurred", "error");
     }
   };
 
   return (
-    <Modal open={open} onOpenChange={setOpen} size="lg">
-      <div className="space-y-6">
-        <h3 className="text-xl font-semibold">Create Task</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label htmlFor="task-title" className="text-sm font-medium">
-              Title
-            </label>
-            <input
-              id="task-title"
-              name="taskTitle"
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              placeholder="e.g., Draft project plan"
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="task-assignee" className="text-sm font-medium">
-              Assignee
-            </label>
-            <select
-              id="task-assignee"
-              name="taskAssignee"
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              value={newTaskAssignee}
-              onChange={(e) => setNewTaskAssignee(e.target.value)}
-            >
-              <option value="You">You</option>
-              {teamMembers.map((member) => (
-                <option key={member.id} value={member.name}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="task-due" className="text-sm font-medium">
-              Due Date
-            </label>
-            <input
-              id="task-due"
-              name="taskDue"
-              type="date"
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              value={newTaskDue}
-              onChange={(e) => setNewTaskDue(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="task-priority" className="text-sm font-medium">
-              Priority
-            </label>
-            <select
-              id="task-priority"
-              name="taskPriority"
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              value={newTaskPriority}
-              onChange={(e) => setNewTaskPriority(e.target.value)}
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-          {projectId && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Milestone</label>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={newTaskMilestone}
-                onChange={(e) => setNewTaskMilestone(e.target.value)}
-              >
-                <option value="">None</option>
-                {getMilestonesByProject(projectId).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleCreate}
-            disabled={!newTaskTitle.trim()}
-          >
-            Create Task
-          </Button>
-        </div>
-      </div>
-    </Modal>
+    <CreateTaskModal
+      isOpen={open}
+      onClose={() => setOpen(false)}
+      newTaskTitle={newTaskTitle}
+      setNewTaskTitle={setNewTaskTitle}
+      newTaskAssignee={newTaskAssignee}
+      setNewTaskAssignee={setNewTaskAssignee}
+      newTaskDue={newTaskDue}
+      setNewTaskDue={setNewTaskDue}
+      newTaskPriority={newTaskPriority}
+      setNewTaskPriority={setNewTaskPriority}
+      newTaskEstimate={newTaskEstimate}
+      setNewTaskEstimate={setNewTaskEstimate}
+      newTaskDescription={newTaskDescription}
+      setNewTaskDescription={setNewTaskDescription}
+      newTaskLabels={newTaskLabels}
+      setNewTaskLabels={setNewTaskLabels}
+      newTaskType={newTaskType}
+      setNewTaskType={setNewTaskType}
+      milestoneId={milestoneId}
+      setMilestoneId={setMilestoneId}
+      memberList={memberList}
+      projectId={projectId || undefined}
+      milestones={milestones}
+      addTask={handleCreate}
+      getAvatarColorClass={getAvatarColorClass}
+    />
   );
 }

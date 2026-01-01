@@ -54,6 +54,7 @@ export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
     "all"
   );
+  const [baseCapacity, setBaseCapacity] = useState(40);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const { isMock, isDatabase } = useDataMode();
 
@@ -108,7 +109,7 @@ export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
             id: u.uid,
             name: u.name,
             role: u.role || "Team Member",
-            capacity: 40,
+            capacity: 40, // Base default, but will be overridden by state calculation if needed
             projects: allocationList,
           };
         });
@@ -129,12 +130,16 @@ export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
 
   const memberStats = useMemo(() => {
     return teamMembers.map((member) => {
+      // Use the selected baseCapacity instead of the member's static capacity
+      // unless member has a specific override (future proofing)
+      const effectiveCapacity = baseCapacity;
+
       const totalAllocated = member.projects.reduce(
         (sum, p) => sum + p.allocated,
         0
       );
-      const utilization = (totalAllocated / member.capacity) * 100;
-      const available = member.capacity - totalAllocated;
+      const utilization = (totalAllocated / effectiveCapacity) * 100;
+      const available = effectiveCapacity - totalAllocated;
 
       let status: "available" | "optimal" | "full" | "overallocated" =
         "available";
@@ -144,13 +149,14 @@ export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
 
       return {
         ...member,
+        capacity: effectiveCapacity, // Update capacity to show reflected value
         totalAllocated,
         utilization,
         available,
         status,
       };
     });
-  }, [members]);
+  }, [teamMembers, baseCapacity]);
 
   const filteredMembers = useMemo(() => {
     switch (filter) {
@@ -219,21 +225,32 @@ export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Users className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">Resource Allocation</h2>
-            <p className="text-sm text-muted-foreground">
-              Team capacity planning and utilization
-            </p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Capacity:</span>
+              <select
+                value={baseCapacity}
+                onChange={(e) => setBaseCapacity(Number(e.target.value))}
+                className="bg-transparent border-b border-muted-foreground/30 py-0.5 px-1 focus:outline-none focus:border-primary text-foreground font-medium"
+              >
+                <option value={30}>30h / week</option>
+                <option value={35}>35h / week</option>
+                <option value={40}>40h / week (Std)</option>
+                <option value={45}>45h / week</option>
+                <option value={50}>50h / week</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Filter buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={() => setFilter("all")}
             className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
