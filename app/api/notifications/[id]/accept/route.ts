@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from \"next/server\";
-import prisma from \"@/lib/prisma\";
-import { getAuthenticatedUser } from \"@/lib/auth\";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function POST(
   try {
     const user = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json({ error: \"Unauthorized\" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -21,7 +21,7 @@ export async function POST(
 
     if (!notification) {
       return NextResponse.json(
-        { error: \"Notification not found\" },
+        { error: "Notification not found" },
         { status: 404 }
       );
     }
@@ -33,13 +33,13 @@ export async function POST(
     });
 
     if (!dbUser || notification.userId !== dbUser.id) {
-      return NextResponse.json({ error: \"Forbidden\" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Check if already responded
     if (notification.acceptedAt || notification.rejectedAt) {
       return NextResponse.json(
-        { error: \"Already responded to this notification\" },
+        { error: "Already responded to this notification" },
         { status: 400 }
       );
     }
@@ -54,10 +54,10 @@ export async function POST(
     });
 
     // If this is a project_invitation, update ProjectMember
-    if (notification.type === \"project_invitation\" && notification.link) {
+    if (notification.type === "project_invitation" && notification.link) {
       // Extract project UID/slug from link (/projects/{id})
-      const projectId = notification.link.split(\"/\").pop();
-      
+      const projectId = notification.link.split("/").pop();
+
       if (projectId) {
         // Find project
         let project = await prisma.project.findFirst({
@@ -86,9 +86,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, notification: updated });
   } catch (error) {
-    console.error(\"Accept notification error:\", error);
+    console.error("Accept notification error:", error);
     return NextResponse.json(
-      { error: \"Internal Server Error\" },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

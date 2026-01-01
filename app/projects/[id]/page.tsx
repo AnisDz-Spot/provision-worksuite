@@ -21,6 +21,7 @@ import { ProjectMilestones } from "@/components/projects/ProjectMilestones";
 import { ProjectComments } from "@/components/projects/ProjectComments";
 import { ProjectDependencies } from "@/components/projects/ProjectDependencies";
 import { ProjectFiles } from "@/components/projects/ProjectFiles";
+import { MemberAcceptanceStatus } from "@/components/projects/MemberAcceptanceStatus";
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { RiskMatrix } from "@/components/projects/RiskMatrix";
 import { Card } from "@/components/ui/Card";
@@ -627,6 +628,9 @@ export default function ProjectDetailsPage() {
 
               {/* Files */}
               <ProjectFiles projectId={project.id} readOnly={true} />
+
+              {/* Member Acceptance Status (for admins/managers) */}
+              <MemberAcceptanceStatus projectId={project.id} />
             </div>
 
             {/* Right Sidebar */}

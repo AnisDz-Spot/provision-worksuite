@@ -62,7 +62,7 @@ export async function GET(
       orderBy: { joinedAt: "desc" },
     });
 
-    const formattedMembers = members.map((m) => ({
+    const formattedMembers = members.map((m: any) => ({
       userId: m.user.id,
       userName: m.user.name,
       userEmail: m.user.email,
