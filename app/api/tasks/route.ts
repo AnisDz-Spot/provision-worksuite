@@ -134,6 +134,7 @@ export async function POST(req: Request) {
       order,
       parentTaskId,
       watchers,
+      milestoneId,
     } = body;
 
     if (!projectId || !title) {
@@ -220,6 +221,7 @@ export async function POST(req: Request) {
         order: order || 0,
         parentTaskId: parentTaskId || null,
         watchers: watchers || [],
+        milestoneId: milestoneId || null,
       },
       include: {
         project: true,

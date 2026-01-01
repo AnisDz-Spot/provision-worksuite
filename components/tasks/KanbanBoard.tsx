@@ -529,7 +529,8 @@ export function KanbanBoard({
       assignee: editAssignee,
       due: editDue,
       priority: editPriority as "low" | "medium" | "high",
-      milestoneId: editMilestone || undefined,
+      milestoneId:
+        editMilestone && editMilestone !== "" ? editMilestone : undefined,
       estimateHours: editEstimate ? parseFloat(editEstimate) : undefined,
       loggedHours: detailTask.loggedHours || 0,
       description: editDescription,
@@ -657,7 +658,8 @@ export function KanbanBoard({
         assignee: newTaskAssignee,
         due: newTaskDue,
         priority: newTaskPriority as "high" | "medium" | "low",
-        milestoneId: milestoneId || undefined,
+        milestoneId:
+          milestoneId && milestoneId !== "" ? milestoneId : undefined,
         estimateHours: newTaskEstimate
           ? parseFloat(newTaskEstimate)
           : undefined,

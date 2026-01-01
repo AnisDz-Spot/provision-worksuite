@@ -59,6 +59,7 @@ export interface Task {
   dueDate?: string;
   tags?: string[];
   progress?: number;
+  milestoneId?: string;
 }
 
 export interface User {

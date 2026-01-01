@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
             boardColumn: task.status || "todo",
             estimateHours: task.estimateHours || null,
             labels: task.labels || task.tags || [],
+            milestoneId: task.milestoneId || null,
           },
           update: {
             projectId: resolvedProjectId,
@@ -160,6 +161,7 @@ export async function POST(request: NextRequest) {
             boardColumn: task.status || "todo",
             estimateHours: task.estimateHours || null,
             labels: task.labels || task.tags || [],
+            milestoneId: task.milestoneId || null,
           },
         });
         successCount++;

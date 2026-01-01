@@ -96,6 +96,8 @@ export async function PATCH(
         boardColumn: body.boardColumn,
         order: body.order,
         assigneeId: body.assigneeId,
+        milestoneId:
+          body.milestoneId !== undefined ? body.milestoneId : undefined,
       },
     });
 
