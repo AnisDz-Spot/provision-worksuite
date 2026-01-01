@@ -53,10 +53,14 @@ export async function GET(
         },
         files: true,
         tasks: {
-          select: {
-            status: true,
-            estimateHours: true,
-            loggedHours: true,
+          include: {
+            assignee: {
+              select: {
+                uid: true,
+                name: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
       },

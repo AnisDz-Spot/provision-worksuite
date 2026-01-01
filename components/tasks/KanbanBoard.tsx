@@ -111,7 +111,12 @@ const priorityColors: Record<string, string> = {
 type KanbanBoardProps = {
   projectId?: string;
   projectUid?: string;
-  projectMembers?: { name: string; avatarUrl?: string }[];
+  projectMembers?: {
+    id?: string;
+    uid?: string;
+    name: string;
+    avatarUrl?: string;
+  }[];
   onTaskUpdate?: () => void;
 };
 
@@ -176,7 +181,10 @@ export function KanbanBoard({
   const memberList: Array<{ id: string; name: string; avatarColor?: string }> =
     (
       projectMembers && projectMembers.length > 0
-        ? projectMembers.map((m, i) => ({ id: `pm-${i}`, name: m.name }))
+        ? projectMembers.map((m) => ({
+            id: m.uid || m.id || m.name,
+            name: m.name,
+          }))
         : shouldUseMockData()
           ? (users as any)
           : []
