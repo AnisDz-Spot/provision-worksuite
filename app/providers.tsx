@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth/AuthContext";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { TimeTrackerProvider } from "@/components/timetracking/TimeTrackingWidget";
 import { ChatProvider } from "@/components/chat/ChatContext";
+import { CallProvider } from "@/components/meetings/CallContext";
 import { initSentry } from "@/lib/sentry";
 
 import { SessionProvider } from "next-auth/react";
@@ -26,7 +27,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <AuthProvider>
               <SidebarProvider>
                 <ChatProvider>
-                  <TimeTrackerProvider>{children}</TimeTrackerProvider>
+                  <CallProvider>
+                    <TimeTrackerProvider>{children}</TimeTrackerProvider>
+                  </CallProvider>
                 </ChatProvider>
               </SidebarProvider>
             </AuthProvider>
