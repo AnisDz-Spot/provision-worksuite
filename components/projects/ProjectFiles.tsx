@@ -21,7 +21,7 @@ import {
   ProjectFile,
 } from "@/lib/utils";
 import { useToaster } from "@/components/ui/Toaster";
-import { fetchWithCsrf } from "@/lib/csrf-client";
+import { fetchWithCsrf, getCsrfToken } from "@/lib/csrf-client";
 
 interface ProjectFilesProps {
   projectId: string;
@@ -35,6 +35,10 @@ export function ProjectFiles({
   const { show } = useToaster();
   const [files, setFiles] = React.useState<ProjectFile[]>([]);
   const [uploading, setUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [currentUploadName, setCurrentUploadName] = React.useState<
+    string | null
+  >(null);
   const [previewFile, setPreviewFile] = React.useState<ProjectFile | null>(
     null
   );
@@ -79,6 +83,7 @@ export function ProjectFiles({
     if (!selectedFiles || selectedFiles.length === 0) return;
 
     setUploading(true);
+    setUploadProgress(0);
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
@@ -88,26 +93,50 @@ export function ProjectFiles({
           continue;
         }
 
+        setCurrentUploadName(file.name);
+        setUploadProgress(0);
+
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetchWithCsrf(`/api/projects/${projectId}/files`, {
-          method: "POST",
-          body: formData,
-        });
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", `/api/projects/${projectId}/files`);
+          xhr.setRequestHeader("x-csrf-token", getCsrfToken() || "");
 
-        if (!res.ok) {
-          const json = await res.json();
-          throw new Error(json.error || "Upload failed");
-        }
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percent = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress(percent);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(xhr.response);
+            } else {
+              try {
+                const errorData = JSON.parse(xhr.responseText);
+                reject(new Error(errorData.error || "Upload failed"));
+              } catch {
+                reject(new Error("Upload failed"));
+              }
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.send(formData);
+        });
       }
       refresh();
-      show("success", "Files uploaded securely");
-    } catch (error) {
+      show("success", "Files uploaded successfully");
+    } catch (error: any) {
       console.error("Upload failed:", error);
-      show("error", "Failed to upload files");
+      show("error", error.message || "Failed to upload files");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setCurrentUploadName(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -176,6 +205,24 @@ export function ProjectFiles({
             accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx"
           />
         </div>
+
+        {uploading && (
+          <div className="space-y-2 py-2 border-b border-border mb-4 animate-in fade-in slide-in-from-top-1">
+            <div className="flex justify-between text-xs font-medium">
+              <span className="truncate flex-1 mr-4">
+                Uploading:{" "}
+                <span className="text-primary">{currentUploadName}</span>
+              </span>
+              <span className="text-muted-foreground">{uploadProgress}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-accent rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-300 ease-out rounded-full"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {files.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
