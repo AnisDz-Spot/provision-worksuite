@@ -37,6 +37,7 @@ export function QuickTaskModal({
   const [newTaskLabels, setNewTaskLabels] = React.useState("");
   const [newTaskType, setNewTaskType] = React.useState("feature");
   const [milestoneId, setMilestoneId] = React.useState("");
+  const [milestones, setMilestones] = React.useState<any[]>([]);
 
   // Transform teamMembers to match memberList prop
   const memberList = React.useMemo(() => {
@@ -50,8 +51,12 @@ export function QuickTaskModal({
     ];
   }, [teamMembers]);
 
-  const milestones = React.useMemo(() => {
-    return projectId ? getMilestonesByProject(projectId) : [];
+  React.useEffect(() => {
+    if (projectId) {
+      getMilestonesByProject(projectId).then(setMilestones);
+    } else {
+      setMilestones([]);
+    }
   }, [projectId]);
 
   React.useEffect(() => {

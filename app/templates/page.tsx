@@ -59,10 +59,10 @@ export default function TemplatesPage() {
     setTemplates(getAllTemplates());
   }
 
-  function handleCreateProject() {
+  async function handleCreateProject() {
     if (!selectedTemplate || !projectName.trim()) return;
     try {
-      const projectId = createProjectFromTemplate(
+      const projectId = await createProjectFromTemplate(
         selectedTemplate.id,
         projectName.trim(),
         owner,

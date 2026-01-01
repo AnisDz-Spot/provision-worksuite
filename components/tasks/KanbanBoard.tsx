@@ -242,6 +242,7 @@ export function KanbanBoard({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [blocked, setBlocked] = useState(false);
+  const [milestones, setMilestones] = useState<any[]>([]);
 
   const refreshFromStorage = async () => {
     if (!projectId) return; // No persistence without project context
@@ -272,11 +273,10 @@ export function KanbanBoard({
       tasks = getTasksByProject(projectId);
     }
 
+    const ms = await getMilestonesByProject(projectId);
+    setMilestones(ms);
     const msLookup = new Map<string, string>();
-    try {
-      const ms = getMilestonesByProject(projectId);
-      ms.forEach((m) => msLookup.set(m.id, m.title));
-    } catch {}
+    ms.forEach((m) => msLookup.set(m.id, m.title));
 
     const toCardTask = (t: TaskItem) => ({
       id: t.id,
@@ -759,7 +759,7 @@ export function KanbanBoard({
                   className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm min-w-32"
                 >
                   <option value="all">All</option>
-                  {getMilestonesByProject(projectId).map((m) => (
+                  {milestones.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.title}
                     </option>
@@ -931,7 +931,7 @@ export function KanbanBoard({
         setMilestoneId={setMilestoneId}
         memberList={memberList}
         projectId={projectId}
-        milestones={projectId ? getMilestonesByProject(projectId) : []}
+        milestones={milestones}
         addTask={addTask}
         getAvatarColorClass={getAvatarColorClass}
       />
@@ -968,7 +968,7 @@ export function KanbanBoard({
         setEditEstimate={setEditEstimate}
         editMilestone={editMilestone}
         setEditMilestone={setEditMilestone}
-        milestones={projectId ? getMilestonesByProject(projectId) : []}
+        milestones={milestones}
         timeLogInput={timeLogInput}
         setTimeLogInput={setTimeLogInput}
         timeLogNote={timeLogNote}

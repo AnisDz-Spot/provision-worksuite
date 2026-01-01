@@ -15,7 +15,23 @@ export type Milestone = {
   description?: string;
 };
 
-// ... existing read/write helpers remain same for mock mode ...
+function readMilestones(): Milestone[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("pv:milestones");
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeMilestones(items: Milestone[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("pv:milestones", JSON.stringify(items));
+  } catch {}
+}
 
 export async function getMilestonesByProject(
   projectId: string
@@ -86,9 +102,14 @@ export function getMilestoneTaskProgress(
   return { total, done, percent };
 }
 
-export function getOverdueMilestoneCount(projectId: string): number {
+export function getOverdueMilestoneCountSync(
+  projectId: string,
+  providedMilestones?: Milestone[]
+): number {
   const today = new Date().toISOString().slice(0, 10);
-  const milestones = getMilestonesByProject(projectId);
+  const milestones =
+    providedMilestones ||
+    readMilestones().filter((m) => m.projectId === projectId);
   return milestones.filter((m) => {
     if (!m.target) return false;
     if (m.target >= today) return false;
@@ -96,4 +117,11 @@ export function getOverdueMilestoneCount(projectId: string): number {
     const prog = getMilestoneTaskProgress(projectId, m.id);
     return prog.percent < 100;
   }).length;
+}
+
+export async function getOverdueMilestoneCount(
+  projectId: string
+): Promise<number> {
+  const milestones = await getMilestonesByProject(projectId);
+  return getOverdueMilestoneCountSync(projectId, milestones);
 }

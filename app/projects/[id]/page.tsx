@@ -1101,10 +1101,10 @@ export default function ProjectDetailsPage() {
             </Button>
             <Button
               variant="primary"
-              onClick={() => {
+              onClick={async () => {
                 if (!templateName.trim()) return;
                 try {
-                  saveAsTemplate(
+                  await saveAsTemplate(
                     templateName.trim(),
                     templateDesc.trim(),
                     templateCategory,

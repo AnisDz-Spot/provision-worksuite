@@ -4,7 +4,7 @@
 import { getProjectEvents } from "./project-events";
 import { getTaskCompletionForProject, getTasksByProject } from "./tasks";
 import { getProjectDependencies } from "./project-dependencies";
-import { getOverdueMilestoneCount } from "./milestones";
+import { getOverdueMilestoneCountSync } from "./milestones";
 
 export type HealthScore = {
   score: number; // 0-100
@@ -52,8 +52,10 @@ export function calculateProjectHealth(
     id: string;
     deadline?: string;
     status?: string;
+    [key: string]: any;
   },
-  providedTasks?: any[]
+  providedTasks?: any[],
+  providedMilestones?: any[]
 ): HealthScore {
   let score = 100;
   const factors = {
@@ -142,7 +144,10 @@ export function calculateProjectHealth(
   }
 
   // Overdue milestones penalty
-  const overdueMilestones = getOverdueMilestoneCount(project.id);
+  const overdueMilestones = getOverdueMilestoneCountSync(
+    project.id,
+    providedMilestones
+  );
   const msPenaltyPer =
     getHealthWeights().milestoneOverduePenaltyPerMilestone ?? 3;
   const msPenaltyCap = getHealthWeights().milestoneOverduePenaltyCap ?? 15;

@@ -58,12 +58,12 @@ export function getTemplateById(id: string): ProjectTemplate | null {
   return readTemplates().find((t) => t.id === id) || null;
 }
 
-export function saveAsTemplate(
+export async function saveAsTemplate(
   name: string,
   description: string,
   category: string,
   projectId: string
-): ProjectTemplate {
+): Promise<ProjectTemplate> {
   const projects =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("pv:projects") || "[]")
@@ -79,7 +79,8 @@ export function saveAsTemplate(
     assigneeRole: "member",
   }));
 
-  const milestones = getMilestonesByProject(projectId).map((m) => ({
+  const ms = await getMilestonesByProject(projectId);
+  const milestones = ms.map((m) => ({
     name: m.title,
     description: m.description || "",
     daysFromStart: 0,
@@ -110,12 +111,12 @@ export function saveAsTemplate(
   return template;
 }
 
-export function createProjectFromTemplate(
+export async function createProjectFromTemplate(
   templateId: string,
   projectName: string,
   owner: string,
   startDate: string
-): string {
+): Promise<string> {
   const template = getTemplateById(templateId);
   if (!template) throw new Error("Template not found");
 
@@ -162,18 +163,18 @@ export function createProjectFromTemplate(
   });
 
   if (template.milestones) {
-    template.milestones.forEach((m) => {
+    for (const m of template.milestones) {
       const dueDate = new Date(
         start.getTime() + m.daysFromStart * 24 * 60 * 60 * 1000
       );
-      upsertMilestone({
+      await upsertMilestone({
         id: `milestone_${Date.now()}_${Math.random().toString(16).slice(2)}`,
         projectId,
         title: m.name,
         target: dueDate.toISOString().split("T")[0],
         description: m.description,
       });
-    });
+    }
   }
 
   logProjectEvent(projectId, "create", { fromTemplate: templateId });
