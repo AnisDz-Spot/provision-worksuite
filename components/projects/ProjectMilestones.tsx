@@ -30,15 +30,16 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     title: string;
   } | null>(null);
 
-  const refresh = React.useCallback(() => {
-    setItems(getMilestonesByProject(projectId));
+  const refresh = React.useCallback(async () => {
+    const data = await getMilestonesByProject(projectId);
+    setItems(data);
   }, [projectId]);
 
   React.useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const onAdd = () => {
+  const onAdd = async () => {
     if (!title.trim()) return;
     const m: Milestone = {
       id: `m_${Date.now()}`,
@@ -47,7 +48,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       start: start || undefined,
       target: target || undefined,
     };
-    upsertMilestone(m);
+    await upsertMilestone(m);
     setTitle("");
     setStart("");
     setTarget("");
@@ -63,7 +64,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     setEditTarget(m.target || "");
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId || !editTitle.trim()) return;
     const m: Milestone = {
       id: editingId,
@@ -72,7 +73,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       start: editStart || undefined,
       target: editTarget || undefined,
     };
-    upsertMilestone(m);
+    await upsertMilestone(m);
     setEditingId(null);
     refresh();
     show("success", "Milestone updated successfully");
@@ -85,9 +86,9 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     setEditTarget("");
   };
 
-  const onDelete = () => {
+  const onDelete = async () => {
     if (!deleteConfirm) return;
-    deleteMilestone(deleteConfirm.id);
+    await deleteMilestone(deleteConfirm.id);
     setDeleteConfirm(null);
     refresh();
     show("success", "Milestone deleted");

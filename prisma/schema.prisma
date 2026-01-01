@@ -300,9 +300,11 @@ model Milestone {
   projectId   Int       @map("project_id")
   name        String
   description String?
+  startDate   DateTime? @map("start_date")
   dueDate     DateTime? @map("due_date")
   status      String    @default("pending") // pending, in-progress, completed
   order       Int       @default(0)
+  metadata    Json?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
