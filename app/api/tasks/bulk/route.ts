@@ -69,6 +69,41 @@ export async function POST(request: NextRequest) {
       projectIdToUidMap.set(p.id, p.uid);
     });
 
+    // Pre-resolve assignees
+    const assigneeStrings = [
+      ...new Set(
+        tasks
+          .map((t: any) => t.assignee)
+          .filter(
+            (a: any) =>
+              a && typeof a === "string" && a !== "You" && a !== "current"
+          )
+      ),
+    ] as string[];
+
+    const dbUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { in: assigneeStrings } },
+          { uid: { in: assigneeStrings } },
+        ],
+      },
+      select: { id: true, uid: true, name: true },
+    });
+
+    const userMap = new Map<string, number>();
+    dbUsers.forEach((u) => {
+      userMap.set(u.uid, u.id);
+      userMap.set(u.name, u.id);
+    });
+
+    // Fetch authenticated user's numeric ID
+    const dbCurrentUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true },
+    });
+    const currentUserId = dbCurrentUser?.id;
+
     // Process each task sequentially to avoid transaction complexity
     let successCount = 0;
     const errors: string[] = [];
@@ -81,6 +116,18 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Resolve assigneeId
+        let assigneeId: number | null = null;
+        if (task.assignee === "You" || task.assignee === "current") {
+          assigneeId = currentUserId || null;
+        } else if (task.assignee) {
+          assigneeId = userMap.get(task.assignee) || null;
+          // Fallback if it's a numeric ID already
+          if (!assigneeId && !isNaN(parseInt(task.assignee))) {
+            assigneeId = parseInt(task.assignee);
+          }
+        }
+
         await prisma.task.upsert({
           where: { uid: task.id || task.uid || "" },
           create: {
@@ -90,6 +137,7 @@ export async function POST(request: NextRequest) {
             description: task.description || null,
             status: task.status || "todo",
             priority: task.priority || "medium",
+            assigneeId,
             due:
               task.dueDate || task.due
                 ? new Date(task.dueDate || task.due)
@@ -104,6 +152,7 @@ export async function POST(request: NextRequest) {
             description: task.description || null,
             status: task.status || "todo",
             priority: task.priority || "medium",
+            assigneeId,
             due:
               task.dueDate || task.due
                 ? new Date(task.dueDate || task.due)

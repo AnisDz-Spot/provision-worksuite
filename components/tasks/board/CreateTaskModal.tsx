@@ -93,7 +93,9 @@ export function CreateTaskModal({
                 >
                   {(() => {
                     const m = memberList.find(
-                      (u) => u.name === newTaskAssignee
+                      (u) =>
+                        (u.uid || u.id) === newTaskAssignee ||
+                        u.name === newTaskAssignee
                     );
                     const cls = getAvatarColorClass((m as any)?.avatarColor);
                     return (
@@ -106,7 +108,9 @@ export function CreateTaskModal({
                         >
                           {newTaskAssignee.charAt(0)}
                         </div>
-                        <span className="text-sm">{newTaskAssignee}</span>
+                        <span className="text-sm">
+                          {m?.name || newTaskAssignee}
+                        </span>
                       </>
                     );
                   })()}
@@ -124,7 +128,7 @@ export function CreateTaskModal({
                     {m.name.charAt(0)}
                   </div>
                 ),
-                onClick: () => setNewTaskAssignee(m.name),
+                onClick: () => setNewTaskAssignee(m.uid || m.id || m.name),
               }))}
               searchable
               searchPlaceholder="Search members..."
