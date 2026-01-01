@@ -29,7 +29,7 @@ export async function GET(
     }
 
     const files = await prisma.file.findMany({
-      where: { projectId: project.id },
+      where: { projectUid: project.uid },
       include: {
         uploader: {
           select: { name: true },
@@ -134,7 +134,7 @@ export async function POST(
         fileUrl: dataUrl,
         fileSize: buffer.length,
         mimeType: finalMime,
-        projectId: project.id,
+        projectUid: project.uid,
         uploadedBy: dbUser.id,
       },
       include: {

@@ -217,7 +217,6 @@ export async function PUT(
         coverUrl: body.cover,
         sla: body.sla,
         isTemplate: body.isTemplate,
-        attachments: body.attachments,
         // clientLogo is removed as per requirement, but if passed and needed for fallback:
         // clientLogo: body.clientLogo
       },
@@ -263,6 +262,7 @@ export async function PUT(
             projectId: project.id,
             userId: uid,
             role: "member",
+            invitedBy: dbUser?.id,
           })),
           skipDuplicates: true,
         });
@@ -298,6 +298,7 @@ export async function PUT(
                   message: `You have been added to the project "${project.name}"`,
                   link: `/projects/${project.slug || project.uid}`,
                   isRead: false,
+                  requiresAcceptance: true,
                 },
               });
             })

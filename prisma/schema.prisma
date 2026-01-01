@@ -85,6 +85,7 @@ model User {
   // Relations
   projects            Project[]
   projectMemberships  ProjectMember[]
+  invitedMembers      ProjectMember[]      @relation("InvitedMembers")
   comments            Comment[]
   notifications       Notification[]
   activities          Activity[]
@@ -186,7 +187,6 @@ model Project {
   coverUrl    String?   @map("cover_url")
   clientLogo  String?   @map("client_logo")
   sla         String?
-  attachments Json?     @default("[]")
 
   // Creator/Owner reference (legacy support)
   userId Int     @map("user_id")
@@ -279,13 +279,19 @@ model ProjectMember {
   role      String   @default("member") // owner, admin, member, viewer
   joinedAt  DateTime @default(now()) @map("joined_at")
 
+  // Invitation tracking
+  invitationAcceptedAt DateTime? @map("invitation_accepted_at")
+  invitedBy            Int?      @map("invited_by")
+
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inviter User?   @relation("InvitedMembers", fields: [invitedBy], references: [id], onDelete: SetNull)
 
   @@unique([projectId, userId])
   @@index([projectId])
   @@index([userId])
+  @@index([invitedBy])
   @@map("project_members")
 }
 
@@ -419,12 +425,18 @@ model Comment {
 model Notification {
   id        String   @id @default(uuid())
   userId    Int      @map("user_id")
-  type      String // task_assigned, comment_added, deadline_reminder, etc.
+  type      String // task_assigned, comment_added, deadline_reminder, project_invitation, etc.
   title     String
   message   String
   link      String?
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
+
+  // Acceptance tracking for invitations
+  requiresAcceptance Boolean   @default(false) @map("requires_acceptance")
+  acceptedAt         DateTime? @map("accepted_at")
+  rejectedAt         DateTime? @map("rejected_at")
+  responseNote       String?   @map("response_note")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -432,6 +444,7 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([requiresAcceptance])
   @@map("notifications")
 }
 
@@ -465,17 +478,17 @@ model File {
   mimeType  String   @map("mime_type")
   createdAt DateTime @default(now()) @map("created_at")
 
-  // Optional associations
-  projectId  Int?    @map("project_id")
+  // Optional associations - using UID references
+  projectUid String? @map("project_uid")
   taskId     String? @map("task_id")
   uploadedBy Int     @map("uploaded_by")
 
   // Relations
-  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project  Project? @relation(fields: [projectUid], references: [uid], onDelete: SetNull)
   task     Task?    @relation(fields: [taskId], references: [uid], onDelete: SetNull)
   uploader User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
 
-  @@index([projectId])
+  @@index([projectUid])
   @@index([taskId])
   @@index([uploadedBy])
   @@map("files")
