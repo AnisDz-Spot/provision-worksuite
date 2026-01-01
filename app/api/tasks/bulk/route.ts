@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     });
 
     const userMap = new Map<string, number>();
-    dbUsers.forEach((u) => {
+    dbUsers.forEach((u: any) => {
       userMap.set(u.uid, u.id);
       userMap.set(u.name, u.id);
     });
