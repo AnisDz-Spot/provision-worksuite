@@ -8,6 +8,7 @@ type Activity = {
   who: string;
   action: string;
   when: string;
+  createdAt: string;
   link?: string;
   type?: "project" | "task" | "user";
 };
@@ -28,8 +29,27 @@ export function RecentActivity() {
           const { tasks, projects } = result.data;
           const recentActivities: Activity[] = [];
 
+          // Helper for relative time
+          const timeAgo = (dateStr: string) => {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffInSeconds = Math.floor(
+              (now.getTime() - date.getTime()) / 1000
+            );
+
+            if (diffInSeconds < 60) return "Just now";
+            if (diffInSeconds < 3600)
+              return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400)
+              return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            if (diffInSeconds < 604800)
+              return `${Math.floor(diffInSeconds / 86400)}d ago`;
+            return date.toLocaleDateString();
+          };
+
           // Map Tasks
-          tasks.forEach((task: any, idx: number) => {
+          tasks.forEach((task: any) => {
             recentActivities.push({
               id: `task_${task.id}`,
               who: task.assignee?.name || "Someone",
@@ -37,22 +57,31 @@ export function RecentActivity() {
                 task.status === "done" || task.status === "completed"
                   ? `completed task ${task.title}`
                   : `updated task ${task.title}`,
-              when: idx === 0 ? "Just now" : idx === 1 ? "15m ago" : "2h ago", // Fallback for time
+              when: timeAgo(task.createdAt),
+              createdAt: task.createdAt,
               link: `/tasks/${task.id}`,
               type: "task",
             });
           });
 
           // Map Projects
-          projects.forEach((project: any, idx: number) => {
+          projects.forEach((project: any) => {
             recentActivities.push({
               id: `project_${project.id}`,
               who: project.user?.name || "Admin",
               action: `created ${project.name}`,
-              when: idx === 0 ? "3h ago" : "Yesterday",
+              when: timeAgo(project.createdAt),
+              createdAt: project.createdAt,
               link: `/projects/${project.id}`,
               type: "project",
             });
+          });
+
+          // Sort by date descending
+          recentActivities.sort((a, b) => {
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
           });
 
           setActivities(recentActivities.slice(0, 4));

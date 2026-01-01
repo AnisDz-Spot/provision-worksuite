@@ -18,44 +18,48 @@ export async function GET() {
 
   // In demo mode or for global admin, return mock activities
   if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    const mockNames = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"];
+    const getRandomName = () =>
+      mockNames[Math.floor(Math.random() * mockNames.length)];
+
     return NextResponse.json({
       success: true,
       data: {
         tasks: [
           {
-            id: "mock_t1",
+            id: `mock_t${Date.now()}_1`,
             title: "Review Design System",
             status: "done",
-            assignee: { name: "Alice" },
+            assignee: { name: getRandomName() },
             createdAt: new Date().toISOString(),
           },
           {
-            id: "mock_t2",
+            id: `mock_t${Date.now()}_2`,
             title: "Implement API Auth",
             status: "in progress",
-            assignee: { name: "Bob" },
+            assignee: { name: getRandomName() },
             createdAt: new Date(Date.now() - 3600000).toISOString(),
           },
           {
-            id: "mock_t3",
+            id: `mock_t${Date.now()}_3`,
             title: "Database Migration",
             status: "completed",
-            assignee: { name: "Charlie" },
+            assignee: { name: getRandomName() },
             createdAt: new Date(Date.now() - 7200000).toISOString(),
           },
         ],
         projects: [
           {
-            id: "mock_p1",
+            id: `mock_p${Date.now()}_1`,
             name: "Phoenix Platform",
             createdAt: new Date(Date.now() - 86400000).toISOString(),
-            user: { name: "Admin" },
+            user: { name: getRandomName() },
           },
           {
-            id: "mock_p2",
+            id: `mock_p${Date.now()}_2`,
             name: "Mobile App MVP",
             createdAt: new Date(Date.now() - 172800000).toISOString(),
-            user: { name: "Admin" },
+            user: { name: getRandomName() },
           },
         ],
       },
