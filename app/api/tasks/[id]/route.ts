@@ -112,6 +112,7 @@ export async function PATCH(
       await recordActivity(dbUser.id, "task", updatedTask.uid, "updated", {
         title: updatedTask.title,
         status: updatedTask.status,
+        projectId: updatedTask.projectId,
       });
     }
 

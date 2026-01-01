@@ -132,35 +132,100 @@ export function ProjectTimeline({
                 <span className="text-sm font-semibold truncate leading-none">
                   {ev.user?.name || "System"}
                 </span>
-                <Badge
-                  variant={typeColor[ev.type] || "default"}
-                  pill
-                  className="text-[10px] py-0 px-2 h-4 max-w-[200px] truncate"
-                >
-                  {ev.data?.title || ev.data?.name || "Project"}
-                </Badge>
                 <span className="text-[10px] text-muted-foreground ml-auto whitespace-nowrap">
                   {formatDate(ev.timestamp)}
                 </span>
               </div>
-              <div className="text-xs text-muted-foreground line-clamp-2 italic">
-                {typeLabel[ev.type] || ev.type}
+              <div className="text-sm text-foreground/80 leading-snug">
+                {(() => {
+                  const action = ev.type;
+                  const entity =
+                    ev.entityType ||
+                    (action.startsWith("task_") ? "task" : "project");
+                  const data = ev.data || {};
+                  const name = data.title || data.name || data.taskTitle || "";
+
+                  if (entity === "task") {
+                    const taskName = name ? `"${name}"` : "a task";
+                    if (action === "created" || action === "task_created")
+                      return (
+                        <span>
+                          created task{" "}
+                          <span className="font-medium text-primary">
+                            {taskName}
+                          </span>
+                        </span>
+                      );
+                    if (action === "deleted" || action === "task_deleted")
+                      return (
+                        <span>
+                          deleted task{" "}
+                          <span className="font-medium text-destructive">
+                            {taskName}
+                          </span>
+                        </span>
+                      );
+                    if (action === "updated" || action === "task_updated") {
+                      if (data.oldStatus && data.status) {
+                        return (
+                          <span>
+                            moved{" "}
+                            <span className="font-medium">{taskName}</span> from{" "}
+                            <span className="capitalize">
+                              {data.oldStatus.replace("_", " ")}
+                            </span>{" "}
+                            to{" "}
+                            <span className="font-bold capitalize text-primary">
+                              {data.status.replace("_", " ")}
+                            </span>
+                          </span>
+                        );
+                      }
+                      if (data.status)
+                        return (
+                          <span>
+                            updated{" "}
+                            <span className="font-medium">{taskName}</span>{" "}
+                            (Status: {data.status})
+                          </span>
+                        );
+                      return (
+                        <span>
+                          updated task{" "}
+                          <span className="font-medium">{taskName}</span>
+                        </span>
+                      );
+                    }
+                  }
+
+                  if (entity === "project") {
+                    if (action === "created")
+                      return <span>initialized the project</span>;
+                    if (action === "status_changed")
+                      return (
+                        <span>
+                          changed project status to{" "}
+                          <span className="font-bold text-primary capitalize">
+                            {data.status}
+                          </span>
+                        </span>
+                      );
+                    if (action === "updated" || action === "edit")
+                      return <span>updated project details</span>;
+                  }
+
+                  if (action === "timelog")
+                    return (
+                      <span>
+                        logged{" "}
+                        <span className="font-medium">{data.hours}h</span> on{" "}
+                        <span className="font-medium">{name || "task"}</span>
+                      </span>
+                    );
+
+                  return <span>{typeLabel[action] || action}</span>;
+                })()}
               </div>
-              {ev.data && Object.keys(ev.data).length > 1 && (
-                <div className="mt-1 p-2 rounded bg-accent/5 text-[10px] grid grid-cols-2 gap-x-2">
-                  {Object.entries(ev.data)
-                    .slice(0, 4)
-                    .filter(([k]) => k !== "title" && k !== "name")
-                    .map(([k, v]) => (
-                      <div key={k} className="truncate">
-                        <span className="text-muted-foreground font-medium">
-                          {k}:
-                        </span>{" "}
-                        {String(v)}
-                      </div>
-                    ))}
-                </div>
-              )}
             </div>
           </li>
         ))}

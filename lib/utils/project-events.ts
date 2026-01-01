@@ -70,15 +70,14 @@ export async function getProjectEventsDB(
 ): Promise<ProjectEvent[]> {
   if (!shouldUseMockData()) {
     try {
-      const res = await fetch(
-        `/api/activities?entityId=${projectId}&entityType=project`
-      );
+      const res = await fetch(`/api/activities?projectId=${projectId}`);
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         return result.data.map((a: any) => ({
           id: a.id,
           projectId: a.entityId,
           type: a.action,
+          entityType: a.entityType,
           timestamp: new Date(a.createdAt).getTime(),
           data: a.metadata,
           user: a.user, // Pass through user info for display

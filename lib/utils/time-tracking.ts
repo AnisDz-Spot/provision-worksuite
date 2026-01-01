@@ -80,6 +80,7 @@ export async function addTimeLog(
           taskTitle: data.task.title,
           hours,
           note,
+          projectId,
         });
 
         return logEntry;
@@ -114,6 +115,7 @@ export async function addTimeLog(
       taskTitle: current.title,
       hours,
       note,
+      projectId,
     });
   }
 

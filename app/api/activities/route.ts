@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const entityId = searchParams.get("entityId");
     const entityType = searchParams.get("entityType");
+    const projectId = searchParams.get("projectId");
     const limit = parseInt(searchParams.get("limit") || "20");
 
     const currentUser = await getAuthenticatedUser();
@@ -23,6 +24,12 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     if (entityId) where.entityId = entityId;
     if (entityType) where.entityType = entityType;
+    if (projectId) {
+      where.OR = [
+        { entityId: projectId, entityType: "project" },
+        { metadata: { path: ["projectId"], equals: projectId } },
+      ];
+    }
 
     const activities = await prisma.activity.findMany({
       where,
