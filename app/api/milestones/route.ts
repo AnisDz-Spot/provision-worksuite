@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
     const project = await prisma.project.findFirst({
       where: {
         OR: [
-          { uid: projectId },
-          { slug: projectId },
+          { uid: String(projectId) },
+          { slug: String(projectId) },
           { id: parseInt(projectId) || -1 },
         ],
       },
@@ -72,9 +72,14 @@ export async function POST(request: NextRequest) {
     const project = await prisma.project.findFirst({
       where: {
         OR: [
-          { uid: projectId },
-          { slug: projectId },
-          { id: parseInt(projectId) || -1 },
+          { uid: String(projectId) },
+          { slug: String(projectId) },
+          {
+            id:
+              typeof projectId === "number"
+                ? projectId
+                : parseInt(projectId) || -1,
+          },
         ],
       },
       select: { id: true, uid: true },
