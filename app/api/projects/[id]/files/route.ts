@@ -110,7 +110,19 @@ export async function POST(
       }
     }
 
-    // 4. Resolve numeric ID from UID
+    // 4. Upload using storage abstraction
+    const { uploadFile } = await import("@/lib/storage");
+    const finalFilename =
+      file.name.replace(/\.[^/.]+$/, "") +
+      (finalMime === "image/webp" ? ".webp" : "");
+
+    const processedFile = new File([new Uint8Array(buffer)], finalFilename, {
+      type: finalMime,
+    });
+
+    const fileUrl = await uploadFile(processedFile, `projects/${project.uid}`);
+
+    // 5. Resolve numeric ID from UID
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
       select: { id: true },
@@ -123,15 +135,10 @@ export async function POST(
       );
     }
 
-    // Convert to Data URL for database storage (preserving current architecture)
-    const dataUrl = `data:${finalMime};base64,${buffer.toString("base64")}`;
-
     const createdFile = await prisma.file.create({
       data: {
-        filename:
-          file.name.replace(/\.[^/.]+$/, "") +
-          (finalMime === "image/webp" ? ".webp" : ""),
-        fileUrl: dataUrl,
+        filename: finalFilename,
+        fileUrl: fileUrl,
         fileSize: buffer.length,
         mimeType: finalMime,
         projectUid: project.uid,
