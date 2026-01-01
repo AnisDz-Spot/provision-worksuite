@@ -70,10 +70,12 @@ export async function getProjectEventsDB(
 ): Promise<ProjectEvent[]> {
   if (!shouldUseMockData()) {
     try {
-      const res = await fetch(`/api/activities?projectId=${projectId}`);
+      const res = await fetch(
+        `/api/activities?entityId=${projectId}&entityType=project`
+      );
       const result = await res.json();
-      if (result.success) {
-        return result.activities.map((a: any) => ({
+      if (result.success && Array.isArray(result.data)) {
+        return result.data.map((a: any) => ({
           id: a.id,
           projectId: a.entityId,
           type: a.action,
