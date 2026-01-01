@@ -48,9 +48,12 @@ export async function GET(
       );
     }
 
-    // Fetch members with acceptance status
+    // Fetch members with acceptance status (excluding the owner)
     const members = await prisma.projectMember.findMany({
-      where: { projectId: project.id },
+      where: {
+        projectId: project.id,
+        role: { not: "owner" },
+      },
       include: {
         user: {
           select: { id: true, name: true, email: true },
