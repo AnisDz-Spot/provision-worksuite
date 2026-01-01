@@ -12,6 +12,8 @@ import { CallProvider } from "@/components/meetings/CallContext";
 import { initSentry } from "@/lib/sentry";
 
 import { SessionProvider } from "next-auth/react";
+import { LoadingProvider } from "@/context/LoadingContext";
+import { GlobalLoader } from "@/components/ui/GlobalLoader";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Initialize Sentry on mount
@@ -22,19 +24,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <ToastProvider>
-          <SettingsProvider>
-            <AuthProvider>
-              <SidebarProvider>
-                <ChatProvider>
-                  <CallProvider>
-                    <TimeTrackerProvider>{children}</TimeTrackerProvider>
-                  </CallProvider>
-                </ChatProvider>
-              </SidebarProvider>
-            </AuthProvider>
-          </SettingsProvider>
-        </ToastProvider>
+        <LoadingProvider>
+          <GlobalLoader />
+          <ToastProvider>
+            <SettingsProvider>
+              <AuthProvider>
+                <SidebarProvider>
+                  <ChatProvider>
+                    <CallProvider>
+                      <TimeTrackerProvider>{children}</TimeTrackerProvider>
+                    </CallProvider>
+                  </ChatProvider>
+                </SidebarProvider>
+              </AuthProvider>
+            </SettingsProvider>
+          </ToastProvider>
+        </LoadingProvider>
       </ThemeProvider>
     </SessionProvider>
   );

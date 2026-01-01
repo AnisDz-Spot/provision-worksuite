@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth, addUser } from "@/components/auth/AuthContext";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 import { Input } from "@/components/ui/Input";
 import {
   Mail,
@@ -101,6 +102,7 @@ type TeamTableProps = {
 export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const searchParams = useSearchParams();
   const { isAdmin, isMasterAdmin, currentUser } = useAuth();
+  const { showLoader, hideLoader } = useLoading();
   const [q, setQ] = useState("");
   const [role, setRole] = useState<string>("all");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const handleStatusSave = async (emoji: string, message: string) => {
     if (!currentUser) return;
     try {
+      showLoader("Saving status...");
       const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -139,12 +142,15 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       }
     } catch (e) {
       console.error("Failed to save status", e);
+    } finally {
+      hideLoader();
     }
   };
 
   const handleStatusClear = async () => {
     if (!currentUser) return;
     try {
+      showLoader("Clearing status...");
       const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +168,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       }
     } catch (e) {
       console.error("Failed to clear status", e);
+    } finally {
+      hideLoader();
     }
   };
 
@@ -416,6 +424,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     if (!editMemberId) return;
 
     try {
+      showLoader("Saving member...");
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
 
       const updatedData = {
@@ -487,6 +496,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     } catch (e) {
       console.error("Save failed", e);
       // Add toast notification later
+    } finally {
+      hideLoader();
     }
   }
 
@@ -495,6 +506,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       return;
 
     try {
+      showLoader("Creating member...");
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
       const { fetchWithCsrf } = await import("@/lib/csrf-client");
 
@@ -599,6 +611,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       resetDrafts();
     } catch (e) {
       console.error("Add failed", e);
+    } finally {
+      hideLoader();
     }
   }
 
@@ -658,6 +672,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
     );
 
     try {
+      showLoader("Updating role...");
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
       if (shouldUseDatabaseData()) {
         await fetchWithCsrf(`/api/users/${id}`, {
@@ -668,6 +683,8 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       }
     } catch (e) {
       console.error("Failed to update role", e);
+    } finally {
+      hideLoader();
     }
   }
 

@@ -6,6 +6,7 @@ import { upsertTask, getMilestonesByProject } from "@/lib/utils";
 import { shouldUseMockData } from "@/lib/dataSource";
 import { CreateTaskModal } from "@/components/tasks/board/CreateTaskModal";
 import { saveTasks } from "@/lib/data";
+import { useLoading } from "@/context/LoadingContext";
 
 interface QuickTaskModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function QuickTaskModal({
   teamMembers,
 }: QuickTaskModalProps) {
   const { showToast } = useToast();
+  const { showLoader, hideLoader } = useLoading();
   const [newTaskTitle, setNewTaskTitle] = React.useState("");
   const [newTaskAssignee, setNewTaskAssignee] = React.useState("You");
   const [newTaskDue, setNewTaskDue] = React.useState("");
@@ -87,6 +89,7 @@ export function QuickTaskModal({
     if (!projectId || !newTaskTitle.trim()) return;
 
     try {
+      showLoader("Creating task...");
       const id = `task-${Date.now()}`;
 
       const taskData = {
@@ -129,6 +132,8 @@ export function QuickTaskModal({
     } catch (e) {
       console.error(e);
       showToast("An error occurred", "error");
+    } finally {
+      hideLoader();
     }
   };
 

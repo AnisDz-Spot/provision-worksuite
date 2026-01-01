@@ -20,6 +20,7 @@ import { CreateTaskModal } from "./board/CreateTaskModal";
 import { TaskDetailsModal } from "./board/TaskDetailsModal";
 import { TimeLogsModal } from "./board/TimeLogsModal";
 import { ConfirmModal } from "./board/ConfirmModal";
+import { useLoading } from "@/context/LoadingContext";
 
 const MOCK_BOARD = [
   {
@@ -124,6 +125,7 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
   const { startTimer } = useTimeTracker();
   const { show } = useToaster();
+  const { showLoader, hideLoader } = useLoading();
 
   // Strict Mode: Only use MOCK_BOARD if explicitly in mock mode
   const [columns, setColumns] = useState(
@@ -447,9 +449,14 @@ export function KanbanBoard({
           };
 
           if (!shouldUseMockData()) {
-            saveTasks([updated as any]).then(() => {
-              onTaskUpdate?.();
-            });
+            showLoader("Moving task...");
+            saveTasks([updated as any])
+              .then(() => {
+                onTaskUpdate?.();
+              })
+              .finally(() => {
+                hideLoader();
+              });
           } else {
             upsertTask(updated);
             queueMicrotask(() => onTaskUpdate?.());
@@ -524,11 +531,16 @@ export function KanbanBoard({
         .filter(Boolean),
     };
     if (!shouldUseMockData()) {
-      saveTasks([updated as any]).then(() => {
-        refreshFromStorage();
-        show("success", "Task updated successfully");
-        if (onTaskUpdate) onTaskUpdate();
-      });
+      showLoader("Updating task...");
+      saveTasks([updated as any])
+        .then(() => {
+          refreshFromStorage();
+          show("success", "Task updated successfully");
+          if (onTaskUpdate) onTaskUpdate();
+        })
+        .finally(() => {
+          hideLoader();
+        });
     } else {
       upsertTask(updated);
       refreshFromStorage();
@@ -586,6 +598,7 @@ export function KanbanBoard({
       show("error", "Please enter a note for this time log");
       return;
     }
+    showLoader("Logging time...");
     const result = await addTimeLog(
       detailTask.id,
       projectId,
@@ -593,6 +606,7 @@ export function KanbanBoard({
       timeLogNote.trim(),
       detailTask.assignee
     );
+    hideLoader();
     if (result) {
       show("success", `Logged ${value} hours`);
       setTimeLogInput("");
@@ -648,10 +662,15 @@ export function KanbanBoard({
       };
 
       if (!shouldUseMockData()) {
-        saveTasks([t as any]).then(() => {
-          refreshFromStorage();
-          if (onTaskUpdate) onTaskUpdate();
-        });
+        showLoader("Adding task...");
+        saveTasks([t as any])
+          .then(() => {
+            refreshFromStorage();
+            if (onTaskUpdate) onTaskUpdate();
+          })
+          .finally(() => {
+            hideLoader();
+          });
       } else {
         upsertTask(t);
         refreshFromStorage();

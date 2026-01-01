@@ -11,6 +11,7 @@ import {
   getProjectFiles,
 } from "@/lib/utils";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 
 import { ProjectCard } from "./ProjectCard";
 import { ProjectFilters } from "./ProjectFilters";
@@ -28,6 +29,7 @@ export function ProjectGrid() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { showToast } = useToast();
+  const { showLoader, hideLoader } = useLoading();
 
   const [query, setQuery] = React.useState(searchParams.get("query") || "");
   const [status, setStatus] = React.useState(
@@ -188,6 +190,7 @@ export function ProjectGrid() {
     });
 
     try {
+      showLoader("Toggling star...");
       const response = await fetchWithCsrf(`/api/projects/${id}/star`, {
         method: "POST",
       });
@@ -206,6 +209,8 @@ export function ProjectGrid() {
         return reverted;
       });
       showToast(error.message || "Failed to star project", "error");
+    } finally {
+      hideLoader();
     }
   };
 
@@ -216,6 +221,7 @@ export function ProjectGrid() {
     setProjects(nextProjects);
 
     try {
+      showLoader("Deleting project...");
       const response = await fetchWithCsrf(`/api/projects/${id}`, {
         method: "DELETE",
       });
@@ -232,6 +238,7 @@ export function ProjectGrid() {
       showToast(error.message || "Failed to delete project", "error");
     } finally {
       setDeleteConfirm(null);
+      hideLoader();
     }
   };
 
@@ -331,6 +338,7 @@ export function ProjectGrid() {
     newStatus: Project["status"]
   ) => {
     try {
+      showLoader("Updating status...");
       // Optimistic update
       setProjects((prev) => {
         const next = prev.map((pr) =>
@@ -353,6 +361,8 @@ export function ProjectGrid() {
       console.error("Status update failed:", error);
       showToast("Failed to update project status", "error");
       loadProjects(); // Revert
+    } finally {
+      hideLoader();
     }
   };
 
