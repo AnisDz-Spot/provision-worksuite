@@ -29,7 +29,7 @@ export async function POST(
     // Verify this notification belongs to the current user
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
-      select: { id: true },
+      select: { id: true, name: true, email: true },
     });
 
     if (!dbUser || notification.userId !== dbUser.id) {
