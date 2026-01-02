@@ -120,7 +120,23 @@ function DataSourceTab() {
     }
   }
 
+  const hasLicense = hasValidLicense();
+
+  useEffect(() => {
+    // If we have a valid license, FORCE real mode
+    if (hasLicense && dataMode !== "real") {
+      setDataMode("real");
+      localStorage.setItem("pv:dataMode", "real");
+      setDataModePreference("real");
+    }
+  }, [hasLicense, dataMode]);
+
   const handleDataModeChange = async (mode: "real" | "mock") => {
+    if (hasLicense && mode === "mock") {
+      alert("You have a valid license active. Demo mode is disabled.");
+      return;
+    }
+
     if (
       !confirm(
         `Switch to ${mode === "real" ? "Live" : "Demo"} mode? You will be logged out to apply changes.`
@@ -129,7 +145,7 @@ function DataSourceTab() {
       return;
     }
 
-    if (mode === "real" && !hasValidLicense()) {
+    if (mode === "real" && !hasLicense) {
       router.push("/license-activation");
       return;
     }

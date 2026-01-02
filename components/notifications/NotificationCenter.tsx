@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { shouldUseMockData } from "@/lib/dataSource";
+import { shouldUseMockData, shouldUseDatabaseData } from "@/lib/dataSource";
 
 export type Notification = {
   id: string;
@@ -57,14 +57,59 @@ export function NotificationCenter({
     return () => clearInterval(interval);
   }, []);
 
-  const loadNotifications = () => {
+  const loadNotifications = async () => {
     if (typeof window === "undefined") return;
+
+    let dbNotifications: Notification[] = [];
+    let localNotifications: Notification[] = [];
+
+    // 1. Fetch from Database
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await fetch("/api/notifications");
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success) {
+            dbNotifications = result.data.map((n: any) => {
+              // Map backend types to frontend visual types
+              let visualType: "info" | "success" | "warning" | "error" = "info";
+              if (n.type === "project_invitation") visualType = "info";
+              if (n.type === "invitation_accepted") visualType = "success";
+              if (n.type === "invitation_rejected") visualType = "error";
+              if (
+                n.type === "warning" ||
+                n.type === "error" ||
+                n.type === "success" ||
+                n.type === "info"
+              ) {
+                visualType = n.type;
+              }
+
+              return {
+                id: n.id.toString(), // Ensure ID is string
+                type: visualType,
+                title: n.title,
+                message: n.message,
+                timestamp: n.createdAt,
+                read: n.isRead,
+                projectId: n.projectId,
+                projectName: n.projectName || undefined,
+                source: "system",
+              };
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching notifications from DB:", error);
+      }
+    }
+
+    // 2. Fetch from Local Storage
     try {
       const stored = localStorage.getItem("pv:notifications");
       if (stored) {
-        setNotifications(JSON.parse(stored));
+        localNotifications = JSON.parse(stored);
       } else if (shouldUseMockData()) {
-        // Initialize with sample notifications only in mock mode
         const initial: Notification[] = [
           {
             id: "n1",
@@ -77,6 +122,7 @@ export function NotificationCenter({
             projectName: "Project Alpha",
             source: "system",
           },
+          // ... (simplified initial mock data for brevity if reused, or keep existing logic)
           {
             id: "n2",
             type: "success",
@@ -88,25 +134,32 @@ export function NotificationCenter({
             projectName: "Project Beta",
             source: "system",
           },
-          {
-            id: "n3",
-            type: "info",
-            title: "New Team Member Added",
-            message: "Eve has joined the team. Welcome!",
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            read: true,
-            source: "system",
-          },
         ];
-        setNotifications(initial);
+        localNotifications = initial;
+        // Only save if strictly in mock mode to avoid overwriting real setup?
+        // Actually, we should respect the logic: "if mock mode, seed data"
         localStorage.setItem("pv:notifications", JSON.stringify(initial));
-      } else {
-        // In live mode, initialize with empty array if nothing stored
-        setNotifications([]);
       }
     } catch (error) {
       console.error("Error loading notifications:", error);
     }
+
+    // 3. Merge
+    const dbIds = new Set(dbNotifications.map((n) => n.id));
+    const combined = [...dbNotifications];
+    localNotifications.forEach((n) => {
+      if (!dbIds.has(n.id)) {
+        combined.push(n);
+      }
+    });
+
+    // Sort
+    combined.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    setNotifications(combined);
   };
 
   const checkForNewNotifications = async () => {

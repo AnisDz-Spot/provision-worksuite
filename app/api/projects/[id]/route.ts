@@ -242,12 +242,28 @@ export async function PUT(
         existingMembers.map((m: { userId: number }) => m.userId)
       );
 
-      // Delete existing non-owner members
+      // Delete existing members
+      // If Master Admin, can delete anyone (including owner)
+      // If not, must preserve owner
+      const currentUser = await getAuthenticatedUser();
+      const isMasterAdmin = [
+        "admin",
+        "global-admin",
+        "master-admin",
+        "Administrator",
+        "Master Admin",
+      ].includes(currentUser?.role || "");
+
+      const deleteWhere: any = {
+        projectId: project.id,
+      };
+
+      if (!isMasterAdmin) {
+        deleteWhere.userId = { not: ownerId };
+      }
+
       await prisma.projectMember.deleteMany({
-        where: {
-          projectId: project.id,
-          userId: { not: ownerId },
-        },
+        where: deleteWhere,
       });
 
       // Find user IDs for the incoming UIDs

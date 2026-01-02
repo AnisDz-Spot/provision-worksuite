@@ -47,14 +47,31 @@ export function NotificationBell() {
   const loadNotifications = async () => {
     if (typeof window === "undefined") return;
 
+    let dbNotifications: Notification[] = [];
+    let localNotifications: Notification[] = [];
+
+    // 1. Fetch from Database
     if (shouldUseDatabaseData()) {
       try {
         const res = await fetch("/api/notifications");
         if (res.ok) {
           const result = await res.json();
           if (result.success) {
-            setNotifications(result.data);
-            return;
+            dbNotifications = result.data.map((n: any) => {
+              let severity: "info" | "success" | "warning" | "error" = "info";
+              if (n.type === "invitation_accepted") severity = "success";
+              if (n.type === "invitation_rejected") severity = "error";
+              if (["info", "success", "warning", "error"].includes(n.type)) {
+                severity = n.type;
+              }
+
+              return {
+                ...n,
+                // Ensure critical fields match Notification type
+                severity,
+                id: n.id.toString(),
+              };
+            });
           }
         }
       } catch (error) {
@@ -62,22 +79,41 @@ export function NotificationBell() {
       }
     }
 
+    // 2. Fetch from Local Storage
     try {
       const stored = localStorage.getItem("pv:notifications");
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Map old format to new format if needed
-        const mapped = parsed.map((n: any) => ({
+        localNotifications = parsed.map((n: any) => ({
           ...n,
           isRead: n.read ?? n.isRead,
           createdAt: n.timestamp ?? n.createdAt,
-          severity: n.type, // Map 'warning/info' to severity for icon rendering
+          severity: n.type,
         }));
-        setNotifications(mapped);
       }
     } catch (error) {
       console.error("Error loading notifications from localStorage:", error);
     }
+
+    // 3. Merge and Deduplicate (prefer DB over Local if ID collision, though unlikely)
+    const combined = [...dbNotifications];
+    const dbIds = new Set(dbNotifications.map((n) => n.id));
+
+    localNotifications.forEach((n) => {
+      // Only add if not already present (avoid duplicates if ID conflicts)
+      // Local IDs are usually strings like "overdue_...", DB IDs are numbers/strings
+      if (!dbIds.has(n.id)) {
+        combined.push(n);
+      }
+    });
+
+    // Sort by Date Descending
+    combined.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    setNotifications(combined);
   };
 
   // Note: Chat notifications are now handled by ChatNotificationToast (floating chat box)
