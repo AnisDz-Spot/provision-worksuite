@@ -512,7 +512,7 @@ export function KanbanBoard({
     setEditDue(task.due);
     setEditPriority(task.priority);
     setEditEstimate(
-      task.estimateHours !== undefined ? task.estimateHours.toString() : ""
+      task.estimateHours != null ? task.estimateHours.toString() : ""
     );
     setEditMilestone((task as any).milestoneId || "");
     setEditDescription(task.description || "");
