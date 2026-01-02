@@ -79,7 +79,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const pref = localStorage.getItem("pv:dataMode");
       const isMaster = currentUser.isMasterAdmin || isGlobalAdmin(currentUser);
 
-      if (isMaster) {
+      // Define function to handle master admin flow
+      const handleMasterAdminFlow = () => {
         const setupDone = isDatabaseConfigured() && isSetupComplete();
 
         if (setupDone) {
@@ -107,7 +108,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             localStorage.setItem("pv:onboardingDone", "true");
           }
         }
-      } else {
+      };
+
+      // Special Global Admin Access: Check if no users exist or DB is unavailable
+      if (isMaster) {
+        (async () => {
+          try {
+            const checkRes = await fetch("/api/setup/check-users");
+            const checkData = await checkRes.json();
+
+            // If no users exist or DB error, force Global Admin to mock mode
+            if (checkData.canAccessWithGlobalAdmin) {
+              console.log(
+                "[AppShell] Global Admin access: No users or DB error, using mock mode"
+              );
+              if (pref !== "mock") {
+                setDataModePreference("mock");
+                setMode("mock");
+                localStorage.setItem("pv:onboardingDone", "true");
+              } else if (mode !== "mock") {
+                setMode("mock");
+              }
+              setShowModeModal(false);
+              setIsSyncing(false);
+              return; // Skip all other checks
+            }
+
+            // Continue with normal flow if users exist
+            handleMasterAdminFlow();
+          } catch (error) {
+            console.error(
+              "[AppShell] Error checking users, allowing Global Admin access:",
+              error
+            );
+            // On error, assume we need Global Admin access
+            if (pref !== "mock") {
+              setDataModePreference("mock");
+              setMode("mock");
+              localStorage.setItem("pv:onboardingDone", "true");
+            } else if (mode !== "mock") {
+              setMode("mock");
+            }
+            setShowModeModal(false);
+            setIsSyncing(false);
+            return;
+          }
+        })();
+        return; // Exit early, let async function handle the rest
+      }
+
+      // Non-master admin: FORCED to 'real' mode
+      if (!isMaster) {
         // All other roles (Admins, Members, etc.) are FORCED to 'real' mode
         if (pref !== "real") {
           setDataModePreference("real");

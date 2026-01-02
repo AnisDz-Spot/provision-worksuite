@@ -125,7 +125,7 @@ export function getStoredLicense(): string | null {
 }
 
 /**
- * Check if a valid license exists
+ * Check if a valid license exists in localStorage
  */
 export function hasValidLicense(): boolean {
   const storedLicense = getStoredLicense();
@@ -133,6 +133,43 @@ export function hasValidLicense(): boolean {
 
   const validation = validateLicense(storedLicense);
   return validation.valid;
+}
+
+/**
+ * Check if license exists in server-side licenses.json file
+ * This is an async function that calls the API
+ */
+export async function checkLicenseFile(licenseKey?: string): Promise<boolean> {
+  try {
+    const keyToCheck = licenseKey || getStoredLicense();
+    if (!keyToCheck) return false;
+
+    const response = await fetch("/api/check-license", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serial: keyToCheck }),
+    });
+
+    const data = await response.json();
+    return data.success === true;
+  } catch (error) {
+    console.error("Error checking license file:", error);
+    return false;
+  }
+}
+
+/**
+ * Comprehensive license check - checks both localStorage and file
+ * Returns true if license is valid in either location
+ */
+export async function hasValidLicenseComprehensive(): Promise<boolean> {
+  // First check localStorage (fast)
+  const localValid = hasValidLicense();
+  if (localValid) return true;
+
+  // Then check file (slower, but authoritative)
+  const fileValid = await checkLicenseFile();
+  return fileValid;
 }
 
 /**

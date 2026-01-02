@@ -142,6 +142,7 @@ function DataSourceTab() {
   }, [hasLicense, dataMode]);
 
   const handleDataModeChange = async (mode: "real" | "mock") => {
+    // Prevent switching to mock mode if valid license exists
     if (hasLicense && mode === "mock") {
       alert("You have a valid license active. Demo mode is disabled.");
       return;
@@ -155,9 +156,27 @@ function DataSourceTab() {
       return;
     }
 
+    // Check for license when switching to real mode
     if (mode === "real" && !hasLicense) {
       router.push("/license-activation");
       return;
+    }
+
+    // If switching to real mode with license, check if master admin exists
+    if (mode === "real" && hasLicense) {
+      try {
+        const checkRes = await fetch("/api/setup/check-users");
+        const checkData = await checkRes.json();
+
+        if (checkData.success && !checkData.hasMasterAdmin) {
+          // No master admin exists, redirect to account setup
+          router.push("/setup/account");
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking for master admin:", error);
+        // Continue anyway if check fails
+      }
     }
 
     setDataMode(mode);
@@ -258,13 +277,26 @@ function DataSourceTab() {
           >
             Use Real Data (Live)
           </Button>
-          <Button
-            variant={dataMode === "mock" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleDataModeChange("mock")}
-          >
-            Use Dummy Data (Demo)
-          </Button>
+          <div className="relative group">
+            <Button
+              variant={dataMode === "mock" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleDataModeChange("mock")}
+              disabled={hasLicense && dataMode === "real"}
+              className={cn(
+                hasLicense &&
+                  dataMode === "real" &&
+                  "opacity-50 cursor-not-allowed"
+              )}
+            >
+              Use Dummy Data (Demo)
+            </Button>
+            {hasLicense && dataMode === "real" && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                Demo mode is disabled when using a valid license
+              </div>
+            )}
+          </div>
         </div>
 
         {message && (
