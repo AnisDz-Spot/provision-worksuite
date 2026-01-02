@@ -137,9 +137,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           // Since license validation is client-side (localStorage), regular users won't have it.
           // We assume if the system is live (isDatabaseConfigured), it is licensed.
           if (isMaster) {
-            setDataModePreference("mock");
-            setMode("mock");
-            localStorage.removeItem("pv:dbConfig");
+            // USER REQUEST: Deactivate dummy mode.
+            // setMode("mock"); // DISABLED
+            // setDataModePreference("mock"); // DISABLED
+            // localStorage.removeItem("pv:dbConfig");
+            router.replace("/license-activation");
             return;
           } else {
             // Non-master users: Do NOT redirect to license page.
@@ -168,10 +170,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         if (!isAtSetup) {
           console.log("[AppShell] Setup or profile missing for real mode");
           if (isMaster) {
-            console.log("[AppShell] Master Admin: resetting to mock mode");
-            setDataModePreference("mock");
-            setMode("mock");
-            clearLicense();
+            console.log(
+              "[AppShell] Master Admin: resetting to mock mode (DISABLED BY USER REQUEST)"
+            );
+            // setDataModePreference("mock");
+            // setMode("mock");
+            // clearLicense();
           } else {
             // Standard user on a configured DB but with no profile yet
             console.log("[AppShell] Redirecting to profile setup");

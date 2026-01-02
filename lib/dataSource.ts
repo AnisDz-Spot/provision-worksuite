@@ -53,9 +53,8 @@ export function shouldUseDatabaseData(): boolean {
   }
 
   // Default priority: If setup is complete, default to DB. Otherwise default to mock.
-  if (isSetupComplete()) return true;
-
-  return false;
+  // USER REQUEST: Deactivate dummy mode globally.
+  return true;
 }
 
 export function shouldUseMockData(): boolean {

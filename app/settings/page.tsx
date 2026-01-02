@@ -83,11 +83,12 @@ function DataSourceTab() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("dbfail") === "1") {
-        setDataMode("mock");
-        localStorage.setItem("pv:dataMode", "mock");
+        // USER REQUEST: Deactivate dummy mode.
+        // setDataMode("mock"); // DISABLED
+        // localStorage.setItem("pv:dataMode", "mock");
         setMessage({
           type: "error",
-          text: "You must finish the database configuration to use Live mode. Switched back to Dummy mode.",
+          text: "Database connection failed. Please check your configuration.",
         });
       }
     }
