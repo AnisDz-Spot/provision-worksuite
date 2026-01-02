@@ -120,7 +120,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       // 3. SECURE REDIRECTS (Only after sync and if mode is explicitly 'real')
       const currentMode = pref || mode;
-      const setupComplete = isSetupComplete();
+      // Trust auth state: if we are logged in as Master Admin, setup MUST be complete enough to exist.
+      const setupComplete = isSetupComplete() || (isAuthenticated && isMaster);
       const onboardingComplete =
         localStorage.getItem("pv:onboardingDone") === "true";
       const hasLicense = hasValidLicense();

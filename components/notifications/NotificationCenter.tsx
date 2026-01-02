@@ -14,10 +14,12 @@ import {
   Info,
   CheckCircle2,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { shouldUseMockData, shouldUseDatabaseData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export type Notification = {
   id: string;
@@ -44,6 +46,21 @@ export function NotificationCenter({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<"all" | "unread" | "project">("all");
   const [mounted, setMounted] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // Helper for icon colors
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case "success":
+        return "text-green-600 bg-green-100";
+      case "warning":
+        return "text-amber-600 bg-amber-100";
+      case "error":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-blue-600 bg-blue-100";
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -263,12 +280,23 @@ export function NotificationCenter({
     }
   };
 
-  const markAsRead = (id: string) => {
-    const updated = notifications.map((n) =>
-      n.id === id ? { ...n, read: true } : n
+  const markAsRead = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
+    if (shouldUseDatabaseData()) {
+      // Assuming fetchWithCsrf and mapNotificationType are defined elsewhere
+      await fetchWithCsrf(`/api/notifications/${id}/read`, { method: "PUT" });
+    } else {
+      const updated = notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      setNotifications(updated);
+      localStorage.setItem("pv:notifications", JSON.stringify(updated));
+    }
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
-    setNotifications(updated);
-    localStorage.setItem("pv:notifications", JSON.stringify(updated));
+    setProcessingId(null);
   };
 
   const markAllAsRead = () => {
@@ -277,10 +305,45 @@ export function NotificationCenter({
     localStorage.setItem("pv:notifications", JSON.stringify(updated));
   };
 
-  const deleteNotification = (id: string) => {
-    const updated = notifications.filter((n) => n.id !== id);
-    setNotifications(updated);
-    localStorage.setItem("pv:notifications", JSON.stringify(updated));
+  const deleteNotification = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
+    if (shouldUseDatabaseData()) {
+      // Assuming fetchWithCsrf is defined elsewhere
+      await fetchWithCsrf(`/api/notifications/${id}`, { method: "DELETE" });
+    } else {
+      const updated = notifications.filter((n) => n.id !== id);
+      setNotifications(updated);
+      localStorage.setItem("pv:notifications", JSON.stringify(updated));
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setProcessingId(null);
+  };
+
+  const handleAccept = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
+    try {
+      if (shouldUseDatabaseData()) {
+        // Assuming fetchWithCsrf is defined elsewhere
+        const res = await fetchWithCsrf(`/api/notifications/${id}/accept`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Refresh entire page to update permissions
+          window.location.reload();
+          return;
+        }
+      } else {
+        // Mock
+        deleteNotification(id);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const clearAll = () => {
@@ -433,65 +496,79 @@ export function NotificationCenter({
           filteredNotifications.map((notification) => (
             <div
               key={notification.id}
-              className={`p-4 border-b border-border hover:bg-accent/30 transition-colors ${
-                !notification.read ? "bg-primary/5" : ""
-              }`}
+              onClick={() => markAsRead(notification.id)}
+              className={`p-4 rounded-xl border border-border hover:bg-accent/50 transition-all cursor-pointer group relative ${
+                !notification.read ? "bg-accent/20" : "bg-card"
+              } ${processingId === notification.id ? "opacity-60 pointer-events-none" : ""}`}
             >
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 mt-1">
-                  {getIcon(notification.type)}
+              <div className="flex gap-4">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${getIconColor(
+                    notification.type
+                  )}`}
+                >
+                  {processingId === notification.id ? (
+                    <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    getIcon(notification.type)
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4
-                      className={`text-sm font-medium ${!notification.read ? "font-semibold" : ""}`}
-                    >
-                      {notification.title}
-                    </h4>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full shrink-0 mt-1.5" />
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {notification.message}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      {formatTimestamp(notification.timestamp)}
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <h3
+                        className={`text-base mb-1 ${
+                          !notification.read ? "font-semibold" : "font-medium"
+                        }`}
+                      >
+                        {notification.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {notification.message}
+                      </p>
                     </div>
-                    {notification.source && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        {getSourceIcon(notification.source)}
-                        <span className="capitalize">
-                          {notification.source}
-                        </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotification(notification.id);
+                      }}
+                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-background rounded-lg"
+                      title="Delete notification"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {notification.type === "info" && // mapped type is info for invites
+                    !notification.read && (
+                      <div className="flex gap-3 mb-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAccept(notification.id);
+                          }}
+                          disabled={!!processingId}
+                          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                        >
+                          {processingId === notification.id
+                            ? "Accepting..."
+                            : "Accept Invitation"}
+                        </button>
                       </div>
                     )}
-                    {notification.projectName && (
-                      <Badge variant="secondary" className="text-xs">
-                        {notification.projectName}
-                      </Badge>
+
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatTimestamp(notification.timestamp)}
+                    </span>
+                    {!notification.read && (
+                      <span className="flex items-center gap-1 text-primary">
+                        <span className="w-2 h-2 rounded-full bg-primary" />
+                        Unread
+                      </span>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
-                      title="Mark as read"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => deleteNotification(notification.id)}
-                    className="p-1 hover:bg-accent rounded transition-colors"
-                    title="Delete"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             </div>

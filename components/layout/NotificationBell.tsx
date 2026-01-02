@@ -44,6 +44,8 @@ export function NotificationBell() {
 
   const { show } = useToaster();
 
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
   const loadNotifications = async () => {
     if (typeof window === "undefined") return;
 
@@ -139,6 +141,8 @@ export function NotificationBell() {
   }, [open]);
 
   async function markAsRead(id: string) {
+    if (processingId) return;
+    setProcessingId(id);
     if (shouldUseDatabaseData()) {
       try {
         await fetchWithCsrf(`/api/notifications/${id}/read`, { method: "PUT" });
@@ -155,9 +159,13 @@ export function NotificationBell() {
     if (!shouldUseDatabaseData()) {
       localStorage.setItem("pv:notifications", JSON.stringify(updated));
     }
+    // Remove unread count locally
+    setProcessingId(null);
   }
 
   async function deleteNotification(id: string) {
+    if (processingId) return;
+    setProcessingId(id);
     if (shouldUseDatabaseData()) {
       try {
         await fetchWithCsrf(`/api/notifications/${id}`, { method: "DELETE" });
@@ -172,6 +180,7 @@ export function NotificationBell() {
     if (!shouldUseDatabaseData()) {
       localStorage.setItem("pv:notifications", JSON.stringify(updated));
     }
+    setProcessingId(null);
   }
 
   async function handleAccept(id: string) {
@@ -245,6 +254,27 @@ export function NotificationBell() {
   ).length;
   const recentNotifications = filteredNotifications.slice(0, 10);
 
+  // Helper for icon colors
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case "success":
+        return "text-green-500 bg-green-500/10";
+      case "warning":
+        return "text-amber-500 bg-amber-500/10";
+      case "error":
+        return "text-red-500 bg-red-500/10";
+      default:
+        return "text-blue-500 bg-blue-500/10";
+    }
+  };
+
+  const getIcon = (type: string) => {
+    // reuse logic or import icons
+    // For simplicity using simple conditional or existing icons
+    // But let's just return nothing here as the UI code below expects children
+    return null;
+  };
+
   return (
     <div className="relative" ref={containerRef}>
       <button
@@ -294,17 +324,32 @@ export function NotificationBell() {
                   <div
                     key={n.id}
                     className={cn(
-                      "p-4 border-b last:border-b-0 hover:bg-accent/10 transition-colors",
-                      !n.isRead && "bg-accent/5"
+                      "p-4 border-b last:border-b-0 hover:bg-accent/10 transition-colors relative group",
+                      !n.isRead && "bg-accent/5",
+                      processingId === n.id && "opacity-50 pointer-events-none"
                     )}
+                    onClick={() => markAsRead(n.id)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">{n.title}</span>
-                          {!n.isRead && (
-                            <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                          {processingId === n.id ? (
+                            <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          ) : (
+                            <span
+                              className={cn(
+                                "w-2 h-2 rounded-full",
+                                n.type === "error"
+                                  ? "bg-red-500"
+                                  : n.type === "warning"
+                                    ? "bg-amber-500"
+                                    : n.type === "success"
+                                      ? "bg-green-500"
+                                      : "bg-blue-500"
+                              )}
+                            />
                           )}
+                          <span className="font-medium text-sm">{n.title}</span>
                         </div>
                         <div className="text-xs text-muted-foreground mb-2">
                           {n.message}
@@ -319,6 +364,7 @@ export function NotificationBell() {
                                   e.stopPropagation();
                                   handleAccept(n.id);
                                 }}
+                                disabled={!!processingId}
                                 className="px-3 py-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-md hover:opacity-90 transition-opacity"
                               >
                                 Accept
@@ -328,6 +374,7 @@ export function NotificationBell() {
                                   e.stopPropagation();
                                   handleReject(n.id);
                                 }}
+                                disabled={!!processingId}
                                 className="px-3 py-1 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-md hover:bg-secondary/80 transition-colors"
                               >
                                 Decline
@@ -352,7 +399,10 @@ export function NotificationBell() {
                       <div className="flex gap-1">
                         {!n.isRead && (
                           <button
-                            onClick={() => markAsRead(n.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(n.id);
+                            }}
                             className="p-1 hover:bg-accent rounded"
                             title="Mark as read"
                           >
@@ -360,7 +410,10 @@ export function NotificationBell() {
                           </button>
                         )}
                         <button
-                          onClick={() => deleteNotification(n.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(n.id);
+                          }}
                           className="p-1 hover:bg-accent rounded"
                           title="Delete"
                         >
