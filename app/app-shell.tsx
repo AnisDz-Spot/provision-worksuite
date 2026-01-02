@@ -340,6 +340,9 @@ function MainContent({
     )
       return;
 
+    // Global Call Signaling Heartbeat
+    let timeoutId: NodeJS.Timeout;
+
     const checkCalls = async () => {
       try {
         const { fetchWithCsrf } = await import("@/lib/csrf-client");
@@ -363,14 +366,15 @@ function MainContent({
           }
         }
       } catch (e) {
-        console.error("Call signaling error", e);
+        // Silent fail
+      } finally {
+        timeoutId = setTimeout(checkCalls, 5000);
       }
     };
 
-    const interval = setInterval(checkCalls, 5000);
     checkCalls();
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeoutId);
   }, [currentUser?.id, pathname, mode]);
 
   // Redirect to login if not authenticated and not on auth pages

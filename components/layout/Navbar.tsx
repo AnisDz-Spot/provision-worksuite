@@ -85,14 +85,21 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
     const throttledHandler = () => trackActivity();
     events.forEach((event) => window.addEventListener(event, throttledHandler));
 
-    // Track every 30 seconds explicitly
-    const interval = setInterval(() => trackActivity(true), 30000);
+    // Track periodically with recursive timeout to avoid pile-up
+    let timeoutId: NodeJS.Timeout;
+
+    const startPolling = async () => {
+      await trackActivity(true);
+      timeoutId = setTimeout(startPolling, 30000);
+    };
+
+    startPolling();
 
     return () => {
       events.forEach((event) =>
         window.removeEventListener(event, throttledHandler)
       );
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
   }, [currentUser, canNavigate]);
 

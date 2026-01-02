@@ -625,14 +625,19 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     if (isOnChatPage) return;
 
     loadConversations();
-    const interval = setInterval(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const poll = async () => {
+      await loadConversations();
       // Back off if we're seeing repeated errors
+      let delay = 3000;
       if (consecutiveErrors.current > 5) {
-        if (consecutiveErrors.current % 5 === 0) loadConversations();
-        return;
+        delay = 15000;
       }
-      loadConversations();
-    }, 3000);
+      timeoutId = setTimeout(poll, delay);
+    };
+
+    poll();
 
     // Listen for chat open requests from other components
     const handleOpenChat = (event: CustomEvent) => {
@@ -645,7 +650,7 @@ export function TeamChat({ currentUser }: TeamChatProps) {
     window.addEventListener("openTeamChat", handleOpenChat as EventListener);
 
     return () => {
-      clearInterval(interval);
+      clearTimeout(timeoutId);
       window.removeEventListener(
         "openTeamChat",
         handleOpenChat as EventListener
