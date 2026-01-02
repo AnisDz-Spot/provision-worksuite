@@ -110,15 +110,6 @@ export async function POST(
           owners.forEach((o: any) => recipients.add(o.userId)); // Add any other owners
           admins.forEach((admin: any) => recipients.add(admin.id)); // Add admins
 
-          console.log("DEBUG: Notification Acceptance", {
-            projectId: project.id,
-            ownerId: project.userId,
-            adminCount: admins.length,
-            recipients: Array.from(recipients),
-            projectName: project.name,
-            acceptingUser: dbUser.id,
-          });
-
           // Create Notifications
           const notificationsData = Array.from(recipients).map((userId) => ({
             userId,
