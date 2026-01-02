@@ -174,7 +174,9 @@ export function AssignmentTable() {
                     </td>
                     <td className="p-4 align-middle">
                       <Badge variant="secondary" className="capitalize">
-                        {assignment.role}
+                        {assignment.role === "owner"
+                          ? "Project Lead"
+                          : assignment.role}
                       </Badge>
                     </td>
                     <td className="p-4 align-middle">

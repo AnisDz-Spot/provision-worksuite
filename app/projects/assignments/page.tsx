@@ -27,7 +27,7 @@ export default function AssignmentsPage() {
   }
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           Project Assignments

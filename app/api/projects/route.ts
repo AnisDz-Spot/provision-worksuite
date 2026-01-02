@@ -273,6 +273,7 @@ export async function POST(req: Request) {
         projectId: project.id,
         userId: projectUserId,
         role: "owner",
+        invitationAcceptedAt: new Date(),
       },
     });
 
