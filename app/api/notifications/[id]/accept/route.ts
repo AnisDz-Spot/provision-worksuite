@@ -95,10 +95,29 @@ export async function POST(
             select: { id: true },
           });
 
-          // Notify Project Owner
+          // Notify Project Owner(s)
+          // Fetch any member with role 'owner'
+          const owners = await prisma.projectMember.findMany({
+            where: {
+              projectId: project.id,
+              role: "owner",
+            },
+            select: { userId: true },
+          });
+
           const recipients = new Set<number>();
-          if (project.userId) recipients.add(project.userId);
-          admins.forEach((admin: any) => recipients.add(admin.id));
+          if (project.userId) recipients.add(project.userId); // Add creator/main owner
+          owners.forEach((o: any) => recipients.add(o.userId)); // Add any other owners
+          admins.forEach((admin: any) => recipients.add(admin.id)); // Add admins
+
+          console.log("DEBUG: Notification Acceptance", {
+            projectId: project.id,
+            ownerId: project.userId,
+            adminCount: admins.length,
+            recipients: Array.from(recipients),
+            projectName: project.name,
+            acceptingUser: dbUser.id,
+          });
 
           // Create Notifications
           const notificationsData = Array.from(recipients).map((userId) => ({
