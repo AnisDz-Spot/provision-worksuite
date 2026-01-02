@@ -13,6 +13,8 @@ export type Milestone = {
   start?: string; // YYYY-MM-DD
   target?: string; // YYYY-MM-DD
   description?: string;
+  totalTasks?: number;
+  completedTasks?: number;
 };
 
 function readMilestones(): Milestone[] {
@@ -48,13 +50,24 @@ export async function getMilestonesByProject(
           start: m.startDate ? m.startDate.split("T")[0] : undefined,
           target: m.dueDate ? m.dueDate.split("T")[0] : undefined,
           description: m.description || undefined,
+          totalTasks: m.totalTasks || 0,
+          completedTasks: m.completedTasks || 0,
         }));
       }
     } catch (e) {
       console.error("DB Milestones error:", e);
     }
   }
-  return readMilestones().filter((m) => m.projectId === projectId);
+  return readMilestones()
+    .filter((m) => m.projectId === projectId)
+    .map((m) => {
+      const prog = getMilestoneTaskProgress(projectId, m.id);
+      return {
+        ...m,
+        totalTasks: prog.total,
+        completedTasks: prog.done,
+      };
+    });
 }
 
 export async function upsertMilestone(m: Milestone) {

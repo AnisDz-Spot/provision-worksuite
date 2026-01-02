@@ -38,10 +38,24 @@ export async function GET(request: NextRequest) {
 
     const milestones = await prisma.milestone.findMany({
       where: { projectId: project.id },
+      include: {
+        tasks: {
+          select: {
+            status: true,
+          },
+        },
+      },
       orderBy: { order: "asc" },
     });
 
-    return NextResponse.json({ success: true, data: milestones });
+    const enrichedMilestones = milestones.map((m: any) => ({
+      ...m,
+      totalTasks: m.tasks.length,
+      completedTasks: m.tasks.filter((t: any) => t.status === "done").length,
+      tasks: undefined,
+    }));
+
+    return NextResponse.json({ success: true, data: enrichedMilestones });
   } catch (error) {
     log.error({ err: error }, "Failed to fetch milestones");
     return NextResponse.json(

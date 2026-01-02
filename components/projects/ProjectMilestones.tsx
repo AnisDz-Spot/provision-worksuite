@@ -10,7 +10,6 @@ import {
   getMilestonesByProject,
   upsertMilestone,
   deleteMilestone,
-  getMilestoneTaskProgress,
 } from "@/lib/utils";
 import { useToaster } from "@/components/ui/Toaster";
 import { useLoading } from "@/context/LoadingContext";
@@ -196,7 +195,14 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       ) : (
         <div className="space-y-3">
           {items.map((m) => {
-            const prog = getMilestoneTaskProgress(projectId, m.id);
+            const prog = {
+              total: m.totalTasks || 0,
+              done: m.completedTasks || 0,
+              percent:
+                m.totalTasks && m.totalTasks > 0
+                  ? Math.round(((m.completedTasks || 0) / m.totalTasks) * 100)
+                  : 0,
+            };
             const isEditing = editingId === m.id;
             return (
               <div key={m.id} className="p-3 border rounded-md">
