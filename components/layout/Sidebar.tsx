@@ -45,6 +45,11 @@ const navItems: (NavItem | NavGroup)[] = [
     icon: FolderKanbanIcon,
     items: [
       { href: "/projects", label: "All Projects", icon: FolderKanbanIcon },
+      {
+        href: "/projects/assignments",
+        label: "Assignments",
+        icon: ClipboardListIcon,
+      },
       { href: "/projects/clients", label: "Clients", icon: UsersIcon },
     ],
   },

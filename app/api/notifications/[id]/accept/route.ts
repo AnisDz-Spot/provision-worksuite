@@ -59,13 +59,15 @@ export async function POST(
       const projectId = notification.link.split("/").pop();
 
       if (projectId) {
-        // Find project
+        // Find project and its owner
         let project = await prisma.project.findFirst({
           where: { slug: projectId },
+          include: { user: true },
         });
         if (!project) {
           project = await prisma.project.findFirst({
             where: { uid: projectId },
+            include: { user: true },
           });
         }
 
@@ -80,6 +82,40 @@ export async function POST(
               invitationAcceptedAt: new Date(),
             },
           });
+
+          // Fetch Master Admins / Global Admin
+          const admins = await prisma.user.findMany({
+            where: {
+              OR: [
+                { role: "GLOBAL_ADMIN" },
+                { role: "admin" },
+                { role: "master admin" },
+              ],
+            },
+            select: { id: true },
+          });
+
+          // Notify Project Owner
+          const recipients = new Set<number>();
+          if (project.userId) recipients.add(project.userId);
+          admins.forEach((admin: any) => recipients.add(admin.id));
+
+          // Create Notifications
+          const notificationsData = Array.from(recipients).map((userId) => ({
+            userId,
+            type: "invitation_accepted",
+            title: "Invitation Accepted",
+            message: `${dbUser.name || dbUser.email} has accepted the invitation to join ${project.name}`,
+            link: `/projects/${project.uid}`,
+            isRead: false,
+            createdAt: new Date(),
+          }));
+
+          if (notificationsData.length > 0) {
+            await prisma.notification.createMany({
+              data: notificationsData,
+            });
+          }
         }
       }
     }
