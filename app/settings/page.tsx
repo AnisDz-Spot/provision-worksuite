@@ -123,8 +123,17 @@ function DataSourceTab() {
   const hasLicense = hasValidLicense();
 
   useEffect(() => {
+    // Check if we just failed DB connection to avoid infinite loop
+    const params =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : null;
+    const hasDbFail = params?.get("dbfail") === "1";
+
     // If we have a valid license, FORCE real mode
-    if (hasLicense && dataMode !== "real") {
+    // UNLESS we just failed (dbfail=1), in which case we let it stay in mock/error state
+    // so user can fix settings.
+    if (hasLicense && dataMode !== "real" && !hasDbFail) {
       setDataMode("real");
       localStorage.setItem("pv:dataMode", "real");
       setDataModePreference("real");
