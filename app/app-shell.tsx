@@ -77,93 +77,92 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // 2. DETERMINE MODE & SETUP FLAGS
     if (isAuthenticated && currentUser) {
       const pref = localStorage.getItem("pv:dataMode");
-      const isMaster = currentUser.isMasterAdmin || isGlobalAdmin(currentUser);
+      const isMasterAdmin = currentUser.isMasterAdmin;
+      const isGlobal = isGlobalAdmin(currentUser);
+      const isMaster = isMasterAdmin || isGlobal;
+      const tablesExist = hasDatabaseTables(); // Synced from server
+      const validLicense = hasValidLicense();
 
-      // Define function to handle master admin flow
-      const handleMasterAdminFlow = () => {
-        const setupDone = isDatabaseConfigured() && isSetupComplete();
-
-        if (setupDone) {
-          // If setup is fully done (Master Admin exists), FORCE real mode
-          if (pref !== "real") {
-            setDataModePreference("real");
-            setMode("real");
-          } else if (mode !== "real") {
-            setMode("real");
-          }
-          setShowModeModal(false);
-        } else if (!pref && !isDatabaseConfigured()) {
-          // No setup yet, default to mock but let them choose (via sidebar/onboarding)
-          setDataModePreference("mock");
-          setMode("mock");
-          localStorage.setItem("pv:onboardingDone", "true");
-          setShowModeModal(false);
-        } else if (!pref && isDatabaseConfigured()) {
-          // DB configured but no profile yet, ask for mode or continue setup
-          setShowModeModal(true);
-        } else if (pref) {
-          setMode(pref);
-          setShowModeModal(false);
-          if (pref === "mock") {
+      // REQUIREMENT 1: No DB Checks or No Tables
+      // If no tables exist (implies DB not configured or empty), ONLY Global Admin can access in Mock Mode.
+      if (!tablesExist) {
+        if (isGlobal) {
+          console.log(
+            "[AppShell] No tables/DB found. Enforcing Mock Mode for Global Admin."
+          );
+          if (pref !== "mock") {
+            setDataModePreference("mock");
             localStorage.setItem("pv:onboardingDone", "true");
           }
-        }
-      };
-
-      // Special Global Admin Access: Check if no users exist or DB is unavailable
-      if (isMaster) {
-        (async () => {
-          try {
-            const checkRes = await fetch("/api/setup/check-users");
-            const checkData = await checkRes.json();
-
-            // If no users exist or DB error, force Global Admin to mock mode
-            if (checkData.canAccessWithGlobalAdmin) {
-              console.log(
-                "[AppShell] Global Admin access: No users or DB error, using mock mode"
-              );
-              if (pref !== "mock") {
-                setDataModePreference("mock");
-                setMode("mock");
-                localStorage.setItem("pv:onboardingDone", "true");
-              } else if (mode !== "mock") {
-                setMode("mock");
-              }
-              setShowModeModal(false);
-              setIsSyncing(false);
-              return; // Skip all other checks
-            }
-
-            // Continue with normal flow if users exist
-            handleMasterAdminFlow();
-          } catch (error) {
-            console.error(
-              "[AppShell] Error checking users, allowing Global Admin access:",
-              error
-            );
-            // On error, assume we need Global Admin access
-            if (pref !== "mock") {
-              setDataModePreference("mock");
-              setMode("mock");
-              localStorage.setItem("pv:onboardingDone", "true");
-            } else if (mode !== "mock") {
-              setMode("mock");
-            }
-            setShowModeModal(false);
-            setIsSyncing(false);
-            return;
+          if (mode !== "mock") {
+            setMode("mock");
           }
-        })();
-        return; // Exit early, let async function handle the rest
+          setShowModeModal(false);
+          setIsSyncing(false);
+          return;
+        } else {
+          console.warn(
+            "[AppShell] No tables/DB found. Standard users not allowed. Logging out."
+          );
+          // Redirect to logout to ensure clean state
+          window.location.href = "/api/auth/logout";
+          return;
+        }
       }
 
-      // Non-master admin: FORCED to 'real' mode
+      // REQUIREMENT 2: Master Admin + License
+      // Once Master Admin exists (implies tables exist) + Valid License => Force LIVE Mode
+      if (isMasterAdmin && validLicense) {
+        if (pref !== "real") {
+          console.log(
+            "[AppShell] Licensed Master Admin found. Enforcing Live Mode."
+          );
+          setDataModePreference("real");
+        }
+        if (mode !== "real") {
+          setMode("real");
+        }
+        setShowModeModal(false);
+        // Continue to setup checks...
+      } else {
+        // Standard Mode Handling (if not enforced above)
+        if (!mode) {
+          if (pref) {
+            setMode(pref);
+            if (pref === "mock") setShowModeModal(false);
+          } else {
+            // New user, no preference
+            if (isMaster) {
+              // Master can choose
+              // But if we are here (tables exist), default to Real unless explicitly mock?
+              // Let logic fall through to modal or default
+              if (isDatabaseConfigured()) setShowModeModal(true);
+              else {
+                setMode("mock");
+                setDataModePreference("mock");
+              }
+            } else {
+              // Standard users forced to Real
+              setMode("real");
+              setDataModePreference("real");
+            }
+          }
+        }
+      }
+
+      // Define function to handle setup flow (used for License/Setup redirects below)
+      const handleMasterAdminFlow = () => {
+        // This function is less relevant with strict enforcement but kept for setup checks
+        const setupDone = isDatabaseConfigured() && isSetupComplete();
+        if (setupDone) setShowModeModal(false);
+      };
+
+      // Non-master admin: FORCED to 'real' mode (redundant safeguard)
       if (!isMaster) {
-        // All other roles (Admins, Members, etc.) are FORCED to 'real' mode
         if (pref !== "real") {
           setDataModePreference("real");
           setMode("real");
-        } else {
+        } else if (mode !== "real") {
           setMode("real");
         }
         setShowModeModal(false);
