@@ -18,6 +18,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Global Admin Bypass (Mock Mode)
+    if (user.uid === "admin-global" || user.email === "admin@provision.com") {
+      return NextResponse.json({
+        success: true,
+        data: {
+          twoFactorEnabled: false,
+          twoFactorVerifiedAt: null,
+          backupCodesRemaining: 0,
+          hasPassword: true, // Default mock password exists
+          linkedProviders: [],
+        },
+      });
+    }
+
     // 2. Get user details from DB
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },

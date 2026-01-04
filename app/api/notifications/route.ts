@@ -9,6 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Global Admin Bypass (Mock Mode) - Return empty notifications
+    if (user.uid === "admin-global") {
+      return NextResponse.json({
+        success: true,
+        data: [],
+      });
+    }
+
     const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
       select: { id: true },

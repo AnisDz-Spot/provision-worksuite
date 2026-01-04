@@ -14,6 +14,11 @@ export async function GET(request: Request) {
     );
   }
 
+  // Global Admin Bypass (Mock Mode)
+  if (user.uid === "admin-global" || user.email === "admin@provision.com") {
+    return NextResponse.json({ success: true, data: [] });
+  }
+
   // Master Admin Check
   // Assuming role 'master_admin' or checking specific email/uid if needed
   // For now we check role from DB or AuthContext (which we don't have here, so DB check is safer)
