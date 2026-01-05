@@ -45,6 +45,12 @@ export default function LicenseActivationPage() {
     setError(null);
   };
 
+  const switchToDummy = () => {
+    setDataModePreference("mock");
+    localStorage.removeItem("pv:dbConfig");
+    router.push("/");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4">
       <div className="max-w-md w-full">
