@@ -32,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [showModeModal, setShowModeModal] = React.useState(false);
   const [isSyncing, setIsSyncing] = React.useState(true);
   const [isNavBlocked, setIsNavBlocked] = React.useState(false);
+  const [serverLicenseValid, setServerLicenseValid] = React.useState(false);
   const [activeCall, setActiveCall] = React.useState<any>(null);
 
   React.useEffect(() => {
@@ -59,14 +60,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               !!status.adminExists
             : !!status.adminExists;
           markSetupComplete(true, profileDone, !!status.hasTables);
+          setServerLicenseValid(status.licenseValid);
         } else {
           markSetupComplete(false, false, false);
+          setServerLicenseValid(false);
         }
       } catch (e) {
         console.error("Sync failed:", e);
         // Force reset setup status on sync failure to prevent stale state
         const { markSetupComplete } = await import("@/lib/setup");
         markSetupComplete(false, false, false);
+        setServerLicenseValid(false);
       } finally {
         setIsSyncing(false);
       }
@@ -84,7 +88,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const isGlobal = isGlobalAdmin(currentUser);
       const isMaster = isMasterAdmin || isGlobal;
       const tablesExist = hasDatabaseTables(); // Synced from server
-      const validLicense = hasValidLicense();
+      const localLicenseValid = hasValidLicense();
+      const validLicense = localLicenseValid || serverLicenseValid;
 
       // REQUIREMENT 1: No DB Checks or No Tables
       // If no tables exist (implies DB not configured or empty), ONLY Global Admin can access in Mock Mode.

@@ -48,12 +48,28 @@ export async function GET() {
     // 5. Check optional Storage
     const storageProvider = process.env.NEXT_PUBLIC_STORAGE_PROVIDER;
 
+    // 6. Check License Status from DB
+    let licenseValid = false;
+    if (hasTables) {
+      try {
+        const licenseSetting = await prisma.systemSetting.findUnique({
+          where: { settingKey: "LICENSE_MASTER" },
+        });
+        if (licenseSetting?.licenseKey) {
+          licenseValid = true;
+        }
+      } catch (e) {
+        // Ignore error
+      }
+    }
+
     return NextResponse.json({
       ready: true,
       provider: storageProvider || "vercel-blob (default)",
       dbConfigured: true,
       hasTables,
       adminExists,
+      licenseValid,
     });
   } catch (error: any) {
     log.error({ err: error }, "System check failed");

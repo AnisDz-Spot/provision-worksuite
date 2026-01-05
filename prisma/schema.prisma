@@ -743,6 +743,7 @@ model SystemSetting {
   isEncrypted  Boolean  @default(true) @map("is_encrypted")
   updatedAt    DateTime @default(now()) @map("updated_at")
   updatedBy    String?  @map("updated_by")
+  licenseKey   String?  @map("license_key")
 
   @@index([settingKey])
   @@map("system_settings")

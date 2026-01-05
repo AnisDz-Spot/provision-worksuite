@@ -29,12 +29,14 @@ export function getDatabaseStatus(): Promise<{
   configured: boolean;
   hasTables: boolean;
   adminExists: boolean;
+  licenseValid: boolean;
 }> {
   if (typeof window === "undefined") {
     return Promise.resolve({
       configured: false,
       hasTables: false,
       adminExists: false,
+      licenseValid: false,
     });
   }
 
@@ -45,8 +47,14 @@ export function getDatabaseStatus(): Promise<{
       configured: !!data.dbConfigured,
       hasTables: !!data.hasTables,
       adminExists: !!data.adminExists,
+      licenseValid: !!data.licenseValid,
     }))
-    .catch(() => ({ configured: false, hasTables: false, adminExists: false }));
+    .catch(() => ({
+      configured: false,
+      hasTables: false,
+      adminExists: false,
+      licenseValid: false,
+    }));
 }
 
 export function isDatabaseConfigured(): boolean {
