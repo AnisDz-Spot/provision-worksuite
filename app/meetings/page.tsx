@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -96,6 +96,24 @@ export default function MeetingsPage() {
       setToasts((t) => t.filter((x) => x.id !== id));
     }, 3000);
   };
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [isAttendeeDropdownOpen, setIsAttendeeDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsAttendeeDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [formData, setFormData] = useState({
     title: "",
     date: new Date().toISOString().slice(0, 16),
