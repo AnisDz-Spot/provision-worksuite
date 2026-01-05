@@ -38,12 +38,12 @@ export function Modal({
       />
       <div
         className={cn(
-          "fixed z-50 bg-card border rounded-xl shadow-lg overflow-hidden p-7 min-w-[300px]",
+          "fixed z-50 bg-card border rounded-xl shadow-lg p-7 min-w-[300px] max-h-[90vh] overflow-y-auto animate-fadeIn",
           size === "sm" && "max-w-sm",
           size === "md" && "max-w-lg",
           size === "lg" && "max-w-2xl",
           size === "xl" && "max-w-4xl",
-          size === "full" && "min-w-[50vw] max-w-[90vw] max-h-[85vh]",
+          size === "full" && "min-w-[90vw] max-w-[95vw] max-h-[95vh]",
           className
         )}
         style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)" }}
@@ -54,6 +54,3 @@ export function Modal({
     </>
   );
 }
-
-
-

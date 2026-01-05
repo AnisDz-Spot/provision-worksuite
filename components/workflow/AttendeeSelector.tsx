@@ -116,16 +116,16 @@ export function AttendeeSelector({
       </div>
 
       {selectedAttendees.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-200">
           {selectedAttendees.map((attendee, idx) => (
             <Badge
               key={idx}
               variant="secondary"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 animate-fadeIn"
             >
               {attendee}
               <button
-                className="hover:text-destructive ml-1"
+                className="hover:text-destructive ml-1 transition-colors"
                 onClick={() => handleRemove(attendee)}
               >
                 ×

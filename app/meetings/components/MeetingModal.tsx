@@ -100,13 +100,13 @@ export function MeetingModal({
             name="new-attendee-search"
           />
         </div>
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-6 border-t mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
             onClick={onSave}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg transition-all"
           >
             {isEditing ? "Save Changes" : "Create Meeting"}
           </Button>
