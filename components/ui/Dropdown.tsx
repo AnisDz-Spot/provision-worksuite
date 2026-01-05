@@ -5,7 +5,12 @@ import * as React from "react";
 
 export interface DropdownProps {
   trigger: React.ReactNode;
-  items: { label: string; onClick: () => void; icon?: React.ReactNode }[];
+  items: {
+    label: string;
+    onClick: () => void;
+    icon?: React.ReactNode;
+    className?: string;
+  }[];
   align?: "start" | "end";
   searchable?: boolean;
   searchPlaceholder?: string;
@@ -48,7 +53,10 @@ export function Dropdown({
             <DropdownMenu.Item
               key={i}
               onSelect={item.onClick}
-              className="flex items-center gap-3 px-4 py-2 text-foreground outline-none hover:bg-accent focus:bg-accent cursor-pointer transition-colors"
+              className={cn(
+                "flex items-center gap-3 px-4 py-2 text-foreground outline-none hover:bg-accent focus:bg-accent cursor-pointer transition-colors",
+                item.className
+              )}
             >
               {item.icon}
               {item.label}
@@ -64,6 +72,3 @@ export function Dropdown({
     </DropdownMenu.Root>
   );
 }
-
-
-
