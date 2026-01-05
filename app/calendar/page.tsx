@@ -54,7 +54,15 @@ export default function CalendarPage() {
   // Load notes
   useEffect(() => {
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
-      if (shouldUseDatabaseData()) {
+      const userJson = localStorage.getItem("pv:currentUser");
+      let isGlobalAdmin = false;
+      try {
+        const user = JSON.parse(userJson || "{}");
+        isGlobalAdmin =
+          user.uid === "admin-global" || user.email === "admin@provision.com";
+      } catch {}
+
+      if (shouldUseDatabaseData() || isGlobalAdmin) {
         fetch("/api/calendar/events")
           .then((res) => res.json())
           .then((json) => {
@@ -62,10 +70,16 @@ export default function CalendarPage() {
               const newNotes: Record<string, any[]> = {};
               json.data.forEach((evt: any) => {
                 const date = evt.startTime.split("T")[0]; // YYYY-MM-DD
-                let meta = { type: "note", color: "#3b82f6" };
+
+                // Support both direct fields (structured) and legacy description JSON
+                let type = evt.type || "note";
+                let color = evt.color || "#3b82f6";
+
                 try {
                   if (evt.description && evt.description.startsWith("{")) {
-                    meta = JSON.parse(evt.description);
+                    const meta = JSON.parse(evt.description);
+                    if (meta.type) type = meta.type;
+                    if (meta.color) color = meta.color;
                   }
                 } catch {}
 
@@ -73,8 +87,8 @@ export default function CalendarPage() {
                 newNotes[date].push({
                   id: evt.id,
                   text: evt.title,
-                  color: meta.color,
-                  type: meta.type,
+                  color: color,
+                  type: type,
                 });
               });
               setNotes(newNotes);
@@ -130,7 +144,15 @@ export default function CalendarPage() {
     }
 
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
-      if (shouldUseDatabaseData()) {
+      const userJson = localStorage.getItem("pv:currentUser");
+      let isGlobalAdmin = false;
+      try {
+        const user = JSON.parse(userJson || "{}");
+        isGlobalAdmin =
+          user.uid === "admin-global" || user.email === "admin@provision.com";
+      } catch {}
+
+      if (shouldUseDatabaseData() || isGlobalAdmin) {
         fetchWithCsrf("/api/calendar/events", {
           method: "POST",
           headers: {
@@ -181,7 +203,15 @@ export default function CalendarPage() {
     const note = notes[iso][idx];
 
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
-      if (shouldUseDatabaseData() && note.id) {
+      const userJson = localStorage.getItem("pv:currentUser");
+      let isGlobalAdmin = false;
+      try {
+        const user = JSON.parse(userJson || "{}");
+        isGlobalAdmin =
+          user.uid === "admin-global" || user.email === "admin@provision.com";
+      } catch {}
+
+      if ((shouldUseDatabaseData() || isGlobalAdmin) && note.id) {
         fetchWithCsrf(`/api/calendar/events?id=${note.id}`, {
           method: "DELETE",
         }).then((res) => {
