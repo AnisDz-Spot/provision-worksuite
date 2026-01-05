@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Menu,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,24 +51,24 @@ const navItems: (NavItem | NavGroup)[] = [
         label: "Assignments",
         icon: ClipboardListIcon,
       },
+      { href: "/templates", label: "Templates", icon: Rocket },
       { href: "/projects/clients", label: "Clients", icon: UsersIcon },
     ],
   },
-  { href: "/templates", label: "Templates", icon: Rocket },
-  { href: "/tasks", label: "Tasks", icon: ClipboardListIcon },
-  { href: "/team", label: "Team", icon: UsersIcon },
-  { href: "/calendar", label: "Calendar", icon: CalendarIcon },
-  { href: "/chat", label: "Messages", icon: MessageSquare },
   {
-    label: "Knowledge",
-    icon: BookOpen,
+    label: "Workflows",
+    icon: Workflow,
     items: [
-      { href: "/wiki", label: "Wiki", icon: BookOpen },
       { href: "/meetings", label: "Meetings", icon: MessageSquare },
       { href: "/decisions", label: "Decisions", icon: FileText },
       { href: "/retrospectives", label: "Retrospectives", icon: RotateCcw },
     ],
   },
+  { href: "/tasks", label: "Tasks", icon: ClipboardListIcon },
+  { href: "/team", label: "Team", icon: UsersIcon },
+  { href: "/calendar", label: "Calendar", icon: CalendarIcon },
+  { href: "/chat", label: "Messages", icon: MessageSquare },
+  { href: "/wiki", label: "Knowledge", icon: BookOpen },
   {
     label: "Insights",
     icon: BarChart3,

@@ -24,18 +24,58 @@ export async function GET(req: Request) {
     currentUser.uid === "admin-global" ||
     currentUser.email === "admin@provision.com"
   ) {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     return NextResponse.json({
       success: true,
       data: [
         {
-          id: "evt_1",
-          title: "Team Sync",
-          description: "Weekly sync",
-          startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 3600000).toISOString(),
+          id: "evt_mock_1",
+          title: "Daily Standup",
+          description: "Team status update",
+          startTime: new Date(today.getTime() + 10 * 3600000).toISOString(), // 10:00 AM Today
+          endTime: new Date(today.getTime() + 10.5 * 3600000).toISOString(), // 10:30 AM Today
           type: "meeting",
           color: "#3b82f6",
           isAllDay: false,
+          createdById: 0,
+        },
+        {
+          id: "evt_mock_2",
+          title: "Project Review",
+          description: "Review Q1 milestones",
+          startTime: new Date(today.getTime() + 14 * 3600000).toISOString(), // 2:00 PM Today
+          endTime: new Date(today.getTime() + 15 * 3600000).toISOString(), // 3:00 PM Today
+          type: "task",
+          color: "#10b981",
+          isAllDay: false,
+          createdById: 0,
+        },
+        {
+          id: "evt_mock_3",
+          title: "Client Call",
+          description: "Requirements gathering with Acme Corp",
+          startTime: new Date(tomorrow.getTime() + 11 * 3600000).toISOString(), // 11:00 AM Tomorrow
+          endTime: new Date(tomorrow.getTime() + 12 * 3600000).toISOString(), // 12:00 PM Tomorrow
+          type: "meeting",
+          color: "#8b5cf6",
+          isAllDay: false,
+          createdById: 0,
+        },
+        {
+          id: "evt_mock_4",
+          title: "Deadline: Website Redesign",
+          description: "Final submission",
+          startTime: new Date(today.getTime() + 17 * 3600000).toISOString(), // 5:00 PM Today
+          endTime: new Date(today.getTime() + 18 * 3600000).toISOString(), // 6:00 PM Today
+          type: "milestone",
+          color: "#ef4444",
+          isAllDay: false,
+          createdById: 0,
         },
       ],
       source: "demo",
