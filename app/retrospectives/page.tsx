@@ -67,9 +67,17 @@ export default function RetrospectivesPage() {
     loadRetrospectives();
   }, []);
 
+  const isRealMode = () => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pv:dataMode") === "real";
+  };
+
   const loadRetrospectives = async () => {
     try {
-      const res = await fetch("/data/retrospectives.json");
+      const endpoint = isRealMode()
+        ? "/api/retrospectives"
+        : "/data/retrospectives.json";
+      const res = await fetch(endpoint);
       const data = await res.json();
       setRetrospectives(data);
     } catch (error) {
@@ -89,7 +97,37 @@ export default function RetrospectivesPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isRealMode()) {
+      try {
+        const payload = {
+          id: isEditing && selectedRetro ? selectedRetro.id : undefined,
+          ...formData,
+          wentWell: isEditing && selectedRetro ? selectedRetro.wentWell : [],
+          needsImprovement:
+            isEditing && selectedRetro ? selectedRetro.needsImprovement : [],
+          actionItems:
+            isEditing && selectedRetro ? selectedRetro.actionItems : [],
+        };
+
+        const res = await fetch("/api/retrospectives", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const saved = await res.json();
+
+        if (saved.id) {
+          loadRetrospectives();
+          setIsModalOpen(false);
+        }
+      } catch (err) {
+        log.error({ err }, "Failed to save retrospective");
+      }
+      return;
+    }
+
+    // Mock Mode
     if (isEditing && selectedRetro) {
       setRetrospectives(
         retrospectives.map((r) =>
@@ -120,19 +158,34 @@ export default function RetrospectivesPage() {
     setIsModalOpen(false);
   };
 
-  const toggleActionItem = (retroId: string, actionId: string) => {
-    setRetrospectives(
-      retrospectives.map((r) =>
-        r.id === retroId
-          ? {
-              ...r,
-              actionItems: r.actionItems.map((a) =>
-                a.id === actionId ? { ...a, completed: !a.completed } : a
-              ),
-            }
-          : r
-      )
+  const toggleActionItem = async (retroId: string, actionId: string) => {
+    // Optimistic
+    const updatedRetros = retrospectives.map((r) =>
+      r.id === retroId
+        ? {
+            ...r,
+            actionItems: r.actionItems.map((a) =>
+              a.id === actionId ? { ...a, completed: !a.completed } : a
+            ),
+          }
+        : r
     );
+    setRetrospectives(updatedRetros);
+
+    if (isRealMode()) {
+      const retroToSync = updatedRetros.find((r) => r.id === retroId);
+      if (retroToSync) {
+        try {
+          await fetch("/api/retrospectives", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(retroToSync),
+          });
+        } catch (err) {
+          console.error("Failed to sync retro update", err);
+        }
+      }
+    }
   };
 
   const formatDate = (dateStr: string) => {

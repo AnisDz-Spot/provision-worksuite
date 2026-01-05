@@ -75,9 +75,15 @@ export default function DecisionsPage() {
     setFilteredDecisions(filtered);
   }, [searchQuery, filterStatus, decisions]);
 
+  const isRealMode = () => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pv:dataMode") === "real";
+  };
+
   const loadDecisions = async () => {
     try {
-      const res = await fetch("/data/decisions.json");
+      const endpoint = isRealMode() ? "/api/decisions" : "/data/decisions.json";
+      const res = await fetch(endpoint);
       const data = await res.json();
       setDecisions(data);
       setFilteredDecisions(data);
@@ -119,7 +125,32 @@ export default function DecisionsPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isRealMode()) {
+      try {
+        const payload = {
+          id: isEditing && selectedDecision ? selectedDecision.id : undefined,
+          ...formData,
+        };
+
+        const res = await fetch("/api/decisions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const saved = await res.json();
+
+        if (saved.id) {
+          loadDecisions();
+          setIsModalOpen(false);
+        }
+      } catch (err) {
+        log.error({ err }, "Failed to save decision");
+      }
+      return;
+    }
+
+    // Mock Mode
     if (isEditing && selectedDecision) {
       setDecisions(
         decisions.map((d) =>

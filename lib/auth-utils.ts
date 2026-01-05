@@ -53,3 +53,21 @@ export function isProjectManager(user: AuthUser | null | undefined): boolean {
 export function canEditProject(user: AuthUser | null | undefined): boolean {
   return isAdmin(user) || isProjectManager(user);
 }
+
+/**
+ * Server-side Data Mode Helpers
+ * Note: Client-side data mode is handled by localStorage and component logic switching between API and JSON.
+ * These helpers are for API routes to determine if they should force mock data (e.g. for fallback).
+ */
+
+export function shouldUseDatabaseData(): boolean {
+  // Could check process.env.DATABASE_URL here
+  return true;
+}
+
+export function shouldReturnMockData(user: any): boolean {
+  // In this architecture, the Frontend decides whether to call the API (Live) or load JSON (Mock).
+  // If the API is called, we assume the intent is to fetch Live data.
+  // However, we can add logic here to force mock return for specific scenarios if needed.
+  return false;
+}

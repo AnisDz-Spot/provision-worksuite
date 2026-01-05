@@ -3,14 +3,12 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData, shouldReturnMockData } from "@/lib/auth-utils";
 
-const MOCK_RETRO = [
+const MOCK_DECISIONS = [
   {
-    id: "retro-1",
-    title: "Sprint 1 Retro",
-    date: new Date().toISOString(),
-    wentWell: [],
-    needsImprovement: [],
-    actionItems: [],
+    id: "decision-1",
+    title: "Use PostgreSQL",
+    status: "approved",
+    tags: ["tech", "database"],
   },
 ];
 
@@ -22,18 +20,18 @@ export async function GET(req: Request) {
     }
 
     if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
-      return NextResponse.json(MOCK_RETRO);
+      return NextResponse.json(MOCK_DECISIONS);
     }
 
-    const retrieved = await prisma.retrospective.findMany({
-      orderBy: { date: "desc" },
+    const decisions = await prisma.decision.findMany({
+      orderBy: { decidedAt: "desc" },
     });
 
-    return NextResponse.json(retrieved);
+    return NextResponse.json(decisions);
   } catch (error) {
-    console.error("Failed to fetch retrospectives:", error);
+    console.error("Failed to fetch decisions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch retrospectives" },
+      { error: "Failed to fetch decisions" },
       { status: 500 }
     );
   }
@@ -52,43 +50,48 @@ export async function POST(req: Request) {
 
     const data = await req.json();
 
-    if (data.id && !data.id.startsWith("retro-")) {
-      const updated = await prisma.retrospective.update({
+    // If update (id provided)
+    if (data.id && !data.id.startsWith("decision-")) {
+      const updated = await prisma.decision.update({
         where: { id: data.id },
         data: {
           title: data.title,
-          date: new Date(data.date),
-          sprintNumber: data.sprintNumber,
+          context: data.context,
+          decision: data.decision,
+          rationale: data.rationale,
+          status: data.status,
+          tags: data.tags,
+          alternatives: data.alternatives,
+          consequences: data.consequences,
           projectId: data.projectId,
-          attendees: data.attendees,
-          wentWell: data.wentWell,
-          needsImprovement: data.needsImprovement,
-          actionItems: data.actionItems,
           updatedAt: new Date(),
         },
       });
       return NextResponse.json(updated);
     }
 
-    const created = await prisma.retrospective.create({
+    // Create
+    const created = await prisma.decision.create({
       data: {
         title: data.title,
-        date: new Date(data.date),
-        sprintNumber: data.sprintNumber,
+        context: data.context,
+        decision: data.decision,
+        rationale: data.rationale,
+        status: data.status || "pending",
+        tags: data.tags || [],
+        alternatives: data.alternatives || [],
+        consequences: data.consequences || [],
         projectId: data.projectId,
-        attendees: data.attendees || [],
-        wentWell: data.wentWell || [],
-        needsImprovement: data.needsImprovement || [],
-        actionItems: data.actionItems || [],
-        createdBy: user.uid,
+        decidedBy: [user.uid], // default current user
+        decidedAt: new Date(),
       },
     });
 
     return NextResponse.json(created);
   } catch (error) {
-    console.error("Failed to save retrospective:", error);
+    console.error("Failed to save decision:", error);
     return NextResponse.json(
-      { error: "Failed to save retrospective" },
+      { error: "Failed to save decision" },
       { status: 500 }
     );
   }

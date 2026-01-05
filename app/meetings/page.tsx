@@ -182,9 +182,15 @@ export default function MeetingsPage() {
     }
   }, [searchQuery, meetings]);
 
+  const isRealMode = () => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("pv:dataMode") === "real";
+  };
+
   const loadMeetings = async () => {
     try {
-      const res = await fetch("/data/meetings.json");
+      const endpoint = isRealMode() ? "/api/meetings" : "/data/meetings.json";
+      const res = await fetch(endpoint);
       const data = await res.json();
       setMeetings(data);
       setFilteredMeetings(data);
@@ -205,7 +211,40 @@ export default function MeetingsPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isRealMode()) {
+      try {
+        const payload = {
+          id: isEditing && selectedMeeting ? selectedMeeting.id : undefined,
+          title: formData.title,
+          date: new Date(formData.date).toISOString(),
+          projectId: formData.projectId,
+          content: formData.content, // Editor content
+          attendees: formData.attendees,
+          actionItems:
+            isEditing && selectedMeeting ? selectedMeeting.actionItems : [],
+        };
+
+        const res = await fetch("/api/meetings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const saved = await res.json();
+
+        if (saved.id) {
+          loadMeetings(); // Reload to get fresh data
+          setIsModalOpen(false);
+          pushToast(isEditing ? "Meeting updated" : "Meeting created");
+        }
+      } catch (err) {
+        log.error({ err }, "Failed to save meeting");
+        pushToast("Failed to save meeting");
+      }
+      return;
+    }
+
+    // Mock Mode fallback
     if (isEditing && selectedMeeting) {
       setMeetings(
         meetings.map((m) =>
@@ -234,7 +273,8 @@ export default function MeetingsPage() {
     setIsModalOpen(false);
   };
 
-  const toggleActionItem = (meetingId: string, actionId: string) => {
+  const toggleActionItem = async (meetingId: string, actionId: string) => {
+    // Optimistic update
     const updatedMeetings = meetings.map((m) =>
       m.id === meetingId
         ? {
@@ -247,9 +287,27 @@ export default function MeetingsPage() {
         : m
     );
     setMeetings(updatedMeetings);
+
+    // Update selected meeting if open
     const updatedMeeting =
       updatedMeetings.find((m) => m.id === meetingId) || null;
-    setSelectedMeeting(updatedMeeting);
+    if (selectedMeeting?.id === meetingId) {
+      setSelectedMeeting(updatedMeeting);
+    }
+
+    if (isRealMode() && updatedMeeting) {
+      // Sync to server
+      try {
+        await fetch("/api/meetings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedMeeting),
+        });
+      } catch (err) {
+        console.error("Failed to sync action item update", err);
+      }
+    }
+
     const action = updatedMeeting?.actionItems.find((a) => a.id === actionId);
     if (
       action?.assignedTo &&

@@ -194,16 +194,19 @@ model Project {
   client Client? @relation(fields: [clientId], references: [id])
 
   // Relations - tasks linked via projectId=uid
-  tasks      Task[]
-  expenses   Expense[]
-  invoices   Invoice[]
-  milestones Milestone[]
-  files      File[]
-  comments   Comment[]
-  events     CalendarEvent[]
-  members    ProjectMember[]
-  chatGroups ChatGroup[]
-  stars      StarredProject[]
+  tasks          Task[]
+  expenses       Expense[]
+  invoices       Invoice[]
+  milestones     Milestone[]
+  files          File[]
+  comments       Comment[]
+  events         CalendarEvent[]
+  members        ProjectMember[]
+  chatGroups     ChatGroup[]
+  stars          StarredProject[]
+  meetings       Meeting[]
+  decisions      Decision[]
+  retrospectives Retrospective[]
 
   @@index([userId])
   @@index([clientId])
@@ -800,6 +803,15 @@ model Meeting {
   conversationId  String?   @map("conversation_id")
   maxParticipants Int       @default(50)
 
+  // Meeting Notes Fields
+  content     String?   @db.Text
+  actionItems Json?     @map("action_items")
+  projectId   String?   @map("project_id")
+  attendees   String[]  @default([])
+  date        DateTime? // Specific date for the meeting note, separate from Jitsi startTime if needed
+
+  project Project? @relation(fields: [projectId], references: [uid], onDelete: SetNull)
+
   participants MeetingParticipant[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -827,4 +839,50 @@ model MeetingParticipant {
   @@index([meetingId])
   @@index([userId])
   @@map("meeting_participants")
+}
+
+model Decision {
+  id           String   @id @default(uuid())
+  title        String
+  context      String?  @db.Text
+  decision     String?  @db.Text
+  rationale    String?  @db.Text
+  alternatives String[] @default([])
+  consequences String[] @default([])
+  tags         String[] @default([])
+  status       String   @default("pending") // approved, pending, rejected
+  decidedBy    String[] @default([]) @map("decided_by")
+  decidedAt    DateTime @default(now()) @map("decided_at")
+
+  projectId String?  @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project? @relation(fields: [projectId], references: [uid], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([status])
+  @@map("decisions")
+}
+
+model Retrospective {
+  id               String   @id @default(uuid())
+  title            String
+  date             DateTime
+  sprintNumber     Int?     @map("sprint_number")
+  projectId        String?  @map("project_id")
+  attendees        String[] @default([])
+  wentWell         Json?    @map("went_well")
+  needsImprovement Json?    @map("needs_improvement")
+  actionItems      Json?    @map("action_items")
+
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project? @relation(fields: [projectId], references: [uid], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([date])
+  @@map("retrospectives")
 }
