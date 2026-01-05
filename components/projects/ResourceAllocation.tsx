@@ -50,7 +50,11 @@ const defaultMembers: TeamMember[] = [
   },
 ];
 
-export function ResourceAllocation({ members = [] }: ResourceAllocationProps) {
+const EMPTY_MEMBERS: TeamMember[] = [];
+
+export function ResourceAllocation({
+  members = EMPTY_MEMBERS,
+}: ResourceAllocationProps) {
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
     "all"
   );

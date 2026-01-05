@@ -19,6 +19,29 @@ export async function GET(req: Request) {
     );
   }
 
+  // Global Admin Bypass (Mock Mode)
+  if (
+    currentUser.uid === "admin-global" ||
+    currentUser.email === "admin@provision.com"
+  ) {
+    return NextResponse.json({
+      success: true,
+      data: [
+        {
+          id: "evt_1",
+          title: "Team Sync",
+          description: "Weekly sync",
+          startTime: new Date().toISOString(),
+          endTime: new Date(Date.now() + 3600000).toISOString(),
+          type: "meeting",
+          color: "#3b82f6",
+          isAllDay: false,
+        },
+      ],
+      source: "demo",
+    });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const start = searchParams.get("start");
@@ -57,6 +80,27 @@ export async function POST(req: Request) {
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // Global Admin Bypass (Mock Mode) - Prevent write but return success/mock
+  if (
+    currentUser.uid === "admin-global" ||
+    currentUser.email === "admin@provision.com"
+  ) {
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: "evt_demo_" + Date.now(),
+        title: "Demo Event",
+        description: "This is a demo event",
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 3600000).toISOString(),
+        type: "event",
+        color: "#3b82f6",
+        isAllDay: false,
+        createdById: 0,
+      },
+    });
   }
 
   // Check for Global Admin (string ID) trying to write to DB (requires Int ID)
@@ -107,6 +151,14 @@ export async function DELETE(req: Request) {
       { success: false, error: "Unauthorized" },
       { status: 401 }
     );
+  }
+
+  // Global Admin Bypass (Mock Mode)
+  if (
+    currentUser.uid === "admin-global" ||
+    currentUser.email === "admin@provision.com"
+  ) {
+    return NextResponse.json({ success: true });
   }
 
   try {
