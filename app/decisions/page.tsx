@@ -54,6 +54,9 @@ export default function DecisionsPage() {
     decidedBy: [] as string[],
   });
 
+  const [altInput, setAltInput] = useState("");
+  const [conInput, setConInput] = useState("");
+
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
@@ -522,17 +525,17 @@ export default function DecisionsPage() {
               <div className="flex gap-2">
                 <Input
                   placeholder="Add alternative..."
-                  id="alt-input"
+                  value={altInput}
+                  onChange={(e) => setAltInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      const val = e.currentTarget.value.trim();
-                      if (val) {
+                      if (altInput.trim()) {
                         setFormData((prev) => ({
                           ...prev,
-                          alternatives: [...prev.alternatives, val],
+                          alternatives: [...prev.alternatives, altInput.trim()],
                         }));
-                        e.currentTarget.value = "";
+                        setAltInput("");
                       }
                     }
                   }}
@@ -541,15 +544,12 @@ export default function DecisionsPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    const el = document.getElementById(
-                      "alt-input"
-                    ) as HTMLInputElement;
-                    if (el?.value.trim()) {
+                    if (altInput.trim()) {
                       setFormData((prev) => ({
                         ...prev,
-                        alternatives: [...prev.alternatives, el.value.trim()],
+                        alternatives: [...prev.alternatives, altInput.trim()],
                       }));
-                      el.value = "";
+                      setAltInput("");
                     }
                   }}
                 >
@@ -589,17 +589,17 @@ export default function DecisionsPage() {
               <div className="flex gap-2">
                 <Input
                   placeholder="Add consequence..."
-                  id="con-input"
+                  value={conInput}
+                  onChange={(e) => setConInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      const val = e.currentTarget.value.trim();
-                      if (val) {
+                      if (conInput.trim()) {
                         setFormData((prev) => ({
                           ...prev,
-                          consequences: [...prev.consequences, val],
+                          consequences: [...prev.consequences, conInput.trim()],
                         }));
-                        e.currentTarget.value = "";
+                        setConInput("");
                       }
                     }
                   }}
@@ -608,15 +608,12 @@ export default function DecisionsPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    const el = document.getElementById(
-                      "con-input"
-                    ) as HTMLInputElement;
-                    if (el?.value.trim()) {
+                    if (conInput.trim()) {
                       setFormData((prev) => ({
                         ...prev,
-                        consequences: [...prev.consequences, el.value.trim()],
+                        consequences: [...prev.consequences, conInput.trim()],
                       }));
-                      el.value = "";
+                      setConInput("");
                     }
                   }}
                 >
