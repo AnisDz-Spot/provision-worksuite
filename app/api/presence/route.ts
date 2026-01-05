@@ -1,10 +1,39 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
+import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { getAuthenticatedUser } from "@/lib/auth";
+import { shouldReturnMockData } from "@/lib/mock-helper";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const user = await getAuthenticatedUser();
+
+  if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+    return NextResponse.json({
+      success: true,
+      data: [
+        {
+          uid: "u1",
+          status: "available",
+          lastSeen: new Date().toISOString(),
+        },
+        {
+          uid: "u2",
+          status: "busy",
+          lastSeen: new Date().toISOString(),
+        },
+        {
+          uid: "u3",
+          status: "away",
+          lastSeen: new Date().toISOString(),
+        },
+      ],
+      serverTime: new Date().toISOString(),
+    });
+  }
+
   try {
     const presences = await prisma.presence.findMany({
       orderBy: { lastSeen: "desc" },
