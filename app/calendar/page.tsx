@@ -63,7 +63,7 @@ export default function CalendarPage() {
       } catch {}
 
       if (shouldUseDatabaseData() || isGlobalAdmin) {
-        fetch("/api/calendar/events")
+        fetchWithCsrf("/api/calendar/events")
           .then((res) => res.json())
           .then((json) => {
             if (json.success && json.data) {

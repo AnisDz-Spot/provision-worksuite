@@ -27,30 +27,36 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
       "unknown";
-    const {
-      success: rateLimitSuccess,
-      remaining,
-      reset,
-    } = await rateLimitLogin(ip);
 
-    if (!rateLimitSuccess) {
-      const resetDate = new Date(reset);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Too many login attempts. Please try again after ${resetDate.toLocaleTimeString()}`,
-          remaining: 0,
-          resetAt: resetDate.toISOString(),
-        },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": "5",
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": reset.toString(),
+    try {
+      const {
+        success: rateLimitSuccess,
+        remaining,
+        reset,
+      } = await rateLimitLogin(ip);
+
+      if (!rateLimitSuccess) {
+        const resetDate = new Date(reset);
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Too many login attempts. Please try again after ${resetDate.toLocaleTimeString()}`,
+            remaining: 0,
+            resetAt: resetDate.toISOString(),
           },
-        }
-      );
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": "5",
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": reset.toString(),
+            },
+          }
+        );
+      }
+    } catch (e) {
+      log.warn({ err: e }, "Rate limiting check failed - failing open");
+      // Continue execution
     }
 
     // 2. Validate request body with Zod
@@ -259,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     // 6. Identify Master Admin (first user) and Sync role if needed
     let isMasterAdmin = false;
-    if (user.uid !== "global-admin") {
+    if (user.uid !== "admin-global") {
       const firstUser = await prisma.user.findFirst({
         orderBy: { id: "asc" },
         select: { id: true, role: true },
