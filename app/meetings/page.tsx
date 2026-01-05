@@ -106,11 +106,7 @@ export default function MeetingsPage() {
 
   useEffect(() => {
     loadMeetings();
-    // Load team members
-    fetch("/data/users.json")
-      .then((res) => res.json())
-      .then((data) => setTeamMembers(data))
-      .catch((err) => log.error({ err }, "Failed to load team members"));
+    loadTeamMembers();
     // Load projects
     fetch("/data/projects.json")
       .then((res) => res.json())
@@ -119,6 +115,22 @@ export default function MeetingsPage() {
       )
       .catch((err) => log.error({ err }, "Failed to load projects"));
   }, []);
+
+  const loadTeamMembers = async () => {
+    try {
+      if (isRealMode()) {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        setTeamMembers(Array.isArray(data) ? data : []);
+      } else {
+        const res = await fetch("/data/users.json");
+        const data = await res.json();
+        setTeamMembers(data);
+      }
+    } catch (err) {
+      log.error({ err }, "Failed to load team members");
+    }
+  };
 
   // When opening a meeting, seed notes draft
   useEffect(() => {
@@ -389,228 +401,250 @@ export default function MeetingsPage() {
         />
       </Card>
 
-      <div
-        className={
-          viewMode === "grid" ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"
-        }
-      >
-        {filteredMeetings.map((meeting) => {
-          const completedActions = meeting.actionItems.filter(
-            (a) => a.completed
-          ).length;
-          const totalActions = meeting.actionItems.length;
-          const plainText = meeting.content.replace(/<[^>]+>/g, "");
-          const excerpt =
-            plainText.length > 160 ? plainText.slice(0, 160) + "…" : plainText;
+      {filteredMeetings.length === 0 ? (
+        <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
+          <div className="p-4 rounded-full bg-muted inline-flex mb-4">
+            <Calendar className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">No meetings found</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            {searchQuery
+              ? "No meetings match your search."
+              : "Schedule your first team meeting to get started."}
+          </p>
+          <Button onClick={handleCreateNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Meeting
+          </Button>
+        </div>
+      ) : (
+        <div
+          className={
+            viewMode === "grid" ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"
+          }
+        >
+          {filteredMeetings.map((meeting) => {
+            const completedActions = meeting.actionItems.filter(
+              (a) => a.completed
+            ).length;
+            const totalActions = meeting.actionItems.length;
+            const plainText = meeting.content.replace(/<[^>]+>/g, "");
+            const excerpt =
+              plainText.length > 160
+                ? plainText.slice(0, 160) + "…"
+                : plainText;
 
-          return (
-            <Card
-              key={meeting.id}
-              className="group relative overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border bg-background/60 backdrop-blur"
-              onClick={() => {
-                setSelectedMeeting(meeting);
-                setIsModalOpen(false);
-              }}
-            >
-              {/* Gradient background accent */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-500 via-blue-500 to-indigo-500" />
+            return (
+              <Card
+                key={meeting.id}
+                className="group relative overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border bg-background/60 backdrop-blur"
+                onClick={() => {
+                  setSelectedMeeting(meeting);
+                  setIsModalOpen(false);
+                }}
+              >
+                {/* Gradient background accent */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-500 via-blue-500 to-indigo-500" />
 
-              <div className="p-6">
-                {/* Header with title and metadata */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-3 group-hover:text-purple-600 transition-colors">
-                      {meeting.title}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full text-sm">
-                        <Calendar className="w-4 h-4 text-purple-600" />
-                        <span className="font-medium">
-                          {formatDate(meeting.date)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full text-sm">
-                        <Users className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium">
-                          {meeting.attendees.length} attendees
-                        </span>
-                      </div>
-                      {/* Attendee avatars preview: show only team members */}
-                      <div className="flex -space-x-2">
-                        {meeting.attendees
-                          .filter((a) => teamMembers.some((m) => m.name === a))
-                          .slice(0, 3)
-                          .map((name, i) => (
-                            <Image
-                              key={i}
-                              src={getAvatarUrl(name)}
-                              alt={name}
-                              width={24}
-                              height={24}
-                              className="w-6 h-6 rounded-full border-2 border-card"
-                            />
-                          ))}
-                        {meeting.attendees.filter((a) =>
-                          teamMembers.some((m) => m.name === a)
-                        ).length > 3 && (
-                          <div className="w-6 h-6 rounded-full border-2 border-card bg-gray-500 text-white flex items-center justify-center text-[10px]">
-                            +
-                            {meeting.attendees.filter((a) =>
+                <div className="p-6">
+                  {/* Header with title and metadata */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold mb-3 group-hover:text-purple-600 transition-colors">
+                        {meeting.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 rounded-full text-sm">
+                          <Calendar className="w-4 h-4 text-purple-600" />
+                          <span className="font-medium">
+                            {formatDate(meeting.date)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 rounded-full text-sm">
+                          <Users className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium">
+                            {meeting.attendees.length} attendees
+                          </span>
+                        </div>
+                        {/* Attendee avatars preview: show only team members */}
+                        <div className="flex -space-x-2">
+                          {meeting.attendees
+                            .filter((a) =>
                               teamMembers.some((m) => m.name === a)
-                            ).length - 3}
-                          </div>
+                            )
+                            .slice(0, 3)
+                            .map((name, i) => (
+                              <Image
+                                key={i}
+                                src={getAvatarUrl(name)}
+                                alt={name}
+                                width={24}
+                                height={24}
+                                className="w-6 h-6 rounded-full border-2 border-card"
+                              />
+                            ))}
+                          {meeting.attendees.filter((a) =>
+                            teamMembers.some((m) => m.name === a)
+                          ).length > 3 && (
+                            <div className="w-6 h-6 rounded-full border-2 border-card bg-gray-500 text-white flex items-center justify-center text-[10px]">
+                              +
+                              {meeting.attendees.filter((a) =>
+                                teamMembers.some((m) => m.name === a)
+                              ).length - 3}
+                            </div>
+                          )}
+                        </div>
+                        {meeting.projectId && (
+                          <Badge variant="secondary" className="px-3 py-1">
+                            {meeting.projectId}
+                          </Badge>
                         )}
                       </div>
-                      {meeting.projectId && (
-                        <Badge variant="secondary" className="px-3 py-1">
-                          {meeting.projectId}
-                        </Badge>
-                      )}
                     </div>
-                  </div>
-                  {/* Kebab quick actions */}
-                  <div className="relative">
-                    <button
-                      className="p-2 rounded-md hover:bg-accent"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(
-                          openMenuId === meeting.id ? null : meeting.id
-                        );
-                      }}
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                    {openMenuId === meeting.id && (
-                      <div
-                        className="absolute right-0 mt-2 w-40 bg-card border rounded-md shadow-lg z-20"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          className="w-full text-left px-3 py-2 hover:bg-accent"
-                          onClick={() => {
-                            setIsEditing(true);
-                            setIsModalOpen(true);
-                            setFormData({
-                              title: meeting.title,
-                              date: new Date(meeting.date)
-                                .toISOString()
-                                .slice(0, 16),
-                              projectId: meeting.projectId,
-                              content: meeting.content,
-                              attendees: meeting.attendees,
-                            });
-                            setOpenMenuId(null);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="w-full text-left px-3 py-2 hover:bg-accent"
-                          onClick={() => {
-                            const duplicate: Meeting = {
-                              ...meeting,
-                              id: `meeting-${Date.now()}`,
-                              title: meeting.title + " (Copy)",
-                              createdAt: new Date().toISOString(),
-                              updatedAt: new Date().toISOString(),
-                            };
-                            setMeetings([duplicate, ...meetings]);
-                            setOpenMenuId(null);
-                          }}
-                        >
-                          Duplicate
-                        </button>
-                        <button
-                          className="w-full text-left px-3 py-2 hover:bg-destructive/20 text-destructive"
-                          onClick={() => {
-                            setMeetings(
-                              meetings.filter((m) => m.id !== meeting.id)
-                            );
-                            setOpenMenuId(null);
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Notes preview rendered as HTML, clamped with scroll */}
-                {meeting.content && (
-                  <div className="mb-3">
-                    <div
-                      className={`prose dark:prose-invert prose-sm ${openMenuId === `expanded-${meeting.id}` ? "" : "max-h-40 overflow-y-hidden"}`}
-                      dangerouslySetInnerHTML={{
-                        __html: sanitizeHtml(meeting.content),
-                      }}
-                    />
-                    <div className="mt-2">
+                    {/* Kebab quick actions */}
+                    <div className="relative">
                       <button
-                        className="text-xs px-2 py-1 rounded border hover:bg-accent"
+                        className="p-2 rounded-md hover:bg-accent"
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuId(
-                            openMenuId === `expanded-${meeting.id}`
-                              ? null
-                              : `expanded-${meeting.id}`
+                            openMenuId === meeting.id ? null : meeting.id
                           );
                         }}
                       >
-                        {openMenuId === `expanded-${meeting.id}`
-                          ? "Show less"
-                          : "Read more"}
+                        <MoreVertical className="w-4 h-4" />
                       </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action items summary */}
-                {meeting.actionItems.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-semibold">
-                          {completedActions}/{totalActions} Action Items
-                          Complete
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 h-2 bg-accent rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-linear-to-r from-green-500 to-emerald-500 transition-all"
-                            style={{
-                              width: `${totalActions > 0 ? (completedActions / totalActions) * 100 : 0}%`,
+                      {openMenuId === meeting.id && (
+                        <div
+                          className="absolute right-0 mt-2 w-40 bg-card border rounded-md shadow-lg z-20"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className="w-full text-left px-3 py-2 hover:bg-accent"
+                            onClick={() => {
+                              setIsEditing(true);
+                              setIsModalOpen(true);
+                              setFormData({
+                                title: meeting.title,
+                                date: new Date(meeting.date)
+                                  .toISOString()
+                                  .slice(0, 16),
+                                projectId: meeting.projectId,
+                                content: meeting.content,
+                                attendees: meeting.attendees,
+                              });
+                              setOpenMenuId(null);
                             }}
-                          />
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="w-full text-left px-3 py-2 hover:bg-accent"
+                            onClick={() => {
+                              const duplicate: Meeting = {
+                                ...meeting,
+                                id: `meeting-${Date.now()}`,
+                                title: meeting.title + " (Copy)",
+                                createdAt: new Date().toISOString(),
+                                updatedAt: new Date().toISOString(),
+                              };
+                              setMeetings([duplicate, ...meetings]);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            className="w-full text-left px-3 py-2 hover:bg-destructive/20 text-destructive"
+                            onClick={() => {
+                              setMeetings(
+                                meetings.filter((m) => m.id !== meeting.id)
+                              );
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {totalActions > 0
-                            ? Math.round(
-                                (completedActions / totalActions) * 100
-                              )
-                            : 0}
-                          %
-                        </span>
-                      </div>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* Click to view indicator */}
-                <div className="mt-4 pt-3 border-t border-border/30 flex items-center justify-center text-xs text-muted-foreground group-hover:text-purple-600 transition-colors">
-                  <span className="font-medium">
-                    Click to view full details →
-                  </span>
-                  <span className="text-[11px]">ID: {meeting.id}</span>
+                  {/* Notes preview rendered as HTML, clamped with scroll */}
+                  {meeting.content && (
+                    <div className="mb-3">
+                      <div
+                        className={`prose dark:prose-invert prose-sm ${openMenuId === `expanded-${meeting.id}` ? "" : "max-h-40 overflow-y-hidden"}`}
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeHtml(meeting.content),
+                        }}
+                      />
+                      <div className="mt-2">
+                        <button
+                          className="text-xs px-2 py-1 rounded border hover:bg-accent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(
+                              openMenuId === `expanded-${meeting.id}`
+                                ? null
+                                : `expanded-${meeting.id}`
+                            );
+                          }}
+                        >
+                          {openMenuId === `expanded-${meeting.id}`
+                            ? "Show less"
+                            : "Read more"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action items summary */}
+                  {meeting.actionItems.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-semibold">
+                            {completedActions}/{totalActions} Action Items
+                            Complete
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-2 bg-accent rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-linear-to-r from-green-500 to-emerald-500 transition-all"
+                              style={{
+                                width: `${totalActions > 0 ? (completedActions / totalActions) * 100 : 0}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {totalActions > 0
+                              ? Math.round(
+                                  (completedActions / totalActions) * 100
+                                )
+                              : 0}
+                            %
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Click to view indicator */}
+                  <div className="mt-4 pt-3 border-t border-border/30 flex items-center justify-center text-xs text-muted-foreground group-hover:text-purple-600 transition-colors">
+                    <span className="font-medium">
+                      Click to view full details →
+                    </span>
+                    <span className="text-[11px]">ID: {meeting.id}</span>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {selectedMeeting && !isModalOpen && (
         <Modal
@@ -742,7 +776,10 @@ export default function MeetingsPage() {
                       </div>
                     </div>
                     <div className="md:col-span-2">
-                      <div className="flex flex-wrap gap-2">
+                      <label className="block text-sm font-medium mb-2">
+                        Attendees
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md min-h-[42px] bg-background">
                         {metaDraft.attendees.map((a, i) => (
                           <Badge
                             key={i}
@@ -751,7 +788,7 @@ export default function MeetingsPage() {
                           >
                             <span>{a}</span>
                             <button
-                              className="hover:bg-destructive/20 rounded-full p-0.5"
+                              className="hover:text-destructive hover:bg-destructive/10 rounded-full p-0.5 transition-colors"
                               onClick={() =>
                                 setMetaDraft({
                                   ...metaDraft,
@@ -765,34 +802,20 @@ export default function MeetingsPage() {
                             </button>
                           </Badge>
                         ))}
-                        <Input
-                          placeholder="Add attendee and press Enter"
-                          onKeyDown={(e) => {
-                            const val = (
-                              e.target as HTMLInputElement
-                            ).value.trim();
-                            if ((e.key === "Enter" || e.key === ",") && val) {
-                              e.preventDefault();
-                              if (!metaDraft.attendees.includes(val))
-                                setMetaDraft({
-                                  ...metaDraft,
-                                  attendees: [...metaDraft.attendees, val],
-                                });
-                              (e.target as HTMLInputElement).value = "";
-                            }
-                          }}
-                        />
+                      </div>
+                      <div className="flex gap-2">
                         <select
+                          className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm"
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (val && !metaDraft.attendees.includes(val))
+                            if (val && !metaDraft.attendees.includes(val)) {
                               setMetaDraft({
                                 ...metaDraft,
                                 attendees: [...metaDraft.attendees, val],
                               });
-                            e.currentTarget.value = "";
+                            }
+                            e.target.value = "";
                           }}
-                          className="px-3 py-2 bg-background border border-border rounded-lg text-sm"
                         >
                           <option value="">+ Add Team Member</option>
                           {teamMembers.map((m) => (

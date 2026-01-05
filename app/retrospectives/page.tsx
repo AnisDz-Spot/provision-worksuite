@@ -63,9 +63,31 @@ export default function RetrospectivesPage() {
     attendees: [] as string[],
   });
 
+  const [users, setUsers] = useState<any[]>([]);
+
   useEffect(() => {
     loadRetrospectives();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      // Logic for user endpoint can differ. /api/users usually requires admin, but let's try.
+      // Or use /api/team if available.
+      // If /api/users fails or returns error, we might fallback.
+      if (isRealMode()) {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        if (Array.isArray(data)) setUsers(data);
+      } else {
+        const res = await fetch("/data/users.json");
+        const data = await res.json();
+        setUsers(data);
+      }
+    } catch (err) {
+      log.error({ err }, "Failed to load users");
+    }
+  };
 
   const isRealMode = () => {
     if (typeof window === "undefined") return false;
@@ -216,172 +238,195 @@ export default function RetrospectivesPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {retrospectives.map((retro) => {
-          const completedActions = retro.actionItems.filter(
-            (a) => a.completed
-          ).length;
-          const totalActions = retro.actionItems.length;
-          const completionRate =
-            totalActions > 0
-              ? Math.round((completedActions / totalActions) * 100)
-              : 0;
+      {retrospectives.length === 0 ? (
+        <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
+          <div className="p-4 rounded-full bg-muted inline-flex mb-4">
+            <RotateCcw className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            No retrospectives found
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            Start logging your sprint retrospectives to improve team
+            performance.
+          </p>
+          <Button onClick={handleCreateNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Retrospective
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {retrospectives.map((retro) => {
+            const completedActions = retro.actionItems.filter(
+              (a) => a.completed
+            ).length;
+            const totalActions = retro.actionItems.length;
+            const completionRate =
+              totalActions > 0
+                ? Math.round((completedActions / totalActions) * 100)
+                : 0;
 
-          return (
-            <Card key={retro.id} className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{retro.title}</h3>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDate(retro.date)}</span>
+            return (
+              <Card key={retro.id} className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {retro.title}
+                    </h3>
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{formatDate(retro.date)}</span>
+                      </div>
+                      {retro.sprintNumber && (
+                        <Badge variant="secondary">
+                          Sprint {retro.sprintNumber}
+                        </Badge>
+                      )}
+                      {retro.projectId && (
+                        <Badge variant="secondary">
+                          Project: {retro.projectId}
+                        </Badge>
+                      )}
                     </div>
-                    {retro.sprintNumber && (
-                      <Badge variant="secondary">
-                        Sprint {retro.sprintNumber}
-                      </Badge>
-                    )}
-                    {retro.projectId && (
-                      <Badge variant="secondary">
-                        Project: {retro.projectId}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                {/* Went Well */}
-                <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ThumbsUp className="w-5 h-5 text-green-600" />
-                    <h4 className="font-semibold text-green-900 dark:text-green-100">
-                      What Went Well
-                    </h4>
-                  </div>
-                  <div className="space-y-2">
-                    {retro.wentWell.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">
-                        No items added yet
-                      </p>
-                    ) : (
-                      retro.wentWell.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-start gap-2 p-2 bg-background/50 rounded"
-                        >
-                          <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-sm">{item.text}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                👍 {item.votes}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
                   </div>
                 </div>
 
-                {/* Needs Improvement */}
-                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-3">
-                    <ThumbsDown className="w-5 h-5 text-amber-600" />
-                    <h4 className="font-semibold text-amber-900 dark:text-amber-100">
-                      Needs Improvement
-                    </h4>
-                  </div>
-                  <div className="space-y-2">
-                    {retro.needsImprovement.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">
-                        No items added yet
-                      </p>
-                    ) : (
-                      retro.needsImprovement.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-start gap-2 p-2 bg-background/50 rounded"
-                        >
-                          <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-sm">{item.text}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                👍 {item.votes}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Items */}
-              {retro.actionItems.length > 0 && (
-                <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-5 h-5 text-blue-600" />
-                      <h4 className="font-semibold text-blue-900 dark:text-blue-100">
-                        Action Items ({completedActions}/{totalActions})
+                <div className="grid md:grid-cols-2 gap-4 mb-6">
+                  {/* Went Well */}
+                  <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ThumbsUp className="w-5 h-5 text-green-600" />
+                      <h4 className="font-semibold text-green-900 dark:text-green-100">
+                        What Went Well
                       </h4>
                     </div>
-                    {totalActions > 0 && (
-                      <Badge variant="secondary">
-                        {completionRate}% complete
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {retro.actionItems.map((action) => (
-                      <div
-                        key={action.id}
-                        className="flex items-start gap-3 p-2 bg-background/50 rounded hover:bg-accent/50 transition-colors"
-                      >
-                        <button
-                          onClick={() => toggleActionItem(retro.id, action.id)}
-                          className="mt-0.5 cursor-pointer"
-                        >
-                          {action.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-muted-foreground" />
-                          )}
-                        </button>
-                        <div className="flex-1">
-                          <p
-                            className={`text-sm ${
-                              action.completed
-                                ? "line-through text-muted-foreground"
-                                : ""
-                            }`}
+                    <div className="space-y-2">
+                      {retro.wentWell.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic">
+                          No items added yet
+                        </p>
+                      ) : (
+                        retro.wentWell.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-start gap-2 p-2 bg-background/50 rounded"
                           >
-                            {action.text}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>Assigned: {action.assignedTo}</span>
-                            <span>
-                              Due:{" "}
-                              {new Date(action.dueDate).toLocaleDateString()}
-                            </span>
+                            <TrendingUp className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm">{item.text}</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  👍 {item.votes}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Needs Improvement */}
+                  <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ThumbsDown className="w-5 h-5 text-amber-600" />
+                      <h4 className="font-semibold text-amber-900 dark:text-amber-100">
+                        Needs Improvement
+                      </h4>
+                    </div>
+                    <div className="space-y-2">
+                      {retro.needsImprovement.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic">
+                          No items added yet
+                        </p>
+                      ) : (
+                        retro.needsImprovement.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-start gap-2 p-2 bg-background/50 rounded"
+                          >
+                            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm">{item.text}</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  👍 {item.votes}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
 
-      <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
+                {/* Action Items */}
+                {retro.actionItems.length > 0 && (
+                  <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                          Action Items ({completedActions}/{totalActions})
+                        </h4>
+                      </div>
+                      {totalActions > 0 && (
+                        <Badge variant="secondary">
+                          {completionRate}% complete
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {retro.actionItems.map((action) => (
+                        <div
+                          key={action.id}
+                          className="flex items-start gap-3 p-2 bg-background/50 rounded hover:bg-accent/50 transition-colors"
+                        >
+                          <button
+                            onClick={() =>
+                              toggleActionItem(retro.id, action.id)
+                            }
+                            className="mt-0.5 cursor-pointer"
+                          >
+                            {action.completed ? (
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <Circle className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </button>
+                          <div className="flex-1">
+                            <p
+                              className={`text-sm ${
+                                action.completed
+                                  ? "line-through text-muted-foreground"
+                                  : ""
+                              }`}
+                            >
+                              {action.text}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>Assigned: {action.assignedTo}</span>
+                              <span>
+                                Due:{" "}
+                                {new Date(action.dueDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <Modal open={isModalOpen} onOpenChange={setIsModalOpen} size="lg">
         <h2 className="text-xl font-semibold mb-4">
           {isEditing ? "Edit Retrospective" : "New Retrospective"}
         </h2>
@@ -427,22 +472,49 @@ export default function RetrospectivesPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Attendees (comma-separated)
-            </label>
-            <Input
-              value={formData.attendees.join(", ")}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  attendees: e.target.value
-                    .split(",")
-                    .map((a) => a.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="user-1, user-2, user-3"
-            />
+            <label className="block text-sm font-medium mb-2">Attendees</label>
+            <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md min-h-[42px] bg-background">
+              {formData.attendees.map((attendee, idx) => (
+                <Badge
+                  key={idx}
+                  variant="secondary"
+                  className="flex items-center gap-1"
+                >
+                  {attendee}
+                  <button
+                    className="hover:text-destructive"
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        attendees: prev.attendees.filter((a) => a !== attendee),
+                      }))
+                    }
+                  >
+                    ×
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <select
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !formData.attendees.includes(val)) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    attendees: [...prev.attendees, val],
+                  }));
+                }
+                e.target.value = "";
+              }}
+            >
+              <option value="">+ Add Attendee</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.name}>
+                  {u.name} ({u.role})
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>

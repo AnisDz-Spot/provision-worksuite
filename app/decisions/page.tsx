@@ -265,200 +265,345 @@ export default function DecisionsPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4">
-        {filteredDecisions.map((decision) => (
-          <Card
-            key={decision.id}
-            className="p-6 hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-semibold">{decision.title}</h3>
-                  <div
-                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getStatusColor(decision.status)}`}
-                  >
-                    {getStatusIcon(decision.status)}
-                    <span className="capitalize">{decision.status}</span>
+      {filteredDecisions.length === 0 ? (
+        <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
+          <div className="p-4 rounded-full bg-muted inline-flex mb-4">
+            <FileText className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">No decisions found</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            {searchQuery || filterStatus !== "all"
+              ? "Try adjusting your search or filters."
+              : "Start tracking important project decisions, context, and outcomes."}
+          </p>
+          <Button onClick={handleCreateNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Decision
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredDecisions.map((decision) => (
+            <Card
+              key={decision.id}
+              className="p-6 hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-semibold">{decision.title}</h3>
+                    <div
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getStatusColor(decision.status)}`}
+                    >
+                      {getStatusIcon(decision.status)}
+                      <span className="capitalize">{decision.status}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{formatDate(decision.decidedAt)}</span>
+                    </div>
+                    {decision.projectId && (
+                      <Badge variant="secondary">
+                        Project: {decision.projectId}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatDate(decision.decidedAt)}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEdit(decision)}
+                >
+                  Edit
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Context</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {decision.context}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Decision</h4>
+                  <p className="text-sm">{decision.decision}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Rationale</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {decision.rationale}
+                  </p>
+                </div>
+                {decision.alternatives.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">
+                      Alternatives Considered
+                    </h4>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {decision.alternatives.map((alt, idx) => (
+                        <li key={idx}>{alt}</li>
+                      ))}
+                    </ul>
                   </div>
-                  {decision.projectId && (
-                    <Badge variant="secondary">
-                      Project: {decision.projectId}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEdit(decision)}
-              >
-                Edit
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Context</h4>
-                <p className="text-sm text-muted-foreground">
-                  {decision.context}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Decision</h4>
-                <p className="text-sm">{decision.decision}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Rationale</h4>
-                <p className="text-sm text-muted-foreground">
-                  {decision.rationale}
-                </p>
-              </div>
-              {decision.alternatives.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">
-                    Alternatives Considered
-                  </h4>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {decision.alternatives.map((alt, idx) => (
-                      <li key={idx}>{alt}</li>
+                )}
+                {decision.consequences.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">Consequences</h4>
+                    <ul className="list-disc list-inside text-sm text-muted-foreground">
+                      {decision.consequences.map((con, idx) => (
+                        <li key={idx}>{con}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {decision.tags.length > 0 && (
+                  <div className="flex gap-2 pt-2">
+                    {decision.tags.map((tag) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
                     ))}
-                  </ul>
-                </div>
-              )}
-              {decision.consequences.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Consequences</h4>
-                  <ul className="list-disc list-inside text-sm text-muted-foreground">
-                    {decision.consequences.map((con, idx) => (
-                      <li key={idx}>{con}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {decision.tags.length > 0 && (
-                <div className="flex gap-2 pt-2">
-                  {decision.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      <Modal open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Modal open={isModalOpen} onOpenChange={setIsModalOpen} size="xl">
         <h2 className="text-xl font-semibold mb-4">
           {isEditing ? "Edit Decision" : "New Decision"}
         </h2>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-          <div>
-            <label className="block text-sm font-medium mb-2">Title</label>
-            <Input
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              placeholder="Adopt TypeScript for New Projects"
-            />
+        <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Title</label>
+              <Input
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                placeholder="e.g. Adopt TypeScript"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Project ID (Optional)
+              </label>
+              <Input
+                value={formData.projectId || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    projectId: e.target.value || null,
+                  })
+                }
+                placeholder="e.g. PROJ-123"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as
+                      | "approved"
+                      | "pending"
+                      | "rejected",
+                  })
+                }
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg cursor-pointer text-sm"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium mb-2">Status</label>
-            <select
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  status: e.target.value as "approved" | "pending" | "rejected",
-                })
-              }
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg cursor-pointer"
-            >
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Context</label>
+            <label className="block text-sm font-medium mb-1">Context</label>
             <textarea
               value={formData.context}
               onChange={(e) =>
                 setFormData({ ...formData, context: e.target.value })
               }
-              placeholder="Describe the situation that led to this decision..."
-              className="w-full min-h-20 px-3 py-2 bg-background border border-border rounded-lg resize-y"
+              placeholder="Describe the situation..."
+              className="w-full min-h-[80px] px-3 py-2 bg-background border border-border rounded-lg resize-y text-sm"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Decision</label>
-            <textarea
-              value={formData.decision}
-              onChange={(e) =>
-                setFormData({ ...formData, decision: e.target.value })
-              }
-              placeholder="What was decided?"
-              className="w-full min-h-20 px-3 py-2 bg-background border border-border rounded-lg resize-y"
-            />
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Decision</label>
+              <textarea
+                value={formData.decision}
+                onChange={(e) =>
+                  setFormData({ ...formData, decision: e.target.value })
+                }
+                placeholder="What was decided?"
+                className="w-full min-h-[100px] px-3 py-2 bg-background border border-border rounded-lg resize-y text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rationale
+              </label>
+              <textarea
+                value={formData.rationale}
+                onChange={(e) =>
+                  setFormData({ ...formData, rationale: e.target.value })
+                }
+                placeholder="Why was this chosen?"
+                className="w-full min-h-[100px] px-3 py-2 bg-background border border-border rounded-lg resize-y text-sm"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Rationale</label>
-            <textarea
-              value={formData.rationale}
-              onChange={(e) =>
-                setFormData({ ...formData, rationale: e.target.value })
-              }
-              placeholder="Why was this decision made?"
-              className="w-full min-h-20 px-3 py-2 bg-background border border-border rounded-lg resize-y"
-            />
+
+          <div className="grid md:grid-cols-2 gap-6 p-4 bg-muted/20 rounded-lg">
+            {/* Alternatives */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Alternatives Considered
+              </label>
+              <div className="space-y-2 mb-2">
+                {formData.alternatives.map((alt, idx) => (
+                  <div
+                    key={idx}
+                    className="flex gap-2 items-center bg-background p-2 rounded border"
+                  >
+                    <span className="text-sm flex-1">{alt}</span>
+                    <button
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          alternatives: prev.alternatives.filter(
+                            (_, i) => i !== idx
+                          ),
+                        }))
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <span className="sr-only">Remove</span>×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add alternative..."
+                  id="alt-input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = e.currentTarget.value.trim();
+                      if (val) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          alternatives: [...prev.alternatives, val],
+                        }));
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const el = document.getElementById(
+                      "alt-input"
+                    ) as HTMLInputElement;
+                    if (el?.value.trim()) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        alternatives: [...prev.alternatives, el.value.trim()],
+                      }));
+                      el.value = "";
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {/* Consequences */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Consequences
+              </label>
+              <div className="space-y-2 mb-2">
+                {formData.consequences.map((con, idx) => (
+                  <div
+                    key={idx}
+                    className="flex gap-2 items-center bg-background p-2 rounded border"
+                  >
+                    <span className="text-sm flex-1">{con}</span>
+                    <button
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          consequences: prev.consequences.filter(
+                            (_, i) => i !== idx
+                          ),
+                        }))
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <span className="sr-only">Remove</span>×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add consequence..."
+                  id="con-input"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = e.currentTarget.value.trim();
+                      if (val) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          consequences: [...prev.consequences, val],
+                        }));
+                        e.currentTarget.value = "";
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const el = document.getElementById(
+                      "con-input"
+                    ) as HTMLInputElement;
+                    if (el?.value.trim()) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        consequences: [...prev.consequences, el.value.trim()],
+                      }));
+                      el.value = "";
+                    }
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Alternatives (comma-separated)
-            </label>
-            <Input
-              value={formData.alternatives.join(", ")}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  alternatives: e.target.value
-                    .split(",")
-                    .map((a) => a.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="Option A, Option B, Option C"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Consequences (comma-separated)
-            </label>
-            <Input
-              value={formData.consequences.join(", ")}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  consequences: e.target.value
-                    .split(",")
-                    .map((c) => c.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="Impact 1, Impact 2, Impact 3"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-1">
               Tags (comma-separated)
             </label>
             <Input
@@ -475,7 +620,7 @@ export default function DecisionsPage() {
               placeholder="technical, standards, process"
             />
           </div>
-          <div className="flex justify-end gap-3 pt-4 sticky bottom-0 bg-background">
+          <div className="flex justify-end gap-3 pt-4 sticky bottom-0 bg-background/95 backdrop-blur p-2 border-t">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
