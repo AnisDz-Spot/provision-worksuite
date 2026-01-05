@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
 
-import { Meeting } from "../types/meeting";
+import { Meeting } from "@/app/meetings/types/meeting";
 
 interface MeetingCardProps {
   meeting: Meeting;
