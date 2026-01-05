@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -18,6 +18,9 @@ import {
   Clock,
 } from "lucide-react";
 import { log } from "@/lib/logger";
+import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 type RetroItem = {
   id: string;
@@ -77,8 +80,8 @@ export default function RetrospectivesPage() {
       // If /api/users fails or returns error, we might fallback.
       if (isRealMode()) {
         const res = await fetch("/api/users");
-        const data = await res.json();
-        if (Array.isArray(data)) setUsers(data);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) setUsers(json.data);
       } else {
         const res = await fetch("/data/users.json");
         const data = await res.json();
@@ -473,48 +476,11 @@ export default function RetrospectivesPage() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Attendees</label>
-            <div className="flex flex-wrap gap-2 mb-2 p-2 border rounded-md min-h-[42px] bg-background">
-              {formData.attendees.map((attendee, idx) => (
-                <Badge
-                  key={idx}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {attendee}
-                  <button
-                    className="hover:text-destructive"
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        attendees: prev.attendees.filter((a) => a !== attendee),
-                      }))
-                    }
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <select
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val && !formData.attendees.includes(val)) {
-                  setFormData((prev) => ({
-                    ...prev,
-                    attendees: [...prev.attendees, val],
-                  }));
-                }
-                e.target.value = "";
-              }}
-            >
-              <option value="">+ Add Attendee</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.name}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
+            <AttendeeSelector
+              selectedAttendees={formData.attendees}
+              onChange={(attendees) => setFormData({ ...formData, attendees })}
+              teamMembers={users.map((u) => ({ ...u, id: u.uid }))}
+            />
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>

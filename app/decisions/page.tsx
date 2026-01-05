@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { log } from "@/lib/logger";
+import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
+import Image from "next/image";
 
 type Decision = {
   id: string;
@@ -49,11 +51,31 @@ export default function DecisionsPage() {
     projectId: null as string | null,
     status: "pending" as "approved" | "pending" | "rejected",
     tags: [] as string[],
+    decidedBy: [] as string[],
   });
+
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     loadDecisions();
+    loadUsers();
   }, []);
+
+  const loadUsers = async () => {
+    try {
+      if (isRealMode()) {
+        const res = await fetch("/api/users");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) setUsers(json.data);
+      } else {
+        const res = await fetch("/data/users.json");
+        const data = await res.json();
+        setUsers(data);
+      }
+    } catch (err) {
+      log.error({ err }, "Failed to load users");
+    }
+  };
 
   useEffect(() => {
     let filtered = decisions;
@@ -103,6 +125,7 @@ export default function DecisionsPage() {
       projectId: null,
       status: "pending",
       tags: [],
+      decidedBy: [],
     });
     setIsEditing(false);
     setIsModalOpen(true);
@@ -119,6 +142,7 @@ export default function DecisionsPage() {
       projectId: decision.projectId,
       status: decision.status,
       tags: decision.tags,
+      decidedBy: decision.decidedBy || [],
     });
     setSelectedDecision(decision);
     setIsEditing(true);
@@ -600,6 +624,17 @@ export default function DecisionsPage() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Decided By</label>
+            <AttendeeSelector
+              selectedAttendees={formData.decidedBy}
+              onChange={(attendees) =>
+                setFormData({ ...formData, decidedBy: attendees })
+              }
+              teamMembers={users.map((u) => ({ ...u, id: u.uid }))}
+            />
           </div>
 
           <div>

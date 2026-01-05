@@ -64,6 +64,7 @@ export async function POST(req: Request) {
           alternatives: data.alternatives,
           consequences: data.consequences,
           projectId: data.projectId,
+          decidedBy: data.decidedBy,
           updatedAt: new Date(),
         },
       });
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
         alternatives: data.alternatives || [],
         consequences: data.consequences || [],
         projectId: data.projectId,
-        decidedBy: [user.uid], // default current user
+        decidedBy: data.decidedBy || [user.uid],
         decidedAt: new Date(),
       },
     });
