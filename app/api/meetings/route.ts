@@ -78,9 +78,24 @@ export async function POST(req: Request) {
 
     const data = await req.json();
 
+    if (data.id && !data.id.startsWith("meeting-")) {
+      const updated = await prisma.meeting.update({
+        where: { id: data.id },
+        data: {
+          title: data.title,
+          date: data.date ? new Date(data.date) : undefined,
+          startTime: data.date ? new Date(data.date) : undefined,
+          content: data.content,
+          projectId: data.projectId || undefined,
+          attendees: data.attendees || [],
+          actionItems: data.actionItems || [],
+          updatedAt: new Date(),
+        },
+      });
+      return NextResponse.json(updated);
+    }
+
     // Create Meeting
-    // Needs 'roomId' because it's required (unique) in original schema.
-    // Random UUID for roomId if creating just a note.
     const roomId = crypto.randomUUID();
 
     const meeting = await prisma.meeting.create({
@@ -88,21 +103,53 @@ export async function POST(req: Request) {
         roomId,
         title: data.title,
         date: data.date ? new Date(data.date) : undefined,
-        startTime: data.date ? new Date(data.date) : undefined, // Sync for compatibility
+        startTime: data.date ? new Date(data.date) : undefined,
         content: data.content,
         projectId: data.projectId || undefined,
         attendees: data.attendees || [],
         actionItems: data.actionItems || [],
         createdBy: user.uid,
-        type: "note", // Distinguish from video calls
+        type: "note",
       },
     });
 
     return NextResponse.json(meeting);
   } catch (error) {
-    console.error("Failed to create meeting:", error);
+    console.error("Failed to save meeting:", error);
     return NextResponse.json(
-      { error: "Failed to create meeting" },
+      { error: "Failed to save meeting" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+      return NextResponse.json({ success: true });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    await prisma.meeting.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete meeting:", error);
+    return NextResponse.json(
+      { error: "Failed to delete meeting" },
       { status: 500 }
     );
   }

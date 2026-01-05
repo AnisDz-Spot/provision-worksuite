@@ -145,10 +145,14 @@ export default function MeetingsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this meeting?")) return;
     try {
+      if (isRealMode()) {
+        await fetch(`/api/meetings?id=${id}`, { method: "DELETE" });
+      }
       setMeetings(meetings.filter((m) => m.id !== id));
       pushToast("Meeting deleted");
     } catch (err) {
       log.error({ err }, "Failed to delete meeting");
+      pushToast("Failed to delete meeting");
     }
   };
 

@@ -93,3 +93,35 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
+      return NextResponse.json({ success: true });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    await prisma.retrospective.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete retrospective:", error);
+    return NextResponse.json(
+      { error: "Failed to delete retrospective" },
+      { status: 500 }
+    );
+  }
+}

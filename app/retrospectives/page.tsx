@@ -213,6 +213,31 @@ export default function RetrospectivesPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this retrospective?")) return;
+    try {
+      if (isRealMode()) {
+        await fetch(`/api/retrospectives?id=${id}`, { method: "DELETE" });
+      }
+      setRetrospectives(retrospectives.filter((r) => r.id !== id));
+    } catch (err) {
+      log.error({ err }, "Failed to delete retrospective");
+    }
+  };
+
+  const handleEditRetro = (retro: Retrospective) => {
+    setFormData({
+      title: retro.title,
+      projectId: retro.projectId,
+      sprintNumber: retro.sprintNumber,
+      date: new Date(retro.date).toISOString().split("T")[0],
+      attendees: retro.attendees,
+    });
+    setSelectedRetro(retro);
+    setIsEditing(true);
+    setIsModalOpen(true);
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
@@ -293,6 +318,23 @@ export default function RetrospectivesPage() {
                         </Badge>
                       )}
                     </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditRetro(retro)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(retro.id)}
+                    >
+                      Delete
+                    </Button>
                   </div>
                 </div>
 

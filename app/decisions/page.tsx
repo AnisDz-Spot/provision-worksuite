@@ -137,19 +137,31 @@ export default function DecisionsPage() {
   const handleEdit = (decision: Decision) => {
     setFormData({
       title: decision.title,
-      context: decision.context,
-      decision: decision.decision,
-      rationale: decision.rationale,
-      alternatives: decision.alternatives,
-      consequences: decision.consequences,
-      projectId: decision.projectId,
       status: decision.status,
       tags: decision.tags,
+      context: decision.context || "",
+      decision: decision.decision || "",
+      rationale: decision.rationale || "",
+      alternatives: decision.alternatives || [],
+      consequences: decision.consequences || [],
+      projectId: decision.projectId || null,
       decidedBy: decision.decidedBy || [],
     });
     setSelectedDecision(decision);
     setIsEditing(true);
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this decision?")) return;
+    try {
+      if (isRealMode()) {
+        await fetch(`/api/decisions?id=${id}`, { method: "DELETE" });
+      }
+      setDecisions(decisions.filter((d) => d.id !== id));
+    } catch (err) {
+      log.error({ err }, "Failed to delete decision");
+    }
   };
 
   const handleSave = async () => {
@@ -338,13 +350,23 @@ export default function DecisionsPage() {
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(decision)}
-                >
-                  Edit
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(decision)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(decision.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3">
