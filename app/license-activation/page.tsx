@@ -15,25 +15,41 @@ export default function LicenseActivationPage() {
     process.env.NODE_ENV === "development"
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsValidating(true);
 
-    // Validate license
+    // Validate license format locally first
     const validation = validateLicense(licenseKey);
 
     if (validation.valid) {
-      // Store license
-      storeLicense(licenseKey);
+      try {
+        // Validation passed locally, now activate on server
+        const res = await fetch("/api/check-license", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serial: licenseKey }),
+        });
+        const data = await res.json();
 
-      // Set mode to real since we just activated
-      setDataModePreference("real");
+        if (data.success) {
+          // Store license locally
+          storeLicense(licenseKey);
 
-      // Redirect to onboarding
-      setTimeout(() => {
-        router.push("/onboarding");
-      }, 1500);
+          // Set mode to real since we just activated
+          setDataModePreference("real");
+
+          // Redirect to onboarding
+          router.push("/onboarding");
+        } else {
+          setError(data.error || "License activation failed.");
+          setIsValidating(false);
+        }
+      } catch (err) {
+        setError("Failed to connect to license server.");
+        setIsValidating(false);
+      }
     } else {
       setError(validation.error || "Invalid license key");
       setIsValidating(false);
