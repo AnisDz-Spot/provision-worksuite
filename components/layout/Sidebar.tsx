@@ -96,22 +96,18 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
   // Submenus are collapsed by default - user must click to expand
 
   const toggleGroup = (label: string) => {
-    setExpandedGroups((prev) =>
-      prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]
-    );
+    setExpandedGroups((prev) => (prev.includes(label) ? [] : [label]));
   };
 
   const isActiveInGroup = (items: NavItem[]) => {
     return items.some((item) => pathname === item.href);
   };
 
-  // Auto-expand group if a child item is active
+  // Auto-expand active group and ensure others are closed
   useEffect(() => {
     navItems.forEach((item) => {
       if (isNavGroup(item) && isActiveInGroup(item.items)) {
-        if (!expandedGroups.includes(item.label)) {
-          setExpandedGroups((prev) => [...prev, item.label]);
-        }
+        setExpandedGroups([item.label]);
       }
     });
   }, [pathname]);
