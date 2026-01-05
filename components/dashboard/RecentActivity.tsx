@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { ActivitySquare } from "lucide-react";
 import { useEffect, useState } from "react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type Activity = {
   id: string;
@@ -20,7 +21,7 @@ export function RecentActivity() {
   useEffect(() => {
     async function loadActivities() {
       try {
-        const res = await fetch("/api/analytics/activities", {
+        const res = await fetchWithCsrf("/api/analytics/activities", {
           cache: "no-store",
         });
         const result = await res.json();

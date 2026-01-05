@@ -9,6 +9,8 @@ import {
   CalendarClock,
 } from "lucide-react";
 
+import { fetchWithCsrf } from "@/lib/csrf-client";
+
 export function AnalyticsWidgets() {
   const router = useRouter();
   const [stats, setStats] = useState({
@@ -21,7 +23,9 @@ export function AnalyticsWidgets() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const res = await fetch("/api/analytics/stats", { cache: "no-store" });
+        const res = await fetchWithCsrf("/api/analytics/stats", {
+          cache: "no-store",
+        });
         const result = await res.json();
 
         if (result.success && result.data) {
