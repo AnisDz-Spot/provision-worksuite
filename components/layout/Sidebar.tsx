@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSettings } from "@/components/settings/SettingsProvider";
 import { useSidebar } from "@/components/layout/SidebarContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type NavItem = {
   href: string;
@@ -104,6 +104,17 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
   const isActiveInGroup = (items: NavItem[]) => {
     return items.some((item) => pathname === item.href);
   };
+
+  // Auto-expand group if a child item is active
+  useEffect(() => {
+    navItems.forEach((item) => {
+      if (isNavGroup(item) && isActiveInGroup(item.items)) {
+        if (!expandedGroups.includes(item.label)) {
+          setExpandedGroups((prev) => [...prev, item.label]);
+        }
+      }
+    });
+  }, [pathname]);
 
   return (
     <>
