@@ -64,6 +64,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error("Sync failed:", e);
+        // Force reset setup status on sync failure to prevent stale state
+        const { markSetupComplete } = await import("@/lib/setup");
+        markSetupComplete(false, false, false);
       } finally {
         setIsSyncing(false);
       }
@@ -178,6 +181,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       // IF in REAL mode but NO license, we must force them to activate or fallback to mock
       if (currentMode === "real" && !hasLicense) {
+        // FAILSAFE: If Global Admin and No Tables found (despite being here), Force Mock and Exit
+        if (isGlobal && !tablesExist) {
+          console.log(
+            "[AppShell] Global Admin caught in Real Mode without Tables. Switching to Mock."
+          );
+          setMode("mock");
+          setDataModePreference("mock");
+          return;
+        }
+
         // If they are not on the license page, send them there or force mock mode
         if (pathname !== "/license-activation" && pathname !== "/onboarding") {
           console.log(
