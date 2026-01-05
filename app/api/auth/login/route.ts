@@ -328,18 +328,23 @@ export async function POST(request: NextRequest) {
 
     // 8. Set HTTP-only secure cookie
     const isProduction = process.env.NODE_ENV === "production";
+    const isLocalhost =
+      request.nextUrl.hostname === "localhost" ||
+      request.nextUrl.hostname === "127.0.0.1";
+    const useSecureCookie = isProduction && !isLocalhost;
+
     const cookieOptions = {
       name: "auth-token",
       value: token,
       httpOnly: true,
-      secure: isProduction,
+      secure: useSecureCookie,
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: "/",
       sameSite: "lax" as const,
     };
 
     console.log(
-      `[Login] Setting auth-token. Production: ${isProduction}, Secure: ${cookieOptions.secure}`
+      `[Login] Setting auth-token. Production: ${isProduction}, Localhost: ${isLocalhost}, Secure: ${cookieOptions.secure}`
     );
 
     response.cookies.set(cookieOptions);

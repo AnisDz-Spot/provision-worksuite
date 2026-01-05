@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
 import { loadTasks, type Task } from "@/lib/data";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type CompletionPoint = {
   date: string;
@@ -39,7 +40,9 @@ export function TasksCharts() {
   useEffect(() => {
     async function fetchChartData() {
       try {
-        const res = await fetch("/api/analytics/charts", { cache: "no-store" });
+        const res = await fetchWithCsrf("/api/analytics/charts", {
+          cache: "no-store",
+        });
         const result = await res.json();
         if (result.success) {
           setChartData(result.data);
