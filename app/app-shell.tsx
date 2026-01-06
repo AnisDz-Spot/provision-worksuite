@@ -31,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = React.useState<string | null>(null);
   const [showModeModal, setShowModeModal] = React.useState(false);
   const [isSyncing, setIsSyncing] = React.useState(true);
+  const [hasSynced, setHasSynced] = React.useState(false);
   const [isNavBlocked, setIsNavBlocked] = React.useState(false);
   const [serverLicenseValid, setServerLicenseValid] = React.useState(false);
   const [activeCall, setActiveCall] = React.useState<any>(null);
@@ -43,6 +44,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!isAuthenticated) {
       if (isSyncing) setIsSyncing(false);
+      if (hasSynced) setHasSynced(false);
+      return;
+    }
+
+    // 0. TRIGGER SYNC ON AUTH
+    if (isAuthenticated && !hasSynced && !isSyncing) {
+      console.log("[AppShell] New authentication detected, triggering sync.");
+      setIsSyncing(true);
       return;
     }
 
@@ -52,6 +61,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const { getDatabaseStatus, markSetupComplete } =
           await import("@/lib/setup");
         const status = (await getDatabaseStatus()) as any;
+        console.log("[AppShell] Server status sync complete:", {
+          configured: status.configured,
+          licenseValid: status.licenseValid,
+          hasTables: status.hasTables,
+        });
 
         if (status.failed) {
           console.warn(
@@ -82,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         // Do NOT reset setup complete on transient errors to avoid flickering banner
       } finally {
         setIsSyncing(false);
+        setHasSynced(true);
       }
     };
 
@@ -193,6 +208,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       // IF in REAL mode but NO license, we must force them to activate or fallback to mock
       if (currentMode === "real" && !hasLicense) {
+        console.log("[AppShell] License required for Real Mode. State:", {
+          currentMode,
+          hasLicense,
+          serverLicenseValid,
+          localLicenseValid,
+          isMaster,
+          pathname,
+        });
+
         // FAILSAFE: If Global Admin and No Tables found (despite being here), Force Mock and Exit
         if (isGlobal && !tablesExist) {
           console.log(
@@ -289,6 +313,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname,
     router,
     isSyncing,
+    hasSynced,
     mode,
     serverLicenseValid,
   ]);

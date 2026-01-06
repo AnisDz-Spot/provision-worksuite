@@ -55,7 +55,13 @@ export async function GET() {
         const licenseSetting = await prisma.systemSetting.findUnique({
           where: { settingKey: "LICENSE_MASTER" },
         });
-        if (licenseSetting?.licenseKey) {
+
+        // Robust check: key exists or value is explicitly active/configured
+        if (
+          licenseSetting?.licenseKey ||
+          licenseSetting?.settingValue === "active" ||
+          licenseSetting?.settingValue === "configured"
+        ) {
           licenseValid = true;
         }
       } catch (e) {
