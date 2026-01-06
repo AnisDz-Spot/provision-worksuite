@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { Project } from "@/lib/data";
 import { log } from "@/lib/logger";
+import { useLoading } from "@/context/LoadingContext";
 
 interface ProjectsContextType {
   projects: Project[];
@@ -29,6 +30,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<number | null>(null);
+  const { showLoader, hideLoader } = useLoading();
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -46,6 +48,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoading(true);
       setError(null);
+      showLoader("Synchronizing projects...");
       try {
         // Dynamic import to avoid server-side issues if any
         const { loadProjects } = await import("@/lib/data");
@@ -63,6 +66,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         // Don't clear projects on error to show stale data if possible
       } finally {
         setIsLoading(false);
+        hideLoader();
       }
     },
     [lastFetched, projects.length]

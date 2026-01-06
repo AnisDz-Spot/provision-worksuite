@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { log } from "@/lib/logger";
 import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
 import Image from "next/image";
+import { useLoading } from "@/context/LoadingContext";
 
 type Decision = {
   id: string;
@@ -58,6 +59,7 @@ export default function DecisionsPage() {
   const [conInput, setConInput] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
+  const { showLoader, hideLoader } = useLoading();
 
   useEffect(() => {
     loadDecisions();
@@ -106,14 +108,17 @@ export default function DecisionsPage() {
   };
 
   const loadDecisions = async () => {
+    showLoader("Loading decisions...");
     try {
       const endpoint = isRealMode() ? "/api/decisions" : "/data/decisions.json";
       const res = await fetch(endpoint);
       const data = await res.json();
-      setDecisions(data);
+      setDecisions(Array.isArray(data) ? data : []);
       setFilteredDecisions(data);
     } catch (error) {
       log.error({ err: error }, "Failed to load decisions");
+    } finally {
+      hideLoader();
     }
   };
 
@@ -154,6 +159,7 @@ export default function DecisionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this decision?")) return;
+    showLoader("Deleting decision...");
     try {
       if (isRealMode()) {
         await fetch(`/api/decisions?id=${id}`, { method: "DELETE" });
@@ -161,10 +167,13 @@ export default function DecisionsPage() {
       setDecisions(decisions.filter((d) => d.id !== id));
     } catch (err) {
       log.error({ err }, "Failed to delete decision");
+    } finally {
+      hideLoader();
     }
   };
 
   const handleSave = async () => {
+    showLoader("Saving decision...");
     if (isRealMode()) {
       try {
         const payload = {
@@ -185,27 +194,33 @@ export default function DecisionsPage() {
         }
       } catch (err) {
         log.error({ err }, "Failed to save decision");
+      } finally {
+        hideLoader();
       }
       return;
     }
 
-    // Mock Mode
-    if (isEditing && selectedDecision) {
-      setDecisions(
-        decisions.map((d) =>
-          d.id === selectedDecision.id ? { ...d, ...formData } : d
-        )
-      );
-    } else {
-      const newDecision: Decision = {
-        id: `decision-${Date.now()}`,
-        ...formData,
-        decidedBy: ["user-1"],
-        decidedAt: new Date().toISOString(),
-      };
-      setDecisions([newDecision, ...decisions]);
+    try {
+      // Mock Mode...
+      if (isEditing && selectedDecision) {
+        setDecisions(
+          decisions.map((d) =>
+            d.id === selectedDecision.id ? { ...d, ...formData } : d
+          )
+        );
+      } else {
+        const newDecision: Decision = {
+          id: `decision-${Date.now()}`,
+          ...formData,
+          decidedBy: ["user-1"],
+          decidedAt: new Date().toISOString(),
+        };
+        setDecisions([newDecision, ...decisions]);
+      }
+      setIsModalOpen(false);
+    } finally {
+      hideLoader();
     }
-    setIsModalOpen(false);
   };
 
   const formatDate = (dateStr: string) => {

@@ -10,6 +10,7 @@ import { SectionHeader } from "@/components/finance/SectionHeader";
 import { MetricCard } from "@/components/finance/MetricCard";
 import { exportToPDF, exportToExcel, generateInvoicePDF } from "@/lib/export";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 
 // Assuming types are defined elsewhere or need to be included here for the component to work
 type Project = {
@@ -56,6 +57,7 @@ export default function InvoicesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [logs, setLogs] = useState<TimeLog[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { showLoader, hideLoader } = useLoading();
   const [filters, setFilters] = useState<{
     projectId: string;
     status: "" | "draft" | "sent" | "paid";
@@ -84,6 +86,7 @@ export default function InvoicesPage() {
       amount: parseFloat(newInvoice.amount), // Added missing property
       status: newInvoice.status as Invoice["status"], // Added missing property
     };
+    showLoader("Creating invoice...");
     try {
       // Try API first
       const res = await fetchWithCsrf("/api/invoices", {
@@ -116,91 +119,100 @@ export default function InvoicesPage() {
         status: "draft",
       });
       setAddLoading(false);
+    } finally {
+      hideLoader();
     }
   };
 
   // Data Loading Effect
   useEffect(() => {
     const load = async () => {
-      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-      setProjects(pData);
-
-      // Expenses
+      showLoader("Loading invoice data...");
       try {
-        const res = await fetch("/api/expenses").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbExpenses = res.data.map((e: any) => ({
-            id: String(e.id),
-            projectId: e.project_id || "",
-            description: e.note || e.vendor || "",
-            amount: parseFloat(e.amount),
-            date: e.date,
-          }));
-          setExpenses(dbExpenses);
-        } else {
-          throw new Error("DB not configured");
-        }
-      } catch {
-        const e = await fetch(`/data/expenses.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setExpenses(
-          e.map((exp: any) => ({
-            ...exp,
-            description: exp.note || exp.vendor || "",
-          }))
-        );
-      }
+        const pData = await fetch(`/data/projects.json`).then((r) => r.json());
+        setProjects(pData);
 
-      // Time logs
-      try {
-        const res = await fetch("/api/time-logs").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbLogs = res.data.map((log: any) => ({
-            id: String(log.id),
-            projectId: log.project_id || "",
-            userId: log.user_id || "",
-            hours: parseFloat(log.hours),
-            rate: parseFloat(log.rate || 0),
-            date: log.date,
-          }));
-          setLogs(dbLogs);
-        } else {
-          throw new Error("DB not configured");
+        // Expenses
+        try {
+          const res = await fetch("/api/expenses").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbExpenses = res.data.map((e: any) => ({
+              id: String(e.id),
+              projectId: e.project_id || "",
+              description: e.note || e.vendor || "",
+              amount: parseFloat(e.amount),
+              date: e.date,
+            }));
+            setExpenses(dbExpenses);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          const e = await fetch(`/data/expenses.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setExpenses(
+            e.map((exp: any) => ({
+              ...exp,
+              description: exp.note || exp.vendor || "",
+            }))
+          );
         }
-      } catch {
-        const t = await fetch(`/data/timelogs.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setLogs(
-          t.map((log: any) => ({
-            ...log,
-            userId: log.userId || "",
-            rate: log.rate || 0,
-          }))
-        );
-      }
 
-      // Invoices
-      try {
-        const res = await fetch("/api/invoices").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbInvoices = res.data.map((inv: any) => ({
-            id: String(inv.id),
-            projectId: inv.project_id || "",
-            date: inv.date,
-            amount: parseFloat(inv.amount),
-            status: inv.status || "draft",
-          }));
-          setInvoices(dbInvoices);
-        } else {
-          throw new Error("DB not configured");
+        // Time logs
+        try {
+          const res = await fetch("/api/time-logs").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbLogs = res.data.map((log: any) => ({
+              id: String(log.id),
+              projectId: log.project_id || "",
+              userId: log.user_id || "",
+              hours: parseFloat(log.hours),
+              rate: parseFloat(log.rate || 0),
+              date: log.date,
+            }));
+            setLogs(dbLogs);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          const t = await fetch(`/data/timelogs.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setLogs(
+            t.map((log: any) => ({
+              ...log,
+              userId: log.userId || "",
+              rate: log.rate || 0,
+            }))
+          );
         }
-      } catch {
-        const i = await fetch(`/data/invoices.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setInvoices(i);
+
+        // Invoices
+        try {
+          const res = await fetch("/api/invoices").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbInvoices = res.data.map((inv: any) => ({
+              id: String(inv.id),
+              projectId: inv.project_id || "",
+              date: inv.date,
+              amount: parseFloat(inv.amount),
+              status: inv.status || "draft",
+            }));
+            setInvoices(dbInvoices);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          const i = await fetch(`/data/invoices.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setInvoices(i);
+        }
+      } catch (err) {
+        console.error("Failed to load invoice data:", err);
+      } finally {
+        hideLoader();
       }
     };
     load();

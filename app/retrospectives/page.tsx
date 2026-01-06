@@ -21,6 +21,7 @@ import { log } from "@/lib/logger";
 import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
+import { useLoading } from "@/context/LoadingContext";
 
 type RetroItem = {
   id: string;
@@ -68,6 +69,8 @@ export default function RetrospectivesPage() {
 
   const [users, setUsers] = useState<any[]>([]);
 
+  const { showLoader, hideLoader } = useLoading();
+
   useEffect(() => {
     loadRetrospectives();
     loadUsers();
@@ -98,6 +101,7 @@ export default function RetrospectivesPage() {
   };
 
   const loadRetrospectives = async () => {
+    showLoader("Loading retrospectives...");
     try {
       const endpoint = isRealMode()
         ? "/api/retrospectives"
@@ -107,6 +111,8 @@ export default function RetrospectivesPage() {
       setRetrospectives(data);
     } catch (error) {
       log.error({ err: error }, "Failed to load retrospectives");
+    } finally {
+      hideLoader();
     }
   };
 
@@ -123,6 +129,7 @@ export default function RetrospectivesPage() {
   };
 
   const handleSave = async () => {
+    showLoader("Saving retrospective...");
     if (isRealMode()) {
       try {
         const payload = {
@@ -148,39 +155,45 @@ export default function RetrospectivesPage() {
         }
       } catch (err) {
         log.error({ err }, "Failed to save retrospective");
+      } finally {
+        hideLoader();
       }
       return;
     }
 
-    // Mock Mode
-    if (isEditing && selectedRetro) {
-      setRetrospectives(
-        retrospectives.map((r) =>
-          r.id === selectedRetro.id
-            ? {
-                ...r,
-                ...formData,
-                date: new Date(formData.date).toISOString(),
-                updatedAt: new Date().toISOString(),
-              }
-            : r
-        )
-      );
-    } else {
-      const newRetro: Retrospective = {
-        id: `retro-${Date.now()}`,
-        ...formData,
-        date: new Date(formData.date).toISOString(),
-        wentWell: [],
-        needsImprovement: [],
-        actionItems: [],
-        createdBy: "user-1",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setRetrospectives([newRetro, ...retrospectives]);
+    try {
+      // Mock Mode...
+      if (isEditing && selectedRetro) {
+        setRetrospectives(
+          retrospectives.map((r) =>
+            r.id === selectedRetro.id
+              ? {
+                  ...r,
+                  ...formData,
+                  date: new Date(formData.date).toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              : r
+          )
+        );
+      } else {
+        const newRetro: Retrospective = {
+          id: `retro-${Date.now()}`,
+          ...formData,
+          date: new Date(formData.date).toISOString(),
+          wentWell: [],
+          needsImprovement: [],
+          actionItems: [],
+          createdBy: "user-1",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setRetrospectives([newRetro, ...retrospectives]);
+      }
+      setIsModalOpen(false);
+    } finally {
+      hideLoader();
     }
-    setIsModalOpen(false);
   };
 
   const toggleActionItem = async (retroId: string, actionId: string) => {
@@ -215,6 +228,7 @@ export default function RetrospectivesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this retrospective?")) return;
+    showLoader("Deleting retrospective...");
     try {
       if (isRealMode()) {
         await fetch(`/api/retrospectives?id=${id}`, { method: "DELETE" });
@@ -222,6 +236,8 @@ export default function RetrospectivesPage() {
       setRetrospectives(retrospectives.filter((r) => r.id !== id));
     } catch (err) {
       log.error({ err }, "Failed to delete retrospective");
+    } finally {
+      hideLoader();
     }
   };
 

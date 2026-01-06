@@ -14,6 +14,7 @@ import {
 } from "@/components/team/ActivityFeed";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { readProjects, readTasks } from "@/lib/utils";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function TeamPage() {
   const [addMemberFn, setAddMemberFn] = useState<(() => void) | null>(null);
@@ -24,6 +25,7 @@ export default function TeamPage() {
     "table"
   );
   const [chatTarget, setChatTarget] = useState<string | null>(null);
+  const { showLoader, hideLoader } = useLoading();
 
   const handleAddClick = useCallback((fn: () => void) => {
     setAddMemberFn(() => fn);
@@ -41,6 +43,7 @@ export default function TeamPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
+    showLoader("Loading team activity...");
     import("@/lib/dataSource").then(({ shouldUseDatabaseData }) => {
       if (shouldUseDatabaseData()) {
         Promise.all([
@@ -94,7 +97,8 @@ export default function TeamPage() {
               liveActivities.sort((a, b) => b.timestamp - a.timestamp)
             );
           })
-          .catch((err) => console.error("Failed to load team activities", err));
+          .catch((err) => console.error("Failed to load team activities", err))
+          .finally(() => hideLoader());
       } else {
         // Fallback to local storage logic
         const projects = readProjects();
@@ -128,9 +132,10 @@ export default function TeamPage() {
         });
 
         setActivities(sampleActivities);
+        hideLoader();
       }
     });
-  }, []);
+  }, [showLoader, hideLoader]);
 
   return (
     <section className="p-4 md:p-8 flex flex-col gap-6">

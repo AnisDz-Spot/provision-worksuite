@@ -19,6 +19,7 @@ import { IntegrationSettings } from "@/components/notifications/IntegrationSetti
 import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
 import { useRouter } from "next/navigation";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 import {
   isDatabaseConfigured,
   markSetupComplete,
@@ -62,6 +63,7 @@ function DataSourceTab() {
   const isAdminGlobal = currentUser ? isGlobalAdmin(currentUser as any) : false;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showLoader, hideLoader } = useLoading();
   const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
     if (typeof window === "undefined") return null;
     const val = localStorage.getItem("pv:dataMode");
@@ -113,11 +115,13 @@ function DataSourceTab() {
 
   async function loadStatus() {
     setLoading(true);
+    showLoader("Fetching system status...");
     try {
       const result = await getDatabaseStatus();
       setStatus(result);
     } finally {
       if (status) setLoading(false);
+      hideLoader();
     }
   }
 
@@ -181,6 +185,7 @@ function DataSourceTab() {
 
     setDataMode(mode);
     setMessage(null);
+    showLoader(`Switching to ${mode === "real" ? "Live" : "Demo"} mode...`);
 
     // 1. Clear Server-side session
     try {
@@ -210,17 +215,22 @@ function DataSourceTab() {
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setMessage(null);
+    showLoader("Saving database configuration...");
 
-    const result = await saveDatabaseConfig(formData);
+    try {
+      const result = await saveDatabaseConfig(formData);
 
-    setLoading(false);
-    setMessage({
-      type: result.success ? "success" : "error",
-      text: result.message,
-    });
+      setLoading(false);
+      setMessage({
+        type: result.success ? "success" : "error",
+        text: result.message,
+      });
 
-    if (result.success) {
-      await loadStatus();
+      if (result.success) {
+        await loadStatus();
+      }
+    } finally {
+      hideLoader();
     }
   }
 

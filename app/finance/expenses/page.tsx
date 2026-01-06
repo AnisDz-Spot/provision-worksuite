@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/Input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { log } from "@/lib/logger";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 
 // Types
 type Project = { id: string; name: string };
@@ -39,6 +40,7 @@ export default function ExpensesPage() {
   // State Definitions
   const [projects, setProjects] = useState<Project[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { showLoader, hideLoader } = useLoading();
 
   // State for the "Add Expense" modal
   const [addOpen, setAddOpen] = useState(false);
@@ -94,6 +96,7 @@ export default function ExpensesPage() {
       setAddLoading(false);
     };
 
+    showLoader("Adding expense...");
     try {
       // Try API first
       const res = await fetchWithCsrf("/api/expenses", {
@@ -113,43 +116,52 @@ export default function ExpensesPage() {
       // Fallback to local state
       setExpenses((prev) => [expenseObj, ...prev]);
       resetState();
+    } finally {
+      hideLoader();
     }
   }, [newExpense]);
 
   // Data Loading Effect
   useEffect(() => {
     const load = async () => {
-      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-      setProjects(pData);
-
+      showLoader("Loading expenses...");
       try {
-        const res = await fetch("/api/expenses").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbExpenses = res.data.map((e: any) => ({
-            id: String(e.id),
-            projectId: e.project_id || "",
-            description: e.note || e.vendor || "",
-            amount: parseFloat(e.amount),
-            date: e.date,
-          }));
-          setExpenses(dbExpenses);
-        } else {
-          throw new Error("DB not configured");
+        const pData = await fetch(`/data/projects.json`).then((r) => r.json());
+        setProjects(pData);
+
+        try {
+          const res = await fetch("/api/expenses").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbExpenses = res.data.map((e: any) => ({
+              id: String(e.id),
+              projectId: e.project_id || "",
+              description: e.note || e.vendor || "",
+              amount: parseFloat(e.amount),
+              date: e.date,
+            }));
+            setExpenses(dbExpenses);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          const e = await fetch(`/data/expenses.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setExpenses(
+            e.map((exp: any) => ({
+              ...exp,
+              description: exp.note || exp.vendor || "",
+            }))
+          );
         }
-      } catch {
-        const e = await fetch(`/data/expenses.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setExpenses(
-          e.map((exp: any) => ({
-            ...exp,
-            description: exp.note || exp.vendor || "",
-          }))
-        );
+      } catch (err) {
+        log.error({ err }, "Failed to load expenses");
+      } finally {
+        hideLoader();
       }
     };
     load();
-  }, []);
+  }, [showLoader, hideLoader]);
 
   // Initialize filters from URL or localStorage
   useEffect(() => {

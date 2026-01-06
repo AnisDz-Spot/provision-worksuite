@@ -247,28 +247,33 @@ export function KanbanBoard({
   const refreshFromStorage = async () => {
     if (!projectId) return; // No persistence without project context
 
+    showLoader("Loading tasks...");
     let tasks: TaskItem[] = [];
     if (!shouldUseMockData()) {
-      const dbTasks = await loadTasks();
-      // Filter by projectId and map to TaskItem format
-      tasks = dbTasks
-        .filter(
-          (t: any) => t.projectId === projectId || t.projectId === projectUid
-        )
-        .map((t: any) => ({
-          id: t.uid || t.id,
-          projectId: t.projectId,
-          title: t.title,
-          status: t.status as any,
-          assignee: t.assignee?.name || t.assignee || "Unassigned",
-          due: t.due ? new Date(t.due).toISOString().split("T")[0] : "",
-          priority: t.priority as any,
-          estimateHours: t.estimateHours,
-          loggedHours: t.loggedHours,
-          milestoneId: t.milestoneId,
-          description: t.description || "",
-          labels: t.labels || [],
-        }));
+      try {
+        const dbTasks = await loadTasks();
+        // Filter by projectId and map to TaskItem format
+        tasks = dbTasks
+          .filter(
+            (t: any) => t.projectId === projectId || t.projectId === projectUid
+          )
+          .map((t: any) => ({
+            id: t.uid || t.id,
+            projectId: t.projectId,
+            title: t.title,
+            status: t.status as any,
+            assignee: t.assignee?.name || t.assignee || "Unassigned",
+            due: t.due ? new Date(t.due).toISOString().split("T")[0] : "",
+            priority: t.priority as any,
+            estimateHours: t.estimateHours,
+            loggedHours: t.loggedHours,
+            milestoneId: t.milestoneId,
+            description: t.description || "",
+            labels: t.labels || [],
+          }));
+      } catch (err) {
+        console.error("Failed to load tasks:", err);
+      }
     } else {
       tasks = getTasksByProject(projectId);
     }
@@ -343,6 +348,7 @@ export function KanbanBoard({
         tasks: byStatus.done,
       },
     ]);
+    hideLoader();
   };
 
   useEffect(() => {
@@ -673,18 +679,11 @@ export function KanbanBoard({
 
       if (!shouldUseMockData()) {
         showLoader("Adding task...");
-        saveTasks([t as any])
-          .then(() => {
-            refreshFromStorage();
-            if (onTaskUpdate) onTaskUpdate();
-          })
-          .finally(() => {
-            hideLoader();
-          });
-      } else {
-        upsertTask(t);
-        refreshFromStorage();
-        if (onTaskUpdate) onTaskUpdate();
+        saveTasks([t as any]).then(() => {
+          refreshFromStorage();
+          if (onTaskUpdate) onTaskUpdate();
+        });
+        hideLoader();
       }
     } else {
       setColumns((prev) =>
@@ -706,20 +705,25 @@ export function KanbanBoard({
   }
 
   function deleteTask(columnId: string, taskId: string) {
-    if (projectId) {
-      removeTask(taskId);
-      refreshFromStorage();
-      if (onTaskUpdate) onTaskUpdate();
-    } else {
-      setColumns((prev) =>
-        prev.map((col) =>
-          col.id === columnId
-            ? { ...col, tasks: col.tasks.filter((t) => t.id !== taskId) }
-            : col
-        )
-      );
+    showLoader("Deleting task...");
+    try {
+      if (projectId) {
+        removeTask(taskId);
+        refreshFromStorage();
+        if (onTaskUpdate) onTaskUpdate();
+      } else {
+        setColumns((prev) =>
+          prev.map((col) =>
+            col.id === columnId
+              ? { ...col, tasks: col.tasks.filter((t) => t.id !== taskId) }
+              : col
+          )
+        );
+      }
+    } finally {
+      hideLoader();
+      setDeleteCardConfirm(null);
     }
-    setDeleteCardConfirm(null);
   }
 
   return (

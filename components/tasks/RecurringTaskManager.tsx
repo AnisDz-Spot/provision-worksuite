@@ -15,6 +15,7 @@ import {
 } from "@/lib/recurring";
 import { useToaster } from "@/components/ui/Toaster";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 
 interface RecurringTemplate {
   id: string;
@@ -39,6 +40,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { show } = useToaster();
+  const { showLoader, hideLoader } = useLoading();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -68,6 +70,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
   }, [projectId]);
 
   const loadTemplates = async () => {
+    showLoader("Loading recurring tasks...");
     try {
       const res = await fetch(`/api/tasks/recurring?projectId=${projectId}`);
       const data = await res.json();
@@ -78,6 +81,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
       console.error("Failed to load templates:", error);
     } finally {
       setLoading(false);
+      hideLoader();
     }
   };
 
@@ -99,6 +103,7 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
       count: formData.occurrences ? parseInt(formData.occurrences) : undefined,
     });
 
+    showLoader("Saving template...");
     try {
       const res = await fetchWithCsrf("/api/tasks/recurring", {
         method: editingId ? "PUT" : "POST",
@@ -130,12 +135,15 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
       }
     } catch (error) {
       show("error", "Network error");
+    } finally {
+      hideLoader();
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this recurring task template?")) return;
 
+    showLoader("Deleting template...");
     try {
       const res = await fetchWithCsrf(`/api/tasks/recurring?id=${id}`, {
         method: "DELETE",
@@ -147,6 +155,8 @@ export function RecurringTaskManager({ projectId, onTaskCreated }: Props) {
       }
     } catch (error) {
       show("error", "Failed to delete");
+    } finally {
+      hideLoader();
     }
   };
 

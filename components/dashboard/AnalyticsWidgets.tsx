@@ -12,6 +12,7 @@ import {
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useLoading } from "@/context/LoadingContext";
 
 export function AnalyticsWidgets() {
   const router = useRouter();
@@ -22,8 +23,11 @@ export function AnalyticsWidgets() {
     upcomingDeadlines: { current: 0, total: 0, trend: [] as number[] },
   });
 
+  const { showLoader, hideLoader } = useLoading();
+
   useEffect(() => {
     async function loadStats() {
+      showLoader("Loading dashboard metrics...");
       try {
         const res = await fetchWithCsrf("/api/analytics/stats", {
           cache: "no-store",
@@ -35,6 +39,8 @@ export function AnalyticsWidgets() {
         }
       } catch (error) {
         console.error("Failed to load analytics:", error);
+      } finally {
+        hideLoader();
       }
     }
     loadStats();

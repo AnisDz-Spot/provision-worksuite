@@ -14,6 +14,7 @@ import { MeetingModal } from "./components/MeetingModal";
 import { MeetingDetailView } from "./components/MeetingDetailView";
 
 import { Meeting, ActionItem } from "./types/meeting";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -49,6 +50,8 @@ export default function MeetingsPage() {
     []
   );
 
+  const { showLoader, hideLoader } = useLoading();
+
   const pushToast = (message: string) => {
     const id = `toast-${Date.now()}`;
     setToasts((t) => [...t, { id, message }]);
@@ -69,6 +72,7 @@ export default function MeetingsPage() {
   }, []);
 
   const loadMeetings = async () => {
+    showLoader("Loading meetings...");
     try {
       const endpoint = isRealMode() ? "/api/meetings" : "/data/meetings.json";
       const res = await fetch(endpoint);
@@ -77,6 +81,8 @@ export default function MeetingsPage() {
       setFilteredMeetings(Array.isArray(data) ? data : []);
     } catch (err) {
       log.error({ err }, "Failed to load meetings");
+    } finally {
+      hideLoader();
     }
   };
 
@@ -142,26 +148,14 @@ export default function MeetingsPage() {
     setSelectedMeeting(meeting);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this meeting?")) return;
-    try {
-      if (isRealMode()) {
-        await fetch(`/api/meetings?id=${id}`, { method: "DELETE" });
-      }
-      setMeetings(meetings.filter((m) => m.id !== id));
-      pushToast("Meeting deleted");
-    } catch (err) {
-      log.error({ err }, "Failed to delete meeting");
-      pushToast("Failed to delete meeting");
-    }
-  };
-
   const handleView = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
     setIsDetailModalOpen(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    showLoader("Saving meeting...");
     try {
       if (isRealMode()) {
         const payload = {
@@ -183,35 +177,68 @@ export default function MeetingsPage() {
           pushToast(isEditing ? "Meeting updated" : "Meeting created");
         }
       } else {
-        if (isEditing && selectedMeeting) {
-          const updated = meetings.map((m) =>
-            m.id === selectedMeeting.id
-              ? ({
-                  ...m,
-                  ...formData,
-                  date: new Date(formData.date).toISOString(),
-                } as Meeting)
-              : m
+        // Mock logic...
+        const newMeeting: Meeting = {
+          id:
+            isEditing && selectedMeeting
+              ? selectedMeeting.id
+              : `m-${Date.now()}`,
+          title: formData.title,
+          date: formData.date,
+          projectId: formData.projectId || "p1",
+          attendees: formData.attendees,
+          content: formData.content,
+          actionItems:
+            isEditing && selectedMeeting ? selectedMeeting.actionItems : [],
+          createdBy: "user-1",
+          createdAt:
+            isEditing && selectedMeeting
+              ? selectedMeeting.createdAt
+              : new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (isEditing) {
+          setMeetings((prev) =>
+            prev.map((m) => (m.id === selectedMeeting?.id ? newMeeting : m))
           );
-          setMeetings(updated);
         } else {
-          const newMeeting = {
-            ...formData,
-            id: `meeting-${Date.now()}`,
-            date: new Date(formData.date).toISOString(),
-            actionItems: [],
-            createdBy: "user-1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          } as Meeting;
-          setMeetings([newMeeting, ...meetings]);
+          setMeetings((prev) => [newMeeting, ...prev]);
         }
         setIsModalOpen(false);
         pushToast(isEditing ? "Meeting updated" : "Meeting created");
       }
     } catch (err) {
       log.error({ err }, "Failed to save meeting");
-      pushToast("Failed to save meeting");
+      pushToast("Error saving meeting");
+    } finally {
+      hideLoader();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this meeting?")) return;
+
+    showLoader("Deleting meeting...");
+    try {
+      if (isRealMode()) {
+        const res = await fetch(`/api/meetings?id=${id}`, {
+          method: "DELETE",
+        });
+        const result = await res.json();
+        if (result.success) {
+          pushToast("Meeting deleted");
+          loadMeetings();
+        }
+      } else {
+        setMeetings((prev) => prev.filter((m) => m.id !== id));
+        pushToast("Meeting deleted");
+      }
+    } catch (err) {
+      log.error({ err }, "Failed to delete meeting");
+      pushToast("Error deleting meeting");
+    } finally {
+      hideLoader();
     }
   };
 
