@@ -2,6 +2,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SectionHeader } from "@/components/finance/SectionHeader";
 import { ProgressBar } from "@/components/finance/ProgressBar";
+import { useLoading } from "@/context/LoadingContext";
+import { loadProjects, loadTasks } from "@/lib/data";
+import { shouldUseMockData } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type Project = {
   id: string;
@@ -31,70 +35,88 @@ export default function BudgetsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [logs, setLogs] = useState<TimeLog[]>([]);
+  const { showLoader, hideLoader } = useLoading();
 
   useEffect(() => {
     const load = async () => {
-      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-      setProjects(pData);
-
-      // Expenses
+      showLoader("Loading budget data...");
       try {
-        const res = await fetch("/api/expenses").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbExpenses = res.data.map((e: any) => ({
-            id: String(e.id),
-            projectId: e.project_id || "",
-            description: e.note || e.vendor || "",
-            amount: parseFloat(e.amount),
-            date: e.date,
-          }));
-          setExpenses(dbExpenses);
-        } else {
-          throw new Error("DB not configured");
-        }
-      } catch {
-        const e = await fetch(`/data/expenses.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setExpenses(
-          e.map((exp: any) => ({
-            ...exp,
-            description: exp.note || exp.vendor || "",
-          }))
-        );
-      }
+        // Load Projects
+        const pData = await loadProjects();
+        setProjects(pData as any);
 
-      // Time logs
-      try {
-        const res = await fetch("/api/time-logs").then((r) => r.json());
-        if (res?.success && res.data) {
-          const dbLogs = res.data.map((log: any) => ({
-            id: String(log.id),
-            projectId: log.project_id || "",
-            userId: log.user_id || "",
-            hours: parseFloat(log.hours),
-            rate: parseFloat(log.rate || 0),
-            date: log.date,
-          }));
-          setLogs(dbLogs);
-        } else {
-          throw new Error("DB not configured");
+        // Load Expenses
+        try {
+          const res = await fetch("/api/expenses").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbExpenses = res.data.map((e: any) => ({
+              id: String(e.id),
+              projectId: e.project_id || "",
+              description: e.note || e.vendor || "",
+              amount: parseFloat(e.amount),
+              date: e.date,
+            }));
+            setExpenses(dbExpenses);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          // Only show mock expenses if explicitly in mock mode
+          if (shouldUseMockData()) {
+            const e = await fetch(`/data/expenses.json`)
+              .then((r) => r.json())
+              .catch(() => []);
+            setExpenses(
+              e.map((exp: any) => ({
+                ...exp,
+                description: exp.note || exp.vendor || "",
+              }))
+            );
+          } else {
+            setExpenses([]);
+          }
         }
-      } catch {
-        const t = await fetch(`/data/timelogs.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setLogs(
-          t.map((log: any) => ({
-            ...log,
-            userId: log.userId || "",
-            rate: log.rate || 0,
-          }))
-        );
+
+        // Load Time Logs
+        try {
+          const res = await fetch("/api/time-logs").then((r) => r.json());
+          if (res?.success && res.data) {
+            const dbLogs = res.data.map((log: any) => ({
+              id: String(log.id),
+              projectId: log.project_id || "",
+              userId: log.user_id || "",
+              hours: parseFloat(log.hours),
+              rate: parseFloat(log.rate || 0),
+              date: log.date,
+            }));
+            setLogs(dbLogs);
+          } else {
+            throw new Error("DB not configured");
+          }
+        } catch {
+          if (shouldUseMockData()) {
+            const t = await fetch(`/data/timelogs.json`)
+              .then((r) => r.json())
+              .catch(() => []);
+            setLogs(
+              t.map((log: any) => ({
+                ...log,
+                userId: log.userId || "",
+                rate: log.rate || 0,
+              }))
+            );
+          } else {
+            setLogs([]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load budget data:", err);
+      } finally {
+        hideLoader();
       }
     };
     load();
-  }, []);
+  }, [showLoader, hideLoader]);
 
   const totals = useMemo(() => {
     const byProject: Record<

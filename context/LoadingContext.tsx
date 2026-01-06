@@ -15,15 +15,15 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const showLoader = (msg?: string) => {
+  const showLoader = React.useCallback((msg?: string) => {
     setMessage(msg || null);
     setIsLoading(true);
-  };
+  }, []);
 
-  const hideLoader = () => {
+  const hideLoader = React.useCallback(() => {
     setIsLoading(false);
     setMessage(null);
-  };
+  }, []);
 
   return (
     <LoadingContext.Provider
