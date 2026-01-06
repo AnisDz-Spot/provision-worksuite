@@ -217,7 +217,7 @@ export function Navbar({ canNavigate = true }: { canNavigate?: boolean }) {
                   Profile
                 </Link>
                 <Link
-                  href="/"
+                  href="/settings?tab=agency"
                   className="flex items-center gap-3 px-4 py-2 hover:bg-accent cursor-pointer text-sm"
                   onClick={() => setProfileOpen(false)}
                 >

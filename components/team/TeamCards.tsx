@@ -244,7 +244,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
             u.avatarUrl ||
             u.avatar ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
-          status: "available", // Presence logic handles this
+          status: "offline", // Presence logic handles this
           tasksCount: 0,
           isMasterAdmin: u.role === "Master Admin",
           statusMessage: u.statusMessage || u.status_message,
@@ -262,41 +262,49 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
     fetchUsers();
   }, []);
 
-  // Poll presence from server and build a map by uid
+  // Load member activities (REAL PRESENCE)
   React.useEffect(() => {
-    let mounted = true;
-    const loadPresence = async () => {
+    async function fetchPresence() {
       try {
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+        if (!shouldUseDatabaseData()) {
+          // Fallback to mock if using mock data
+          const activities = new Map();
+          membersData.forEach((m) => {
+            const { getMemberActivity } = require("@/lib/utils");
+            const act = getMemberActivity(m.name);
+            activities.set(m.id, act);
+          });
+          setMemberActivities(activities);
+          return;
+        }
+
         const res = await fetch("/api/presence");
-        const data = await res.json();
-        if (mounted && data?.success && Array.isArray(data.data)) {
+        const json = await res.json();
+        if (json.success) {
+          const activityMap = new Map();
           const map: Record<string, { status: string; lastSeen: string }> = {};
-          for (const row of data.data) {
-            map[row.uid] = { status: row.status, lastSeen: row.lastSeen };
-          }
+
+          json.data.forEach((p: any) => {
+            const lastSeen = new Date(p.lastSeen);
+            const now = new Date();
+            const diffMins = (now.getTime() - lastSeen.getTime()) / 60000;
+            const isOnline = diffMins < 5;
+            const status = isOnline ? p.status || "available" : "offline";
+
+            activityMap.set(p.uid, { status, lastSeen });
+            map[p.uid] = { status: p.status, lastSeen: p.lastSeen };
+          });
+          setMemberActivities(activityMap);
           setPresenceMap(map);
         }
-      } catch {}
-    };
-    loadPresence();
-    const interval = setInterval(loadPresence, 15000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+      } catch (e) {
+        console.error("Failed to fetch presence", e);
+      }
+    }
 
-  // Load member activities
-  React.useEffect(() => {
-    const loadActivities = () => {
-      const activities = new Map();
-      membersData.forEach((m) => {
-        activities.set(m.name, getMemberActivity(m.name));
-      });
-      setMemberActivities(activities);
-    };
-    loadActivities();
-    const interval = setInterval(loadActivities, 10000); // Update every 10s
+    fetchPresence();
+    const interval = setInterval(fetchPresence, 15000);
     return () => clearInterval(interval);
   }, [membersData]);
 

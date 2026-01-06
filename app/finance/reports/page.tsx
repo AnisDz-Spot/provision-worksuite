@@ -21,8 +21,19 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-      setProjects(pData);
+      const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+      if (shouldUseDatabaseData()) {
+        const res = await fetch("/api/projects").then((r) => r.json());
+        if (res?.success && res.data) {
+          setProjects(res.data);
+        } else {
+          setProjects([]);
+        }
+      } else {
+        const pData = await fetch(`/data/projects.json`).then((r) => r.json());
+        setProjects(pData);
+      }
 
       // Expenses
       try {
@@ -39,10 +50,15 @@ export default function ReportsPage() {
           throw new Error("DB not configured");
         }
       } catch {
-        const e = await fetch(`/data/expenses.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setExpenses(e);
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        if (shouldUseMockData()) {
+          const e = await fetch(`/data/expenses.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setExpenses(e);
+        } else {
+          setExpenses([]);
+        }
       }
 
       // Time logs
@@ -61,15 +77,20 @@ export default function ReportsPage() {
           throw new Error("DB not configured");
         }
       } catch {
-        const t = await fetch(`/data/timelogs.json`)
-          .then((r) => r.json())
-          .catch(() => []);
-        setLogs(
-          t.map((log: any) => ({
-            ...log,
-            rate: log.rate || 0,
-          }))
-        );
+        const { shouldUseMockData } = await import("@/lib/dataSource");
+        if (shouldUseMockData()) {
+          const t = await fetch(`/data/timelogs.json`)
+            .then((r) => r.json())
+            .catch(() => []);
+          setLogs(
+            t.map((log: any) => ({
+              ...log,
+              rate: log.rate || 0,
+            }))
+          );
+        } else {
+          setLogs([]);
+        }
       }
     };
     load();
