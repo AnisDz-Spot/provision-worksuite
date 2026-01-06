@@ -199,10 +199,26 @@ export const MOCK_CLIENTS = [
 ];
 
 export const MOCK_DASHBOARD_STATS = {
-  totalProjects: 12,
-  activeProjects: 8,
-  totalTasks: 145,
-  completedTasks: 112,
+  totalProjects: {
+    current: 8,
+    total: 12,
+    trend: [4, 5, 5, 6, 7, 7, 8],
+  },
+  completedTasks: {
+    current: 112,
+    total: 145,
+    trend: [90, 95, 100, 105, 108, 110, 112],
+  },
+  activeUsers: {
+    current: 18,
+    total: 24,
+    trend: [12, 15, 14, 18, 20, 19, 18],
+  },
+  upcomingDeadlines: {
+    current: 3,
+    total: 8,
+    trend: [1, 2, 2, 3, 3, 4, 3],
+  },
   totalRevenue: 158000,
   monthlyGrowth: 12.5,
   pendingInvoices: 5,
