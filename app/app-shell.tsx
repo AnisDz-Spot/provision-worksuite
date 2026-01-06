@@ -51,7 +51,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       try {
         const { getDatabaseStatus, markSetupComplete } =
           await import("@/lib/setup");
-        const status = await getDatabaseStatus();
+        const status = (await getDatabaseStatus()) as any;
+
+        if (status.failed) {
+          console.warn(
+            "[AppShell] System check unreachable. Retaining local state."
+          );
+          return;
+        }
 
         if (status.configured) {
           const currentSetup = localStorage.getItem("pv:setupStatus");
@@ -59,7 +66,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ? !!JSON.parse(currentSetup).profileCompleted ||
               !!status.adminExists
             : !!status.adminExists;
-          markSetupComplete(true, profileDone, !!status.hasTables);
+
+          // Authenticated users who reached this shell are inherently setup-competent
+          const finalProfileDone =
+            profileDone || (isAuthenticated && !!currentUser?.isAdmin);
+
+          markSetupComplete(true, finalProfileDone, !!status.hasTables);
           setServerLicenseValid(status.licenseValid);
         } else {
           markSetupComplete(false, false, false);
@@ -67,10 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error("Sync failed:", e);
-        // Force reset setup status on sync failure to prevent stale state
-        const { markSetupComplete } = await import("@/lib/setup");
-        markSetupComplete(false, false, false);
-        setServerLicenseValid(false);
+        // Do NOT reset setup complete on transient errors to avoid flickering banner
       } finally {
         setIsSyncing(false);
       }

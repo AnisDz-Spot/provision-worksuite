@@ -42,19 +42,27 @@ export function getDatabaseStatus(): Promise<{
 
   // Call API endpoint to check status (server-side validation only)
   return fetch("/api/setup/check-system")
-    .then((res) => res.json())
+    .then((res) => {
+      if (!res.ok) throw new Error("API failure");
+      return res.json();
+    })
     .then((data) => ({
       configured: !!data.dbConfigured,
       hasTables: !!data.hasTables,
       adminExists: !!data.adminExists,
       licenseValid: !!data.licenseValid,
+      failed: false,
     }))
-    .catch(() => ({
-      configured: false,
-      hasTables: false,
-      adminExists: false,
-      licenseValid: false,
-    }));
+    .catch((err) => {
+      console.warn("[Setup] Check failed:", err);
+      return {
+        configured: false,
+        hasTables: false,
+        adminExists: false,
+        licenseValid: false,
+        failed: true,
+      };
+    });
 }
 
 export function isDatabaseConfigured(): boolean {
