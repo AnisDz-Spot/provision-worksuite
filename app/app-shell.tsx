@@ -127,13 +127,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // REQUIREMENT 2: Master Admin + License
-      // Once Master Admin exists (implies tables exist) + Valid License => Force LIVE Mode
-      if (isMasterAdmin && validLicense) {
+      // REQUIREMENT 2: Force LIVE Mode on License
+      // If a valid license exists in DB or LocalStorage, force Real mode for everyone.
+      if (validLicense) {
         if (pref !== "real") {
-          console.log(
-            "[AppShell] Licensed Master Admin found. Enforcing Live Mode."
-          );
+          console.log("[AppShell] Valid license found. Enforcing Live Mode.");
           setDataModePreference("real");
         }
         if (mode !== "real") {
@@ -292,6 +290,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router,
     isSyncing,
     mode,
+    serverLicenseValid,
   ]);
 
   const handleSelectMode = (selected: "mock" | "real") => {
