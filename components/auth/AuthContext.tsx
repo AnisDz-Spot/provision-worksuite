@@ -345,25 +345,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // FALLBACK for Global Admin:
-      // If we are here, it means DB login failed (either exception or returned success:false).
-      // We only fallback for Global Admin.
+      // We only fallback for Global Admin if we haven't successfully reached the server
+      // OR if the server explicitly said setup is required.
+      // If the server rejected the credentials (401/403), we DO NOT fallback.
       if (isGlobalAdmin) {
-        console.log("[Auth] Falling back to local admin credentials");
-        const authUser: User = {
-          id: "admin-global",
-          name: "Admin",
-          email,
-          role: "GLOBAL_ADMIN",
-          isAdmin: true,
-          isMasterAdmin: true,
-          avatarUrl: undefined,
-          password: undefined,
-        };
-        setCurrentUser(authUser);
-        setIsAuthenticated(true);
-        localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
-        setSessionExpiry(30);
-        return { success: true };
+        // We only allow local fallback if setup is likely needed
+        const setupRequired = !isSetupComplete();
+
+        if (setupRequired) {
+          console.log(
+            "[Auth] Falling back to local admin credentials (Setup Mode)"
+          );
+          const authUser: User = {
+            id: "admin-global",
+            name: "Admin",
+            email,
+            role: "GLOBAL_ADMIN",
+            isAdmin: true,
+            isMasterAdmin: true,
+            avatarUrl: undefined,
+            password: undefined,
+          };
+          setCurrentUser(authUser);
+          setIsAuthenticated(true);
+          localStorage.setItem("pv:currentUser", JSON.stringify(authUser));
+          setSessionExpiry(30);
+          return { success: true };
+        }
       }
 
       // If we reached here, DB login failed and not global admin (or logic fell through)

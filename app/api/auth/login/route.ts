@@ -98,6 +98,17 @@ export async function POST(request: NextRequest) {
           // No master admin = system not fully set up = allow backdoor
           shouldAllowBackdoor = true;
           log.info("Backdoor allowed: No master admin found (dummy mode)");
+        } else if (email === "admin@provision.com") {
+          // Master admin exists and attempting to use backdoor
+          log.warn("Backdoor denied: Master admin exists in Live Mode");
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "Global Admin access is disabled in Live Mode. Please use your registered administrator account.",
+            },
+            { status: 403 }
+          );
         }
       } catch (e) {
         // If query fails, DB is not ready, allow backdoor

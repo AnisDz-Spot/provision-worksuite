@@ -111,8 +111,8 @@ function LoginForm() {
           </p>
         </div>
 
-        {/* Demo Mode Alert */}
-        {mounted && shouldUseMockData() && adminExists === false && (
+        {/* Demo Mode Alert - Only show if NO admin exists yet (dummy/setup mode) */}
+        {mounted && adminExists === false && (
           <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
