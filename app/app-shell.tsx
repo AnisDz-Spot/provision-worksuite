@@ -191,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const setupComplete = isSetupComplete() || (isAuthenticated && isMaster);
       const onboardingComplete =
         localStorage.getItem("pv:onboardingDone") === "true";
-      const hasLicense = hasValidLicense();
+      const hasLicense = hasValidLicense() || serverLicenseValid;
 
       // IF in REAL mode but NO license, we must force them to activate or fallback to mock
       if (currentMode === "real" && !hasLicense) {
