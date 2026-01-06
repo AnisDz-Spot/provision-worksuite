@@ -34,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [hasSynced, setHasSynced] = React.useState(false);
   const [isNavBlocked, setIsNavBlocked] = React.useState(false);
   const [serverLicenseValid, setServerLicenseValid] = React.useState(false);
+  const [setupDone, setSetupDone] = React.useState(false);
   const [activeCall, setActiveCall] = React.useState<any>(null);
 
   React.useEffect(() => {
@@ -87,9 +88,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           markSetupComplete(true, finalProfileDone, !!status.hasTables);
           setServerLicenseValid(status.licenseValid);
+          setSetupDone(finalProfileDone);
         } else {
           markSetupComplete(false, false, false);
           setServerLicenseValid(false);
+          setSetupDone(false);
         }
       } catch (e) {
         console.error("Sync failed:", e);
@@ -403,6 +406,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <MainContent
         canNavigate={canNavigate}
         isSyncing={isSyncing}
+        setupDone={setupDone}
         mode={mode}
         onSelectMode={handleSelectMode}
       >
@@ -416,12 +420,14 @@ function MainContent({
   children,
   canNavigate,
   isSyncing,
+  setupDone,
   mode,
   onSelectMode,
 }: {
   children: React.ReactNode;
   canNavigate?: boolean;
   isSyncing: boolean;
+  setupDone: boolean;
   mode: string | null;
   onSelectMode: (mode: "mock" | "real") => void;
 }) {
@@ -542,7 +548,7 @@ function MainContent({
     currentUser.isAdmin &&
     !currentUser.id.includes("admin-global") &&
     mode === "real" &&
-    !isSetupComplete() &&
+    !setupDone &&
     pathname !== "/onboarding" &&
     pathname !== "/setup/account" &&
     !pathname.includes("setup=true") &&

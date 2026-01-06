@@ -30,6 +30,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<number | null>(null);
+  const lastFetchedRef = React.useRef<number | null>(null);
   const { showLoader, hideLoader } = useLoading();
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -39,8 +40,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       // If we have data and it's fresh, don't refetch unless forced
       if (
         !force &&
-        lastFetched &&
-        Date.now() - lastFetched < CACHE_DURATION &&
+        lastFetchedRef.current &&
+        Date.now() - lastFetchedRef.current < CACHE_DURATION &&
         projects.length > 0
       ) {
         return;
@@ -56,7 +57,9 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
         if (Array.isArray(data)) {
           setProjects(data);
-          setLastFetched(Date.now());
+          const now = Date.now();
+          setLastFetched(now);
+          lastFetchedRef.current = now;
         } else {
           setProjects([]);
         }
@@ -69,7 +72,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         hideLoader();
       }
     },
-    [lastFetched, projects.length]
+    [] // No external dependencies that change when this function runs
   );
 
   // Initial load
