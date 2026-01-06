@@ -126,8 +126,21 @@ export default function ExpensesPage() {
     const load = async () => {
       showLoader("Loading expenses...");
       try {
-        const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-        setProjects(pData);
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+        if (shouldUseDatabaseData()) {
+          const res = await fetch("/api/projects").then((r) => r.json());
+          if (res?.success && res.data) {
+            setProjects(res.data);
+          } else {
+            setProjects([]);
+          }
+        } else {
+          const pData = await fetch(`/data/projects.json`).then((r) =>
+            r.json()
+          );
+          setProjects(pData);
+        }
 
         try {
           const res = await fetch("/api/expenses").then((r) => r.json());

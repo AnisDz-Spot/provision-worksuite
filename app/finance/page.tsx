@@ -635,7 +635,11 @@ export default function FinancePage() {
         </div>
         <Button
           onClick={() => {
-            setEditingProject(projects[0] || null);
+            if (projects.length > 0) {
+              setEditingProject(projects[0]);
+            } else {
+              setEditingProject(null);
+            }
             setSettingsModalOpen(true);
           }}
         >
@@ -1745,7 +1749,23 @@ export default function FinancePage() {
         <h2 className="text-xl font-semibold mb-4">
           Project Financial Settings
         </h2>
-        {editingProject && (
+        {projects.length === 0 ? (
+          <div className="py-12 text-center space-y-4">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+              <Settings className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-semibold">No Projects Found</h3>
+              <p className="text-sm text-muted-foreground max-w-[250px] mx-auto">
+                You need to create a project before you can configure its
+                financial settings.
+              </p>
+            </div>
+            <Button onClick={() => router.push("/projects/new")}>
+              Create Project
+            </Button>
+          </div>
+        ) : editingProject ? (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Project</label>
@@ -1862,7 +1882,7 @@ export default function FinancePage() {
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </Modal>
 
       {/* Invoice Creation Modal */}

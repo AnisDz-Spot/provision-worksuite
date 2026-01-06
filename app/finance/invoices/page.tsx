@@ -129,8 +129,21 @@ export default function InvoicesPage() {
     const load = async () => {
       showLoader("Loading invoice data...");
       try {
-        const pData = await fetch(`/data/projects.json`).then((r) => r.json());
-        setProjects(pData);
+        const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+
+        if (shouldUseDatabaseData()) {
+          const res = await fetch("/api/projects").then((r) => r.json());
+          if (res?.success && res.data) {
+            setProjects(res.data);
+          } else {
+            setProjects([]);
+          }
+        } else {
+          const pData = await fetch(`/data/projects.json`).then((r) =>
+            r.json()
+          );
+          setProjects(pData);
+        }
 
         // Expenses
         try {
@@ -148,15 +161,20 @@ export default function InvoicesPage() {
             throw new Error("DB not configured");
           }
         } catch {
-          const e = await fetch(`/data/expenses.json`)
-            .then((r) => r.json())
-            .catch(() => []);
-          setExpenses(
-            e.map((exp: any) => ({
-              ...exp,
-              description: exp.note || exp.vendor || "",
-            }))
-          );
+          const { shouldUseMockData } = await import("@/lib/dataSource");
+          if (shouldUseMockData()) {
+            const e = await fetch(`/data/expenses.json`)
+              .then((r) => r.json())
+              .catch(() => []);
+            setExpenses(
+              e.map((exp: any) => ({
+                ...exp,
+                description: exp.note || exp.vendor || "",
+              }))
+            );
+          } else {
+            setExpenses([]);
+          }
         }
 
         // Time logs
@@ -176,16 +194,21 @@ export default function InvoicesPage() {
             throw new Error("DB not configured");
           }
         } catch {
-          const t = await fetch(`/data/timelogs.json`)
-            .then((r) => r.json())
-            .catch(() => []);
-          setLogs(
-            t.map((log: any) => ({
-              ...log,
-              userId: log.userId || "",
-              rate: log.rate || 0,
-            }))
-          );
+          const { shouldUseMockData } = await import("@/lib/dataSource");
+          if (shouldUseMockData()) {
+            const t = await fetch(`/data/timelogs.json`)
+              .then((r) => r.json())
+              .catch(() => []);
+            setLogs(
+              t.map((log: any) => ({
+                ...log,
+                userId: log.userId || "",
+                rate: log.rate || 0,
+              }))
+            );
+          } else {
+            setLogs([]);
+          }
         }
 
         // Invoices
@@ -204,10 +227,15 @@ export default function InvoicesPage() {
             throw new Error("DB not configured");
           }
         } catch {
-          const i = await fetch(`/data/invoices.json`)
-            .then((r) => r.json())
-            .catch(() => []);
-          setInvoices(i);
+          const { shouldUseMockData } = await import("@/lib/dataSource");
+          if (shouldUseMockData()) {
+            const i = await fetch(`/data/invoices.json`)
+              .then((r) => r.json())
+              .catch(() => []);
+            setInvoices(i);
+          } else {
+            setInvoices([]);
+          }
         }
       } catch (err) {
         console.error("Failed to load invoice data:", err);
