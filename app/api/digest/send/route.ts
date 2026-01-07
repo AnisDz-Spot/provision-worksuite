@@ -69,6 +69,10 @@ export async function POST(req: Request) {
         (r.status === "fulfilled" && !r.value.success)
     );
 
+    const previewUrls = results
+      .map((r) => r.status === "fulfilled" && r.value.previewUrl)
+      .filter(Boolean) as string[];
+
     if (failures.length === results.length) {
       // All failed
       return NextResponse.json(
@@ -83,6 +87,7 @@ export async function POST(req: Request) {
         success: true,
         warning: `Sent to ${results.length - failures.length} of ${results.length} recipients`,
         recipients: settings.recipients.length,
+        previewUrls: previewUrls.length > 0 ? previewUrls : undefined,
       });
     }
 
@@ -91,6 +96,7 @@ export async function POST(req: Request) {
       success: true,
       message: "Digest sent successfully",
       recipients: settings.recipients.length,
+      previewUrls: previewUrls.length > 0 ? previewUrls : undefined,
     });
   } catch (error: any) {
     console.error("Error sending digest:", error);

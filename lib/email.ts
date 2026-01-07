@@ -71,11 +71,19 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
             password: decrypt(settings.smtpPassword),
             secure: settings.smtpSecure,
           };
+        } else {
+          console.log("[Email] SMTP configuration incomplete, falling back");
+          return null;
         }
         break;
       case "sendgrid":
         if (settings.sendgridApiKey) {
           config.sendgrid = { apiKey: decrypt(settings.sendgridApiKey) };
+        } else {
+          console.log(
+            "[Email] SendGrid configuration incomplete, falling back"
+          );
+          return null;
         }
         break;
       case "mailgun":
@@ -84,13 +92,22 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
             apiKey: decrypt(settings.mailgunApiKey),
             domain: settings.mailgunDomain,
           };
+        } else {
+          console.log("[Email] Mailgun configuration incomplete, falling back");
+          return null;
         }
         break;
       case "resend":
         if (settings.resendApiKey) {
           config.resend = { apiKey: decrypt(settings.resendApiKey) };
+        } else {
+          console.log("[Email] Resend configuration incomplete, falling back");
+          return null;
         }
         break;
+      default:
+        console.log("[Email] Unknown provider, falling back");
+        return null;
     }
 
     return config;

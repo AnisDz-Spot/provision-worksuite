@@ -314,11 +314,16 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
         }),
       });
       const data = await res.json();
-      alert(
-        data.success
-          ? `Digest sent to ${data.recipients} recipient(s)!`
-          : `Failed: ${data.error}`
-      );
+      if (data.success) {
+        let msg = `Digest sent to ${data.recipients} recipient(s)!`;
+        if (data.previewUrls && data.previewUrls.length > 0) {
+          msg += `\n\nTest Mode (Ethereal): You can preview the email here:\n${data.previewUrls[0]}`;
+          console.log("[Digest] Preview URLs:", data.previewUrls);
+        }
+        alert(msg);
+      } else {
+        alert(`Failed: ${data.error}`);
+      }
     } catch (error) {
       alert("Error sending digest");
     } finally {
