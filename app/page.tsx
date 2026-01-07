@@ -59,7 +59,7 @@ export default function DashboardPage() {
         </div> */}
 
         {/* Weekly Digest Section */}
-        <WeeklyDigest />
+        {/* <WeeklyDigest /> */}
       </section>
     </>
   );
