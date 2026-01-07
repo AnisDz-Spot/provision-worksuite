@@ -96,13 +96,18 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     message?: string;
   }>({ target: null, status: "idle" });
 
-  // Load stored webhook URLs and users
+  // Load stored settings (webhooks, schedule, users)
   React.useEffect(() => {
     try {
       const s = localStorage.getItem("pv:webhook:slack") || "";
       const t = localStorage.getItem("pv:webhook:teams") || "";
       setSlackWebhookUrl(s);
       setTeamsWebhookUrl(t);
+
+      const savedSchedule = localStorage.getItem("pv:digest:schedule");
+      if (savedSchedule) {
+        setSchedule(JSON.parse(savedSchedule));
+      }
 
       const fetchUsers = async () => {
         setLoadingUsers(true);
@@ -137,6 +142,13 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       fetchUsers();
     } catch {}
   }, []);
+
+  // Save schedule to localStorage whenever it changes
+  React.useEffect(() => {
+    try {
+      localStorage.setItem("pv:digest:schedule", JSON.stringify(schedule));
+    } catch {}
+  }, [schedule]);
 
   // Load real data if in Live mode
   const [digestData, setDigestData] = useState<DigestData | null>(null);
@@ -1000,7 +1012,11 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       </div>
 
       {/* Settings Modal */}
-      <Modal open={showSettings} onOpenChange={setShowSettings} size="lg">
+      <Modal
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        className="w-[85vw] md:w-[50vw] lg:w-[33vw]"
+      >
         <h3 className="text-lg font-semibold mb-4">Digest Settings</h3>
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
