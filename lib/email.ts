@@ -1,12 +1,13 @@
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 /**
- * Email configuration from environment variables
- * For production, set these in your .env file
+ * Email configuration type
  */
 export type EmailConfig = {
   provider: "smtp" | "sendgrid" | "mailgun" | "resend";
   fromAddress: string;
+  fromName?: string;
   smtp?: {
     host: string;
     port: number;
@@ -19,63 +20,84 @@ export type EmailConfig = {
   resend?: { apiKey: string };
 };
 
-/**
- * Get email configuration from environment variables
- */
-export function getEmailConfig(): EmailConfig | null {
-  const provider = process.env.EMAIL_PROVIDER as EmailConfig["provider"];
-  const fromAddress = process.env.EMAIL_FROM_ADDRESS;
+// Encryption helpers
+const ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || "provision-default-key-change-in-production";
+const ALGORITHM = "aes-256-cbc";
 
-  if (!provider || !fromAddress) {
-    console.warn(
-      "Email not configured: EMAIL_PROVIDER and EMAIL_FROM_ADDRESS required"
-    );
+function decrypt(text: string): string {
+  try {
+    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+    const parts = text.split(":");
+    const iv = Buffer.from(parts[0], "hex");
+    const encrypted = parts[1];
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (e) {
+    console.error("[Email] Decryption failed:", e);
+    return "";
+  }
+}
+
+/**
+ * Get email configuration from database
+ * Falls back to Ethereal test account if no configuration exists
+ */
+export async function getEmailConfig(): Promise<EmailConfig | null> {
+  try {
+    const prisma = (await import("@/lib/prisma")).default;
+    const settings = await prisma.emailSettings.findFirst();
+
+    if (!settings) {
+      console.log("[Email] No database configuration found, will use Ethereal");
+      return null;
+    }
+
+    const config: EmailConfig = {
+      provider: settings.provider as EmailConfig["provider"],
+      fromAddress: settings.fromAddress,
+      fromName: settings.fromName || undefined,
+    };
+
+    switch (settings.provider) {
+      case "smtp":
+        if (settings.smtpHost && settings.smtpUser && settings.smtpPassword) {
+          config.smtp = {
+            host: settings.smtpHost,
+            port: settings.smtpPort || 587,
+            user: settings.smtpUser,
+            password: decrypt(settings.smtpPassword),
+            secure: settings.smtpSecure,
+          };
+        }
+        break;
+      case "sendgrid":
+        if (settings.sendgridApiKey) {
+          config.sendgrid = { apiKey: decrypt(settings.sendgridApiKey) };
+        }
+        break;
+      case "mailgun":
+        if (settings.mailgunApiKey && settings.mailgunDomain) {
+          config.mailgun = {
+            apiKey: decrypt(settings.mailgunApiKey),
+            domain: settings.mailgunDomain,
+          };
+        }
+        break;
+      case "resend":
+        if (settings.resendApiKey) {
+          config.resend = { apiKey: decrypt(settings.resendApiKey) };
+        }
+        break;
+    }
+
+    return config;
+  } catch (error) {
+    console.error("[Email] Failed to fetch config from database:", error);
     return null;
   }
-
-  const config: EmailConfig = {
-    provider,
-    fromAddress,
-  };
-
-  switch (provider) {
-    case "smtp":
-      if (
-        process.env.SMTP_HOST &&
-        process.env.SMTP_PORT &&
-        process.env.SMTP_USER &&
-        process.env.SMTP_PASSWORD
-      ) {
-        config.smtp = {
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT, 10),
-          user: process.env.SMTP_USER,
-          password: process.env.SMTP_PASSWORD,
-          secure: process.env.SMTP_SECURE === "true",
-        };
-      }
-      break;
-    case "sendgrid":
-      if (process.env.SENDGRID_API_KEY) {
-        config.sendgrid = { apiKey: process.env.SENDGRID_API_KEY };
-      }
-      break;
-    case "mailgun":
-      if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
-        config.mailgun = {
-          apiKey: process.env.MAILGUN_API_KEY,
-          domain: process.env.MAILGUN_DOMAIN,
-        };
-      }
-      break;
-    case "resend":
-      if (process.env.RESEND_API_KEY) {
-        config.resend = { apiKey: process.env.RESEND_API_KEY };
-      }
-      break;
-  }
-
-  return config;
 }
 
 type SendEmailOptions = {
@@ -85,39 +107,50 @@ type SendEmailOptions = {
   html: string;
 };
 
-// Import server action to get workspace settings
-import { getWorkspaceSettingsAction } from "@/app/actions/workspace-settings";
-
-async function getSenderAddress(defaultFrom: string): Promise<string> {
-  try {
-    const settings = await getWorkspaceSettingsAction();
-    if (settings?.email) {
-      // If we have a name, format it as "Name <email>"
-      if (settings.name) {
-        return `"${settings.name}" <${settings.email}>`;
-      }
-      return settings.email;
-    }
-  } catch (e) {
-    // Fail silently and use default
-  }
-  return defaultFrom;
-}
-
 /**
- * Send an email using the configured provider
+ * Send an email using the configured provider or Ethereal for testing
  */
 export async function sendEmail(
   options: SendEmailOptions
-): Promise<{ success: boolean; error?: string }> {
-  const config = getEmailConfig();
+): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+  const config = await getEmailConfig();
 
   if (!config) {
-    return { success: false, error: "Email not configured" };
+    // Use Ethereal test account as fallback
+    console.log("[Email] Using Ethereal test account");
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      const transporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: '"ProVision WorkSuite" <noreply@provision.com>',
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      });
+
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log("[Email] Preview URL:", previewUrl);
+
+      return { success: true, previewUrl: previewUrl || undefined };
+    } catch (error: any) {
+      console.error("[Email] Ethereal send failed:", error);
+      return { success: false, error: error.message };
+    }
   }
 
-  // Override from address with workspace setting if available
-  const fromAddress = await getSenderAddress(config.fromAddress);
+  const fromAddress = config.fromName
+    ? `"${config.fromName}" <${config.fromAddress}>`
+    : config.fromAddress;
 
   try {
     switch (config.provider) {

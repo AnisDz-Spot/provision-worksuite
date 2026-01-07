@@ -907,3 +907,34 @@ model DigestSettings {
   @@index([userId])
   @@map("digest_settings")
 }
+
+// =============================================================================
+// EMAIL SETTINGS
+// =============================================================================
+
+model EmailSettings {
+  id       Int    @id @default(autoincrement())
+  provider String @default("smtp") // smtp, sendgrid, mailgun, resend
+
+  // Common fields
+  fromAddress String  @map("from_address")
+  fromName    String? @map("from_name")
+
+  // SMTP fields
+  smtpHost     String? @map("smtp_host")
+  smtpPort     Int?    @map("smtp_port")
+  smtpUser     String? @map("smtp_user")
+  smtpPassword String? @map("smtp_password") // Encrypted
+  smtpSecure   Boolean @default(false) @map("smtp_secure")
+
+  // API keys for other providers (encrypted)
+  sendgridApiKey String? @map("sendgrid_api_key")
+  mailgunApiKey  String? @map("mailgun_api_key")
+  mailgunDomain  String? @map("mailgun_domain")
+  resendApiKey   String? @map("resend_api_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_settings")
+}
