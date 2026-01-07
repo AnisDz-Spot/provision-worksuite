@@ -120,7 +120,7 @@ export function AnalyticsWidgets() {
             </div>
 
             {/* Sparkline Chart */}
-            <div className="absolute inset-x-0 bottom-0 h-16 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none">
+            <div className="absolute inset-x-0 bottom-0 h-16 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none min-h-[64px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend?.map((v, idx) => ({ value: v, idx }))}>
                   <defs>

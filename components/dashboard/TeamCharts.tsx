@@ -216,9 +216,11 @@ export function TeamCharts() {
           availableTypes={["bar", "line"]}
         />
       </div>
-      <ResponsiveContainer width="100%" height={350}>
-        {renderChart()}
-      </ResponsiveContainer>
+      <div className="min-h-[350px]">
+        <ResponsiveContainer width="100%" height={350}>
+          {renderChart()}
+        </ResponsiveContainer>
+      </div>
     </Card>
   );
 }

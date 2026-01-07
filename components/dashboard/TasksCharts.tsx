@@ -430,9 +430,11 @@ export function TasksCharts() {
             availableTypes={["area", "bar", "line"]}
           />
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          {renderCompletionChart()}
-        </ResponsiveContainer>
+        <div className="min-h-[300px]">
+          <ResponsiveContainer width="100%" height={300}>
+            {renderCompletionChart()}
+          </ResponsiveContainer>
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -448,9 +450,11 @@ export function TasksCharts() {
               availableTypes={["bar", "line", "area"]}
             />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            {renderPriorityChart()}
-          </ResponsiveContainer>
+          <div className="min-h-[250px]">
+            <ResponsiveContainer width="100%" height={250}>
+              {renderPriorityChart()}
+            </ResponsiveContainer>
+          </div>
         </Card>
 
         {/* Team Productivity */}
@@ -465,9 +469,11 @@ export function TasksCharts() {
               availableTypes={["bar", "line", "area"]}
             />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            {renderProductivityChart()}
-          </ResponsiveContainer>
+          <div className="min-h-[250px]">
+            <ResponsiveContainer width="100%" height={250}>
+              {renderProductivityChart()}
+            </ResponsiveContainer>
+          </div>
         </Card>
       </div>
     </div>

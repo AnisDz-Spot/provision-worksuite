@@ -421,9 +421,11 @@ export function ProjectsCharts() {
             availableTypes={["line", "bar", "area"]}
           />
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          {renderTimelineChart()}
-        </ResponsiveContainer>
+        <div className="min-h-[300px]">
+          <ResponsiveContainer width="100%" height={300}>
+            {renderTimelineChart()}
+          </ResponsiveContainer>
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -439,9 +441,11 @@ export function ProjectsCharts() {
               availableTypes={["pie", "bar", "line"]}
             />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            {renderStatusChart()}
-          </ResponsiveContainer>
+          <div className="min-h-[250px]">
+            <ResponsiveContainer width="100%" height={250}>
+              {renderStatusChart()}
+            </ResponsiveContainer>
+          </div>
         </Card>
 
         {/* Project Health Score */}
@@ -456,9 +460,11 @@ export function ProjectsCharts() {
               availableTypes={["bar", "line", "area"]}
             />
           </div>
-          <ResponsiveContainer width="100%" height={250}>
-            {renderHealthChart()}
-          </ResponsiveContainer>
+          <div className="min-h-[250px]">
+            <ResponsiveContainer width="100%" height={250}>
+              {renderHealthChart()}
+            </ResponsiveContainer>
+          </div>
         </Card>
       </div>
     </div>
