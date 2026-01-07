@@ -96,7 +96,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     message?: string;
   }>({ target: null, status: "idle" });
 
-  // Load stored settings (webhooks, schedule, users)
+  // Load stored settings (webhooks from localStorage, schedule from API)
   React.useEffect(() => {
     try {
       const s = localStorage.getItem("pv:webhook:slack") || "";
@@ -104,10 +104,24 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       setSlackWebhookUrl(s);
       setTeamsWebhookUrl(t);
 
-      const savedSchedule = localStorage.getItem("pv:digest:schedule");
-      if (savedSchedule) {
-        setSchedule(JSON.parse(savedSchedule));
-      }
+      // Fetch digest settings from API
+      const fetchSettings = async () => {
+        try {
+          const res = await fetch("/api/digest-settings");
+          const json = await res.json();
+          if (json.success && json.data) {
+            setSchedule({
+              enabled: json.data.enabled,
+              dayOfWeek: json.data.dayOfWeek,
+              time: json.data.time,
+              recipients: json.data.recipients,
+            });
+          }
+        } catch (e) {
+          console.error("Failed to fetch digest settings", e);
+        }
+      };
+      fetchSettings();
 
       const fetchUsers = async () => {
         setLoadingUsers(true);
@@ -143,11 +157,21 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     } catch {}
   }, []);
 
-  // Save schedule to localStorage whenever it changes
+  // Save schedule to API whenever it changes (debounced)
   React.useEffect(() => {
-    try {
-      localStorage.setItem("pv:digest:schedule", JSON.stringify(schedule));
-    } catch {}
+    const timeoutId = setTimeout(async () => {
+      try {
+        await fetch("/api/digest-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(schedule),
+        });
+      } catch (e) {
+        console.error("Failed to save digest settings", e);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [schedule]);
 
   // Load real data if in Live mode

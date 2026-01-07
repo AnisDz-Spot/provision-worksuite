@@ -96,6 +96,7 @@ model User {
   createdMeetings     Meeting[]            @relation("CreatedMeetings")
   meetingParticipants MeetingParticipant[]
   starredProjects     StarredProject[]
+  digestSettings      DigestSettings?
 
   @@index([email])
   @@index([roleId])
@@ -885,4 +886,24 @@ model Retrospective {
   @@index([projectId])
   @@index([date])
   @@map("retrospectives")
+}
+
+// =============================================================================
+// DIGEST SETTINGS
+// =============================================================================
+
+model DigestSettings {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique @map("user_id")
+  enabled    Boolean  @default(false)
+  dayOfWeek  Int      @default(1) @map("day_of_week") // 0-6 (Sunday-Saturday)
+  time       String   @default("09:00") // HH:MM format
+  recipients String[] @default([])
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("digest_settings")
 }
