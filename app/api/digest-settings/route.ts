@@ -6,22 +6,35 @@ import prisma from "@/lib/prisma";
 export async function GET(req: Request) {
   try {
     const user = await getAuthenticatedUser();
-    if (!user || !user.id) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    // Get user ID from database using uid
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     let settings = await prisma.digestSettings.findUnique({
-      where: { userId: parseInt(String(user.id)) },
+      where: { userId: dbUser.id },
     });
 
     // Return defaults if no settings exist
     if (!settings) {
       settings = {
         id: 0,
-        userId: parseInt(String(user.id)),
+        userId: dbUser.id,
         enabled: false,
         dayOfWeek: 1,
         time: "09:00",
@@ -48,10 +61,23 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getAuthenticatedUser();
-    if (!user || !user.id) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // Get user ID from database using uid
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
       );
     }
 
@@ -86,7 +112,7 @@ export async function POST(req: Request) {
 
     // Upsert settings
     const settings = await prisma.digestSettings.upsert({
-      where: { userId: parseInt(String(user.id)) },
+      where: { userId: dbUser.id },
       update: {
         enabled,
         dayOfWeek,
@@ -94,7 +120,7 @@ export async function POST(req: Request) {
         recipients,
       },
       create: {
-        userId: parseInt(String(user.id)),
+        userId: dbUser.id,
         enabled,
         dayOfWeek,
         time,
