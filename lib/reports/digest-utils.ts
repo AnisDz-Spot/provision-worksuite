@@ -1,4 +1,9 @@
-import { DigestData, DigestProject } from "./digest/types";
+import {
+  DigestData,
+  DigestProject,
+  DigestBlocker,
+  DigestMilestone,
+} from "@/components/reports/digest/types";
 
 /**
  * Build Slack Blocks payload for the digest
@@ -36,7 +41,7 @@ export const buildSlackPayload = (digestData: DigestData) => {
     },
     { type: "divider" },
     { type: "section", text: { type: "mrkdwn", text: "*Project Status*" } },
-    ...digestData.projects.map((p) => ({
+    ...digestData.projects.map((p: DigestProject) => ({
       type: "section",
       text: {
         type: "mrkdwn",
@@ -49,12 +54,12 @@ export const buildSlackPayload = (digestData: DigestData) => {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: digestData.achievements.map((a) => `• ${a}`).join("\n"),
+        text: digestData.achievements.map((a: string) => `• ${a}`).join("\n"),
       },
     },
     { type: "divider" },
     { type: "section", text: { type: "mrkdwn", text: "*Blockers*" } },
-    ...digestData.blockers.map((b) => ({
+    ...digestData.blockers.map((b: DigestBlocker) => ({
       type: "section",
       text: {
         type: "mrkdwn",
@@ -66,7 +71,7 @@ export const buildSlackPayload = (digestData: DigestData) => {
       type: "section",
       text: { type: "mrkdwn", text: "*Upcoming Milestones*" },
     },
-    ...digestData.upcomingMilestones.map((m) => ({
+    ...digestData.upcomingMilestones.map((m: DigestMilestone) => ({
       type: "section",
       text: {
         type: "mrkdwn",
@@ -166,7 +171,7 @@ export const buildTeamsCard = (digestData: DigestData) => {
         weight: "Bolder",
         spacing: "Medium",
       },
-      ...digestData.projects.map((p) => ({
+      ...digestData.projects.map((p: DigestProject) => ({
         type: "Container",
         items: [
           {
@@ -192,7 +197,7 @@ export const buildTeamsCard = (digestData: DigestData) => {
       {
         type: "TextBlock",
         wrap: true,
-        text: digestData.achievements.map((a) => `• ${a}`).join("\n"),
+        text: digestData.achievements.map((a: string) => `• ${a}`).join("\n"),
       },
       {
         type: "TextBlock",
@@ -205,7 +210,8 @@ export const buildTeamsCard = (digestData: DigestData) => {
         wrap: true,
         text: digestData.blockers
           .map(
-            (b) => `• ${b.title} (${b.severity.toUpperCase()}) — ${b.project}`
+            (b: DigestBlocker) =>
+              `• ${b.title} (${b.severity.toUpperCase()}) — ${b.project}`
           )
           .join("\n"),
       },
@@ -219,7 +225,9 @@ export const buildTeamsCard = (digestData: DigestData) => {
         type: "TextBlock",
         wrap: true,
         text: digestData.upcomingMilestones
-          .map((m) => `• ${m.title} — ${m.date} (${m.project})`)
+          .map(
+            (m: DigestMilestone) => `• ${m.title} — ${m.date} (${m.project})`
+          )
           .join("\n"),
       },
     ],
@@ -315,7 +323,7 @@ export const generateHTMLDigest = (digestData: DigestData) => {
       <h2>⚠️ Active Blockers</h2>
       ${digestData.blockers
         .map(
-          (b: any) => `
+          (b: DigestBlocker) => `
         <div class="blocker">
           <strong>${b.title}</strong><br>
           <small>Project: ${b.project} • Severity: ${b.severity.toUpperCase()}</small>
@@ -328,7 +336,7 @@ export const generateHTMLDigest = (digestData: DigestData) => {
     <div class="section">
       <h2>📅 Upcoming Milestones</h2>
       <ul>
-        ${digestData.upcomingMilestones.map((m: any) => `<li><strong>${m.title}</strong> - ${m.date} (${m.project})</li>`).join("")}
+        ${digestData.upcomingMilestones.map((m: DigestMilestone) => `<li><strong>${m.title}</strong> - ${m.date} (${m.project})</li>`).join("")}
       </ul>
     </div>
   </div>
