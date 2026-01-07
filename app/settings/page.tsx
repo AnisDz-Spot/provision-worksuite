@@ -29,6 +29,7 @@ import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 import { ZegoSettingsForm } from "@/components/settings/ZegoSettingsForm";
 import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
+import { EmailSettings } from "@/components/settings/EmailSettings";
 import {
   saveDatabaseConfig,
   getDatabaseStatus,
@@ -818,6 +819,7 @@ function SettingsContent() {
         </div>
       )}
       {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
+      {tab === "email" && !isSetupMode && <EmailSettings />}
       {tab === "support" && !isSetupMode && <SupportTab />}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
     </section>
