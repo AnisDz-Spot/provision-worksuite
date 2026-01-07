@@ -79,14 +79,12 @@ type WeeklyDigestProps = {
 
 export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const [schedule, setSchedule] = useState<DigestSchedule>({
-    enabled: false,
-    dayOfWeek: 1, // Monday
-    time: "09:00",
-    recipients: ["anis@example.com", "team@example.com"],
+    recipients: [], // Start empty
   });
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [newRecipient, setNewRecipient] = useState("");
   const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
   const [teamsWebhookUrl, setTeamsWebhookUrl] = useState("");
   const [sending, setSending] = useState<{
@@ -95,13 +93,45 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     message?: string;
   }>({ target: null, status: "idle" });
 
-  // Load stored webhook URLs
+  // Load stored webhook URLs and users
   React.useEffect(() => {
     try {
       const s = localStorage.getItem("pv:webhook:slack") || "";
       const t = localStorage.getItem("pv:webhook:teams") || "";
       setSlackWebhookUrl(s);
       setTeamsWebhookUrl(t);
+
+      const fetchUsers = async () => {
+        setLoadingUsers(true);
+        try {
+          const { shouldUseDatabaseData } = await import("@/lib/dataSource");
+          let data = [];
+          if (shouldUseDatabaseData()) {
+            const res = await fetch("/api/users");
+            const json = await res.json();
+            if (json.success) data = json.data;
+          } else {
+            const { loadUsers } = await import("@/lib/data");
+            data = await loadUsers();
+          }
+          setUsers(
+            data.map((u: any) => ({
+              id: u.id || u.uid,
+              name: u.name,
+              email: u.email,
+              avatar:
+                u.avatar_url ||
+                u.avatarUrl ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+            }))
+          );
+        } catch (e) {
+          console.error("Failed to fetch users for digest", e);
+        } finally {
+          setLoadingUsers(false);
+        }
+      };
+      fetchUsers();
     } catch {}
   }, []);
 
@@ -293,16 +323,6 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   }, [projectId]);
 
   if (!digestData) return <div>Loading digest...</div>;
-
-  const addRecipient = () => {
-    if (newRecipient && newRecipient.includes("@")) {
-      setSchedule({
-        ...schedule,
-        recipients: [...schedule.recipients, newRecipient],
-      });
-      setNewRecipient("");
-    }
-  };
 
   const removeRecipient = (email: string) => {
     setSchedule({
@@ -977,64 +997,129 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       </div>
 
       {/* Settings Modal */}
-      <Modal open={showSettings} onOpenChange={setShowSettings}>
+      <Modal open={showSettings} onOpenChange={setShowSettings} size="lg">
         <h3 className="text-lg font-semibold mb-4">Digest Settings</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-1 block">
-              Day of Week
-            </label>
-            <select
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-              value={schedule.dayOfWeek}
-              onChange={(e) =>
-                setSchedule({
-                  ...schedule,
-                  dayOfWeek: parseInt(e.target.value),
-                })
-              }
-            >
-              {[
-                "Sunday",
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-              ].map((day, idx) => (
-                <option key={idx} value={idx}>
-                  {day}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Time</label>
-            <Input
-              type="time"
-              value={schedule.time}
-              onChange={(e) =>
-                setSchedule({ ...schedule, time: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">
-              Add Recipient
-            </label>
-            <div className="flex gap-2">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                Day of Week
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                value={schedule.dayOfWeek}
+                onChange={(e) =>
+                  setSchedule({
+                    ...schedule,
+                    dayOfWeek: parseInt(e.target.value),
+                  })
+                }
+              >
+                {[
+                  "Sunday",
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                ].map((day, idx) => (
+                  <option key={idx} value={idx}>
+                    {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Time</label>
               <Input
-                type="email"
-                placeholder="email@example.com"
-                value={newRecipient}
-                onChange={(e) => setNewRecipient(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addRecipient()}
+                type="time"
+                value={schedule.time}
+                onChange={(e) =>
+                  setSchedule({ ...schedule, time: e.target.value })
+                }
               />
-              <Button onClick={addRecipient}>Add</Button>
             </div>
           </div>
-          <div className="pt-4">
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium block">Recipients</label>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline"
+                onClick={() => {
+                  const allEmails = users.map((u) => u.email);
+                  const isAllSelected = allEmails.every((email) =>
+                    schedule.recipients.includes(email)
+                  );
+                  setSchedule({
+                    ...schedule,
+                    recipients: isAllSelected ? [] : allEmails,
+                  });
+                }}
+              >
+                {users.length > 0 &&
+                users.every((u) => schedule.recipients.includes(u.email))
+                  ? "Deselect All"
+                  : "Select All"}
+              </button>
+            </div>
+
+            <div className="border rounded-lg divide-y max-h-60 overflow-y-auto">
+              {loadingUsers ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Loading members...
+                </div>
+              ) : users.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No members found.
+                </div>
+              ) : (
+                users.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      const exists = schedule.recipients.includes(u.email);
+                      setSchedule({
+                        ...schedule,
+                        recipients: exists
+                          ? schedule.recipients.filter((r) => r !== u.email)
+                          : [...schedule.recipients, u.email],
+                      });
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={u.avatar}
+                        alt={u.name}
+                        className="w-8 h-8 rounded-full border bg-accent"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{u.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {u.email}
+                        </span>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={schedule.recipients.includes(u.email)}
+                      readOnly
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Select users who should receive the weekly progress update.
+            </p>
+          </div>
+
+          <div className="pt-2">
             <Button onClick={() => setShowSettings(false)} className="w-full">
               Save Settings
             </Button>
