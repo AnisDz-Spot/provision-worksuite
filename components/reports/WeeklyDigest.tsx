@@ -108,6 +108,15 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       const fetchSettings = async () => {
         try {
           const res = await fetch("/api/digest-settings");
+
+          // Silently fail on 401 (user might not be authenticated yet)
+          if (res.status === 401) {
+            console.log(
+              "[Digest] User not authenticated, skipping settings fetch"
+            );
+            return;
+          }
+
           const json = await res.json();
           if (json.success && json.data) {
             setSchedule({
