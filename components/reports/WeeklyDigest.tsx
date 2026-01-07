@@ -166,15 +166,29 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     } catch {}
   }, []);
 
+  // Track if this is the first render to avoid saving default values
+  const isInitialMount = React.useRef(true);
+
   // Save schedule to API whenever it changes (debounced)
   React.useEffect(() => {
+    // Skip save on initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const timeoutId = setTimeout(async () => {
       try {
-        await fetchWithCsrf("/api/digest-settings", {
+        const res = await fetchWithCsrf("/api/digest-settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(schedule),
         });
+
+        // Log if save failed
+        if (!res.ok) {
+          console.error("[Digest] Failed to save settings", res.status);
+        }
       } catch (e) {
         console.error("Failed to save digest settings", e);
       }
