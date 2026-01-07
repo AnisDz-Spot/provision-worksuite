@@ -819,7 +819,7 @@ function SettingsContent() {
         </div>
       )}
       {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
-      {tab === "email" && !isSetupMode && <EmailSettings />}
+      {/* {tab === "email" && !isSetupMode && <EmailSettings />} */}
       {tab === "support" && !isSetupMode && <SupportTab />}
       {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
     </section>
