@@ -11,10 +11,11 @@ export default function DashboardPage() {
   return (
     <>
       <section className="flex flex-col gap-8 p-4 md:p-8">
-        {/* <AnalyticsWidgets /> */}
+        <AnalyticsWidgets />
 
         {/* Charts Section */}
-        {/* <div className="space-y-8">
+        <div className="space-y-8">
+          {/* Projects Overview */}
           <div className="rounded-lg border border-border bg-card/50">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-2xl font-bold text-foreground">
@@ -26,6 +27,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Tasks Overview */}
           <div className="rounded-lg border border-border bg-card/50">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-2xl font-bold text-foreground">
@@ -37,6 +39,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Team Overview */}
           <div className="rounded-lg border border-border bg-card/50">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-2xl font-bold text-foreground">
@@ -56,7 +59,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-8">
             <RecentActivity />
           </div>
-        </div> */}
+        </div>
 
         {/* Weekly Digest Section */}
         {/* <WeeklyDigest /> */}

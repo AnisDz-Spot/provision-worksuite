@@ -109,13 +109,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
         try {
           const res = await fetch("/api/digest-settings");
 
-          // Silently fail on 401 (user might not be authenticated yet)
-          if (res.status === 401) {
-            console.log(
-              "[Digest] User not authenticated, skipping settings fetch"
-            );
-            return;
-          }
+          if (res.status === 401) return;
 
           const json = await res.json();
           if (json.success && json.data) {
@@ -123,11 +117,13 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
               enabled: json.data.enabled,
               dayOfWeek: json.data.dayOfWeek,
               time: json.data.time,
-              recipients: json.data.recipients,
+              recipients: json.data.recipients || [],
             });
           }
         } catch (e) {
           console.error("Failed to fetch digest settings", e);
+        } finally {
+          setHasLoadedSettings(true);
         }
       };
       fetchSettings();
@@ -166,14 +162,13 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
     } catch {}
   }, []);
 
-  // Track if this is the first render to avoid saving default values
-  const isInitialMount = React.useRef(true);
+  // Track if settings have been loaded to prevent saving default values
+  const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
 
   // Save schedule to API whenever it changes (debounced)
   React.useEffect(() => {
-    // Skip save on initial mount
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    // Skip save if settings haven't loaded yet or on initial mount
+    if (!hasLoadedSettings) {
       return;
     }
 
