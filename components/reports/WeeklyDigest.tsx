@@ -161,7 +161,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   React.useEffect(() => {
     const timeoutId = setTimeout(async () => {
       try {
-        await fetch("/api/digest-settings", {
+        await fetchWithCsrf("/api/digest-settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(schedule),
