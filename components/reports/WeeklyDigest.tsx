@@ -828,9 +828,46 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
 </html>`;
   };
 
-  const sendDigest = () => {
-    // In production, call API to send email
-    alert(`Digest sent to ${schedule.recipients.length} recipient(s)`);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const sendDigest = async () => {
+    if (schedule.recipients.length === 0) {
+      alert(
+        "Please configure at least one recipient before sending the digest."
+      );
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const htmlContent = generateHTMLDigest();
+      const res = await fetchWithCsrf("/api/digest/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          htmlContent,
+          weekRange: digestData.weekRange,
+          summary: digestData.summary,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(
+          data.warning
+            ? `Digest sent with warnings: ${data.warning}`
+            : `Digest sent successfully to ${data.recipients} recipient(s)!`
+        );
+      } else {
+        alert(`Failed to send digest: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error("Error sending digest:", error);
+      alert(`Error sending digest: ${error.message || "Unknown error"}`);
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   return (
