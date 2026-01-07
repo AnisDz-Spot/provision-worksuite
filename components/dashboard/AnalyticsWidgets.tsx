@@ -44,7 +44,8 @@ export function AnalyticsWidgets() {
       }
     }
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount only
 
   const WIDGETS = [
     {
