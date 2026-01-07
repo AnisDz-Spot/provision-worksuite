@@ -79,7 +79,10 @@ type WeeklyDigestProps = {
 
 export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const [schedule, setSchedule] = useState<DigestSchedule>({
-    recipients: [], // Start empty
+    enabled: false,
+    dayOfWeek: 1, // Monday
+    time: "09:00",
+    recipients: [],
   });
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
