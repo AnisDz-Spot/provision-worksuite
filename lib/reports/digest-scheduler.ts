@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { getDigestData } from "./digest-logic";
 import { generateHTMLDigest } from "./digest-utils";
 import { sendEmail } from "@/lib/email";
-
 // Prevents multiple intervals from being created during hot-reloading (HMR)
 const globalForCron = globalThis as unknown as {
   digestInterval: NodeJS.Timeout | undefined;
@@ -34,6 +33,7 @@ export function startDigestScheduler() {
   );
 
   // Run once immediately on start (optional, but good for verification)
+  console.log("[Scheduler] Running initial cron check...");
   runCronLogic().catch((e) =>
     console.error("[Scheduler] Initial run failed:", e)
   );
@@ -43,9 +43,10 @@ async function runCronLogic() {
   const now = new Date();
   const currentDay = now.getDay();
   const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
 
   console.log(
-    `[Scheduler] Checking for due digests at ${now.toISOString()}...`
+    `[Scheduler] 🕒 Checking for due digests. Server Time: Day ${currentDay}, ${currentHour}:${currentMinute < 10 ? "0" + currentMinute : currentMinute} (UTC/Server Local)`
   );
 
   // Fetch all enabled digest settings
@@ -66,12 +67,24 @@ async function runCronLogic() {
   });
 
   for (const setting of enabledSettings) {
+    console.log(
+      `[Scheduler] 🔍 Checking user: ${setting.user.email} (Target: Day ${setting.dayOfWeek}, Time ${setting.time})`
+    );
+
     // 1. Day Check
-    if (setting.dayOfWeek !== currentDay) continue;
+    if (setting.dayOfWeek !== currentDay) {
+      console.log(`[Scheduler] ❌ Day mismatch for ${setting.user.email}`);
+      continue;
+    }
 
     // 2. Hour Check
     const [targetHour] = setting.time.split(":").map(Number);
-    if (currentHour !== targetHour) continue;
+    if (currentHour !== targetHour) {
+      console.log(
+        `[Scheduler] ❌ Hour mismatch for ${setting.user.email} (Goal: ${targetHour}, Now: ${currentHour})`
+      );
+      continue;
+    }
 
     // 3. Prevent Duplicates (Already sent today)
     if (setting.lastSentAt) {

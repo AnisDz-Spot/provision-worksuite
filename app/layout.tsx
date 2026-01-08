@@ -64,6 +64,17 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Initialize background scheduler on server-side
+  if (typeof window === "undefined") {
+    try {
+      const { startDigestScheduler } =
+        await import("@/lib/reports/digest-scheduler");
+      startDigestScheduler();
+    } catch (e) {
+      console.error("Failed to start scheduler from layout:", e);
+    }
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body>

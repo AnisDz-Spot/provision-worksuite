@@ -156,10 +156,52 @@ export const DigestSettingsModal: React.FC<DigestSettingsModalProps> = ({
           </p>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex flex-col gap-2">
           <Button onClick={() => onOpenChange(false)} className="w-full">
             Save Settings
           </Button>
+
+          <div className="border-t pt-4 mt-2">
+            <h4 className="text-sm font-semibold mb-2">Automation Help</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              The scheduler runs in the background every 10 minutes. If you want
+              to test the automation logic immediately:
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={async () => {
+                const btn = document.activeElement as HTMLButtonElement;
+                const originalText = btn.innerText;
+                btn.innerText = "Triggering...";
+                btn.disabled = true;
+
+                try {
+                  const res = await fetch(
+                    "/api/digest/cron?secret=provision-default-cron-secret"
+                  );
+                  const data = await res.json();
+                  if (data.success) {
+                    alert(
+                      `Automation Trigger Success!\nProcessed: ${data.processed}\nSent: ${data.sent}\nCheck server console for details.`
+                    );
+                  } else {
+                    alert(
+                      `Automation Failed: ${data.error || "Unknown error"}`
+                    );
+                  }
+                } catch (err) {
+                  alert("Failed to connect to automation endpoint");
+                } finally {
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                }
+              }}
+            >
+              Run Automation Logic Now
+            </Button>
+          </div>
         </div>
         <div className="pt-6 border-t mt-2">
           <h4 className="text-sm font-semibold mb-2">Webhooks</h4>
