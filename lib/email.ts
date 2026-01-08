@@ -51,7 +51,7 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
     const settings = await prisma.emailSettings.findFirst();
 
     if (!settings) {
-      console.log("[Email] No database configuration found, will use Ethereal");
+      console.log("[Email] No email configuration found in database");
       return null;
     }
 
@@ -72,7 +72,7 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
             secure: settings.smtpSecure,
           };
         } else {
-          console.log("[Email] SMTP configuration incomplete, falling back");
+          console.log("[Email] SMTP configuration incomplete");
           return null;
         }
         break;
@@ -80,9 +80,7 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
         if (settings.sendgridApiKey) {
           config.sendgrid = { apiKey: decrypt(settings.sendgridApiKey) };
         } else {
-          console.log(
-            "[Email] SendGrid configuration incomplete, falling back"
-          );
+          console.log("[Email] SendGrid configuration incomplete");
           return null;
         }
         break;
@@ -93,7 +91,7 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
             domain: settings.mailgunDomain,
           };
         } else {
-          console.log("[Email] Mailgun configuration incomplete, falling back");
+          console.log("[Email] Mailgun configuration incomplete");
           return null;
         }
         break;
@@ -101,12 +99,12 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
         if (settings.resendApiKey) {
           config.resend = { apiKey: decrypt(settings.resendApiKey) };
         } else {
-          console.log("[Email] Resend configuration incomplete, falling back");
+          console.log("[Email] Resend configuration incomplete");
           return null;
         }
         break;
       default:
-        console.log("[Email] Unknown provider, falling back");
+        console.log("[Email] Unknown provider");
         return null;
     }
 
@@ -133,36 +131,11 @@ export async function sendEmail(
   const config = await getEmailConfig();
 
   if (!config) {
-    // Use Ethereal test account as fallback
-    console.log("[Email] Using Ethereal test account");
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      const transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from: '"ProVision WorkSuite" <noreply@provision.com>',
-        to: options.to,
-        subject: options.subject,
-        text: options.text,
-        html: options.html,
-      });
-
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      console.log("[Email] Preview URL:", previewUrl);
-
-      return { success: true, previewUrl: previewUrl || undefined };
-    } catch (error: any) {
-      console.error("[Email] Ethereal send failed:", error);
-      return { success: false, error: error.message };
-    }
+    return {
+      success: false,
+      error:
+        "Email provider not configured. Please visit Settings to set up your email provider.",
+    };
   }
 
   const fromAddress = config.fromName

@@ -315,12 +315,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       });
       const data = await res.json();
       if (data.success) {
-        let msg = `Digest sent to ${data.recipients} recipient(s)!`;
-        if (data.previewUrls && data.previewUrls.length > 0) {
-          msg = `Test Mode Active (Ethereal Fallback)\n\n${msg}\n\nNOTE: Real inbox delivery requires Email Provider configuration in Settings.\n\nPreview the email here:\n${data.previewUrls[0]}`;
-          console.log("[Digest] Preview URLs:", data.previewUrls);
-        }
-        alert(msg);
+        alert(`Digest sent to ${data.recipients} recipient(s)!`);
       } else {
         alert(`Failed: ${data.error}`);
       }
