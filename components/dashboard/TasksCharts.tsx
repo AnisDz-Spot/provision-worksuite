@@ -19,6 +19,8 @@ import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
 import { loadTasks, type Task } from "@/lib/data";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type CompletionPoint = {
   date: string;
@@ -35,24 +37,7 @@ export function TasksCharts() {
   const [priorityChartType, setPriorityChartType] = useState<ChartType>("bar");
   const [productivityChartType, setProductivityChartType] =
     useState<ChartType>("bar");
-  const [chartData, setChartData] = useState<any>(null);
-
-  useEffect(() => {
-    async function fetchChartData() {
-      try {
-        const res = await fetchWithCsrf("/api/analytics/charts", {
-          cache: "no-store",
-        });
-        const result = await res.json();
-        if (result.success) {
-          setChartData(result.data);
-        }
-      } catch (error) {
-        console.error("Failed to load task chart data:", error);
-      }
-    }
-    fetchChartData();
-  }, []);
+  const { charts: chartData, loading } = useDashboardData();
 
   const taskCompletionData: CompletionPoint[] = useMemo(() => {
     return chartData?.completionTrend || [];
@@ -431,9 +416,13 @@ export function TasksCharts() {
           />
         </div>
         <div className="min-h-[300px]">
-          <ResponsiveContainer width="100%" height={300}>
-            {renderCompletionChart()}
-          </ResponsiveContainer>
+          {loading && !chartData ? (
+            <Skeleton className="w-full h-[300px]" />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              {renderCompletionChart()}
+            </ResponsiveContainer>
+          )}
         </div>
       </Card>
 
@@ -451,9 +440,13 @@ export function TasksCharts() {
             />
           </div>
           <div className="min-h-[250px]">
-            <ResponsiveContainer width="100%" height={250}>
-              {renderPriorityChart()}
-            </ResponsiveContainer>
+            {loading && !chartData ? (
+              <Skeleton className="w-full h-[250px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                {renderPriorityChart()}
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -470,9 +463,13 @@ export function TasksCharts() {
             />
           </div>
           <div className="min-h-[250px]">
-            <ResponsiveContainer width="100%" height={250}>
-              {renderProductivityChart()}
-            </ResponsiveContainer>
+            {loading && !chartData ? (
+              <Skeleton className="w-full h-[250px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                {renderProductivityChart()}
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>

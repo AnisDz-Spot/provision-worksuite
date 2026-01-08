@@ -18,6 +18,8 @@ import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
 import { loadTasks, loadUsers, type Task, type User } from "@/lib/data";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type TeamPoint = {
   month: string;
@@ -28,24 +30,7 @@ type TeamPoint = {
 
 export function TeamCharts() {
   const [chartType, setChartType] = useState<ChartType>("bar");
-  const [chartData, setChartData] = useState<any>(null);
-
-  useEffect(() => {
-    async function fetchChartData() {
-      try {
-        const res = await fetchWithCsrf("/api/analytics/charts", {
-          cache: "no-store",
-        });
-        const result = await res.json();
-        if (result.success) {
-          setChartData(result.data);
-        }
-      } catch (error) {
-        console.error("Failed to load team chart data:", error);
-      }
-    }
-    fetchChartData();
-  }, []);
+  const { charts: chartData, loading } = useDashboardData();
 
   const teamMetricsData: TeamPoint[] = useMemo(() => {
     const metrics = chartData?.teamMetrics || {
@@ -217,9 +202,13 @@ export function TeamCharts() {
         />
       </div>
       <div className="min-h-[350px]">
-        <ResponsiveContainer width="100%" height={350}>
-          {renderChart()}
-        </ResponsiveContainer>
+        {loading && !chartData ? (
+          <Skeleton className="w-full h-[350px]" />
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            {renderChart()}
+          </ResponsiveContainer>
+        )}
       </div>
     </Card>
   );

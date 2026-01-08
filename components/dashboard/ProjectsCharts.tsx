@@ -22,6 +22,8 @@ import { ChartTypeSelector, type ChartType } from "./ChartTypeSelector";
 import { chartTooltipStyle } from "@/lib/chart-utils";
 import { loadProjects, type Project } from "@/lib/data";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type TimelinePoint = {
   week: string;
@@ -36,24 +38,7 @@ export function ProjectsCharts() {
   const [timelineChartType, setTimelineChartType] = useState<ChartType>("line");
   const [statusChartType, setStatusChartType] = useState<ChartType>("pie");
   const [healthChartType, setHealthChartType] = useState<ChartType>("bar");
-  const [chartData, setChartData] = useState<any>(null);
-
-  useEffect(() => {
-    async function fetchChartData() {
-      try {
-        const res = await fetchWithCsrf("/api/analytics/charts", {
-          cache: "no-store",
-        });
-        const result = await res.json();
-        if (result.success) {
-          setChartData(result.data);
-        }
-      } catch (error) {
-        console.error("Failed to load chart data:", error);
-      }
-    }
-    fetchChartData();
-  }, []);
+  const { charts: chartData, loading } = useDashboardData();
 
   const projectStatusData: StatusPoint[] = useMemo(() => {
     if (!chartData?.projectStatus) return [];
@@ -422,9 +407,13 @@ export function ProjectsCharts() {
           />
         </div>
         <div className="min-h-[300px]">
-          <ResponsiveContainer width="100%" height={300}>
-            {renderTimelineChart()}
-          </ResponsiveContainer>
+          {loading && !chartData ? (
+            <Skeleton className="w-full h-[300px]" />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              {renderTimelineChart()}
+            </ResponsiveContainer>
+          )}
         </div>
       </Card>
 
@@ -442,9 +431,13 @@ export function ProjectsCharts() {
             />
           </div>
           <div className="min-h-[250px]">
-            <ResponsiveContainer width="100%" height={250}>
-              {renderStatusChart()}
-            </ResponsiveContainer>
+            {loading && !chartData ? (
+              <Skeleton className="w-full h-[250px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                {renderStatusChart()}
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
 
@@ -461,9 +454,13 @@ export function ProjectsCharts() {
             />
           </div>
           <div className="min-h-[250px]">
-            <ResponsiveContainer width="100%" height={250}>
-              {renderHealthChart()}
-            </ResponsiveContainer>
+            {loading && !chartData ? (
+              <Skeleton className="w-full h-[250px]" />
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                {renderHealthChart()}
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>

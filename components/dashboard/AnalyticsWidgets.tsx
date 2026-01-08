@@ -12,40 +12,19 @@ import {
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 import { fetchWithCsrf } from "@/lib/csrf-client";
-import { useLoading } from "@/context/LoadingContext";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function AnalyticsWidgets() {
   const router = useRouter();
-  const [stats, setStats] = useState({
+  const { stats, loading } = useDashboardData();
+
+  const displayStats = stats || {
     totalProjects: { current: 0, total: 0, trend: [] as number[] },
     completedTasks: { current: 0, total: 0, trend: [] as number[] },
     activeUsers: { current: 0, total: 0, trend: [] as number[] },
     upcomingDeadlines: { current: 0, total: 0, trend: [] as number[] },
-  });
-
-  const { showLoader, hideLoader } = useLoading();
-
-  useEffect(() => {
-    async function loadStats() {
-      showLoader("Loading dashboard metrics...");
-      try {
-        const res = await fetchWithCsrf("/api/analytics/stats", {
-          cache: "no-store",
-        });
-        const result = await res.json();
-
-        if (result.success && result.data) {
-          setStats(result.data);
-        }
-      } catch (error) {
-        console.error("Failed to load analytics:", error);
-      } finally {
-        hideLoader();
-      }
-    }
-    loadStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount only
+  };
 
   const WIDGETS = [
     {
@@ -97,22 +76,28 @@ export function AnalyticsWidgets() {
           <motion.button
             whileHover={{ scale: 1.03 }}
             onClick={() => router.push(link)}
-            className="relative flex flex-col rounded-xl shadow-md bg-card p-6 transition-all border border-border group hover:border-primary hover:shadow-lg cursor-pointer text-left overflow-hidden"
+            className="relative flex flex-col rounded-xl shadow-md bg-card p-6 transition-all border border-border group hover:border-primary hover:shadow-lg cursor-pointer text-left overflow-hidden min-h-[160px]"
             key={label}
           >
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <span
                 className={`inline-flex items-center justify-center rounded-lg bg-linear-to-tr ${color} text-white w-10 h-10 mb-3`}
               >
                 <Icon className="w-5 h-5" />
               </span>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold tracking-tight">
-                  {value.split("/")[0]}
-                </span>
-                <span className="text-muted-foreground text-sm font-medium">
-                  / {value.split("/")[1]}
-                </span>
+                {loading && !stats ? (
+                  <Skeleton className="h-9 w-24 mb-1" />
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold tracking-tight">
+                      {value.split("/")[0]}
+                    </span>
+                    <span className="text-muted-foreground text-sm font-medium">
+                      / {value.split("/")[1]}
+                    </span>
+                  </>
+                )}
               </div>
               <span className="text-muted-foreground text-xs uppercase font-semibold tracking-wider mt-1 block">
                 {label}
@@ -121,31 +106,44 @@ export function AnalyticsWidgets() {
 
             {/* Sparkline Chart */}
             <div className="absolute inset-x-0 bottom-0 h-16 opacity-30 group-hover:opacity-50 transition-opacity pointer-events-none min-h-[64px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trend?.map((v, idx) => ({ value: v, idx }))}>
-                  <defs>
-                    <linearGradient
-                      id={`gradient-${i}`}
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor={stroke} stopOpacity={0.8} />
-                      <stop offset="95%" stopColor={stroke} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke={stroke}
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill={`url(#gradient-${i})`}
-                    isAnimationActive={true}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {loading && !stats ? (
+                <Skeleton className="w-full h-full rounded-none" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={(trend || []).map((v: number, idx: number) => ({
+                      value: v,
+                      idx,
+                    }))}
+                  >
+                    <defs>
+                      <linearGradient
+                        id={`gradient-${i}`}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor={stroke}
+                          stopOpacity={0.8}
+                        />
+                        <stop offset="95%" stopColor={stroke} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke={stroke}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill={`url(#gradient-${i})`}
+                      isAnimationActive={true}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </motion.button>
         )
