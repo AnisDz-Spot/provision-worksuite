@@ -2,7 +2,10 @@
 
 import React, { useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useRouter } from "next/navigation";
 
 // Import types
 import { DigestSchedule, DigestData, RecipientUser } from "./digest/types";
@@ -24,6 +27,7 @@ type WeeklyDigestProps = {
 };
 
 export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
+  const router = useRouter();
   const [schedule, setSchedule] = useState<DigestSchedule>({
     enabled: false,
     dayOfWeek: 1, // Monday
@@ -39,6 +43,8 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [digestData, setDigestData] = useState<DigestData | null>(null);
+  const [showConfigError, setShowConfigError] = useState(false);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
 
   // Guard to prevent saving on initial load
   const skipSaveRef = React.useRef(true);
@@ -80,6 +86,16 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       const fetchUsers = async () => {
         setLoadingUsers(true);
         try {
+          // Check if current user is Master Admin (Global Admin)
+          const authRes = await fetch("/api/auth/me");
+          const authJson = await authRes.json();
+          if (authJson.success && authJson.user) {
+            setIsMasterAdmin(
+              authJson.user.role === "Administrator" ||
+                authJson.user.isGlobalAdmin
+            );
+          }
+
           const { shouldUseDatabaseData } = await import("@/lib/dataSource");
           let data = [];
           if (shouldUseDatabaseData()) {
@@ -317,7 +333,11 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       if (data.success) {
         alert(`Digest sent to ${data.recipients} recipient(s)!`);
       } else {
-        alert(`Failed: ${data.error}`);
+        if (data.error && data.error.includes("provider not configured")) {
+          setShowConfigError(true);
+        } else {
+          alert(`Failed: ${data.error}`);
+        }
       }
     } catch (error) {
       alert("Error sending digest");
@@ -434,6 +454,52 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
         onOpenChange={setShowPreview}
         digestData={digestData}
       />
+
+      <Modal open={showConfigError} onOpenChange={setShowConfigError} size="sm">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Email Not Configured</h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            {isMasterAdmin
+              ? "You haven't set up an email provider yet. Please configure your SMTP or API settings to send digests."
+              : "The email system is not configured. Please contact your administrator to set up the email provider."}
+          </p>
+          <div className="flex flex-col gap-2">
+            {isMasterAdmin && (
+              <Button
+                onClick={() => {
+                  setShowConfigError(false);
+                  router.push("/settings/email");
+                }}
+                className="w-full"
+              >
+                Go to Email Settings
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowConfigError(false)}
+              className="w-full"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Card>
   );
 }

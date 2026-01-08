@@ -74,9 +74,18 @@ export async function POST(req: Request) {
       .filter(Boolean) as string[];
 
     if (failures.length === results.length) {
-      // All failed
+      // All failed - get the first error message for context
+      const firstFailure = failures[0] as any;
+      const errorMessage =
+        firstFailure.status === "rejected"
+          ? firstFailure.reason?.message
+          : firstFailure.value?.error;
+
       return NextResponse.json(
-        { success: false, error: "Failed to send digest to any recipients" },
+        {
+          success: false,
+          error: errorMessage || "Failed to send digest to any recipients",
+        },
         { status: 500 }
       );
     }
