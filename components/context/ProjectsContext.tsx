@@ -7,13 +7,14 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Project } from "@/lib/data";
+import { Project, loadProjects } from "@/lib/data";
 import { log } from "@/lib/logger";
-import { useLoading } from "@/context/LoadingContext";
+import { useRevalidatedData } from "@/hooks/useRevalidatedData";
 
 interface ProjectsContextType {
   projects: Project[];
   isLoading: boolean;
+  refreshing: boolean;
   error: string | null;
   refreshProjects: () => Promise<void>;
   updateProject: (updatedProject: Project) => void;
@@ -26,72 +27,29 @@ const ProjectsContext = createContext<ProjectsContextType | undefined>(
 );
 
 export function ProjectsProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState<number | null>(null);
-  const lastFetchedRef = React.useRef<number | null>(null);
-  const { showLoader, hideLoader } = useLoading();
+  const {
+    data: projectsData,
+    loading: isLoading,
+    refreshing,
+    error,
+    refresh: refreshProjects,
+    setData: setProjects,
+  } = useRevalidatedData<Project[]>(loadProjects, {
+    persistKey: "projects",
+    onError: (err) => console.error("Failed to load projects:", err),
+  });
 
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  const fetchProjects = useCallback(
-    async (force = false) => {
-      // If we have data and it's fresh, don't refetch unless forced
-      if (
-        !force &&
-        lastFetchedRef.current &&
-        Date.now() - lastFetchedRef.current < CACHE_DURATION &&
-        projects.length > 0
-      ) {
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      showLoader("Synchronizing projects...");
-      try {
-        // Dynamic import to avoid server-side issues if any
-        const { loadProjects } = await import("@/lib/data");
-        const data = await loadProjects();
-
-        if (Array.isArray(data)) {
-          setProjects(data);
-          const now = Date.now();
-          setLastFetched(now);
-          lastFetchedRef.current = now;
-        } else {
-          setProjects([]);
-        }
-      } catch (err) {
-        console.error("Failed to load projects:", err);
-        setError("Failed to load projects");
-        // Don't clear projects on error to show stale data if possible
-      } finally {
-        setIsLoading(false);
-        hideLoader();
-      }
-    },
-    [] // No external dependencies that change when this function runs
-  );
-
-  // Initial load
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  const refreshProjects = async () => {
-    await fetchProjects(true);
-  };
+  const projects = projectsData || [];
+  const lastFetched = null; // No longer explicitly tracked outside the hook if not needed
 
   const updateProject = (updatedProject: Project) => {
     setProjects((prev) =>
-      prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+      (prev || []).map((p) => (p.id === updatedProject.id ? updatedProject : p))
     );
   };
 
   const deleteProjectInCache = (projectId: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    setProjects((prev) => (prev || []).filter((p) => p.id !== projectId));
   };
 
   return (
@@ -99,8 +57,11 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       value={{
         projects,
         isLoading,
-        error,
-        refreshProjects,
+        refreshing,
+        error: error ? String(error) : null,
+        refreshProjects: async () => {
+          await refreshProjects();
+        },
         updateProject,
         deleteProjectInCache,
         lastFetched,

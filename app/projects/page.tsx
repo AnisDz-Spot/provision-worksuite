@@ -23,6 +23,7 @@ import {
   GanttChartIcon,
 } from "lucide-react";
 import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getProjectDependencies } from "@/lib/utils";
 
 function ProjectsContent() {
@@ -102,9 +103,26 @@ function ProjectsContent() {
       </div>
 
       {/* Dynamic Stats Section */}
-      <ProjectStats projects={projects} />
+      {isLoading && projects.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <ProjectStats projects={projects} />
+      )}
 
-      {view === "gantt" ? (
+      {isLoading && projects.length === 0 ? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-64 w-full rounded-xl" />
+            ))}
+          </div>
+        </div>
+      ) : view === "gantt" ? (
         <GanttChart
           projects={projects.filter((p) => p.deadline)}
           dependencies={projects.map((p) => ({

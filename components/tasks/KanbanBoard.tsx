@@ -14,13 +14,15 @@ import {
   addTimeLog,
   getTimeLogsForTask,
 } from "@/lib/utils";
-import { loadTasks, saveTasks } from "@/lib/data";
+import { loadTasks, saveTasks, Task } from "@/lib/data";
+import { useRevalidatedData } from "@/hooks/useRevalidatedData";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { BoardColumn } from "./board/BoardColumn";
 import { CreateTaskModal } from "./board/CreateTaskModal";
 import { TaskDetailsModal } from "./board/TaskDetailsModal";
 import { TimeLogsModal } from "./board/TimeLogsModal";
 import { ConfirmModal } from "./board/ConfirmModal";
-import { useLoading } from "@/context/LoadingContext";
+import { shouldUseMockData } from "@/lib/dataSource";
 
 const MOCK_BOARD = [
   {
@@ -28,77 +30,28 @@ const MOCK_BOARD = [
     title: "Todo",
     color: "border-slate-400",
     bgColor: "bg-slate-50 dark:bg-slate-900/30",
-    tasks: [
-      {
-        id: "1",
-        title: "Setup Firebase Auth",
-        assignee: "Alice",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-        due: "2025-12-07",
-        priority: "high",
-        milestoneTitle: "",
-      },
-      {
-        id: "2",
-        title: "Design Project Modal",
-        assignee: "Bob",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
-        due: "2025-12-10",
-        priority: "medium",
-        milestoneTitle: "",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "in-progress",
     title: "In Progress",
     color: "border-blue-400",
     bgColor: "bg-blue-50 dark:bg-blue-900/30",
-    tasks: [
-      {
-        id: "3",
-        title: "Dashboard UI",
-        assignee: "Carol",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carol",
-        due: "2025-12-02",
-        priority: "high",
-        milestoneTitle: "",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "review",
     title: "Review",
     color: "border-amber-400",
     bgColor: "bg-amber-50 dark:bg-amber-900/30",
-    tasks: [
-      {
-        id: "4",
-        title: "TypeScript Types",
-        assignee: "David",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-        due: "2025-12-04",
-        priority: "low",
-        milestoneTitle: "",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "done",
     title: "Done",
     color: "border-green-400",
     bgColor: "bg-green-50 dark:bg-green-900/30",
-    tasks: [
-      {
-        id: "5",
-        title: "Project Planning",
-        assignee: "Eve",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve",
-        due: "2025-11-28",
-        priority: "medium",
-        milestoneTitle: "",
-      },
-    ],
+    tasks: [],
   },
 ];
 
@@ -120,8 +73,6 @@ type KanbanBoardProps = {
   onTaskUpdate?: () => void;
 };
 
-import { shouldUseMockData } from "@/lib/dataSource";
-
 export function KanbanBoard({
   projectId,
   projectUid,
@@ -130,44 +81,8 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
   const { startTimer } = useTimeTracker();
   const { show } = useToaster();
-  const { showLoader, hideLoader } = useLoading();
 
-  // Strict Mode: Only use MOCK_BOARD if explicitly in mock mode
-  const [columns, setColumns] = useState(
-    shouldUseMockData()
-      ? MOCK_BOARD
-      : [
-          {
-            id: "todo",
-            title: "Todo",
-            color: "border-slate-400",
-            bgColor: "bg-slate-50 dark:bg-slate-900/30",
-            tasks: [],
-          },
-          {
-            id: "in-progress",
-            title: "In Progress",
-            color: "border-blue-400",
-            bgColor: "bg-blue-50 dark:bg-blue-900/30",
-            tasks: [],
-          },
-          {
-            id: "review",
-            title: "Review",
-            color: "border-amber-400",
-            bgColor: "bg-amber-50 dark:bg-amber-900/30",
-            tasks: [],
-          },
-          {
-            id: "done",
-            title: "Done",
-            color: "border-green-400",
-            bgColor: "bg-green-50 dark:bg-green-900/30",
-            tasks: [],
-          },
-        ]
-  );
-
+  // State
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -176,36 +91,6 @@ export function KanbanBoard({
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
   const [newTaskPriority, setNewTaskPriority] = useState("medium");
-
-  // Strict Mode: Only use mock users if explicitly in mock mode
-  const memberList: Array<{ id: string; name: string; avatarColor?: string }> =
-    (
-      projectMembers && projectMembers.length > 0
-        ? projectMembers.map((m) => ({
-            id: m.uid || m.id || m.name,
-            name: m.name,
-          }))
-        : shouldUseMockData()
-          ? (users as any)
-          : []
-    ) as Array<{ id: string; name: string; avatarColor?: string }>;
-
-  const getAvatarColorClass = (color?: string) => {
-    switch (color) {
-      case "indigo":
-        return "bg-indigo-500/10 text-indigo-600";
-      case "green":
-        return "bg-green-500/10 text-green-600";
-      case "pink":
-        return "bg-pink-500/10 text-pink-600";
-      case "yellow":
-        return "bg-yellow-500/10 text-yellow-600";
-      case "blue":
-        return "bg-blue-500/10 text-blue-600";
-      default:
-        return "bg-primary/10 text-primary";
-    }
-  };
   const [newTaskEstimate, setNewTaskEstimate] = useState<string>("");
   const [newTaskType, setNewTaskType] = useState<string>("feature");
   const [newTaskDescription, setNewTaskDescription] = useState<string>("");
@@ -244,46 +129,85 @@ export function KanbanBoard({
   const [blocked, setBlocked] = useState(false);
   const [milestones, setMilestones] = useState<any[]>([]);
 
-  const refreshFromStorage = async () => {
-    if (!projectId) return; // No persistence without project context
+  // Data Fetching
+  const {
+    data: allTasks,
+    loading: isLoading,
+    refresh: refreshTasks,
+  } = useRevalidatedData<Task[]>(loadTasks, {
+    persistKey: "tasks",
+  });
 
-    showLoader("Loading tasks...");
-    let tasks: TaskItem[] = [];
-    if (!shouldUseMockData()) {
-      try {
-        const dbTasks = await loadTasks();
-        // Filter by projectId and map to TaskItem format
-        tasks = dbTasks
-          .filter(
-            (t: any) => t.projectId === projectId || t.projectId === projectUid
-          )
-          .map((t: any) => ({
-            id: t.uid || t.id,
-            projectId: t.projectId,
-            title: t.title,
-            status: t.status as any,
-            assignee: t.assignee?.name || t.assignee || "Unassigned",
-            due: t.due ? new Date(t.due).toISOString().split("T")[0] : "",
-            priority: t.priority as any,
-            estimateHours: t.estimateHours,
-            loggedHours: t.loggedHours,
-            milestoneId: t.milestoneId,
-            description: t.description || "",
-            labels: t.labels || [],
-          }));
-      } catch (err) {
-        console.error("Failed to load tasks:", err);
-      }
-    } else {
-      tasks = getTasksByProject(projectId);
+  useEffect(() => {
+    if (projectId) {
+      getMilestonesByProject(projectId).then(setMilestones);
     }
+  }, [projectId]);
 
-    const ms = await getMilestonesByProject(projectId);
-    setMilestones(ms);
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setCurrentUser(data.user);
+      })
+      .catch((err) => console.error("Error fetching user:", err));
+  }, []);
+
+  // Derived State
+  const isAuthorized = useMemo(() => {
+    if (!currentUser) return false;
+    const role = currentUser.role?.toLowerCase() || "";
+    return (
+      ["admin", "administrator", "master admin", "project manager"].includes(
+        role
+      ) || currentUser.uid === "admin-global"
+    );
+  }, [currentUser]);
+
+  const memberList = useMemo(() => {
+    return projectMembers && projectMembers.length > 0
+      ? projectMembers.map((m) => ({
+          id: m.uid || m.id || m.name,
+          name: m.name,
+        }))
+      : shouldUseMockData()
+        ? (users as any)
+        : [];
+  }, [projectMembers]);
+
+  const columns = useMemo(() => {
+    if (!allTasks && !shouldUseMockData()) return MOCK_BOARD;
+
+    const tasks = (allTasks || [])
+      .filter(
+        (t: any) =>
+          !projectId ||
+          t.projectId === projectId ||
+          t.projectId === projectUid ||
+          (shouldUseMockData() && !t.projectId)
+      )
+      .map((t: any) => ({
+        id: t.uid || t.id,
+        projectId: t.projectId,
+        title: t.title,
+        status: t.status as any,
+        assignee: t.assignee?.name || t.assignee || "Unassigned",
+        due:
+          t.dueDate || t.due
+            ? new Date(t.dueDate || t.due).toISOString().split("T")[0]
+            : "",
+        priority: t.priority as any,
+        estimateHours: t.estimateHours,
+        loggedHours: t.loggedHours,
+        milestoneId: t.milestoneId,
+        description: t.description || "",
+        labels: t.labels || [],
+      }));
+
     const msLookup = new Map<string, string>();
-    ms.forEach((m) => msLookup.set(m.id, m.title));
+    milestones.forEach((m) => msLookup.set(m.id, m.title));
 
-    const toCardTask = (t: TaskItem) => ({
+    const toCardTask = (t: any) => ({
       id: t.id,
       title: t.title,
       assignee: t.assignee || "Unassigned",
@@ -307,121 +231,76 @@ export function KanbanBoard({
       done: "done",
     };
 
-    const byStatus = {
-      todo: tasks.filter((t) => statusMap[t.status] === "todo").map(toCardTask),
-      "in-progress": tasks
-        .filter((t) => statusMap[t.status] === "in-progress")
-        .map(toCardTask),
-      review: tasks
-        .filter((t) => statusMap[t.status] === "review")
-        .map(toCardTask),
-      done: tasks.filter((t) => statusMap[t.status] === "done").map(toCardTask),
-    } as const;
-
-    setColumns([
+    return [
       {
         id: "todo",
         title: "Todo",
         color: "border-slate-400",
         bgColor: "bg-slate-50 dark:bg-slate-900/30",
-        tasks: byStatus.todo,
+        tasks: tasks
+          .filter((t: any) => statusMap[t.status] === "todo")
+          .map(toCardTask),
       },
       {
         id: "in-progress",
         title: "In Progress",
         color: "border-blue-400",
         bgColor: "bg-blue-50 dark:bg-blue-900/30",
-        tasks: byStatus["in-progress"],
+        tasks: tasks
+          .filter((t: any) => statusMap[t.status] === "in-progress")
+          .map(toCardTask),
       },
       {
         id: "review",
         title: "Review",
         color: "border-amber-400",
         bgColor: "bg-amber-50 dark:bg-amber-900/30",
-        tasks: byStatus.review,
+        tasks: tasks
+          .filter((t: any) => statusMap[t.status] === "review")
+          .map(toCardTask),
       },
       {
         id: "done",
         title: "Done",
         color: "border-green-400",
         bgColor: "bg-green-50 dark:bg-green-900/30",
-        tasks: byStatus.done,
+        tasks: tasks
+          .filter((t: any) => statusMap[t.status] === "done")
+          .map(toCardTask),
       },
-    ]);
-    hideLoader();
-  };
+    ];
+  }, [allTasks, projectId, projectUid, milestones]);
 
-  useEffect(() => {
-    if (projectId) {
-      refreshFromStorage();
-    } else {
-      if (shouldUseMockData()) {
-        setColumns(MOCK_BOARD);
-      } else {
-        // Clear board if not mock mode
-        setColumns((prev) => prev.map((c) => ({ ...c, tasks: [] })));
-      }
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setCurrentUser(data.user);
+  const assignees = useMemo(() => {
+    const list = new Set<string>(["You"]);
+    projectMembers.forEach((m) => list.add(m.name));
+    columns.forEach((c) =>
+      c.tasks.forEach((t) => {
+        if (t.assignee) list.add(t.assignee);
       })
-      .catch((err) => console.error("Error fetching user:", err));
-  }, []);
-
-  const isAuthorized = useMemo(() => {
-    if (!currentUser) return false;
-    const role = currentUser.role?.toLowerCase() || "";
-    return (
-      ["admin", "administrator", "master admin", "project manager"].includes(
-        role
-      ) || currentUser.uid === "admin-global"
     );
-  }, [currentUser]);
+    return Array.from(list);
+  }, [columns, projectMembers]);
 
-  useEffect(() => {
-    if (!projectId) {
-      setBlocked(false);
-      return;
-    }
-    try {
-      const incompletes = getIncompleteDependencyIds(projectId);
-      setBlocked(incompletes.length > 0);
-    } catch {
-      setBlocked(false);
-    }
-  }, [projectId, columns]);
-
-  const visibleColumns = useMemo(() => {
-    return columns.filter((c) =>
-      filterStatus === "all" ? true : c.id === filterStatus
-    );
-  }, [columns, filterStatus]);
-
-  function onDragStart(
+  // Handlers
+  const onDragStart = (
     e: React.DragEvent<HTMLDivElement>,
     colId: string,
     taskId: string
-  ) {
+  ) => {
     setDraggedTask(taskId);
     e.dataTransfer.setData("text/plain", JSON.stringify({ colId, taskId }));
     e.dataTransfer.effectAllowed = "move";
-  }
+  };
 
-  function onDragEnd() {
-    setDraggedTask(null);
-  }
+  const onDragEnd = () => setDraggedTask(null);
 
-  function onDragOver(e: React.DragEvent<HTMLDivElement>) {
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  }
+  };
 
-  function onDrop(e: React.DragEvent<HTMLDivElement>, targetColId: string) {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>, targetColId: string) => {
     if (!isAuthorized) {
       show(
         "error",
@@ -432,72 +311,47 @@ export function KanbanBoard({
     e.preventDefault();
     const text = e.dataTransfer.getData("text/plain");
     if (!text) return;
-    const { colId, taskId } = JSON.parse(text) as {
-      colId: string;
-      taskId: string;
-    };
-    if (colId === targetColId) {
-      setDraggedTask(null);
-      return;
-    }
-    setColumns((prev) => {
-      const next = prev.map((c) => ({ ...c, tasks: [...c.tasks] }));
-      const from = next.find((c) => c.id === colId);
-      const to = next.find((c) => c.id === targetColId);
-      if (!from || !to) return prev;
-      const idx = from.tasks.findIndex((t) => t.id === taskId);
-      if (idx >= 0) {
-        const [moved] = from.tasks.splice(idx, 1);
-        to.tasks.push(moved);
-        if (projectId) {
-          const updated: TaskItem = {
-            id: moved.id,
-            projectId,
-            title: moved.title,
-            status: targetColId as TaskItem["status"],
-            assignee: moved.assignee,
-            due: moved.due,
-            priority:
-              (moved.priority as "high" | "medium" | "low") || undefined,
-            milestoneId: (moved as any).milestoneId || undefined,
-          };
 
-          if (!shouldUseMockData()) {
-            showLoader("Moving task...");
-            saveTasks([updated as any])
-              .then(() => {
-                onTaskUpdate?.();
-              })
-              .finally(() => {
-                hideLoader();
-              });
-          } else {
-            upsertTask(updated);
-            queueMicrotask(() => onTaskUpdate?.());
-          }
+    try {
+      const { colId, taskId } = JSON.parse(text);
+      if (colId === targetColId) return;
+
+      const taskToMove = allTasks?.find(
+        (t: any) => (t.uid || t.id) === taskId
+      ) as any;
+      if (!taskToMove || !projectId) return;
+
+      const updated: TaskItem = {
+        id: taskId,
+        projectId,
+        title: taskToMove.title,
+        status: targetColId as any,
+        assignee:
+          taskToMove.assignee?.name || taskToMove.assignee || "Unassigned",
+        due: taskToMove.dueDate || taskToMove.due,
+        priority: taskToMove.priority as any,
+        milestoneId: taskToMove.milestoneId || undefined,
+      };
+
+      const doUpdate = async () => {
+        if (!shouldUseMockData()) {
+          await saveTasks([updated as any]);
+        } else {
+          upsertTask(updated);
         }
-      }
-      return next;
-    });
-    setDraggedTask(null);
-  }
+        await refreshTasks();
+        onTaskUpdate?.();
+      };
 
-  const assignees = useMemo(() => {
-    if (projectId && projectMembers.length > 0) {
-      const set = new Set<string>([
-        "You",
-        ...projectMembers.map((m) => m.name),
-      ]);
-      return Array.from(set);
+      doUpdate().catch(() => show("error", "Failed to move task"));
+    } catch (err) {
+      console.error("Drop error:", err);
+    } finally {
+      setDraggedTask(null);
     }
-    const names = columns.flatMap((c) =>
-      c.tasks.map((t: any) => t.assignee).filter(Boolean)
-    );
-    const set = new Set<string>(["You", ...names]);
-    return Array.from(set);
-  }, [columns, projectId, projectMembers]);
+  };
 
-  function openAddModal(columnId: string) {
+  const openAddModal = (columnId: string) => {
     setTargetColumn(columnId);
     setNewTaskTitle("");
     setNewTaskAssignee("You");
@@ -509,9 +363,10 @@ export function KanbanBoard({
     setNewTaskType("feature");
     setMilestoneId("");
     setModalOpen(true);
-  }
+  };
 
-  function startEditTask(task: any) {
+  const startEditTask = (task: any) => {
+    setDetailTask(task);
     setEditMode(true);
     setEditTitle(task.title);
     setEditAssignee(task.assignee);
@@ -520,23 +375,23 @@ export function KanbanBoard({
     setEditEstimate(
       task.estimateHours != null ? task.estimateHours.toString() : ""
     );
-    setEditMilestone((task as any).milestoneId || "");
+    setEditMilestone(task.milestoneId || "");
     setEditDescription(task.description || "");
     setEditLabels(Array.isArray(task.labels) ? task.labels.join(", ") : "");
-  }
+  };
 
-  function saveTaskEdit() {
+  const saveTaskEdit = async () => {
     if (!detailTask || !projectId || !editTitle.trim()) return;
+
     const updated: TaskItem = {
       id: detailTask.id,
       projectId,
       title: editTitle.trim(),
-      status: (detailTask.status || "todo") as TaskItem["status"],
+      status: (detailTask.status || "todo") as any,
       assignee: editAssignee,
       due: editDue,
-      priority: editPriority as "low" | "medium" | "high",
-      milestoneId:
-        editMilestone && editMilestone !== "" ? editMilestone : undefined,
+      priority: editPriority as any,
+      milestoneId: editMilestone || undefined,
       estimateHours: editEstimate ? parseFloat(editEstimate) : undefined,
       loggedHours: detailTask.loggedHours || 0,
       description: editDescription,
@@ -545,64 +400,37 @@ export function KanbanBoard({
         .map((l) => l.trim())
         .filter(Boolean),
     };
-    if (!shouldUseMockData()) {
-      showLoader("Updating task...");
-      saveTasks([updated as any])
-        .then(() => {
-          refreshFromStorage();
-          show("success", "Task updated successfully");
-          if (onTaskUpdate) onTaskUpdate();
-        })
-        .finally(() => {
-          hideLoader();
-        });
-    } else {
-      upsertTask(updated);
-      refreshFromStorage();
-      show("success", "Task updated successfully");
-      if (onTaskUpdate) onTaskUpdate();
-    }
 
-    setEditMode(false);
-
-    // Update detailTask from storage to reflect saved changes
-    // (This part might be slightly delayed in Live mode, but UI state is already updated)
-    if (shouldUseMockData()) {
-      const savedTask = getTasksByProject(projectId).find(
-        (t) => t.id === updated.id
-      );
-      if (savedTask) {
-        setDetailTask({
-          ...detailTask,
-          title: savedTask.title,
-          assignee: savedTask.assignee || "Unassigned",
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(savedTask.assignee || "User")}`,
-          due: savedTask.due,
-          priority: savedTask.priority,
-          status: savedTask.status,
-          estimateHours: savedTask.estimateHours,
-          loggedHours: savedTask.loggedHours,
-          milestoneId: savedTask.milestoneId,
-        });
+    try {
+      if (!shouldUseMockData()) {
+        await saveTasks([updated as any]);
+      } else {
+        upsertTask(updated);
       }
+      await refreshTasks();
+      show("success", "Task updated successfully");
+      onTaskUpdate?.();
+      setEditMode(false);
+    } catch (err) {
+      show("error", "Failed to update task");
     }
-  }
+  };
 
-  function cancelEditTask() {
-    setEditMode(false);
-  }
+  const confirmDeleteTask = async () => {
+    if (!detailTask) return;
+    try {
+      removeTask(detailTask.id);
+      await refreshTasks();
+      setDeleteTaskConfirm(null);
+      setDetailOpen(false);
+      show("success", "Task deleted successfully");
+      onTaskUpdate?.();
+    } catch (err) {
+      show("error", "Failed to delete task");
+    }
+  };
 
-  function confirmDeleteTask() {
-    if (!detailTask || !projectId) return;
-    removeTask(detailTask.id);
-    setDeleteTaskConfirm(null);
-    setDetailOpen(false);
-    refreshFromStorage();
-    show("success", "Task deleted successfully");
-    if (onTaskUpdate) onTaskUpdate();
-  }
-
-  async function handleLogTime() {
+  const handleLogTime = async () => {
     if (!detailTask || !projectId || !timeLogInput.trim()) return;
     const value = parseFloat(timeLogInput);
     if (isNaN(value) || value <= 0) {
@@ -613,7 +441,7 @@ export function KanbanBoard({
       show("error", "Please enter a note for this time log");
       return;
     }
-    showLoader("Logging time...");
+
     const result = await addTimeLog(
       detailTask.id,
       projectId,
@@ -621,297 +449,263 @@ export function KanbanBoard({
       timeLogNote.trim(),
       detailTask.assignee
     );
-    hideLoader();
+
     if (result) {
       show("success", `Logged ${value} hours`);
       setTimeLogInput("");
       setTimeLogNote("");
-
-      // Update detailTask state immediately if possible
-      setDetailTask({
-        ...detailTask,
-        loggedHours: parseFloat(
-          ((detailTask.loggedHours || 0) + value).toFixed(2)
-        ),
-      });
-
-      refreshFromStorage();
+      await refreshTasks();
       window.dispatchEvent(new Event("pv:timeUpdated"));
-      if (onTaskUpdate) onTaskUpdate();
+      onTaskUpdate?.();
     } else {
       show("error", "Failed to log time");
     }
-  }
+  };
 
-  function addTask() {
-    if (!newTaskTitle.trim() || !targetColumn) return;
+  const addTask = async () => {
+    if (!newTaskTitle.trim() || !targetColumn || !projectId) return;
+
     const id = `task-${Date.now()}`;
-    const newTask = {
+    const t: TaskItem = {
       id,
+      projectId,
       title: newTaskTitle.trim(),
+      status: targetColumn as any,
       assignee: newTaskAssignee,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(newTaskAssignee)}`,
       due: newTaskDue,
-      priority: newTaskPriority as "high" | "medium" | "low",
-      milestoneTitle: "",
+      priority: newTaskPriority as any,
+      milestoneId: milestoneId || undefined,
+      estimateHours: newTaskEstimate ? parseFloat(newTaskEstimate) : undefined,
+      loggedHours: 0,
+      description: newTaskDescription,
+      labels: newTaskLabels
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean),
     };
-    if (projectId) {
-      const t: TaskItem = {
-        id,
-        projectId,
-        title: newTaskTitle.trim(),
-        status: targetColumn as TaskItem["status"],
-        assignee: newTaskAssignee,
-        due: newTaskDue,
-        priority: newTaskPriority as "high" | "medium" | "low",
-        milestoneId:
-          milestoneId && milestoneId !== "" ? milestoneId : undefined,
-        estimateHours: newTaskEstimate
-          ? parseFloat(newTaskEstimate)
-          : undefined,
-        loggedHours: 0,
-        description: newTaskDescription,
-        labels: newTaskLabels
-          .split(",")
-          .map((l) => l.trim())
-          .filter(Boolean),
-      };
 
-      if (!shouldUseMockData()) {
-        showLoader("Adding task...");
-        saveTasks([t as any]).then(() => {
-          refreshFromStorage();
-          if (onTaskUpdate) onTaskUpdate();
-        });
-        hideLoader();
-      }
-    } else {
-      setColumns((prev) =>
-        prev.map((col) =>
-          col.id === targetColumn
-            ? { ...col, tasks: [...col.tasks, newTask] }
-            : col
-        )
-      );
-    }
-    setModalOpen(false);
-    setNewTaskTitle("");
-    setNewTaskAssignee("You");
-    setNewTaskDue("");
-    setNewTaskPriority("medium");
-    setNewTaskEstimate("");
-    setMilestoneId("");
-    setTargetColumn(null);
-  }
-
-  function deleteTask(columnId: string, taskId: string) {
-    showLoader("Deleting task...");
     try {
-      if (projectId) {
-        removeTask(taskId);
-        refreshFromStorage();
-        if (onTaskUpdate) onTaskUpdate();
+      if (!shouldUseMockData()) {
+        await saveTasks([t as any]);
       } else {
-        setColumns((prev) =>
-          prev.map((col) =>
-            col.id === columnId
-              ? { ...col, tasks: col.tasks.filter((t) => t.id !== taskId) }
-              : col
-          )
-        );
+        upsertTask(t);
       }
+      await refreshTasks();
+      onTaskUpdate?.();
+      setModalOpen(false);
+    } catch (err) {
+      show("error", "Failed to add task");
+    }
+  };
+
+  const deleteTask = async (columnId: string, taskId: string) => {
+    if (!projectId) return;
+    try {
+      removeTask(taskId);
+      await refreshTasks();
+      onTaskUpdate?.();
     } finally {
-      hideLoader();
       setDeleteCardConfirm(null);
     }
-  }
+  };
+
+  const checkIsBlocked = (taskId: string) => {
+    if (!projectId) return false;
+    try {
+      const incompletes = getIncompleteDependencyIds(projectId);
+      return incompletes.includes(taskId);
+    } catch {
+      return false;
+    }
+  };
+
+  const getAvatarColorClass = (color?: string) => {
+    switch (color) {
+      case "indigo":
+        return "bg-indigo-500/10 text-indigo-600";
+      case "green":
+        return "bg-green-500/10 text-green-600";
+      case "pink":
+        return "bg-pink-500/10 text-pink-600";
+      case "yellow":
+        return "bg-yellow-500/10 text-yellow-600";
+      case "blue":
+        return "bg-blue-500/10 text-blue-600";
+      default:
+        return "bg-primary/10 text-primary";
+    }
+  };
 
   return (
     <>
-      {projectId && (
-        <div className="mb-6 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm"
-            >
-              <option value="all">All</option>
-              <option value="todo">Todo</option>
-              <option value="in-progress">In Progress</option>
-              <option value="review">Review</option>
-              <option value="done">Done</option>
-            </select>
-            <label className="text-sm">Assignee</label>
-            <select
-              value={filterAssignee}
-              onChange={(e) => setFilterAssignee(e.target.value)}
-              className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm min-w-32"
-            >
-              <option value="all">All</option>
-              {assignees.map((a) => (
-                <option key={`assignee-${a}`} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-            {projectId && (
-              <>
-                <label className="text-sm">Milestone</label>
-                <select
-                  value={filterMilestone}
-                  onChange={(e) => setFilterMilestone(e.target.value)}
-                  className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm min-w-32"
-                >
-                  <option value="all">All</option>
-                  {milestones.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
-                  ))}
-                </select>
-              </>
-            )}
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant={selectMode ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setSelectMode(!selectMode);
-                  setSelectedIds(new Set());
-                }}
-              >
-                {selectMode ? "Selection On" : "Select"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFilterStatus("all");
-                  setFilterAssignee("all");
-                  setFilterMilestone("all");
-                }}
-              >
-                Reset Filters
-              </Button>
-            </div>
-          </div>
-          {selectMode && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  // Move selected to Done
-                  const ids = Array.from(selectedIds);
-                  ids.forEach((id) => {
-                    // find task in columns
-                    for (const c of columns) {
-                      const t = (c.tasks as any[]).find((x) => x.id === id);
-                      if (t) {
-                        if (projectId) {
-                          upsertTask({
-                            id,
-                            projectId,
-                            title: t.title,
-                            status: "done",
-                            assignee: t.assignee,
-                            due: t.due,
-                            priority: t.priority,
-                          });
-                        }
-                        break;
-                      }
-                    }
-                  });
-                  if (projectId) {
-                    refreshFromStorage();
-                    queueMicrotask(() => onTaskUpdate?.());
-                  }
-                  setSelectedIds(new Set());
-                }}
-                disabled={selectedIds.size === 0}
-              >
-                Move to Done
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  const ids = Array.from(selectedIds);
-                  ids.forEach((id) => removeTask(id));
-                  if (projectId) refreshFromStorage();
-                  setSelectedIds(new Set());
-                }}
-                disabled={selectedIds.size === 0}
-              >
-                Delete Selected
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear Selection
-              </Button>
-            </div>
-          )}
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm">Status</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm"
+          >
+            <option value="all">All</option>
+            <option value="todo">Todo</option>
+            <option value="in-progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
+          </select>
+
+          <label className="text-sm">Assignee</label>
+          <select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm min-w-32"
+          >
+            <option value="all">All</option>
+            {assignees.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+
+          <label className="text-sm">Milestone</label>
+          <select
+            value={filterMilestone}
+            onChange={(e) => setFilterMilestone(e.target.value)}
+            className="rounded-md border border-border bg-card text-foreground px-2 py-1 text-sm min-w-32"
+          >
+            <option value="all">All</option>
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex-1" />
+
+          <Button
+            variant={selectMode ? "primary" : "outline"}
+            size="sm"
+            onClick={() => {
+              setSelectMode(!selectMode);
+              if (selectMode) setSelectedIds(new Set());
+            }}
+          >
+            {selectMode ? "Exit Selection" : "Bulk Actions"}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFilterStatus("all");
+              setFilterAssignee("all");
+              setFilterMilestone("all");
+            }}
+          >
+            Reset
+          </Button>
         </div>
-      )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {columns.map((col) => (
-          <BoardColumn
-            key={col.id}
-            col={col}
-            filterAssignee={filterAssignee}
-            filterMilestone={filterMilestone}
-            isAuthorized={isAuthorized}
-            selectMode={selectMode}
-            selectedIds={selectedIds}
-            draggedTask={draggedTask}
-            priorityColors={priorityColors}
-            onDragOver={onDragOver}
-            onDrop={onDrop}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            onTaskClick={(task: any) => {
-              if (selectMode) {
-                setSelectedIds((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(task.id)) next.delete(task.id);
-                  else next.add(task.id);
-                  return next;
-                });
-              } else {
-                setDetailTask(task);
-                setDetailOpen(true);
-              }
-            }}
-            onSelectToggle={(taskId: string, selected: boolean) => {
-              setSelectedIds((prev) => {
-                const next = new Set(prev);
-                if (selected) next.add(taskId);
-                else next.delete(taskId);
-                return next;
-              });
-            }}
-            onDeleteTaskClick={(
-              columnId: string,
-              taskId: string,
-              taskTitle: string
-            ) => {
-              setDeleteCardConfirm({ columnId, taskId, taskTitle });
-            }}
-            onAddTaskClick={openAddModal}
-            checkIsBlocked={(taskId: string) => {
-              if (!projectId) return false;
-              // Project dependency check
-              const incomplete = getIncompleteDependencyIds(projectId);
-              return incomplete.length > 0;
-            }}
-          />
-        ))}
+
+        {selectMode && (
+          <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/10 animate-in fade-in slide-in-from-top-2">
+            <span className="text-sm font-medium">
+              {selectedIds.size} tasks selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const allIds = columns.flatMap((c) => c.tasks.map((t) => t.id));
+                setSelectedIds(new Set(allIds));
+              }}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={selectedIds.size === 0}
+              onClick={async () => {
+                if (confirm(`Delete ${selectedIds.size} tasks?`)) {
+                  for (const id of selectedIds) {
+                    removeTask(id);
+                  }
+                  await refreshTasks();
+                  setSelectedIds(new Set());
+                  show("success", `Deleted ${selectedIds.size} tasks`);
+                }
+              }}
+            >
+              Delete Selected
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isLoading && !allTasks ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
+              </div>
+            ))}
+          </>
+        ) : (
+          columns
+            .filter((c) =>
+              filterStatus === "all" ? true : c.id === filterStatus
+            )
+            .map((col) => (
+              <BoardColumn
+                key={col.id}
+                col={col}
+                filterAssignee={filterAssignee}
+                filterMilestone={filterMilestone}
+                isAuthorized={isAuthorized}
+                selectMode={selectMode}
+                selectedIds={selectedIds}
+                draggedTask={draggedTask}
+                priorityColors={priorityColors}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                onTaskClick={(task) => {
+                  if (selectMode) {
+                    const next = new Set(selectedIds);
+                    if (next.has(task.id)) {
+                      next.delete(task.id);
+                    } else {
+                      next.add(task.id);
+                    }
+                    setSelectedIds(next);
+                  } else {
+                    setDetailTask(task);
+                    setDetailOpen(true);
+                  }
+                }}
+                onSelectToggle={(taskId, selected) => {
+                  const next = new Set(selectedIds);
+                  if (selected) next.add(taskId);
+                  else next.delete(taskId);
+                  setSelectedIds(next);
+                }}
+                onDeleteTaskClick={(colId, tId, tTitle) => {
+                  setDeleteCardConfirm({
+                    columnId: colId,
+                    taskId: tId,
+                    taskTitle: tTitle,
+                  });
+                }}
+                onAddTaskClick={openAddModal}
+                checkIsBlocked={checkIsBlocked}
+              />
+            ))
+        )}
       </div>
 
       <CreateTaskModal
@@ -954,10 +748,8 @@ export function KanbanBoard({
         setEditMode={setEditMode}
         startEditTask={startEditTask}
         saveTaskEdit={saveTaskEdit}
-        cancelEditTask={cancelEditTask}
-        setDeleteTaskConfirm={(confirmed: any) => {
-          setDeleteTaskConfirm(confirmed);
-        }}
+        cancelEditTask={() => setEditMode(false)}
+        setDeleteTaskConfirm={setDeleteTaskConfirm}
         editTitle={editTitle}
         setEditTitle={setEditTitle}
         editAssignee={editAssignee}
