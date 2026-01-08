@@ -63,6 +63,16 @@ export async function GET(req: Request) {
       resendApiKey: settings.resendApiKey
         ? decrypt(settings.resendApiKey)
         : null,
+      postmarkApiKey: settings.postmarkApiKey
+        ? decrypt(settings.postmarkApiKey)
+        : null,
+      brevoApiKey: settings.brevoApiKey ? decrypt(settings.brevoApiKey) : null,
+      awsAccessKey: settings.awsAccessKey
+        ? decrypt(settings.awsAccessKey)
+        : null,
+      awsSecretKey: settings.awsSecretKey
+        ? decrypt(settings.awsSecretKey)
+        : null,
     };
 
     return NextResponse.json({
@@ -106,6 +116,11 @@ export async function POST(req: Request) {
       mailgunApiKey,
       mailgunDomain,
       resendApiKey,
+      postmarkApiKey,
+      brevoApiKey,
+      awsAccessKey,
+      awsSecretKey,
+      awsRegion,
     } = body;
 
     // Validate required fields
@@ -130,6 +145,11 @@ export async function POST(req: Request) {
       mailgunApiKey: mailgunApiKey ? encrypt(mailgunApiKey) : null,
       mailgunDomain: mailgunDomain || null,
       resendApiKey: resendApiKey ? encrypt(resendApiKey) : null,
+      postmarkApiKey: postmarkApiKey ? encrypt(postmarkApiKey) : null,
+      brevoApiKey: brevoApiKey ? encrypt(brevoApiKey) : null,
+      awsAccessKey: awsAccessKey ? encrypt(awsAccessKey) : null,
+      awsSecretKey: awsSecretKey ? encrypt(awsSecretKey) : null,
+      awsRegion: awsRegion || null,
     };
 
     // Check if settings exist

@@ -5,7 +5,14 @@ import crypto from "crypto";
  * Email configuration type
  */
 export type EmailConfig = {
-  provider: "smtp" | "sendgrid" | "mailgun" | "resend";
+  provider:
+    | "smtp"
+    | "sendgrid"
+    | "mailgun"
+    | "resend"
+    | "postmark"
+    | "brevo"
+    | "ses";
   fromAddress: string;
   fromName?: string;
   smtp?: {
@@ -18,6 +25,9 @@ export type EmailConfig = {
   sendgrid?: { apiKey: string };
   mailgun?: { apiKey: string; domain: string };
   resend?: { apiKey: string };
+  postmark?: { apiKey: string };
+  brevo?: { apiKey: string };
+  ses?: { accessKey: string; secretKey: string; region: string };
 };
 
 // Encryption helpers
@@ -100,6 +110,38 @@ export async function getEmailConfig(): Promise<EmailConfig | null> {
           config.resend = { apiKey: decrypt(settings.resendApiKey) };
         } else {
           console.log("[Email] Resend configuration incomplete");
+          return null;
+        }
+        break;
+      case "postmark":
+        if (settings.postmarkApiKey) {
+          config.postmark = { apiKey: decrypt(settings.postmarkApiKey) };
+        } else {
+          console.log("[Email] Postmark configuration incomplete");
+          return null;
+        }
+        break;
+      case "brevo":
+        if (settings.brevoApiKey) {
+          config.brevo = { apiKey: decrypt(settings.brevoApiKey) };
+        } else {
+          console.log("[Email] Brevo configuration incomplete");
+          return null;
+        }
+        break;
+      case "ses":
+        if (
+          settings.awsAccessKey &&
+          settings.awsSecretKey &&
+          settings.awsRegion
+        ) {
+          config.ses = {
+            accessKey: decrypt(settings.awsAccessKey),
+            secretKey: decrypt(settings.awsSecretKey),
+            region: settings.awsRegion,
+          };
+        } else {
+          console.log("[Email] AWS SES configuration incomplete");
           return null;
         }
         break;
@@ -255,6 +297,99 @@ export async function sendEmail(
           const error = await response.json();
           return { success: false, error: `Resend error: ${error.message}` };
         }
+
+        return { success: true };
+      }
+
+      case "postmark": {
+        if (!config.postmark?.apiKey) {
+          return { success: false, error: "Postmark API key missing" };
+        }
+
+        const response = await fetch("https://api.postmarkapp.com/email", {
+          method: "POST",
+          headers: {
+            "X-Postmark-Server-Token": config.postmark.apiKey,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            From: fromAddress,
+            To: options.to,
+            Subject: options.subject,
+            TextBody: options.text,
+            HtmlBody: options.html,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          return {
+            success: false,
+            error: `Postmark error: ${error.Message || "Unknown error"}`,
+          };
+        }
+
+        return { success: true };
+      }
+
+      case "brevo": {
+        if (!config.brevo?.apiKey) {
+          return { success: false, error: "Brevo API key missing" };
+        }
+
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "api-key": config.brevo.apiKey,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            sender: config.fromName
+              ? { name: config.fromName, email: config.fromAddress }
+              : { email: config.fromAddress },
+            to: [{ email: options.to }],
+            subject: options.subject,
+            textContent: options.text,
+            htmlContent: options.html,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          return {
+            success: false,
+            error: `Brevo error: ${error.message || "Unknown error"}`,
+          };
+        }
+
+        return { success: true };
+      }
+
+      case "ses": {
+        if (!config.ses) {
+          return { success: false, error: "AWS SES configuration missing" };
+        }
+
+        // For ThemeForest, easier to use SMTP for SES than complex SigV4 API
+        const transporter = nodemailer.createTransport({
+          host: `email-smtp.${config.ses.region}.amazonaws.com`,
+          port: 587,
+          secure: false, // TLS
+          auth: {
+            user: config.ses.accessKey,
+            pass: config.ses.secretKey,
+          },
+        });
+
+        await transporter.sendMail({
+          from: fromAddress,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+          html: options.html,
+        });
 
         return { success: true };
       }

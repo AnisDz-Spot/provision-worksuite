@@ -933,6 +933,11 @@ model EmailSettings {
   mailgunApiKey  String? @map("mailgun_api_key")
   mailgunDomain  String? @map("mailgun_domain")
   resendApiKey   String? @map("resend_api_key")
+  postmarkApiKey String? @map("postmark_api_key")
+  brevoApiKey    String? @map("brevo_api_key")
+  awsAccessKey   String? @map("aws_access_key")
+  awsSecretKey   String? @map("aws_secret_key")
+  awsRegion      String? @map("aws_region")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

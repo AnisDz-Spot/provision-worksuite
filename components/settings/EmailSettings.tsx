@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/Input";
 import { Mail, Save, Trash2 } from "lucide-react";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 
-type EmailProvider = "smtp" | "sendgrid" | "mailgun" | "resend";
+type EmailProvider =
+  | "smtp"
+  | "sendgrid"
+  | "mailgun"
+  | "resend"
+  | "postmark"
+  | "brevo"
+  | "ses";
 
 export function EmailSettings() {
   const [loading, setLoading] = useState(true);
@@ -28,6 +35,11 @@ export function EmailSettings() {
   const [mailgunApiKey, setMailgunApiKey] = useState("");
   const [mailgunDomain, setMailgunDomain] = useState("");
   const [resendApiKey, setResendApiKey] = useState("");
+  const [postmarkApiKey, setPostmarkApiKey] = useState("");
+  const [brevoApiKey, setBrevoApiKey] = useState("");
+  const [awsAccessKey, setAwsAccessKey] = useState("");
+  const [awsSecretKey, setAwsSecretKey] = useState("");
+  const [awsRegion, setAwsRegion] = useState("us-east-1");
 
   useEffect(() => {
     loadSettings();
@@ -53,6 +65,11 @@ export function EmailSettings() {
         setMailgunApiKey(settings.mailgunApiKey || "");
         setMailgunDomain(settings.mailgunDomain || "");
         setResendApiKey(settings.resendApiKey || "");
+        setPostmarkApiKey(settings.postmarkApiKey || "");
+        setBrevoApiKey(settings.brevoApiKey || "");
+        setAwsAccessKey(settings.awsAccessKey || "");
+        setAwsSecretKey(settings.awsSecretKey || "");
+        setAwsRegion(settings.awsRegion || "us-east-1");
       }
     } catch (error) {
       console.error("Failed to load email settings:", error);
@@ -80,6 +97,11 @@ export function EmailSettings() {
           mailgunApiKey,
           mailgunDomain,
           resendApiKey,
+          postmarkApiKey,
+          brevoApiKey,
+          awsAccessKey,
+          awsSecretKey,
+          awsRegion,
         }),
       });
 
@@ -127,6 +149,11 @@ export function EmailSettings() {
         setMailgunApiKey("");
         setMailgunDomain("");
         setResendApiKey("");
+        setPostmarkApiKey("");
+        setBrevoApiKey("");
+        setAwsAccessKey("");
+        setAwsSecretKey("");
+        setAwsRegion("us-east-1");
       } else {
         alert(`Failed to delete: ${data.error}`);
       }
@@ -169,6 +196,9 @@ export function EmailSettings() {
             <option value="sendgrid">SendGrid</option>
             <option value="mailgun">Mailgun</option>
             <option value="resend">Resend</option>
+            <option value="postmark">Postmark</option>
+            <option value="brevo">Brevo (Sendinblue)</option>
+            <option value="ses">AWS SES</option>
           </select>
         </div>
 
@@ -320,6 +350,86 @@ export function EmailSettings() {
                 onChange={(e) => setResendApiKey(e.target.value)}
               />
             </div>
+          </div>
+        )}
+
+        {/* Postmark */}
+        {provider === "postmark" && (
+          <div className="border rounded-lg p-4">
+            <h3 className="font-medium mb-3">Postmark Configuration</h3>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                Server API Token *
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••••-••••-••••-••••-••••••••••••"
+                value={postmarkApiKey}
+                onChange={(e) => setPostmarkApiKey(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Brevo */}
+        {provider === "brevo" && (
+          <div className="border rounded-lg p-4">
+            <h3 className="font-medium mb-3">Brevo Configuration</h3>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                API Key *
+              </label>
+              <Input
+                type="password"
+                placeholder="xkeysib-••••••••"
+                value={brevoApiKey}
+                onChange={(e) => setBrevoApiKey(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* AWS SES */}
+        {provider === "ses" && (
+          <div className="border rounded-lg p-4 space-y-4">
+            <h3 className="font-medium">AWS SES Configuration</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium mb-1 block">
+                  AWS Region *
+                </label>
+                <Input
+                  placeholder="us-east-1"
+                  value={awsRegion}
+                  onChange={(e) => setAwsRegion(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  Access Key ID *
+                </label>
+                <Input
+                  placeholder="AKIA••••••••"
+                  value={awsAccessKey}
+                  onChange={(e) => setAwsAccessKey(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  Secret Access Key *
+                </label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={awsSecretKey}
+                  onChange={(e) => setAwsSecretKey(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">
+              Note: Ensure your SES identity (email or domain) is verified in
+              the AWS Console.
+            </p>
           </div>
         )}
 
