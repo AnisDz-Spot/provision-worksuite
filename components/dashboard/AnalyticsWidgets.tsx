@@ -29,8 +29,8 @@ export function AnalyticsWidgets() {
   const WIDGETS = [
     {
       label: "Total Projects",
-      value: `${stats.totalProjects.current}/${stats.totalProjects.total}`,
-      trend: stats.totalProjects.trend,
+      value: `${displayStats.totalProjects.current}/${displayStats.totalProjects.total}`,
+      trend: displayStats.totalProjects.trend,
       icon: FolderKanban,
       color: "from-indigo-500 to-purple-500",
       stroke: "#818cf8",
@@ -39,8 +39,8 @@ export function AnalyticsWidgets() {
     },
     {
       label: "Completed Tasks",
-      value: `${stats.completedTasks.current}/${stats.completedTasks.total}`,
-      trend: stats.completedTasks.trend,
+      value: `${displayStats.completedTasks.current}/${displayStats.completedTasks.total}`,
+      trend: displayStats.completedTasks.trend,
       icon: ClipboardList,
       color: "from-green-400 to-lime-500",
       stroke: "#4ade80",
@@ -49,8 +49,8 @@ export function AnalyticsWidgets() {
     },
     {
       label: "Active Users",
-      value: `${stats.activeUsers.current}/${stats.activeUsers.total}`,
-      trend: stats.activeUsers.trend,
+      value: `${displayStats.activeUsers.current}/${displayStats.activeUsers.total}`,
+      trend: displayStats.activeUsers.trend,
       icon: UserCheck,
       color: "from-blue-400 to-cyan-500",
       stroke: "#60a5fa",
@@ -59,8 +59,8 @@ export function AnalyticsWidgets() {
     },
     {
       label: "Upcoming Deadlines",
-      value: `${stats.upcomingDeadlines.current}/${stats.upcomingDeadlines.total}`,
-      trend: stats.upcomingDeadlines.trend,
+      value: `${displayStats.upcomingDeadlines.current}/${displayStats.upcomingDeadlines.total}`,
+      trend: displayStats.upcomingDeadlines.trend,
       icon: CalendarClock,
       color: "from-orange-400 to-pink-500",
       stroke: "#fb923c",
