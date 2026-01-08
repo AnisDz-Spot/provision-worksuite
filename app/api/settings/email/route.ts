@@ -1,32 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import crypto from "crypto";
+import { encrypt, decrypt } from "@/lib/encryption";
 
-// Simple encryption for sensitive fields
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || "provision-default-key-change-in-production";
-const ALGORITHM = "aes-256-cbc";
-
-function encrypt(text: string): string {
-  const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  let encrypted = cipher.update(text, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  return iv.toString("hex") + ":" + encrypted;
-}
-
-function decrypt(text: string): string {
-  const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
-  const parts = text.split(":");
-  const iv = Buffer.from(parts[0], "hex");
-  const encrypted = parts[1];
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  let decrypted = decipher.update(encrypted, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
-}
+// Encryption helpers removed - using @/lib/encryption
 
 // GET - Fetch email settings (admin only)
 export async function GET(req: Request) {
@@ -72,6 +49,12 @@ export async function GET(req: Request) {
         : null,
       awsSecretKey: settings.awsSecretKey
         ? decrypt(settings.awsSecretKey)
+        : null,
+      slackWebhookUrl: settings.slackWebhookUrl
+        ? decrypt(settings.slackWebhookUrl)
+        : null,
+      teamsWebhookUrl: settings.teamsWebhookUrl
+        ? decrypt(settings.teamsWebhookUrl)
         : null,
     };
 
@@ -121,6 +104,8 @@ export async function POST(req: Request) {
       awsAccessKey,
       awsSecretKey,
       awsRegion,
+      slackWebhookUrl,
+      teamsWebhookUrl,
     } = body;
 
     // Validate required fields
@@ -150,6 +135,8 @@ export async function POST(req: Request) {
       awsAccessKey: awsAccessKey ? encrypt(awsAccessKey) : null,
       awsSecretKey: awsSecretKey ? encrypt(awsSecretKey) : null,
       awsRegion: awsRegion || null,
+      slackWebhookUrl: slackWebhookUrl ? encrypt(slackWebhookUrl) : null,
+      teamsWebhookUrl: teamsWebhookUrl ? encrypt(teamsWebhookUrl) : null,
     };
 
     // Check if settings exist

@@ -11,10 +11,6 @@ interface DigestSettingsModalProps {
   setSchedule: (schedule: DigestSchedule) => void;
   users: RecipientUser[];
   loadingUsers: boolean;
-  slackWebhookUrl: string;
-  setSlackWebhookUrl: (url: string) => void;
-  teamsWebhookUrl: string;
-  setTeamsWebhookUrl: (url: string) => void;
 }
 
 export const DigestSettingsModal: React.FC<DigestSettingsModalProps> = ({
@@ -24,10 +20,6 @@ export const DigestSettingsModal: React.FC<DigestSettingsModalProps> = ({
   setSchedule,
   users,
   loadingUsers,
-  slackWebhookUrl,
-  setSlackWebhookUrl,
-  teamsWebhookUrl,
-  setTeamsWebhookUrl,
 }) => {
   return (
     <Modal
@@ -203,42 +195,17 @@ export const DigestSettingsModal: React.FC<DigestSettingsModalProps> = ({
             </Button>
           </div>
         </div>
-        <div className="pt-6 border-t mt-2">
-          <h4 className="text-sm font-semibold mb-2">Webhooks</h4>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">
-                Slack Incoming Webhook URL
-              </label>
-              <Input
-                type="url"
-                value={slackWebhookUrl}
-                onChange={(e) => setSlackWebhookUrl(e.target.value)}
-                placeholder="https://hooks.slack.com/services/..."
-                onBlur={() => {
-                  try {
-                    localStorage.setItem("pv:webhook:slack", slackWebhookUrl);
-                  } catch {}
-                }}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">
-                Teams Incoming Webhook URL
-              </label>
-              <Input
-                type="url"
-                value={teamsWebhookUrl}
-                onChange={(e) => setTeamsWebhookUrl(e.target.value)}
-                placeholder="https://outlook.office.com/webhook/..."
-                onBlur={() => {
-                  try {
-                    localStorage.setItem("pv:webhook:teams", teamsWebhookUrl);
-                  } catch {}
-                }}
-              />
-            </div>
-          </div>
+        <div className="pt-4 border-t mt-2">
+          <p className="text-[10px] text-center text-muted-foreground italic">
+            Note: Slack and Teams webhooks are now managed globally in
+            <a
+              href="/settings/email"
+              className="text-primary hover:underline ml-1"
+            >
+              Email & Notification Settings
+            </a>
+            .
+          </p>
         </div>
       </div>
     </Modal>

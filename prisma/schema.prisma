@@ -939,6 +939,10 @@ model EmailSettings {
   awsSecretKey   String? @map("aws_secret_key")
   awsRegion      String? @map("aws_region")
 
+  // Custom Webhooks (encrypted)
+  slackWebhookUrl String? @map("slack_webhook_url")
+  teamsWebhookUrl String? @map("teams_webhook_url")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

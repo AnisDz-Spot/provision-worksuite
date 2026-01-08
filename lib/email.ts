@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import crypto from "crypto";
+import { decrypt } from "@/lib/encryption";
 
 /**
  * Email configuration type
@@ -30,26 +30,7 @@ export type EmailConfig = {
   ses?: { accessKey: string; secretKey: string; region: string };
 };
 
-// Encryption helpers
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || "provision-default-key-change-in-production";
-const ALGORITHM = "aes-256-cbc";
-
-function decrypt(text: string): string {
-  try {
-    const key = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
-    const parts = text.split(":");
-    const iv = Buffer.from(parts[0], "hex");
-    const encrypted = parts[1];
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-    let decrypted = decipher.update(encrypted, "hex", "utf8");
-    decrypted += decipher.final("utf8");
-    return decrypted;
-  } catch (e) {
-    console.error("[Email] Decryption failed:", e);
-    return "";
-  }
-}
+// Encryption helpers moved to @/lib/encryption
 
 /**
  * Get email configuration from database

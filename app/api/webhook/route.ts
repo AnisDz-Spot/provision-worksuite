@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { decrypt } from "@/lib/encryption";
 
 type PostBody = {
   type: "slack" | "teams";
@@ -19,16 +21,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing type" }, { status: 400 });
     }
 
-    // SECURITY FIX: Only use server-configured webhook URLs - never accept from client
-    // This prevents SSRF (Server-Side Request Forgery) attacks
+    // Fetach settings from DB
+    const settings = await prisma.emailSettings.findFirst();
+
+    // SECURITY FIX: Prioritize server-configured webhook URLs from DB, fallback to env
+    const dbSlack = settings?.slackWebhookUrl
+      ? decrypt(settings.slackWebhookUrl)
+      : null;
+    const dbTeams = settings?.teamsWebhookUrl
+      ? decrypt(settings.teamsWebhookUrl)
+      : null;
+
     const webhookUrl =
       body.type === "slack"
-        ? process.env.SLACK_WEBHOOK_URL
-        : process.env.TEAMS_WEBHOOK_URL;
+        ? dbSlack || process.env.SLACK_WEBHOOK_URL
+        : dbTeams || process.env.TEAMS_WEBHOOK_URL;
 
     if (!webhookUrl) {
       return NextResponse.json(
-        { error: `${body.type} webhook not configured on server` },
+        {
+          error: `${body.type} webhook not configured on server. Please visit Email Settings to set it up.`,
+        },
         { status: 503 }
       );
     }

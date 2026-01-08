@@ -4,8 +4,16 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Mail, Save, Trash2 } from "lucide-react";
+import {
+  Mail,
+  Save,
+  Trash2,
+  BellRing,
+  MessageSquare,
+  PanelsTopLeft,
+} from "lucide-react";
 import { fetchWithCsrf } from "@/lib/csrf-client";
+import { useToast } from "@/components/ui/Toast";
 
 type EmailProvider =
   | "smtp"
@@ -17,6 +25,7 @@ type EmailProvider =
   | "ses";
 
 export function EmailSettings() {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [provider, setProvider] = useState<EmailProvider>("smtp");
@@ -40,6 +49,8 @@ export function EmailSettings() {
   const [awsAccessKey, setAwsAccessKey] = useState("");
   const [awsSecretKey, setAwsSecretKey] = useState("");
   const [awsRegion, setAwsRegion] = useState("us-east-1");
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
+  const [teamsWebhookUrl, setTeamsWebhookUrl] = useState("");
 
   useEffect(() => {
     loadSettings();
@@ -70,6 +81,8 @@ export function EmailSettings() {
         setAwsAccessKey(settings.awsAccessKey || "");
         setAwsSecretKey(settings.awsSecretKey || "");
         setAwsRegion(settings.awsRegion || "us-east-1");
+        setSlackWebhookUrl(settings.slackWebhookUrl || "");
+        setTeamsWebhookUrl(settings.teamsWebhookUrl || "");
       }
     } catch (error) {
       console.error("Failed to load email settings:", error);
@@ -102,19 +115,21 @@ export function EmailSettings() {
           awsAccessKey,
           awsSecretKey,
           awsRegion,
+          slackWebhookUrl,
+          teamsWebhookUrl,
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        alert("Email settings saved successfully!");
+        showToast("Email and notification settings saved successfully!");
       } else {
-        alert(`Failed to save: ${data.error}`);
+        showToast(`Failed to save: ${data.error}`, "error");
       }
     } catch (error: any) {
       console.error("Failed to save email settings:", error);
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, "error");
     } finally {
       setSaving(false);
     }
@@ -154,12 +169,15 @@ export function EmailSettings() {
         setAwsAccessKey("");
         setAwsSecretKey("");
         setAwsRegion("us-east-1");
+        setSlackWebhookUrl("");
+        setTeamsWebhookUrl("");
+        showToast("Email and notification settings deleted.", "info");
       } else {
-        alert(`Failed to delete: ${data.error}`);
+        showToast(`Failed to delete: ${data.error}`, "error");
       }
     } catch (error: any) {
       console.error("Failed to delete email settings:", error);
-      alert(`Error: ${error.message}`);
+      showToast(`Error: ${error.message}`, "error");
     }
   };
 
@@ -433,12 +451,60 @@ export function EmailSettings() {
           </div>
         )}
 
+        {/* Webhooks Section */}
+        <div className="border rounded-lg p-4 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BellRing className="w-4 h-4 text-primary" />
+            <h3 className="font-medium text-lg">Notification Webhooks</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Configure webhooks to post weekly digests directly to your team
+            channels.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <MessageSquare className="w-4 h-4 text-[#4A154B]" />
+                <label className="text-sm font-medium">Slack Webhook URL</label>
+              </div>
+              <Input
+                type="password"
+                placeholder="https://hooks.slack.com/services/..."
+                value={slackWebhookUrl}
+                onChange={(e) => setSlackWebhookUrl(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Incoming Webhook URL for your Slack workspace.
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <PanelsTopLeft className="w-4 h-4 text-[#5059C9]" />
+                <label className="text-sm font-medium">
+                  Microsoft Teams Webhook URL
+                </label>
+              </div>
+              <Input
+                type="password"
+                placeholder="https://outlook.office.com/webhook/..."
+                value={teamsWebhookUrl}
+                onChange={(e) => setTeamsWebhookUrl(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Incoming Webhook connector URL for your Teams channel.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Info Box */}
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm">
-          <p className="font-medium text-blue-600 mb-1">ℹ️ Fallback Behavior</p>
+          <p className="font-medium text-blue-600 mb-1">ℹ️ Email Behavior</p>
           <p className="text-muted-foreground">
-            If no email settings are configured, the system will use Ethereal
-            (test email service) and log preview URLs in the server console.
+            Configure a provider to enable email delivery. If no provider is
+            set, email sending will fail with a configuration prompt.
           </p>
         </div>
 

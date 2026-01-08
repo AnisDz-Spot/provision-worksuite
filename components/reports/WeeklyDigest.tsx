@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { useRouter } from "next/navigation";
 
@@ -28,6 +29,7 @@ type WeeklyDigestProps = {
 
 export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [schedule, setSchedule] = useState<DigestSchedule>({
     enabled: false,
     dayOfWeek: 1, // Monday
@@ -38,8 +40,6 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
-  const [teamsWebhookUrl, setTeamsWebhookUrl] = useState("");
   const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [digestData, setDigestData] = useState<DigestData | null>(null);
@@ -52,10 +52,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   // Load stored settings (webhooks from localStorage, schedule from API)
   React.useEffect(() => {
     try {
-      const s = localStorage.getItem("pv:webhook:slack") || "";
-      const t = localStorage.getItem("pv:webhook:teams") || "";
-      setSlackWebhookUrl(s);
-      setTeamsWebhookUrl(t);
+      // Webhooks are now server-side, no longer loading from localStorage
 
       // Fetch digest settings from API
       const fetchSettings = async () => {
@@ -314,7 +311,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
 
   const sendDigest = async () => {
     if (!digestData || schedule.recipients.length === 0) {
-      alert("Please configure recipients first.");
+      showToast("Please configure recipients first.", "warning");
       return;
     }
     setSendingEmail(true);
@@ -331,56 +328,64 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Digest sent to ${data.recipients} recipient(s)!`);
+        showToast(`Digest sent to ${data.recipients} recipient(s)!`);
       } else {
         if (data.error && data.error.includes("provider not configured")) {
           setShowConfigError(true);
         } else {
-          alert(`Failed: ${data.error}`);
+          showToast(`Failed: ${data.error}`, "error");
         }
       }
     } catch (error) {
-      alert("Error sending digest");
+      showToast("Error sending digest", "error");
     } finally {
       setSendingEmail(false);
     }
   };
 
   const postToSlack = async () => {
-    if (!digestData || !slackWebhookUrl) return;
+    if (!digestData) return;
     try {
       const payload = buildSlackPayload(digestData);
-      await fetchWithCsrf("/api/webhook", {
+      const res = await fetchWithCsrf("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "slack",
-          webhookUrl: slackWebhookUrl,
           payload,
         }),
       });
-      alert("Posted to Slack.");
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Posted to Slack!");
+      } else {
+        showToast(`Slack error: ${data.error}`, "error");
+      }
     } catch (e: any) {
-      alert(`Slack error: ${e.message}`);
+      showToast(`Slack error: ${e.message}`, "error");
     }
   };
 
   const postToTeams = async () => {
-    if (!digestData || !teamsWebhookUrl) return;
+    if (!digestData) return;
     try {
       const payload = buildTeamsCard(digestData);
-      await fetchWithCsrf("/api/webhook", {
+      const res = await fetchWithCsrf("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "teams",
-          webhookUrl: teamsWebhookUrl,
           payload,
         }),
       });
-      alert("Posted to Teams.");
+      const data = await res.json();
+      if (res.ok) {
+        showToast("Posted to Teams!");
+      } else {
+        showToast(`Teams error: ${data.error}`, "error");
+      }
     } catch (e: any) {
-      alert(`Teams error: ${e.message}`);
+      showToast(`Teams error: ${e.message}`, "error");
     }
   };
 
@@ -443,10 +448,6 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
         setSchedule={setSchedule}
         users={users}
         loadingUsers={loadingUsers}
-        slackWebhookUrl={slackWebhookUrl}
-        setSlackWebhookUrl={setSlackWebhookUrl}
-        teamsWebhookUrl={teamsWebhookUrl}
-        setTeamsWebhookUrl={setTeamsWebhookUrl}
       />
 
       <DigestPreviewModal
