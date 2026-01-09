@@ -5,8 +5,17 @@ import { Input } from "@/components/ui/Input";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { Users, CheckCircle2, Circle, Clock, Pencil, X } from "lucide-react";
+import {
+  Users,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Pencil,
+  X,
+  UserPlus,
+} from "lucide-react";
 import Image from "next/image";
+import { MeetingCustomAttendeeModal } from "./MeetingCustomAttendeeModal";
 
 import { Meeting, ActionItem } from "@/app/meetings/types/meeting";
 
@@ -30,6 +39,7 @@ export function MeetingDetailView({
   onUpdate,
   onRefresh,
 }: MeetingDetailViewProps) {
+  const [customOpen, setCustomOpen] = useState(false);
   const [tab, setTab] = useState<"overview" | "notes" | "actions">("overview");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesDraft, setNotesDraft] = useState(meeting.content || "");
@@ -197,7 +207,14 @@ export function MeetingDetailView({
                             />
                           </div>
                         )}
-                        {attendee}
+                        {attendee.includes("<") ? (
+                          <div className="flex items-center gap-1">
+                            <UserPlus className="w-3 h-3 text-purple-600" />
+                            {attendee.split("<")[0].trim()}
+                          </div>
+                        ) : (
+                          attendee
+                        )}
                       </Badge>
                     );
                   })}
@@ -209,6 +226,7 @@ export function MeetingDetailView({
                     setMetaDraft({ ...metaDraft, attendees })
                   }
                   teamMembers={teamMembers}
+                  onAddCustom={() => setCustomOpen(true)}
                 />
               )}
             </div>
@@ -358,6 +376,16 @@ export function MeetingDetailView({
           </div>
         )}
       </div>
+      <MeetingCustomAttendeeModal
+        isOpen={customOpen}
+        onOpenChange={setCustomOpen}
+        onAdd={(attendee) => {
+          const current = metaDraft.attendees || [];
+          if (!current.includes(attendee)) {
+            setMetaDraft({ ...metaDraft, attendees: [...current, attendee] });
+          }
+        }}
+      />
     </div>
   );
 }

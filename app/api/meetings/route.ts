@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldUseDatabaseData, shouldReturnMockData } from "@/lib/auth-utils";
+import { handleMeetingNotifications } from "@/lib/services/meeting-notifications";
 
 // Mock data (fallback)
 const MOCK_MEETINGS = [
@@ -88,6 +89,11 @@ export async function POST(req: Request) {
     const data = await req.json();
 
     if (data.id && !data.id.startsWith("meeting-")) {
+      const prevMeeting = await prisma.meeting.findUnique({
+        where: { id: data.id },
+        select: { attendees: true },
+      });
+
       const updated = await prisma.meeting.update({
         where: { id: data.id },
         data: {
@@ -101,6 +107,17 @@ export async function POST(req: Request) {
           updatedAt: new Date(),
         },
       });
+
+      // Notify new attendees
+      const prevAttendees = prevMeeting?.attendees || [];
+      const newAttendees = (data.attendees || []).filter(
+        (a: string) => !prevAttendees.includes(a)
+      );
+      if (newAttendees.length > 0) {
+        const baseUrl = new URL(req.url).origin;
+        handleMeetingNotifications(updated.id, newAttendees, baseUrl);
+      }
+
       return NextResponse.json(updated);
     }
 
@@ -121,6 +138,12 @@ export async function POST(req: Request) {
         type: "note",
       },
     });
+
+    // Notify attendees
+    if (data.attendees && data.attendees.length > 0) {
+      const baseUrl = new URL(req.url).origin;
+      handleMeetingNotifications(meeting.id, data.attendees, baseUrl);
+    }
 
     return NextResponse.json(meeting);
   } catch (error) {

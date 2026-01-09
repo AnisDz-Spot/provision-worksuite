@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
+import { UserPlus } from "lucide-react";
 import Image from "next/image";
 
 interface User {
@@ -18,6 +19,7 @@ interface AttendeeSelectorProps {
   teamMembers: User[];
   id?: string;
   name?: string;
+  onAddCustom?: () => void;
 }
 
 export function AttendeeSelector({
@@ -26,6 +28,7 @@ export function AttendeeSelector({
   teamMembers,
   id = "attendee-search",
   name = "attendee-search",
+  onAddCustom,
 }: AttendeeSelectorProps) {
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -49,7 +52,9 @@ export function AttendeeSelector({
     .filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
 
   const handleAdd = (userName: string) => {
-    onChange([...selectedAttendees, userName]);
+    if (!selectedAttendees.includes(userName)) {
+      onChange([...selectedAttendees, userName]);
+    }
     setSearch("");
     setIsOpen(false);
   };
@@ -73,6 +78,16 @@ export function AttendeeSelector({
           }}
           className="flex-1"
         />
+        {onAddCustom && (
+          <button
+            type="button"
+            onClick={onAddCustom}
+            className="flex items-center justify-center p-2 rounded-md border hover:bg-accent transition-colors text-muted-foreground hover:text-primary"
+            title="Add Custom Attendee"
+          >
+            <UserPlus className="w-5 h-5" />
+          </button>
+        )}
         {isOpen && (
           <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
             {filteredMembers.length === 0 ? (
@@ -121,10 +136,22 @@ export function AttendeeSelector({
             <Badge
               key={idx}
               variant="secondary"
-              className="flex items-center gap-1 animate-fadeIn"
+              className={`flex items-center gap-1 animate-fadeIn ${
+                attendee.includes("<")
+                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                  : ""
+              }`}
             >
-              {attendee}
+              {attendee.includes("<") ? (
+                <span className="flex items-center gap-1">
+                  <UserPlus className="w-3 h-3" />
+                  {attendee.split("<")[0].trim()}
+                </span>
+              ) : (
+                attendee
+              )}
               <button
+                type="button"
                 className="hover:text-destructive ml-1 transition-colors"
                 onClick={() => handleRemove(attendee)}
               >

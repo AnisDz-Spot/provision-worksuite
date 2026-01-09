@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/Button";
 import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
 import { Meeting } from "@/app/meetings/types/meeting"; // Import Meeting from shared types
 import dynamic from "next/dynamic";
+import { useState } from "react";
+import { MeetingCustomAttendeeModal } from "./MeetingCustomAttendeeModal";
 
 // Dynamically import RichTextEditor to avoid SSR issues if it uses browser-only APIs
 // Dynamically import RichTextEditor to avoid SSR issues
@@ -56,6 +58,7 @@ export function MeetingModal({
   projects,
   onSave,
 }: MeetingModalProps) {
+  const [customOpen, setCustomOpen] = useState(false);
   return (
     <Modal open={isOpen} onOpenChange={onOpenChange} size="lg">
       <h2 className="text-xl font-semibold mb-4">
@@ -96,6 +99,7 @@ export function MeetingModal({
             selectedAttendees={formData.attendees || []}
             onChange={(attendees) => setFormData({ ...formData, attendees })}
             teamMembers={teamMembers}
+            onAddCustom={() => setCustomOpen(true)}
             id="new-attendee-search"
             name="new-attendee-search"
           />
@@ -112,6 +116,16 @@ export function MeetingModal({
           </Button>
         </div>
       </div>
+      <MeetingCustomAttendeeModal
+        isOpen={customOpen}
+        onOpenChange={setCustomOpen}
+        onAdd={(attendee) => {
+          const current = formData.attendees || [];
+          if (!current.includes(attendee)) {
+            setFormData({ ...formData, attendees: [...current, attendee] });
+          }
+        }}
+      />
     </Modal>
   );
 }

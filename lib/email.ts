@@ -502,3 +502,71 @@ Provision WorkSuite Team
 
   return sendEmail({ to: email, subject, text, html });
 }
+
+export async function sendMeetingInvitationEmail(
+  email: string,
+  meetingTitle: string,
+  meetingDate: string,
+  meetingUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  const subject = `New Meeting: ${meetingTitle}`;
+  const formattedDate = new Date(meetingDate).toLocaleString([], {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const text = `
+You've been invited to a meeting: ${meetingTitle}
+Date: ${formattedDate}
+
+Join or view details here:
+${meetingUrl}
+
+--
+Provision WorkSuite Team
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">New Meeting Invitation</h1>
+  </div>
+  
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+    <h2 style="color: #333; margin-top: 0;">${meetingTitle}</h2>
+    
+    <p>You have been invited to a meeting on Provision WorkSuite.</p>
+    
+    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0; color: #4b5563; font-size: 14px;">Date & Time</p>
+      <p style="margin: 5px 0 0 0; font-weight: 600;">${formattedDate}</p>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${meetingUrl}" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+        View Meeting Details
+      </a>
+    </div>
+    
+    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+    
+    <p style="color: #999; font-size: 12px; margin-bottom: 0;">
+      <a href="${meetingUrl}" style="color: #8b5cf6; word-break: break-all;">${meetingUrl}</a>
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+  return sendEmail({ to: email, subject, text, html });
+}
