@@ -100,8 +100,11 @@ async function createDatabaseAdapter(
             console.error("🚨 Postgres Pool Error:", err.message);
           });
 
-          const adapter = new PrismaPg(pool);
-          return { type: "postgresql", adapter };
+          // const adapter = new PrismaPg(pool);
+          // return { type: "postgresql", adapter };
+
+          // 🚀 STABILITY FIX: Force native engine to avoid DriverAdapterError on array params
+          return null;
         } else {
           // Edge Runtime Fallback: Use Neon Serverless (WebSockets)
           const { Pool: NeonPool, neonConfig } = await import(
@@ -281,6 +284,7 @@ const getPrismaClient = async () => {
       const dbAdapter = await createDatabaseAdapter(dbUrl);
 
       if (dbAdapter) {
+        // Disabled for debugging
         console.log(
           `✅ Using ${dbAdapter.type.toUpperCase()} database with ${dbAdapter.adapter ? "optimized adapter" : "standard driver"}`
         );
