@@ -7,7 +7,6 @@
  */
 
 import { getConfig } from "@/lib/config/auto-setup";
-import ws from "ws";
 
 // Database type detection and adapter imports
 type DatabaseType = "postgresql" | "mysql" | "sqlite" | "sqlserver" | "unknown";
@@ -56,12 +55,15 @@ async function createDatabaseAdapter(
       case "postgresql": {
         const url = connectionString.trim();
         const lowerUrl = url.toLowerCase();
+
+        // Define runtime environment
+        const runtime = process.env.NEXT_RUNTIME;
+
+        // Generic SSL Detection for PostgreSQL
+        const hasSslParam = lowerUrl.includes("sslmode=");
         const isNeon =
           lowerUrl.includes("neon.tech") || lowerUrl.includes("-pooler.");
 
-        // Generic SSL Detection for PostgreSQL
-        // Many cloud providers (RDS, DO, Supabase, Neon) require SSL
-        const hasSslParam = lowerUrl.includes("sslmode=");
         const needsSsl =
           isNeon ||
           lowerUrl.includes("supabase.co") ||
@@ -73,57 +75,56 @@ async function createDatabaseAdapter(
         if (!hasSslParam && needsSsl) {
           const separator = url.includes("?") ? "&" : "?";
           finalConnectionString = `${url}${separator}sslmode=require`;
-          console.log(
-            "🔒 Enforcing sslmode=require for cloud database provider"
-          );
         }
 
-        // 🚀 STABILITY: Always prefer standard pg (TCP) in Node.js environments.
-        // The standard pg driver is significantly more stable than WebSockets
-        // when running in traditional serverless functions (Node.js).
-        const runtime = process.env.NEXT_RUNTIME;
+        if (runtime === "edge") {
+          // Edge Runtime: Use Neon Serverless (WebSockets)
+          try {
+            const { Pool: NeonPool, neonConfig } = await import(
+              /* webpackIgnore: true */ "@neondatabase/serverless"
+            );
+            const { PrismaNeon } = await import(
+              /* webpackIgnore: true */ "@prisma/adapter-neon"
+            );
 
-        if (runtime !== "edge") {
-          // Standard PostgreSQL / Cloud providers using TCP
-          // Remove webpackIgnore to allow Next.js to properly manage these external deps
-          const { Pool } = await import("pg");
-          const { PrismaPg } = await import("@prisma/adapter-pg");
+            // Configure Neon to not use pipeline connect if needed, but defaults are usually improved in newer versions
+            // neonConfig.pipelineConnect = false;
 
-          const pool = new Pool({
-            connectionString: finalConnectionString,
-            connectionTimeoutMillis: 30000,
-            max: 1, // 🔑 STRICT: Serverless best practice
-            ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
-          });
+            const pool = new NeonPool({
+              connectionString: finalConnectionString,
+            });
 
-          pool.on("error", (err: Error) => {
-            console.error("🚨 Postgres Pool Error:", err.message);
-          });
-
-          // const adapter = new PrismaPg(pool);
-          // return { type: "postgresql", adapter };
-
-          // 🚀 STABILITY FIX: Force native engine to avoid DriverAdapterError on array params
-          return null;
+            const adapter = new PrismaNeon(pool);
+            return { type: "postgresql", adapter };
+          } catch (e) {
+            console.warn("Neon adapter load failed in edge, falling back:", e);
+            return null; // Fallback to engine
+          }
         } else {
-          // Edge Runtime Fallback: Use Neon Serverless (WebSockets)
-          const { Pool: NeonPool, neonConfig } = await import(
-            /* webpackIgnore: true */ "@neondatabase/serverless"
-          );
-          const { PrismaNeon } = await import(
-            /* webpackIgnore: true */ "@prisma/adapter-neon"
-          );
+          // Node.js Runtime: Use standard 'pg' with @prisma/adapter-pg
+          try {
+            const { Pool } = await import("pg");
+            const { PrismaPg } = await import("@prisma/adapter-pg");
 
-          neonConfig.pipelineConnect = false;
+            const pool = new Pool({
+              connectionString: finalConnectionString,
+              connectionTimeoutMillis: 30000,
+              max: 10, // Increased from 1 to 10 for better concurrency in Node
+              ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+            });
 
-          const pool = new NeonPool({
-            connectionString: finalConnectionString,
-            connectionTimeoutMillis: 30000,
-            max: 1,
-          });
+            // Handle pool errors
+            pool.on("error", (err: Error) => {
+              // Silent or low-level log to avoid spam
+              console.error("PG Pool Error:", err.message);
+            });
 
-          const adapter = new PrismaNeon(pool as any);
-          return { type: "postgresql", adapter };
+            const adapter = new PrismaPg(pool);
+            return { type: "postgresql", adapter };
+          } catch (e) {
+            console.error("Failed to initialize pg adapter:", e);
+            return null; // Fallback to native engine
+          }
         }
       }
 
