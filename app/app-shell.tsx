@@ -136,12 +136,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           setIsSyncing(false);
           return;
         } else {
-          console.warn(
-            "[AppShell] No tables/DB found. Standard users not allowed. Logging out."
-          );
-          // Redirect to logout to ensure clean state
-          window.location.href = "/api/auth/logout";
-          return;
+          // Allow any admin to stay and fix the database (run seeds/migrations)
+          if (
+            currentUser.isAdmin ||
+            currentUser.role === "admin" ||
+            currentUser.role === "Administrator"
+          ) {
+            console.log(
+              "[AppShell] No tables found, but user is Admin. Allowing setup access."
+            );
+            // Do not return, let logic flow to setup redirects
+          } else {
+            console.warn(
+              "[AppShell] No tables/DB found. Standard users not allowed. Logging out."
+            );
+            // Redirect to logout to ensure clean state
+            window.location.href = "/api/auth/logout";
+            return;
+          }
         }
       }
 
