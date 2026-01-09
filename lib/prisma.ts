@@ -94,7 +94,7 @@ async function createDatabaseAdapter(
               connectionString: finalConnectionString,
             });
 
-            const adapter = new PrismaNeon(pool);
+            const adapter = new PrismaNeon(pool as any);
             return { type: "postgresql", adapter };
           } catch (e) {
             console.warn("Neon adapter load failed in edge, falling back:", e);
@@ -119,7 +119,7 @@ async function createDatabaseAdapter(
               console.error("PG Pool Error:", err.message);
             });
 
-            const adapter = new PrismaPg(pool);
+            const adapter = new PrismaPg(pool as any);
             return { type: "postgresql", adapter };
           } catch (e) {
             console.error("Failed to initialize pg adapter:", e);
