@@ -65,8 +65,11 @@ export function useRevalidatedData<T>(
     }
   }, [fetchFn, persistKey, options]);
 
+  const revalidated = useRef(false);
+
   useEffect(() => {
-    if (revalidateOnMount) {
+    if (revalidateOnMount && !revalidated.current) {
+      revalidated.current = true;
       refresh();
     }
   }, [revalidateOnMount, refresh]);

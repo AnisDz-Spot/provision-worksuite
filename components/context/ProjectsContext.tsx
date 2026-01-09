@@ -27,6 +27,14 @@ const ProjectsContext = createContext<ProjectsContextType | undefined>(
 );
 
 export function ProjectsProvider({ children }: { children: React.ReactNode }) {
+  const options = React.useMemo(
+    () => ({
+      persistKey: "projects",
+      onError: (err: any) => console.error("Failed to load projects:", err),
+    }),
+    []
+  );
+
   const {
     data: projectsData,
     loading: isLoading,
@@ -34,10 +42,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     error,
     refresh: refreshProjects,
     setData: setProjects,
-  } = useRevalidatedData<Project[]>(loadProjects, {
-    persistKey: "projects",
-    onError: (err) => console.error("Failed to load projects:", err),
-  });
+  } = useRevalidatedData<Project[]>(loadProjects, options);
 
   const projects = projectsData || [];
   const lastFetched = null; // No longer explicitly tracked outside the hook if not needed
