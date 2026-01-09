@@ -174,19 +174,30 @@ export default function ClientForm({
 
     setUploadingLogo(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, logo: reader.result as string }));
-        setUploadingLogo(false);
-      };
-      reader.onerror = () => {
-        alert("Failed to read file");
-        setUploadingLogo(false);
-      };
-      reader.readAsDataURL(file);
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+      // Use a consistent path structure for client logos
+      const ext = file.name.split(".").pop();
+      const filename = `logo-${Date.now()}.${ext}`;
+      uploadFormData.append("path", `clients/${filename}`);
+
+      // We use the local upload API which works in our structure
+      // fetchWithCsrf handles headers correctly (preserves FormData content-type logic)
+      const res = await fetchWithCsrf("/api/upload-local", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await res.json();
+      setFormData((prev) => ({ ...prev, logo: data.url }));
     } catch (error) {
       console.error("Logo upload error:", error);
-      alert("Failed to process logo. Please try again.");
+      alert("Failed to upload logo: Local storage might be disabled or full.");
+    } finally {
       setUploadingLogo(false);
     }
   };

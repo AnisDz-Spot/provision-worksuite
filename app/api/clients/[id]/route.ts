@@ -42,17 +42,12 @@ export async function PUT(
   const body = await req.json();
 
   try {
-    // Determine name/contact logic same as POST
-    let clientName = body.name;
-    let primaryContact = body.companyName ? body.name : undefined;
-
-    // If editing, we might need to be careful not to overwrite if fields are missing?
-    // Assume full payload or merge?
-    // For simplicity, update what's passed, or standard fields.
-
+    // Explicitly update all allowed fields
     const updateData: any = {
-      name: clientName,
-      primaryEmail: body.email,
+      name: body.name,
+      primaryContact: body.primaryContact,
+      primaryEmail: body.primaryEmail,
+      secondaryEmail: body.secondaryEmail,
       phone: body.phone,
       website: body.website,
       address: body.address,
@@ -60,15 +55,20 @@ export async function PUT(
       state: body.state,
       country: body.country,
       postalCode: body.postalCode,
+      timezone: body.timezone,
+      language: body.language,
+      billingEmail: body.billingEmail,
+      vatNumber: body.vatNumber,
+      currency: body.currency,
+      hourlyRate: body.hourlyRate ? parseFloat(body.hourlyRate) : null,
+      paymentTerms: body.paymentTerms,
+      defaultVisibility: body.defaultVisibility,
+      customFields: body.customFields || {},
       notes: body.notes,
+      type: body.type,
+      status: body.status,
+      logo: body.logo,
     };
-
-    if (body.companyName) {
-      updateData.name = body.companyName;
-      updateData.primaryContact = body.name;
-      // Optionally update type?
-      updateData.type = "company";
-    }
 
     const client = await prisma.client.update({
       where: { id },

@@ -91,32 +91,11 @@ export async function POST(req: Request) {
     // Logic: If 'companyName' is provided, use that as the Client Name, and 'name' as Primary Contact.
     // If not, use 'name' as Client Name (Individual).
 
-    let clientName = body.name;
-    let primaryContact = body.companyName ? body.name : undefined;
-    let type = "individual";
-
-    if (body.companyName) {
-      clientName = body.companyName;
-      type = "company";
-    }
-
-    // Fallback: If user put Company Name in 'name' field and left companyName empty (common),
-    // we assume it's a company if no companyName is strictly separate.
-    // But adhering to the form logic in page.tsx:
-    // Label "Name *" (John Doe), "Company Name" (Acme Inc.)
-    // If I enter "Anis" and "Provison", Client should probably be "Provision" (Company) and Contact "Anis".
-    // If I enter "Anis" and "", Client is "Anis" (Individual).
-
-    // However, if the user fills "Name" with "Heaven Promotion" (as seen in screenshot) and empty "Company Name",
-    // then `clientName` = "Heaven Promotion". Type defaults to individual?
-    // User might want to adjust type manually later or we infer?
-    // For now, let's Stick to the simple mapping:
-    // If companyName is present, it TAKES PRECEDENCE as the Client Entity Name.
-
+    // Simplified mapping: Use what the form sends
     const client = await prisma.client.create({
       data: {
-        name: clientName,
-        primaryContact: primaryContact,
+        name: body.name,
+        primaryContact: body.primaryContact, // Explicitly use provided contact
         primaryEmail: body.primaryEmail,
         secondaryEmail: body.secondaryEmail,
         phone: body.phone,
@@ -136,9 +115,9 @@ export async function POST(req: Request) {
         defaultVisibility: body.defaultVisibility,
         customFields: body.customFields || {},
         notes: body.notes,
-        type: type,
-        status: "active",
-        logo: body.logo,
+        type: body.type || "company", // respect type from form
+        status: body.status || "active",
+        logo: body.logo, // Validated on frontend or uploaded URL
       },
     });
 
