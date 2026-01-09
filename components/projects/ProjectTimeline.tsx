@@ -212,8 +212,23 @@ export function ProjectTimeline({
                           </span>
                         </span>
                       );
-                    if (action === "updated" || action === "edit")
-                      return <span>updated project details</span>;
+                    if (action === "updated" || action === "edit") {
+                      const projName = data.name || data.title;
+                      return (
+                        <span>
+                          updated project details
+                          {projName && (
+                            <>
+                              {" "}
+                              for{" "}
+                              <span className="font-medium text-primary">
+                                "{projName}"
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      );
+                    }
                   }
 
                   if (action === "timelog")

@@ -380,6 +380,9 @@ export async function PUT(
       if (project.name !== updated.name) {
         changedFields.push(`name to ${updated.name}`);
       }
+      if (project.visibility !== updated.visibility) {
+        changedFields.push(`privacy to ${updated.visibility}`);
+      }
       if (
         body.deadline &&
         new Date(project.deadline || 0).getTime() !==
@@ -388,6 +391,19 @@ export async function PUT(
         changedFields.push(
           `deadline to ${new Date(body.deadline).toLocaleDateString()}`
         );
+      }
+      // Simplified checks for arrays
+      if (
+        JSON.stringify(project.categories) !==
+        JSON.stringify(updated.categories)
+      ) {
+        changedFields.push("categories");
+      }
+      if (JSON.stringify(project.tags) !== JSON.stringify(updated.tags)) {
+        changedFields.push("tags");
+      }
+      if (project.description !== updated.description) {
+        changedFields.push("description");
       }
 
       if (changedFields.length > 0) {
