@@ -614,23 +614,26 @@ export default function ProjectDetailsPage() {
               )}
 
               {/* Milestones */}
-              <ProjectMilestones projectId={project.id} />
+              <ProjectMilestones projectId={project.uid || project.id} />
 
               {/* Comments */}
-              <ProjectComments projectId={project.id} />
+              <ProjectComments projectId={project.uid || project.id} />
 
               {/* Dependencies */}
               <ProjectDependencies
-                projectId={project.id}
+                projectId={project.uid || project.id}
                 availableProjects={allProjects}
                 readOnly={true}
               />
 
               {/* Files */}
-              <ProjectFiles projectId={project.id} readOnly={true} />
+              <ProjectFiles
+                projectId={project.uid || project.id}
+                readOnly={true}
+              />
 
               {/* Member Acceptance Status (for admins/managers) */}
-              <MemberAcceptanceStatus projectId={project.id} />
+              <MemberAcceptanceStatus projectId={project.uid || project.id} />
             </div>
 
             {/* Right Sidebar */}
@@ -777,7 +780,10 @@ export default function ProjectDetailsPage() {
                   Activity Timeline
                 </h3>
                 <div className="text-xs text-muted-foreground">
-                  <ProjectTimeline projectId={project.id} compact />
+                  <ProjectTimeline
+                    projectId={project.uid || project.id}
+                    compact
+                  />
                 </div>
               </Card>
             </div>
@@ -787,7 +793,7 @@ export default function ProjectDetailsPage() {
           <div className="mt-6" ref={tasksRef}>
             <h3 className="text-sm font-semibold mb-2">Tasks</h3>
             <KanbanBoard
-              projectId={project.id}
+              projectId={project.uid || project.id}
               projectUid={project.uid}
               projectMembers={members}
               onTaskUpdate={() => setRefreshKey((k) => k + 1)}
@@ -797,7 +803,7 @@ export default function ProjectDetailsPage() {
           {/* Risk Management Matrix */}
           <div className="mt-6">
             <RiskMatrix
-              projectId={project.id}
+              projectId={project.uid || project.id}
               projectName={project.name}
               projectMembers={members}
             />

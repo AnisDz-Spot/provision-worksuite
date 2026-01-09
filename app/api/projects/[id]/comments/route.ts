@@ -172,6 +172,29 @@ export async function POST(
       },
     });
 
+    // Record Activity
+    try {
+      const { recordActivity } = await import("@/lib/activity");
+      const projectRecord = await prisma.project.findUnique({
+        where: { id: projectIdInt },
+        select: { uid: true },
+      });
+      if (projectRecord) {
+        await recordActivity(
+          userRecord.id,
+          "project",
+          projectRecord.uid,
+          "commented",
+          {
+            content:
+              content.length > 50 ? content.substring(0, 50) + "..." : content,
+          }
+        );
+      }
+    } catch (activityError) {
+      console.error("Failed to record comment activity:", activityError);
+    }
+
     return NextResponse.json({ success: true, data: comment });
   } catch (error) {
     console.error("Failed to create comment:", error);
