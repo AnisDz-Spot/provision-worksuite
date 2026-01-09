@@ -266,7 +266,6 @@ export async function POST(req: Request) {
         coverUrl: cover || null,
         clientLogo: clientLogo || null,
         sla: sla || null,
-        attachments: safeAttachments,
       },
       include: {
         user: true,
