@@ -109,6 +109,7 @@ export function KanbanBoard({
   const [editMilestone, setEditMilestone] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLabels, setEditLabels] = useState("");
+  const [editType, setEditType] = useState("feature");
   const [deleteTaskConfirm, setDeleteTaskConfirm] = useState<{
     id: string;
     title: string;
@@ -134,14 +135,21 @@ export function KanbanBoard({
     data: allTasks,
     loading: isLoading,
     refresh: refreshTasks,
+    setData: setAllTasks,
   } = useRevalidatedData<Task[]>(loadTasks, {
     persistKey: "tasks",
   });
 
   useEffect(() => {
-    if (projectId) {
-      getMilestonesByProject(projectId).then(setMilestones);
-    }
+    const fetchMilestones = () => {
+      if (projectId) {
+        getMilestonesByProject(projectId).then(setMilestones);
+      }
+    };
+    fetchMilestones();
+    window.addEventListener("pv:milestonesUpdated", fetchMilestones);
+    return () =>
+      window.removeEventListener("pv:milestonesUpdated", fetchMilestones);
   }, [projectId]);
 
   useEffect(() => {
@@ -165,14 +173,18 @@ export function KanbanBoard({
   }, [currentUser]);
 
   const memberList = useMemo(() => {
-    return projectMembers && projectMembers.length > 0
-      ? projectMembers.map((m) => ({
-          id: m.uid || m.id || m.name,
-          name: m.name,
-        }))
-      : shouldUseMockData()
-        ? (users as any)
-        : [];
+    const list =
+      projectMembers && projectMembers.length > 0
+        ? projectMembers.map((m) => ({
+            id: m.uid || m.id || m.name,
+            name: m.name,
+          }))
+        : shouldUseMockData()
+          ? (users as any)
+          : [];
+
+    // Ensure current user is in identifying name for "You" mapping
+    return list;
   }, [projectMembers]);
 
   const columns = useMemo(() => {
@@ -273,14 +285,27 @@ export function KanbanBoard({
 
   const assignees = useMemo(() => {
     const list = new Set<string>(["You"]);
-    projectMembers.forEach((m) => list.add(m.name));
+    const currentUserName = currentUser?.name;
+
+    projectMembers.forEach((m) => {
+      if (currentUserName && m.name === currentUserName) return;
+      list.add(m.name);
+    });
+
     columns.forEach((c) =>
       c.tasks.forEach((t) => {
-        if (t.assignee) list.add(t.assignee);
+        if (
+          t.assignee &&
+          t.assignee !== "Unassigned" &&
+          t.assignee !== "You" &&
+          t.assignee !== currentUserName
+        ) {
+          list.add(t.assignee);
+        }
       })
     );
     return Array.from(list);
-  }, [columns, projectMembers]);
+  }, [columns, projectMembers, currentUser]);
 
   // Handlers
   const onDragStart = (
@@ -334,16 +359,30 @@ export function KanbanBoard({
       };
 
       const doUpdate = async () => {
-        if (!shouldUseMockData()) {
-          await saveTasks([updated as any]);
-        } else {
-          upsertTask(updated);
+        // Optimistic update
+        if (allTasks) {
+          const nextTasks = allTasks.map((t: any) =>
+            (t.uid || t.id) === taskId ? { ...t, status: targetColId } : t
+          );
+          setAllTasks(nextTasks);
         }
-        await refreshTasks();
-        onTaskUpdate?.();
+
+        try {
+          if (!shouldUseMockData()) {
+            await saveTasks([updated as any]);
+          } else {
+            upsertTask(updated);
+          }
+          // No need for a full refresh if we updated state correctly
+          onTaskUpdate?.();
+        } catch (err) {
+          show("error", "Failed to move task");
+          // Revert on error
+          if (allTasks) setAllTasks(allTasks);
+        }
       };
 
-      doUpdate().catch(() => show("error", "Failed to move task"));
+      doUpdate();
     } catch (err) {
       console.error("Drop error:", err);
     } finally {
@@ -378,6 +417,7 @@ export function KanbanBoard({
     setEditMilestone(task.milestoneId || "");
     setEditDescription(task.description || "");
     setEditLabels(Array.isArray(task.labels) ? task.labels.join(", ") : "");
+    setEditType(task.type || "feature");
   };
 
   const saveTaskEdit = async () => {
@@ -399,6 +439,7 @@ export function KanbanBoard({
         .split(",")
         .map((l) => l.trim())
         .filter(Boolean),
+      type: editType,
     };
 
     try {
@@ -477,6 +518,7 @@ export function KanbanBoard({
       milestoneId: milestoneId || undefined,
       estimateHours: newTaskEstimate ? parseFloat(newTaskEstimate) : undefined,
       loggedHours: 0,
+      type: newTaskType,
       description: newTaskDescription,
       labels: newTaskLabels
         .split(",")
@@ -766,6 +808,8 @@ export function KanbanBoard({
         setEditEstimate={setEditEstimate}
         editMilestone={editMilestone}
         setEditMilestone={setEditMilestone}
+        editType={editType}
+        setEditType={setEditType}
         milestones={milestones}
         timeLogInput={timeLogInput}
         setTimeLogInput={setTimeLogInput}

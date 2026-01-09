@@ -15,6 +15,7 @@ export type TaskItem = {
   loggedHours?: number;
   description?: string;
   labels?: string[];
+  type?: string;
 };
 
 function _readTasks(): TaskItem[] {

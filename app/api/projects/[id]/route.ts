@@ -159,6 +159,33 @@ export async function GET(
       project.slug = uniqueSlug;
     }
 
+    // Ensure the project creator (owner) is in the members list
+    const creatorId = project.userId;
+    const isCreatorInMembers = project.members.some(
+      (m: any) => m.userId === creatorId
+    );
+
+    if (creatorId && !isCreatorInMembers) {
+      const creatorUser = await prisma.user.findUnique({
+        where: { id: creatorId },
+        select: {
+          uid: true,
+          name: true,
+          avatarUrl: true,
+          email: true,
+        },
+      });
+
+      if (creatorUser) {
+        // Add a virtual member entry for the creator
+        (project as any).members.push({
+          userId: creatorId,
+          role: "owner",
+          user: creatorUser,
+        });
+      }
+    }
+
     return NextResponse.json({ success: true, project });
   } catch (error) {
     console.error("Error fetching project:", error);
@@ -332,16 +359,42 @@ export async function PUT(
     // Record Activity
     if (dbUser) {
       const activityData: any = { name: updated.name };
+      let action = "updated";
+      const changedFields: string[] = [];
+
       if (project.status !== updated.status) {
+        action = "status_changed";
         activityData.status = updated.status;
         activityData.oldStatus = project.status;
+        changedFields.push(`status to ${updated.status}`);
+      }
+      if (project.priority !== updated.priority) {
+        activityData.priority = updated.priority;
+        activityData.oldPriority = project.priority;
+        changedFields.push(`priority to ${updated.priority}`);
+      }
+      if (project.name !== updated.name) {
+        changedFields.push(`name to ${updated.name}`);
+      }
+      if (
+        body.deadline &&
+        new Date(project.deadline || 0).getTime() !==
+          new Date(body.deadline).getTime()
+      ) {
+        changedFields.push(
+          `deadline to ${new Date(body.deadline).toLocaleDateString()}`
+        );
+      }
+
+      if (action === "updated" && changedFields.length > 0) {
+        activityData.summary = `Updated ${changedFields.join(", ")}`;
       }
 
       await recordActivity(
         dbUser.id,
         "project",
         project.uid,
-        project.status !== updated.status ? "status_changed" : "updated",
+        action as any,
         activityData
       );
     }

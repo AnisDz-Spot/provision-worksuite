@@ -320,7 +320,7 @@ export async function POST(req: Request) {
       try {
         await prisma.file.createMany({
           data: files.map((f: any) => ({
-            projectId: project.id,
+            projectUid: project.uid, // Fixed: Use projectUid string reference
             filename: f.name,
             fileUrl: f.url,
             fileSize: f.size,

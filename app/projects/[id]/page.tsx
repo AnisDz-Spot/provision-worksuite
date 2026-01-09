@@ -796,7 +796,11 @@ export default function ProjectDetailsPage() {
 
           {/* Risk Management Matrix */}
           <div className="mt-6">
-            <RiskMatrix projectId={project.id} projectName={project.name} />
+            <RiskMatrix
+              projectId={project.id}
+              projectName={project.name}
+              projectMembers={members}
+            />
           </div>
 
           {/* Recent Time Logs */}

@@ -38,9 +38,19 @@ export type Risk = {
 interface RiskMatrixProps {
   projectId: string;
   projectName: string;
+  projectMembers?: {
+    uid?: string;
+    id?: string;
+    name: string;
+    avatarUrl?: string;
+  }[];
 }
 
-export function RiskMatrix({ projectId, projectName }: RiskMatrixProps) {
+export function RiskMatrix({
+  projectId,
+  projectName,
+  projectMembers = [],
+}: RiskMatrixProps) {
   const [risks, setRisks] = useState<Risk[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -449,13 +459,20 @@ export function RiskMatrix({ projectId, projectName }: RiskMatrixProps) {
               <label className="block text-sm font-medium mb-2">
                 Risk Owner
               </label>
-              <Input
+              <select
                 value={formData.owner}
                 onChange={(e) =>
                   setFormData({ ...formData, owner: e.target.value })
                 }
-                placeholder="Who is responsible?"
-              />
+                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+              >
+                <option value="">Select Owner...</option>
+                {projectMembers.map((m) => (
+                  <option key={m.uid || m.id || m.name} value={m.name}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

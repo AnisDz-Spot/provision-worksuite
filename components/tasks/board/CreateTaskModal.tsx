@@ -164,8 +164,21 @@ export function CreateTaskModal({
           <div className="space-y-3">
             <label className="text-sm font-medium">Task Type</label>
             <select
-              value={newTaskType}
-              onChange={(e) => setNewTaskType(e.target.value)}
+              value={
+                [
+                  "feature",
+                  "bug",
+                  "improvement",
+                  "documentation",
+                  "research",
+                ].includes(newTaskType)
+                  ? newTaskType
+                  : "other"
+              }
+              onChange={(e) => {
+                if (e.target.value === "other") setNewTaskType("");
+                else setNewTaskType(e.target.value);
+              }}
               className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm cursor-pointer"
             >
               <option value="feature">Feature</option>
@@ -173,7 +186,22 @@ export function CreateTaskModal({
               <option value="improvement">Improvement</option>
               <option value="documentation">Documentation</option>
               <option value="research">Research</option>
+              <option value="other">Other...</option>
             </select>
+            {![
+              "feature",
+              "bug",
+              "improvement",
+              "documentation",
+              "research",
+            ].includes(newTaskType) && (
+              <Input
+                className="mt-2"
+                value={newTaskType}
+                onChange={(e) => setNewTaskType(e.target.value)}
+                placeholder="Enter custom task type..."
+              />
+            )}
           </div>
           <div className="space-y-3">
             <label className="text-sm font-medium">Due Date</label>

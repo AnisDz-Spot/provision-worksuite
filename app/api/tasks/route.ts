@@ -135,6 +135,7 @@ export async function POST(req: Request) {
       parentTaskId,
       watchers,
       milestoneId,
+      type,
     } = body;
 
     if (!projectId || !title) {
@@ -222,6 +223,7 @@ export async function POST(req: Request) {
         parentTaskId: parentTaskId || null,
         watchers: watchers || [],
         milestoneId: milestoneId || null,
+        type: type || "feature",
       },
       include: {
         project: true,

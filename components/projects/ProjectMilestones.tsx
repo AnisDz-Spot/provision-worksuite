@@ -21,10 +21,12 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
   const [title, setTitle] = React.useState("");
   const [start, setStart] = React.useState("");
   const [target, setTarget] = React.useState("");
+  const [description, setDescription] = React.useState("");
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitle, setEditTitle] = React.useState("");
   const [editStart, setEditStart] = React.useState("");
   const [editTarget, setEditTarget] = React.useState("");
+  const [editDescription, setEditDescription] = React.useState("");
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
     id: string;
     title: string;
@@ -50,11 +52,14 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
         id: `m_${Date.now()}`,
         projectId,
         title: title.trim(),
+        description: description.trim() || undefined,
         start: start || undefined,
         target: target || undefined,
       };
       await upsertMilestone(m);
+      window.dispatchEvent(new Event("pv:milestonesUpdated"));
       setTitle("");
+      setDescription("");
       setStart("");
       setTarget("");
       setAdding(false);
@@ -72,6 +77,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
   const startEdit = (m: Milestone) => {
     setEditingId(m.id);
     setEditTitle(m.title);
+    setEditDescription(m.description || "");
     setEditStart(m.start || "");
     setEditTarget(m.target || "");
   };
@@ -85,11 +91,14 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
         id: editingId,
         projectId,
         title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
         start: editStart || undefined,
         target: editTarget || undefined,
       };
       await upsertMilestone(m);
+      window.dispatchEvent(new Event("pv:milestonesUpdated"));
       setEditingId(null);
+      setEditDescription("");
       await refresh();
       show("success", "Milestone updated successfully");
     } catch (error) {
@@ -113,6 +122,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     showLoader("Deleting milestone...");
     try {
       await deleteMilestone(deleteConfirm.id);
+      window.dispatchEvent(new Event("pv:milestonesUpdated"));
       setDeleteConfirm(null);
       await refresh();
       show("success", "Milestone deleted");
@@ -143,6 +153,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
               onClick={() => {
                 setAdding(false);
                 setTitle("");
+                setDescription("");
                 setStart("");
                 setTarget("");
               }}
@@ -185,6 +196,14 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
               type="date"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-3 space-y-1">
+            <label className="text-xs font-medium">Description</label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Detailed description of this milestone..."
             />
           </div>
         </div>
@@ -237,6 +256,12 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                             onChange={(e) => setEditTarget(e.target.value)}
                           />
                         </div>
+                        <Input
+                          className="text-xs mt-2"
+                          value={editDescription}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          placeholder="Description..."
+                        />
                       </>
                     ) : (
                       <>
@@ -251,6 +276,11 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                             Target: {m.target || "—"}
                           </span>
                         </div>
+                        {m.description && (
+                          <div className="text-xs text-muted-foreground mt-2 line-clamp-2 italic">
+                            {m.description}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

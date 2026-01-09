@@ -39,6 +39,8 @@ type TaskDetailsModalProps = {
   setEditEstimate: (val: string) => void;
   editMilestone: string;
   setEditMilestone: (val: string) => void;
+  editType: string;
+  setEditType: (val: string) => void;
 
   milestones: any[];
   timeLogInput: string;
@@ -81,6 +83,8 @@ export function TaskDetailsModal({
   setEditEstimate,
   editMilestone,
   setEditMilestone,
+  editType,
+  setEditType,
   milestones,
   timeLogInput,
   setTimeLogInput,
@@ -248,6 +252,58 @@ export function TaskDetailsModal({
                   <span className="font-medium capitalize">
                     {task.priority}
                   </span>
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">
+                Task Type
+              </div>
+              {editMode ? (
+                <div className="space-y-2">
+                  <select
+                    value={
+                      [
+                        "feature",
+                        "bug",
+                        "improvement",
+                        "documentation",
+                        "research",
+                      ].includes(editType)
+                        ? editType
+                        : "other"
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === "other") setEditType("");
+                      else setEditType(e.target.value);
+                    }}
+                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+                  >
+                    <option value="feature">Feature</option>
+                    <option value="bug">Bug</option>
+                    <option value="improvement">Improvement</option>
+                    <option value="documentation">Documentation</option>
+                    <option value="research">Research</option>
+                    <option value="other">Other...</option>
+                  </select>
+                  {![
+                    "feature",
+                    "bug",
+                    "improvement",
+                    "documentation",
+                    "research",
+                  ].includes(editType) && (
+                    <Input
+                      value={editType}
+                      onChange={(e) => setEditType(e.target.value)}
+                      placeholder="Custom type..."
+                      className="text-xs"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="font-medium capitalize">
+                  {task.type || "feature"}
                 </div>
               )}
             </div>
