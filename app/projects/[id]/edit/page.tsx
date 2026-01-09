@@ -78,7 +78,10 @@ export default function ProjectEditPage() {
       });
       if (res.ok) {
         showToast("Project deleted successfully", "success");
-        // Clear cache if possible or just redirect
+        // Clear cache to ensure list is updated immediately despite staleTime
+        const { invalidateCache } = await import("@/lib/cache");
+        invalidateCache("projects");
+
         router.push("/projects");
         router.refresh();
       } else {
@@ -222,6 +225,11 @@ export default function ProjectEditPage() {
 
       logProjectEvent(project.id, "edit", { name: project.name });
       showToast("Project saved successfully", "success");
+
+      // Force cache invalidation
+      const { invalidateCache } = await import("@/lib/cache");
+      invalidateCache("projects");
+
       router.push(`/projects/${nextId}`);
     } catch (error) {
       log.error({ err: error }, "Failed to save project");

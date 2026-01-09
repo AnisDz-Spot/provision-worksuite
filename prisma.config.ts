@@ -1,14 +1,14 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 // Detect database URL from environment (supports multiple DB types)
 const getDatabaseUrl = () => {
   return (
-    env("POSTGRES_URL") ||
-    env("DATABASE_URL") ||
-    env("MYSQL_URL") ||
-    env("SQLITE_URL") ||
-    env("SQLSERVER_URL") ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.MYSQL_URL ||
+    process.env.SQLITE_URL ||
+    process.env.SQLSERVER_URL ||
     ""
   );
 };

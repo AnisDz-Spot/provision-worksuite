@@ -314,6 +314,11 @@ export default function NewProjectPage() {
 
       const { project } = await res.json();
       showToast(`Project "${project.name}" created successfully`, "success");
+
+      // Force cache invalidation so the list updates immediately
+      const { invalidateCache } = await import("@/lib/cache");
+      invalidateCache("projects");
+
       router.push(`/projects/${project.slug || project.uid || project.id}`);
     } catch (error) {
       console.error(error);

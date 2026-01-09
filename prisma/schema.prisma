@@ -2,8 +2,7 @@
 // Updated: 2024-12-10
 
 generator client {
-  provider   = "prisma-client-js"
-  engineType = "library"
+  provider = "prisma-client-js"
 }
 
 datasource db {
