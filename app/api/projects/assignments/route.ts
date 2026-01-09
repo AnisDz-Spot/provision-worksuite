@@ -10,20 +10,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Role check
-    if (!isAdmin(user) && !isProjectManager(user)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Role check - removed strict block to allow members to see their own assignments
+    const canSeeAll = isAdmin(user) || isProjectManager(user);
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
+    // Fetch user for Int ID if we need to filter
+    let dbUser = null;
+    if (!canSeeAll) {
+      dbUser = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { id: true },
+      });
+      if (!dbUser) {
+        return NextResponse.json({ success: true, data: [] });
+      }
+    }
+
+    const whereClause = canSeeAll ? {} : { userId: dbUser?.id };
+
     // Fetch assignments (ProjectMembers)
     const [total, members] = await Promise.all([
-      prisma.projectMember.count(),
+      prisma.projectMember.count({ where: whereClause }),
       prisma.projectMember.findMany({
+        where: whereClause,
         skip,
         take: limit,
         include: {

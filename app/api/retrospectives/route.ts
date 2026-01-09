@@ -46,6 +46,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Role check: Only Master Admin, Admin, and Project Manager can save retrospectives
+    const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
+    if (!isAdmin(user) && !isProjectManager(user)) {
+      return NextResponse.json(
+        {
+          error: "Forbidden: You do not have permission to save retrospectives",
+        },
+        { status: 403 }
+      );
+    }
+
     if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {
       return NextResponse.json({ success: true, id: "mock-id" });
     }
@@ -99,6 +110,18 @@ export async function DELETE(req: Request) {
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Role check: Only Master Admin, Admin, and Project Manager can delete retrospectives
+    const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
+    if (!isAdmin(user) && !isProjectManager(user)) {
+      return NextResponse.json(
+        {
+          error:
+            "Forbidden: You do not have permission to delete retrospectives",
+        },
+        { status: 403 }
+      );
     }
 
     if (!shouldUseDatabaseData() || shouldReturnMockData(user)) {

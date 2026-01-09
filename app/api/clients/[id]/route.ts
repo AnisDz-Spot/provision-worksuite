@@ -41,6 +41,18 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json();
 
+  // Role check: Only Master Admin, Admin, and Project Manager can update clients
+  const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
+  if (!isAdmin(user) && !isProjectManager(user)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Forbidden: You do not have permission to update clients",
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     // Explicitly update all allowed fields
     const updateData: any = {
@@ -94,6 +106,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  // Role check: Only Master Admin, Admin, and Project Manager can delete clients
+  const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
+  if (!isAdmin(user) && !isProjectManager(user)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Forbidden: You do not have permission to delete clients",
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     // Soft delete or hard delete?

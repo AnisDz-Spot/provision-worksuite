@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { getProjectDependencies } from "@/lib/utils";
 
 function ProjectsContent() {
-  const { projects, isLoading, refreshProjects } = useProjects();
+  const { projects, isLoading, refreshing, refreshProjects } = useProjects();
   const [view, setView] = useState<"grid" | "list" | "gantt">("grid");
   const [addOpen, setAddOpen] = useState(false);
 
@@ -58,8 +58,16 @@ function ProjectsContent() {
             variant="outline"
             onClick={() => refreshProjects()}
             title="Refresh Data"
+            disabled={refreshing}
           >
-            Refresh
+            {refreshing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                Refreshing...
+              </>
+            ) : (
+              "Refresh"
+            )}
           </Button>
 
           <Button

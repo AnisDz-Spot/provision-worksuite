@@ -58,6 +58,7 @@ export async function GET() {
           OR: [
             { userId: dbUser.id },
             { members: { some: { userId: dbUser.id } } },
+            { visibility: { in: ["public", "team-only"] } },
           ],
           archivedAt: null,
         };

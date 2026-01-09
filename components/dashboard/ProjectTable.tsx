@@ -210,22 +210,22 @@ const columns: ColumnDef<Project>[] = [
 
       let total = 0,
         done = 0,
-        percent = 0;
+        percentBase = 0;
 
       if (p.tasks && p.tasks.length > 0) {
         total = p.tasks.length;
         done = p.tasks.filter(
-          (t) => t.status === "done" || t.status === "completed"
+          (t: any) => t.status === "done" || t.status === "completed"
         ).length;
-        percent = total > 0 ? Math.round((done / total) * 100) : 0;
+        percentBase = total > 0 ? Math.round((done / total) * 100) : 0;
       } else if (!shouldUseDatabaseData()) {
         const t = getTaskCompletionForProject(p.id);
         total = t.total;
         done = t.done;
-        percent = t.percent;
+        percentBase = t.percent;
       }
 
-      const fallback =
+      const fallbackPercentage =
         p.status === "Completed"
           ? 100
           : p.status === "Active"
@@ -236,12 +236,12 @@ const columns: ColumnDef<Project>[] = [
 
       const displayPercent =
         total > 0
-          ? percent
+          ? percentBase
           : shouldUseDatabaseData()
             ? p.status === "Completed"
               ? 100
               : 0
-            : fallback;
+            : fallbackPercentage;
 
       return (
         <div className="min-w-40">
@@ -754,8 +754,26 @@ export function ProjectTable() {
                     {/* Progress */}
                     <td className="p-4">
                       {(() => {
-                        const t = getTaskCompletionForProject(p.id);
-                        const fallback =
+                        let total = 0,
+                          done = 0,
+                          percentBase = 0;
+
+                        if (p.tasks && p.tasks.length > 0) {
+                          total = p.tasks.length;
+                          done = p.tasks.filter(
+                            (t: any) =>
+                              t.status === "done" || t.status === "completed"
+                          ).length;
+                          percentBase =
+                            total > 0 ? Math.round((done / total) * 100) : 0;
+                        } else if (!shouldUseDatabaseData()) {
+                          const t = getTaskCompletionForProject(p.id);
+                          total = t.total;
+                          done = t.done;
+                          percentBase = t.percent;
+                        }
+
+                        const fallbackPercentage =
                           p.status === "Completed"
                             ? 100
                             : p.status === "Active"
@@ -763,21 +781,29 @@ export function ProjectTable() {
                               : p.status === "In Progress"
                                 ? 40
                                 : 20;
-                        const percent = t.total > 0 ? t.percent : fallback;
+
+                        const displayPercent =
+                          total > 0
+                            ? percentBase
+                            : shouldUseDatabaseData()
+                              ? p.status === "Completed"
+                                ? 100
+                                : 0
+                              : fallbackPercentage;
                         return (
                           <div className="min-w-40">
                             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>
-                                {t.total > 0 ? `${t.done}/${t.total}` : "—"}
+                                {total > 0 ? `${done}/${total}` : "—"}
                               </span>
                               <span className="font-medium text-foreground">
-                                {percent}%
+                                {displayPercent}%
                               </span>
                             </div>
                             <div className="h-2 bg-accent rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-linear-to-r from-primary to-primary/60"
-                                style={{ width: `${percent}%` }}
+                                style={{ width: `${displayPercent}%` }}
                               />
                             </div>
                           </div>

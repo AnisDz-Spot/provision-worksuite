@@ -23,6 +23,8 @@ type User = {
   isMasterAdmin?: boolean;
   avatarUrl?: string;
   password?: string;
+  statusEmoji?: string;
+  statusMessage?: string;
 };
 
 type AuthContextType = {

@@ -15,6 +15,7 @@ import {
   Music2,
 } from "lucide-react";
 import { MemberForm } from "./MemberForm";
+import { StatusPicker } from "./StatusPicker";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { getCountries, getStates, getCities } from "@/app/actions/geo";
 import { Card } from "@/components/ui/Card";
@@ -95,6 +96,7 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const {
     data: allUsers,
@@ -557,10 +559,32 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <div className="flex gap-2">
                     {m.socials?.linkedin && (
-                      <Linkedin className="w-4 h-4 text-blue-600 hover:scale-110 transition-transform" />
+                      <a
+                        href={
+                          m.socials.linkedin.startsWith("http")
+                            ? m.socials.linkedin
+                            : `https://linkedin.com/in/${m.socials.linkedin}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-75 transition-opacity"
+                      >
+                        <Linkedin className="w-4 h-4 text-blue-600 hover:scale-110 transition-transform" />
+                      </a>
                     )}
                     {m.socials?.github && (
-                      <Github className="w-4 h-4 text-foreground hover:scale-110 transition-transform" />
+                      <a
+                        href={
+                          m.socials.github.startsWith("http")
+                            ? m.socials.github
+                            : `https://github.com/${m.socials.github}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-75 transition-opacity"
+                      >
+                        <Github className="w-4 h-4 text-foreground hover:scale-110 transition-transform" />
+                      </a>
                     )}
                   </div>
                   <div className="flex gap-1">
@@ -573,6 +597,18 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
                         className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
                       >
                         <UserCircle2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    {currentUser?.id === m.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStatusOpen(true);
+                        }}
+                        className="p-1.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-primary"
+                        title="Set your status"
+                      >
+                        <span className="text-sm">{m.statusEmoji || "👋"}</span>
                       </button>
                     )}
                   </div>
@@ -712,6 +748,46 @@ export function TeamCards({ onAddClick, onChatClick }: TeamCardsProps) {
           </div>
         </div>
       </Modal>
+
+      {statusOpen && (
+        <StatusPicker
+          currentEmoji={currentUser?.statusEmoji}
+          currentStatus={currentUser?.statusMessage}
+          onSave={async (emoji, message) => {
+            if (!currentUser) return;
+            try {
+              const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  statusEmoji: emoji,
+                  statusMessage: message,
+                }),
+              });
+              if (res.ok) refreshUsers();
+            } catch (e) {
+              console.error("Failed to save status", e);
+            }
+          }}
+          onClear={async () => {
+            if (!currentUser) return;
+            try {
+              const res = await fetchWithCsrf(`/api/users/${currentUser.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  statusEmoji: "",
+                  statusMessage: "",
+                }),
+              });
+              if (res.ok) refreshUsers();
+            } catch (e) {
+              console.error("Failed to clear status", e);
+            }
+          }}
+          onClose={() => setStatusOpen(false)}
+        />
+      )}
     </div>
   );
 }

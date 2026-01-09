@@ -77,10 +77,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const user = await getAuthenticatedUser();
-  if (!user) {
+  // Role check: Only Master Admin, Admin, and Project Manager can add clients
+  const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
+  if (!isAdmin(user) && !isProjectManager(user)) {
     return NextResponse.json(
-      { success: false, error: "Unauthorized" },
-      { status: 401 }
+      {
+        success: false,
+        error: "Forbidden: You do not have permission to add clients",
+      },
+      { status: 403 }
     );
   }
 

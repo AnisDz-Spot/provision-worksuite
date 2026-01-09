@@ -56,7 +56,7 @@ export function AssignmentTable() {
       // Safe cast or mapping if needed, simplified for now
       const authUser = currentUser as unknown as AuthUser;
       if (!isAdmin(authUser) && !isProjectManager(authUser)) {
-        router.push("/dashboard");
+        router.push("/");
       }
     }
   }, [currentUser, router]);

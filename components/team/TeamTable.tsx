@@ -109,6 +109,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [editOpen, setEditOpen] = useState(false);
   const [editMemberId, setEditMemberId] = useState<string | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const {
     data: allUsers,
@@ -643,13 +644,46 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {m.socials?.linkedin && (
-                        <Linkedin className="w-4 h-4 text-blue-600" />
+                        <a
+                          href={
+                            m.socials.linkedin.startsWith("http")
+                              ? m.socials.linkedin
+                              : `https://linkedin.com/in/${m.socials.linkedin}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:opacity-75 transition-opacity"
+                        >
+                          <Linkedin className="w-4 h-4 text-blue-600" />
+                        </a>
                       )}
                       {m.socials?.github && (
-                        <Github className="w-4 h-4 text-foreground" />
+                        <a
+                          href={
+                            m.socials.github.startsWith("http")
+                              ? m.socials.github
+                              : `https://github.com/${m.socials.github}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:opacity-75 transition-opacity"
+                        >
+                          <Github className="w-4 h-4 text-foreground" />
+                        </a>
                       )}
                       {m.socials?.twitter && (
-                        <Twitter className="w-4 h-4 text-sky-500" />
+                        <a
+                          href={
+                            m.socials.twitter.startsWith("http")
+                              ? m.socials.twitter
+                              : `https://twitter.com/${m.socials.twitter}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:opacity-75 transition-opacity"
+                        >
+                          <Twitter className="w-4 h-4 text-sky-500" />
+                        </a>
                       )}
                     </div>
                   </td>
@@ -665,6 +699,20 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
                           title="Edit member"
                         >
                           <UserCircle2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {currentUser?.id === m.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStatusOpen(true);
+                          }}
+                          className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                          title="Set your status"
+                        >
+                          <span className="text-lg">
+                            {m.statusEmoji || "👋"}
+                          </span>
                         </button>
                       )}
                       <button
@@ -856,6 +904,16 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
           </div>
         </div>
       </Modal>
+
+      {statusOpen && (
+        <StatusPicker
+          currentEmoji={currentUser?.statusEmoji}
+          currentStatus={currentUser?.statusMessage}
+          onSave={handleStatusSave}
+          onClear={handleStatusClear}
+          onClose={() => setStatusOpen(false)}
+        />
+      )}
     </div>
   );
 }

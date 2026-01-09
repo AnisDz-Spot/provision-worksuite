@@ -207,6 +207,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // Role check for recurring tasks
+    const { isProjectManager } = await import("@/lib/auth-utils");
+    if (body.isRecurring && !isAdmin && !isProjectManager(currentUser)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Forbidden: Only Admin and Project Manager can create recurring tasks",
+        },
+        { status: 403 }
+      );
+    }
+
     const task = await prisma.task.create({
       data: {
         projectId: project.uid,
