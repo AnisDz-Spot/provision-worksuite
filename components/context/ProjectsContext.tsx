@@ -30,6 +30,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const options = React.useMemo(
     () => ({
       persistKey: "projects",
+      staleTime: 5 * 60 * 1000, // 5 minutes
       onError: (err: any) => console.error("Failed to load projects:", err),
     }),
     []
