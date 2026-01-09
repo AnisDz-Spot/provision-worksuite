@@ -145,6 +145,8 @@ export function ProjectTimeline({
                   const data = ev.data || {};
                   const name = data.title || data.name || data.taskTitle || "";
 
+                  if (data.summary) return <span>{data.summary}</span>;
+
                   if (entity === "task") {
                     const taskName = name ? `"${name}"` : "a task";
                     if (action === "created" || action === "task_created")
@@ -199,7 +201,6 @@ export function ProjectTimeline({
                   }
 
                   if (entity === "project") {
-                    if (data.summary) return <span>{data.summary}</span>;
                     if (action === "created")
                       return <span>initialized the project</span>;
                     if (action === "status_changed")

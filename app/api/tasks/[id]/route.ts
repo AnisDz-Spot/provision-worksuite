@@ -111,11 +111,41 @@ export async function PATCH(
     });
 
     if (dbUser) {
-      await recordActivity(dbUser.id, "task", updatedTask.uid, "updated", {
+      const changedFields: string[] = [];
+      const activityData: any = {
         title: updatedTask.title,
         status: updatedTask.status,
         projectId: updatedTask.projectId,
-      });
+      };
+
+      if (task.status !== updatedTask.status) {
+        changedFields.push(
+          `status from ${task.status} to ${updatedTask.status}`
+        );
+      }
+      if (task.priority !== updatedTask.priority) {
+        changedFields.push(
+          `priority from ${task.priority} to ${updatedTask.priority}`
+        );
+      }
+      if (task.assigneeId !== updatedTask.assigneeId) {
+        changedFields.push("assignee");
+      }
+      if (task.title !== updatedTask.title) {
+        changedFields.push("title");
+      }
+
+      if (changedFields.length > 0) {
+        activityData.summary = `Updated task ${updatedTask.title}: ${changedFields.join(", ")}`;
+      }
+
+      await recordActivity(
+        dbUser.id,
+        "task",
+        updatedTask.uid,
+        "updated",
+        activityData
+      );
     }
 
     return NextResponse.json({ success: true, task: updatedTask });

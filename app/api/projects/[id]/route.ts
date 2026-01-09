@@ -366,12 +366,16 @@ export async function PUT(
         action = "status_changed";
         activityData.status = updated.status;
         activityData.oldStatus = project.status;
-        changedFields.push(`status to ${updated.status}`);
+        changedFields.push(
+          `status from ${project.status} to ${updated.status}`
+        );
       }
       if (project.priority !== updated.priority) {
         activityData.priority = updated.priority;
         activityData.oldPriority = project.priority;
-        changedFields.push(`priority to ${updated.priority}`);
+        changedFields.push(
+          `priority from ${project.priority} to ${updated.priority}`
+        );
       }
       if (project.name !== updated.name) {
         changedFields.push(`name to ${updated.name}`);

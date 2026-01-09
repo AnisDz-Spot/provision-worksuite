@@ -223,7 +223,6 @@ export default function ProjectEditPage() {
       const savedProject = await res.json();
       const nextId = savedProject.project?.slug || projectId;
 
-      logProjectEvent(project.id, "edit", { name: project.name });
       showToast("Project saved successfully", "success");
 
       // Force cache invalidation
