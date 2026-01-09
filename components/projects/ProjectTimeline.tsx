@@ -199,6 +199,7 @@ export function ProjectTimeline({
                   }
 
                   if (entity === "project") {
+                    if (data.summary) return <span>{data.summary}</span>;
                     if (action === "created")
                       return <span>initialized the project</span>;
                     if (action === "status_changed")

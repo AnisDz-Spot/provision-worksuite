@@ -386,7 +386,7 @@ export async function PUT(
         );
       }
 
-      if (action === "updated" && changedFields.length > 0) {
+      if (changedFields.length > 0) {
         activityData.summary = `Updated ${changedFields.join(", ")}`;
       }
 
