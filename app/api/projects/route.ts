@@ -239,6 +239,13 @@ export async function POST(req: Request) {
     // Use current user's ID for the project
     const projectUserId = dbUser.id;
 
+    // Verify arrays are actually arrays to prevent adapter serialization errors
+    const safeTags = Array.isArray(tags) ? tags : [];
+    const safeCategories = Array.isArray(body.categories)
+      ? body.categories
+      : [];
+    const safeAttachments = Array.isArray(attachments) ? attachments : [];
+
     const project = await prisma.project.create({
       data: {
         name,
@@ -252,14 +259,14 @@ export async function POST(req: Request) {
         priority: priority || null,
         clientName: clientName || null,
         clientId: clientId || null,
-        tags: body.tags || [],
-        categories: body.categories || [],
+        tags: safeTags,
+        categories: safeCategories,
         visibility: body.visibility || "private",
         color: color || null,
         coverUrl: cover || null,
         clientLogo: clientLogo || null,
         sla: sla || null,
-        attachments: attachments || [],
+        attachments: safeAttachments,
       },
       include: {
         user: true,
@@ -268,14 +275,22 @@ export async function POST(req: Request) {
     });
 
     // Also add the creator as an owner in project members
-    await prisma.projectMember.create({
-      data: {
-        projectId: project.id,
-        userId: projectUserId,
-        role: "owner",
-        invitationAcceptedAt: new Date(),
-      },
-    });
+    try {
+      await prisma.projectMember.create({
+        data: {
+          projectId: project.id,
+          userId: projectUserId,
+          role: "owner",
+          invitationAcceptedAt: new Date(),
+        },
+      });
+    } catch (memberError) {
+      log.error(
+        { err: memberError, projectId: project.id },
+        "Failed to add owner member to project"
+      );
+      // Continue, as project is created
+    }
 
     // Add other members
     if (Array.isArray(members) && members.length > 0) {
@@ -303,16 +318,23 @@ export async function POST(req: Request) {
 
     // Add Files
     if (Array.isArray(files) && files.length > 0) {
-      await prisma.file.createMany({
-        data: files.map((f: any) => ({
-          projectId: project.id,
-          filename: f.name,
-          fileUrl: f.url,
-          fileSize: f.size,
-          mimeType: f.type,
-          uploadedBy: projectUserId,
-        })),
-      });
+      try {
+        await prisma.file.createMany({
+          data: files.map((f: any) => ({
+            projectId: project.id,
+            filename: f.name,
+            fileUrl: f.url,
+            fileSize: f.size,
+            mimeType: f.type,
+            uploadedBy: projectUserId,
+          })),
+        });
+      } catch (filesError) {
+        log.error(
+          { err: filesError, projectId: project.id },
+          "Failed to attach initial files to project"
+        );
+      }
     }
 
     log.info(
@@ -326,18 +348,34 @@ export async function POST(req: Request) {
     );
 
     // Record Activity
-    await recordActivity(projectUserId, "project", project.uid, "created", {
-      name: project.name,
-    });
+    try {
+      await recordActivity(projectUserId, "project", project.uid, "created", {
+        name: project.name,
+      });
+    } catch (activityError) {
+      // Ignore activity recording errors
+    }
 
     // Clear projects cache
     (revalidateTag as any)("projects");
 
     return NextResponse.json({ success: true, project });
-  } catch (error) {
-    log.error({ err: error }, "Create project error");
+  } catch (error: any) {
+    log.error({ err: error, stack: error.stack }, "Create project error");
+
+    // Check for specific Prisma errors
+    const errorMessage = error.message || "Failed to create project.";
+    const isSerializationError =
+      errorMessage.includes("serialization") ||
+      errorMessage.includes("adapter");
+
     return NextResponse.json(
-      { success: false, error: "Failed to create project." },
+      {
+        success: false,
+        error: isSerializationError
+          ? "Database Adapter Error: " + errorMessage
+          : errorMessage,
+      },
       { status: 500 }
     );
   }

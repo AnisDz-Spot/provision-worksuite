@@ -129,6 +129,7 @@ export async function POST(req: Request) {
         notes: body.notes,
         type: type,
         status: "active",
+        logo: body.logo,
       },
     });
 
