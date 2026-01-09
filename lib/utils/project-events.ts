@@ -66,11 +66,15 @@ export async function logProjectEvent(
 }
 
 export async function getProjectEventsDB(
-  projectId: string
+  projectId: string,
+  limit: number = 10,
+  skip: number = 0
 ): Promise<ProjectEvent[]> {
   if (!shouldUseMockData()) {
     try {
-      const res = await fetch(`/api/activities?projectId=${projectId}`);
+      const res = await fetch(
+        `/api/activities?projectId=${projectId}&limit=${limit}&skip=${skip}`
+      );
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         return result.data.map((a: any) => ({

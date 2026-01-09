@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
     const entityId = searchParams.get("entityId");
     const entityType = searchParams.get("entityType");
     const projectId = searchParams.get("projectId");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = parseInt(searchParams.get("skip") || "0");
 
     const currentUser = await getAuthenticatedUser();
     if (!currentUser) {
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
       where,
       orderBy: { createdAt: "desc" },
       take: limit,
+      skip: skip,
       include: {
         user: {
           select: {

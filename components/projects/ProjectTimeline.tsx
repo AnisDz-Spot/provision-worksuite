@@ -50,27 +50,51 @@ export function ProjectTimeline({
 }) {
   const [events, setEvents] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  const [visibleCount, setVisibleCount] = React.useState(10);
+  const [hasMore, setHasMore] = React.useState(true);
 
-  const fetchEvents = React.useCallback(async () => {
-    const data = await getProjectEventsDB(projectId);
-    setEvents(data);
-    setLoading(false);
-  }, [projectId]);
+  const fetchEvents = React.useCallback(
+    async (count: number) => {
+      const data = await getProjectEventsDB(projectId, count, 0);
+      setEvents(data);
+      if (data.length < count) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+    },
+    [projectId]
+  );
+
+  // Initial load
+  React.useEffect(() => {
+    fetchEvents(visibleCount).then(() => setLoading(false));
+  }, [fetchEvents, visibleCount]);
 
   React.useEffect(() => {
-    fetchEvents();
     const interval = setInterval(() => {
-      fetchEvents();
+      fetchEvents(visibleCount);
     }, 30000); // refresh every 30s
 
-    const handler = () => fetchEvents();
+    const handler = () => fetchEvents(visibleCount);
     window.addEventListener("pv:timeUpdated", handler);
+    window.addEventListener("pv:milestonesUpdated", handler);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("pv:timeUpdated", handler);
+      window.removeEventListener("pv:milestonesUpdated", handler);
     };
-  }, [fetchEvents]);
+  }, [fetchEvents, visibleCount]);
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    const nextCount = visibleCount + 10;
+    await fetchEvents(nextCount);
+    setVisibleCount(nextCount);
+    setLoadingMore(false);
+  };
 
   if (loading) {
     return (
@@ -247,6 +271,24 @@ export function ProjectTimeline({
           </li>
         ))}
       </ol>
+      {hasMore && (
+        <div className="pt-2 flex justify-center">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                Loading older activities...
+              </>
+            ) : (
+              "Load older activities"
+            )}
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
