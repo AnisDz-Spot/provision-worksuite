@@ -163,7 +163,12 @@ export default function ClientForm({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ... inside ClientForm component
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+
+  // ... (existing state)
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -172,34 +177,24 @@ export default function ClientForm({
       return;
     }
 
-    setUploadingLogo(true);
-    try {
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", file);
-      // Use a consistent path structure for client logos
-      const ext = file.name.split(".").pop();
-      const filename = `logo-${Date.now()}.${ext}`;
-      uploadFormData.append("path", `clients/${filename}`);
+    // Defer upload: Set file and create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({ ...prev, logo: previewUrl }));
+    setLogoFile(file);
+  };
 
-      // We use the local upload API which works in our structure
-      // fetchWithCsrf handles headers correctly (preserves FormData content-type logic)
-      const res = await fetchWithCsrf("/api/upload-local", {
-        method: "POST",
-        body: uploadFormData,
-      });
+  const handleUpload = async (file: File, path: string) => {
+    const uploadFormData = new FormData();
+    uploadFormData.append("file", file);
+    uploadFormData.append("path", path);
 
-      if (!res.ok) {
-        throw new Error("Upload failed");
-      }
+    const res = await fetchWithCsrf("/api/uploads", {
+      method: "POST",
+      body: uploadFormData,
+    });
 
-      const data = await res.json();
-      setFormData((prev) => ({ ...prev, logo: data.url }));
-    } catch (error) {
-      console.error("Logo upload error:", error);
-      alert("Failed to upload logo: Local storage might be disabled or full.");
-    } finally {
-      setUploadingLogo(false);
-    }
+    if (!res.ok) throw new Error("Upload failed");
+    return res.json();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,6 +202,26 @@ export default function ClientForm({
     setLoading(true);
 
     try {
+      let finalLogo = formData.logo;
+
+      // Perform upload if new file selected
+      if (logoFile) {
+        try {
+          // Use "clients/logos" path to organize files
+          const data = await handleUpload(logoFile, "clients/logos");
+          finalLogo = data.url;
+        } catch (error) {
+          console.error("Logo upload failed", error);
+          alert("Failed to upload logo. Saving client without updating logo.");
+          // Fallback: If it was a new preview, revert or keep blank?
+          // If we fail upload, we shouldn't send the blob: URL to DB.
+          // Better to fail or warn? User requested robust.
+          // Let's stop.
+          setLoading(false);
+          return;
+        }
+      }
+
       const url =
         isEditing && initialData?.id
           ? `/api/clients/${initialData.id}`
@@ -214,11 +229,15 @@ export default function ClientForm({
 
       const method = isEditing ? "PUT" : "POST";
 
-      // Use fetchWithCsrf for CSRF protection
+      const payload = { ...formData, logo: finalLogo };
+      // Remove customFields array from payload if we relied on the sync effect?
+      // Actually formData already has the synced object.
+      // But we need to make sure we don't send the blob URL if upload failed.
+
       const res = await fetchWithCsrf(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error("Failed to save client");
