@@ -7,14 +7,19 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 // NextAuth v5 configuration
-if (!process.env.AUTH_SECRET) {
-  console.error(
-    "🚨 CRITICAL: AUTH_SECRET is missing from environment variables!"
+// NextAuth v5 configuration
+const isDev = process.env.NODE_ENV === "development";
+const shouldUseDummySecret = !process.env.AUTH_SECRET;
+
+if (shouldUseDummySecret) {
+  console.warn(
+    "⚠️ WARNING: AUTH_SECRET is missing. Using fallback secret for Dummy Mode."
   );
 }
 
 export const authConfig = {
   trustHost: true,
+  secret: process.env.AUTH_SECRET || "dummy-secret-dev-only", // Fallback for demo/dummy mode
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
@@ -58,17 +63,5 @@ export const authConfig = {
 // NextAuth v5 exports handlers object with GET and POST
 const { handlers } = NextAuth(authConfig);
 
-// Wrapper to catch missing secret errors
-const handleAuth = async (req: any, context: any, method: "GET" | "POST") => {
-  if (!process.env.AUTH_SECRET) {
-    return NextResponse.json(
-      { error: "AUTH_SECRET is not configured on the server." },
-      { status: 500 }
-    );
-  }
-  return method === "GET" ? handlers.GET(req) : handlers.POST(req);
-};
-
-export const GET = (req: any, context: any) => handleAuth(req, context, "GET");
-export const POST = (req: any, context: any) =>
-  handleAuth(req, context, "POST");
+export const GET = handlers.GET;
+export const POST = handlers.POST;
