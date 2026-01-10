@@ -1,16 +1,21 @@
 import prisma from "@/lib/prisma"; // Use default import
 import { headers } from "next/headers";
 import { UAParser } from "ua-parser-js";
-import { AuthUser } from "@/lib/auth";
 
 export async function createSession(userId: number, token: string) {
   try {
     const headersList = await headers();
     const userAgent = headersList.get("user-agent") || "Unknown";
     const ip =
-      headersList.get("x-forwarded-for") ||
+      headersList.get("x-forwarded-for")?.split(",")[0] ||
       headersList.get("x-real-ip") ||
       "Unknown";
+
+    // Basic GeoIP from standard CDN headers (Vercel, Cloudflare)
+    const city = headersList.get("x-vercel-ip-city");
+    const country = headersList.get("x-vercel-ip-country");
+    const location =
+      city && country ? `${city}, ${country}` : "Unknown Location";
 
     const parser = new UAParser(userAgent);
     const result = parser.getResult();
@@ -27,7 +32,7 @@ export async function createSession(userId: number, token: string) {
         token,
         deviceInfo,
         ipAddress: ip,
-        location: "Unknown", // GeoIP requires external service
+        location: location !== "Unknown Location" ? location : undefined,
         expiresAt,
       },
     });
@@ -47,6 +52,33 @@ export async function getActiveSessions(userId: number) {
     },
     orderBy: { lastActiveAt: "desc" },
   });
+}
+
+/**
+ * Updates the lastActiveAt timestamp for a session.
+ * Throttled: Only updates if > 5 minutes have passed since last update.
+ */
+export async function updateSessionActivity(sessionId: string) {
+  try {
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { lastActiveAt: true },
+    });
+
+    if (!session) return;
+
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+    if (session.lastActiveAt < fiveMinutesAgo) {
+      await prisma.session.update({
+        where: { id: sessionId },
+        data: { lastActiveAt: new Date() },
+      });
+    }
+  } catch (error) {
+    // Fail silently to avoid interrupting requests
+    console.error("Failed to update session activity:", error);
+  }
 }
 
 export async function revokeSession(sessionId: string, userId: number) {

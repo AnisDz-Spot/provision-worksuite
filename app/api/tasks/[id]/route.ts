@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { log } from "@/lib/logger";
 import { revalidateTag } from "next/cache";
 import { recordActivity } from "@/lib/activity";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
@@ -47,179 +48,179 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-
-    const task = await prisma.task.findFirst({
-      where: {
-        OR: [{ uid: id }, { id: parseInt(id) || -1 }],
-      },
-    });
-
-    if (!task) {
-      return NextResponse.json(
-        { success: false, error: "Task not found" },
-        { status: 404 }
-      );
-    }
-
-    const updatedTask = await prisma.task.update({
-      where: { id: task.id },
-      data: {
-        title: body.title,
-        description: body.description,
-        status: body.status,
-        priority: body.priority,
-        due: body.due ? new Date(body.due) : undefined,
-        estimateHours:
-          body.estimateHours !== undefined
-            ? parseFloat(body.estimateHours)
-            : undefined,
-        loggedHours:
-          body.loggedHours !== undefined
-            ? parseFloat(body.loggedHours)
-            : undefined,
-        labels: body.labels,
-        boardColumn: body.boardColumn,
-        order: body.order,
-        assigneeId: body.assigneeId,
-        milestoneId:
-          body.milestoneId !== undefined ? body.milestoneId : undefined,
-      },
-    });
-
-    (revalidateTag as any)("tasks");
-    (revalidateTag as any)("projects");
-
-    // Fetch DB user for Integer ID
-    const dbUser = await prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: { id: true },
-    });
-
-    if (dbUser) {
-      const changedFields: string[] = [];
-      const activityData: any = {
-        title: updatedTask.title,
-        status: updatedTask.status,
-        projectId: updatedTask.projectId,
-      };
-
-      if (task.status !== updatedTask.status) {
-        changedFields.push(
-          `status from ${task.status} to ${updatedTask.status}`
+export const PATCH = withRateLimit(
+  RATE_LIMITS.MUTATION,
+  async (request: any, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: "Unauthorized" },
+          { status: 401 }
         );
       }
-      if (task.priority !== updatedTask.priority) {
-        changedFields.push(
-          `priority from ${task.priority} to ${updatedTask.priority}`
+
+      const { id } = await params;
+      const body = await request.json();
+
+      const task = await prisma.task.findFirst({
+        where: {
+          OR: [{ uid: id }, { id: parseInt(id) || -1 }],
+        },
+      });
+
+      if (!task) {
+        return NextResponse.json(
+          { success: false, error: "Task not found" },
+          { status: 404 }
         );
       }
-      if (task.assigneeId !== updatedTask.assigneeId) {
-        changedFields.push("assignee");
-      }
-      if (task.title !== updatedTask.title) {
-        changedFields.push("title");
+
+      const updatedTask = await prisma.task.update({
+        where: { id: task.id },
+        data: {
+          title: body.title,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          due: body.due ? new Date(body.due) : undefined,
+          estimateHours:
+            body.estimateHours !== undefined
+              ? parseFloat(body.estimateHours)
+              : undefined,
+          loggedHours:
+            body.loggedHours !== undefined
+              ? parseFloat(body.loggedHours)
+              : undefined,
+          labels: body.labels,
+          boardColumn: body.boardColumn,
+          order: body.order,
+          assigneeId: body.assigneeId,
+          milestoneId:
+            body.milestoneId !== undefined ? body.milestoneId : undefined,
+        },
+      });
+
+      (revalidateTag as any)("tasks");
+      (revalidateTag as any)("projects");
+
+      // Fetch DB user for Integer ID
+      const dbUser = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { id: true },
+      });
+
+      if (dbUser) {
+        const changedFields: string[] = [];
+        const activityData: any = {
+          title: updatedTask.title,
+          status: updatedTask.status,
+          projectId: updatedTask.projectId,
+        };
+
+        if (task.status !== updatedTask.status) {
+          changedFields.push(
+            `status from ${task.status} to ${updatedTask.status}`
+          );
+        }
+        if (task.priority !== updatedTask.priority) {
+          changedFields.push(
+            `priority from ${task.priority} to ${updatedTask.priority}`
+          );
+        }
+        if (task.assigneeId !== updatedTask.assigneeId) {
+          changedFields.push("assignee");
+        }
+        if (task.title !== updatedTask.title) {
+          changedFields.push("title");
+        }
+
+        if (changedFields.length > 0) {
+          activityData.summary = `Updated task ${updatedTask.title}: ${changedFields.join(", ")}`;
+        }
+
+        await recordActivity(
+          dbUser.id,
+          "task",
+          updatedTask.uid,
+          "updated",
+          activityData
+        );
       }
 
-      if (changedFields.length > 0) {
-        activityData.summary = `Updated task ${updatedTask.title}: ${changedFields.join(", ")}`;
-      }
-
-      await recordActivity(
-        dbUser.id,
-        "task",
-        updatedTask.uid,
-        "updated",
-        activityData
+      return NextResponse.json({ success: true, task: updatedTask });
+    } catch (error) {
+      log.error({ err: error }, "Failed to update task");
+      return NextResponse.json(
+        { success: false, error: "Internal server error" },
+        { status: 500 }
       );
     }
-
-    return NextResponse.json({ success: true, task: updatedTask });
-  } catch (error) {
-    log.error({ err: error }, "Failed to update task");
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
   }
-}
+);
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export const DELETE = withRateLimit(
+  RATE_LIMITS.MUTATION,
+  async (request: any, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const { id } = await params;
+
+      const task = await prisma.task.findFirst({
+        where: {
+          OR: [{ uid: id }, { id: parseInt(id) || -1 }],
+        },
+      });
+
+      if (!task) {
+        return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      }
+
+      // Fetch DB user for Integer ID and role check
+      const dbUser = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { id: true, role: true },
+      });
+
+      if (!dbUser) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const isAdmin = ["admin", "global-admin", "master-admin"].includes(
+        dbUser.role
+      );
+      if (!isAdmin && task.assigneeId !== dbUser.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      const taskTitle = task.title;
+      const taskUid = task.uid;
+      const projectId = task.projectId;
+
+      await prisma.task.delete({
+        where: { id: task.id },
+      });
+
+      (revalidateTag as any)("tasks");
+      (revalidateTag as any)("projects");
+
+      // Record Activity
+      await recordActivity(dbUser.id, "task", taskUid, "deleted", {
+        title: taskTitle,
+        projectId,
+      });
+
+      return NextResponse.json({ success: true, message: "Task deleted" });
+    } catch (error) {
+      log.error({ err: error }, "Failed to delete task");
+      return NextResponse.json(
+        { success: false, error: "Internal server error" },
+        { status: 500 }
+      );
     }
-
-    const { id } = await params;
-
-    const task = await prisma.task.findFirst({
-      where: {
-        OR: [{ uid: id }, { id: parseInt(id) || -1 }],
-      },
-    });
-
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
-    // Fetch DB user for Integer ID and role check
-    const dbUser = await prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: { id: true, role: true },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const isAdmin = ["admin", "global-admin", "master-admin"].includes(
-      dbUser.role
-    );
-    if (!isAdmin && task.assigneeId !== dbUser.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const taskTitle = task.title;
-    const taskUid = task.uid;
-    const projectId = task.projectId;
-
-    await prisma.task.delete({
-      where: { id: task.id },
-    });
-
-    (revalidateTag as any)("tasks");
-    (revalidateTag as any)("projects");
-
-    // Record Activity
-    await recordActivity(dbUser.id, "task", taskUid, "deleted", {
-      title: taskTitle,
-      projectId,
-    });
-
-    return NextResponse.json({ success: true, message: "Task deleted" });
-  } catch (error) {
-    log.error({ err: error }, "Failed to delete task");
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
   }
-}
+);

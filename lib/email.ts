@@ -570,3 +570,89 @@ Provision WorkSuite Team
 
   return sendEmail({ to: email, subject, text, html });
 }
+
+export async function sendInvoiceEmail(
+  email: string,
+  invoice: any, // Using any for flexibility, consistent with PDF gen
+  userParams: { name?: string }
+): Promise<{ success: boolean; error?: string; previewUrl?: string }> {
+  const subject = `Invoice #${invoice.uid.substring(0, 8).toUpperCase()} from Provision WorkSuite`;
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
+  const text = `
+Hello ${invoice.clientName},
+
+Here is your invoice for ${formatCurrency(invoice.total)}.
+
+Invoice ID: ${invoice.uid}
+Date: ${formatDate(invoice.issueDate)}
+Due Date: ${formatDate(invoice.dueDate)}
+Status: ${invoice.status}
+
+Total: ${formatCurrency(invoice.total)}
+
+Thank you for your business.
+`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">New Invoice</h1>
+  </div>
+  
+  <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+    <h2 style="color: #333; margin-top: 0;">Hello ${invoice.clientName},</h2>
+    
+    <p>Please find attached the details of your invoice.</p>
+    
+    <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #64748b; padding-bottom: 5px;">Invoice ID</td>
+          <td style="text-align: right; font-weight: 600;">#${invoice.uid.substring(0, 8).toUpperCase()}</td>
+        </tr>
+         <tr>
+          <td style="color: #64748b; padding-bottom: 5px;">Issue Date</td>
+          <td style="text-align: right;">${formatDate(invoice.issueDate)}</td>
+        </tr>
+         <tr>
+          <td style="color: #64748b; padding-bottom: 5px;">Due Date</td>
+          <td style="text-align: right;">${formatDate(invoice.dueDate)}</td>
+        </tr>
+        <tr>
+          <td style="color: #64748b; padding-top: 10px; border-top: 1px dashed #cbd5e1;">Amount Due</td>
+          <td style="text-align: right; font-weight: 700; font-size: 18px; color: #0f172a; padding-top: 10px; border-top: 1px dashed #cbd5e1;">${formatCurrency(invoice.total)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="color: #666; font-size: 14px;">
+      If you have any questions, please contact us.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+  return sendEmail({ to: email, subject, text, html });
+}

@@ -7,6 +7,31 @@ import { Laptop, Smartphone, Globe, AlertCircle, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 
+// Helper to check if active within last 5 minutes
+const isRecent = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMinutes = (now.getTime() - date.getTime()) / 1000 / 60;
+  return diffInMinutes < 5;
+};
+
+// Helper for relative time (replacement for date-fns)
+const timeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return "just now";
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60)
+    return `${diffInMinutes} min${diffInMinutes > 1 ? "s" : ""} ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24)
+    return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`;
+};
+
 // Mock data type until API is ready/working
 type Session = {
   id: string;
@@ -135,12 +160,10 @@ export function SessionList() {
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
                   <span className="flex items-center gap-1">
-                    <Globe className="w-3 h-3" />{" "}
-                    {session.location || "Unknown Location"}
-                  </span>
-                  <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" /> Last active:{" "}
-                    {new Date(session.lastActiveAt).toLocaleDateString()}
+                    {isRecent(session.lastActiveAt)
+                      ? "Active Now"
+                      : timeAgo(session.lastActiveAt)}
                   </span>
                 </div>
               </div>

@@ -1,29 +1,14 @@
-"use client";
-
-import { useAuth } from "@/components/auth/AuthContext";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { AssignmentTable } from "@/components/projects/AssignmentTable";
-import { Loader2 } from "lucide-react";
+import { redirect } from "next/navigation";
 import React from "react";
 
-export default function AssignmentsPage() {
-  const { currentUser, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+export default async function AssignmentsPage() {
+  // SECURITY: Server-side authentication check
+  const currentUser = await getAuthenticatedUser();
 
   if (!currentUser) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">
-          Please sign in to view this page.
-        </p>
-      </div>
-    );
+    redirect("/login");
   }
 
   return (

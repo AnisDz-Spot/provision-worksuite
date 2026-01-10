@@ -8,8 +8,9 @@ import {
   decryptSecret,
 } from "@/lib/auth/totp";
 import prisma from "@/lib/prisma";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
   try {
     // 1. Verify user authentication
     const authUser = await getAuthenticatedUser();
@@ -98,4 +99,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

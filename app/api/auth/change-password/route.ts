@@ -3,8 +3,9 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { log } from "@/lib/logger";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
   try {
     // 1. Verify user is authenticated
     const authUser = await getAuthenticatedUser();
@@ -97,4 +98,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

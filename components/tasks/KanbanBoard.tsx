@@ -483,23 +483,81 @@ export function KanbanBoard({
       return;
     }
 
-    const result = await addTimeLog(
-      detailTask.id,
-      projectId,
-      value,
-      timeLogNote.trim(),
-      detailTask.assignee
-    );
+    // Show loading state immediately
+    const loadingToast = show("info", "Logging time...");
 
-    if (result) {
-      show("success", `Logged ${value} hours`);
-      setTimeLogInput("");
-      setTimeLogNote("");
-      await refreshTasks();
-      window.dispatchEvent(new Event("pv:timeUpdated"));
-      onTaskUpdate?.();
-    } else {
-      show("error", "Failed to log time");
+    // Optimistically update the UI
+    const previousLoggedHours = detailTask.loggedHours || 0;
+    const optimisticLoggedHours = previousLoggedHours + value;
+
+    // Update local state immediately for instant feedback
+    setAllTasks((prev: Task[] | null) => {
+      if (!prev) return prev;
+      return prev.map((t: Task) =>
+        t.id === detailTask.id
+          ? { ...t, loggedHours: optimisticLoggedHours }
+          : t
+      );
+    });
+
+    // Also update the detail task to reflect changes immediately
+    setDetailTask((prev: any) => ({
+      ...prev,
+      loggedHours: optimisticLoggedHours,
+    }));
+
+    try {
+      const result = await addTimeLog(
+        detailTask.id,
+        projectId,
+        value,
+        timeLogNote.trim(),
+        detailTask.assignee
+      );
+
+      if (result) {
+        show("success", `Logged ${value} hours`);
+        setTimeLogInput("");
+        setTimeLogNote("");
+
+        // Refresh only the task data, not the entire component
+        await refreshTasks();
+        window.dispatchEvent(new Event("pv:timeUpdated"));
+        onTaskUpdate?.();
+      } else {
+        // Revert optimistic update on failure
+        setAllTasks((prev: Task[] | null) => {
+          if (!prev) return prev;
+          return prev.map((t: Task) =>
+            t.id === detailTask.id
+              ? { ...t, loggedHours: previousLoggedHours }
+              : t
+          );
+        });
+        setDetailTask((prev: any) => ({
+          ...prev,
+          loggedHours: previousLoggedHours,
+        }));
+        show("error", "Failed to log time");
+      }
+    } catch (error: any) {
+      // Revert optimistic update on error
+      setAllTasks((prev: Task[] | null) => {
+        if (!prev) return prev;
+        return prev.map((t: Task) =>
+          t.id === detailTask.id
+            ? { ...t, loggedHours: previousLoggedHours }
+            : t
+        );
+      });
+      setDetailTask((prev: any) => ({
+        ...prev,
+        loggedHours: previousLoggedHours,
+      }));
+
+      // Show specific error message if available
+      const errorMessage = error?.message || "Failed to log time";
+      show("error", errorMessage);
     }
   };
 

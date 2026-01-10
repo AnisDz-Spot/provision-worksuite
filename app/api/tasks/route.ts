@@ -7,6 +7,7 @@ import { revalidateTag } from "next/cache";
 import { shouldReturnMockData } from "@/lib/mock-helper";
 import { recordActivity } from "@/lib/activity";
 import { MOCK_TASKS } from "@/lib/mock-data";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withRateLimit(RATE_LIMITS.MUTATION, async (req: any) => {
   // SECURITY: Require authentication to create tasks
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -271,4 +272,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

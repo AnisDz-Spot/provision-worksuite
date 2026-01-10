@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { log } from "@/lib/logger";
-import { z } from "zod";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ const ResetPasswordSchema = z.object({
     ),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
   try {
     const body = await request.json();
 
@@ -105,4 +106,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

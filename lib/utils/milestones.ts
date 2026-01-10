@@ -15,6 +15,8 @@ export type Milestone = {
   description?: string;
   totalTasks?: number;
   completedTasks?: number;
+  amount?: number;
+  paymentStatus?: string;
 };
 
 function readMilestones(): Milestone[] {
@@ -52,6 +54,8 @@ export async function getMilestonesByProject(
           description: m.description || undefined,
           totalTasks: m.totalTasks || 0,
           completedTasks: m.completedTasks || 0,
+          amount: m.amount || undefined,
+          paymentStatus: m.paymentStatus || "unpaid",
         }));
       }
     } catch (e) {

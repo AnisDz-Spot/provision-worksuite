@@ -4,6 +4,9 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { shouldReturnMockData } from "@/lib/mock-helper";
 import { MOCK_CLIENTS } from "@/lib/mock-data";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { createClientSchema, validateRequest } from "@/lib/schemas/validation";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +51,30 @@ export async function GET(req: Request) {
     };
 
     if (search) {
-      whereClause.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { primaryEmail: { contains: search, mode: "insensitive" } },
-        { primaryContact: { contains: search, mode: "insensitive" } },
-      ];
+      // SECURITY: Sanitize search input
+      const searchSchema = z
+        .string()
+        .max(100)
+        .regex(/^[a-zA-Z0-9\s@.-]*$/);
+      const searchValidation = searchSchema.safeParse(search);
+
+      if (searchValidation.success) {
+        whereClause.OR = [
+          { name: { contains: searchValidation.data, mode: "insensitive" } },
+          {
+            primaryEmail: {
+              contains: searchValidation.data,
+              mode: "insensitive",
+            },
+          },
+          {
+            primaryContact: {
+              contains: searchValidation.data,
+              mode: "insensitive",
+            },
+          },
+        ];
+      }
     }
 
     const clients = await prisma.client.findMany({
@@ -75,7 +97,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withRateLimit(RATE_LIMITS.MUTATION, async (req: any) => {
   const user = await getAuthenticatedUser();
   // Role check: Only Master Admin, Admin, and Project Manager can add clients
   const { isAdmin, isProjectManager } = await import("@/lib/auth-utils");
@@ -91,6 +113,19 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    // SECURITY: Validate input with Zod
+    const validation = validateRequest(createClientSchema, body);
+    if (!validation.success || !validation.data) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validation.error?.message || "Validation failed",
+          details: validation.error?.details.flatten(),
+        },
+        { status: 400 }
+      );
+    }
 
     // Map form data to schema
     // Logic: If 'companyName' is provided, use that as the Client Name, and 'name' as Primary Contact.
@@ -134,4 +169,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

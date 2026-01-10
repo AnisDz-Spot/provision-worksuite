@@ -6,8 +6,6 @@
  * Supports: PostgreSQL (Neon, standard), MySQL, SQLite, MS SQL Server
  */
 
-import { getConfig } from "@/lib/config/auto-setup";
-
 // Database type detection and adapter imports
 type DatabaseType = "postgresql" | "mysql" | "sqlite" | "sqlserver" | "unknown";
 
@@ -252,8 +250,13 @@ const getPrismaClient = async () => {
       process.env.MYSQL_URL;
 
     // Try to load from custom config if env var not found
-    if (!dbUrl && typeof window === "undefined") {
+    if (
+      !dbUrl &&
+      typeof window === "undefined" &&
+      process.env.NEXT_RUNTIME !== "edge"
+    ) {
       try {
+        const { getConfig } = await import("@/lib/config/auto-setup");
         const config = await getConfig();
         if (config.postgresUrl) {
           dbUrl = config.postgresUrl;

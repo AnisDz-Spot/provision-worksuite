@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signToken } from "@/lib/auth";
 import { LoginSchema } from "@/lib/schemas";
-import { rateLimitLogin } from "@/lib/ratelimit";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { log } from "@/lib/logger";
 import {
   verifyToken,
@@ -18,46 +18,11 @@ import { isDatabaseConfiguredServer } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
   try {
     const body = await request.json();
 
-    // 1. Rate limiting - 5 attempts per 15 minutes
-    const ip =
-      request.headers.get("x-forwarded-for") ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    try {
-      const {
-        success: rateLimitSuccess,
-        remaining,
-        reset,
-      } = await rateLimitLogin(ip);
-
-      if (!rateLimitSuccess) {
-        const resetDate = new Date(reset);
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Too many login attempts. Please try again after ${resetDate.toLocaleTimeString()}`,
-            remaining: 0,
-            resetAt: resetDate.toISOString(),
-          },
-          {
-            status: 429,
-            headers: {
-              "X-RateLimit-Limit": "5",
-              "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": reset.toString(),
-            },
-          }
-        );
-      }
-    } catch (e) {
-      log.warn({ err: e }, "Rate limiting check failed - failing open");
-      // Continue execution
-    }
+    // (Manual rate limiting removed - now handled by withRateLimit)
 
     // 2. Validate request body with Zod
     // Allow 'code' (2FA) and 'useBackupCode' fields
@@ -391,4 +356,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

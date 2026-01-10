@@ -91,7 +91,7 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
     // Check if session exists and is valid
     const session = await prisma.session.findUnique({
       where: { token },
-      select: { isValid: true, expiresAt: true },
+      select: { id: true, isValid: true, expiresAt: true },
     });
 
     if (session) {
@@ -102,6 +102,13 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
         });
         return null; // Session revoked or expired
       }
+      // Heartbeat: Update session activity (throttled)
+      // We import dynamically to avoid circular dependencies if any (though session.ts is clean)
+      // or we can just use the Prisma calls from here. Better to keep logic in session.ts
+      const { updateSessionActivity } = await import("@/lib/auth/session");
+      // Fire and forget - don't await to not slow down every request
+      updateSessionActivity(session.id);
+
       console.log("[Auth] Session valid in DB");
     }
   } catch (error) {

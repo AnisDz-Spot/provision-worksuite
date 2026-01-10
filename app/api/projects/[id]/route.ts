@@ -6,6 +6,9 @@ import { shouldReturnMockData } from "@/lib/mock-helper";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { recordActivity } from "@/lib/activity";
+import { canAccessProject, canModifyProject } from "@/lib/authorization";
+import { updateProjectSchema, validateRequest } from "@/lib/schemas/validation";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
@@ -134,6 +137,31 @@ export async function GET(
       );
     }
 
+    // SECURITY: Check if user has access to this project
+    const dbUser = await prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { id: true, role: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const hasAccess = await canAccessProject(dbUser.id, project.id, user.role);
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Forbidden: You do not have access to this project",
+        },
+        { status: 403 }
+      );
+    }
+
     // Auto-backfill slug if missing
     if (!project.slug) {
       const slug = project.name
@@ -196,125 +224,167 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = await params;
-
-    // Fetch user from DB to get ID for activity logging
-    const dbUser = await prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: { id: true },
-    });
-
-    // Resolve project (Slug -> UID -> ID)
-    let project = await prisma.project.findFirst({ where: { slug: id } });
-    if (!project)
-      project = await prisma.project.findFirst({ where: { uid: id } });
-    if (!project) {
-      const idAsInt = parseInt(id);
-      if (!isNaN(idAsInt)) {
-        project = await prisma.project.findUnique({ where: { id: idAsInt } });
+export const PUT = withRateLimit(
+  RATE_LIMITS.MUTATION,
+  async (request: any, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-    }
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
+      const { id } = await params;
+      const body = await request.json();
 
-    const body = await request.json();
+      // SECURITY: Validate input with Zod
+      const validation = validateRequest(updateProjectSchema, body);
+      if (!validation.success || !validation.data) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validation.error?.message || "Validation failed",
+            details: validation.error?.details.flatten(),
+          },
+          { status: 400 }
+        );
+      }
 
-    const updated = await prisma.project.update({
-      where: { id: project.id },
-      data: {
-        name: body.name,
-        description: body.description,
-        status: body.status,
-        priority: body.priority,
-        deadline: body.deadline ? new Date(body.deadline) : undefined,
-        budget: body.budget ? parseFloat(body.budget) : undefined,
-        clientName: body.clientName,
-        clientId: body.clientId,
-        tags: body.tags,
-        categories: body.categories,
-        visibility: body.visibility || body.privacy, // Handle privacy mapped to visibility
-        coverUrl: body.cover,
-        sla: body.sla,
-        isTemplate: body.isTemplate,
-        // clientLogo is removed as per requirement, but if passed and needed for fallback:
-        // clientLogo: body.clientLogo
-      },
-    });
-
-    // Handle members update if provided
-    if (Array.isArray(body.members)) {
-      // 1. Get current members to preserve "owner" if needed or just replace members
-      // The user usually wants to manage the list.
-      // We'll keep the owner (the project.userId) and replace the others.
-      const ownerId = project.userId;
-
-      // Get existing members to identify NEW members for notifications
-      const existingMembers = await prisma.projectMember.findMany({
-        where: { projectId: project.id },
-        select: { userId: true },
+      // Fetch user from DB to get ID for activity logging
+      const dbUser = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { id: true, role: true },
       });
-      const existingMemberIds = new Set(
-        existingMembers.map((m: { userId: number }) => m.userId)
+
+      // Resolve project (Slug -> UID -> ID)
+      let project = await prisma.project.findFirst({ where: { slug: id } });
+      if (!project)
+        project = await prisma.project.findFirst({ where: { uid: id } });
+      if (!project) {
+        const idAsInt = parseInt(id);
+        if (!isNaN(idAsInt)) {
+          project = await prisma.project.findUnique({ where: { id: idAsInt } });
+        }
+      }
+
+      if (!project) {
+        return NextResponse.json(
+          { error: "Project not found" },
+          { status: 404 }
+        );
+      }
+
+      // SECURITY: Check if user can modify this project
+      if (!dbUser) {
+        return NextResponse.json(
+          { success: false, error: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      const canModify = await canModifyProject(
+        dbUser.id,
+        project.id,
+        user.role
       );
 
-      // Delete existing members
-      // If Master Admin, can delete anyone (including owner)
-      // If not, must preserve owner
-      const currentUser = await getAuthenticatedUser();
-      const isMasterAdmin = [
-        "admin",
-        "global-admin",
-        "master-admin",
-        "Administrator",
-        "Master Admin",
-      ].includes(currentUser?.role || "");
-
-      const deleteWhere: any = {
-        projectId: project.id,
-      };
-
-      if (!isMasterAdmin) {
-        deleteWhere.userId = { not: ownerId };
+      if (!canModify) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Forbidden: You do not have permission to modify this project",
+          },
+          { status: 403 }
+        );
       }
 
-      await prisma.projectMember.deleteMany({
-        where: deleteWhere,
+      const updated = await prisma.project.update({
+        where: { id: project.id },
+        data: {
+          name: body.name,
+          description: body.description,
+          status: body.status,
+          priority: body.priority,
+          deadline: body.deadline ? new Date(body.deadline) : undefined,
+          budget: body.budget ? parseFloat(body.budget) : undefined,
+          clientName: body.clientName,
+          clientId: body.clientId,
+          tags: body.tags,
+          categories: body.categories,
+          visibility: body.visibility || body.privacy, // Handle privacy mapped to visibility
+          coverUrl: body.cover,
+          sla: body.sla,
+          isTemplate: body.isTemplate,
+          // clientLogo is removed as per requirement, but if passed and needed for fallback:
+          // clientLogo: body.clientLogo
+        },
       });
 
-      // Find user IDs for the incoming UIDs
-      const memberUsers = await prisma.user.findMany({
-        where: { uid: { in: body.members } },
-        select: { id: true, email: true, name: true },
-      });
+      // Handle members update if provided
+      if (Array.isArray(body.members)) {
+        // 1. Get current members to preserve "owner" if needed or just replace members
+        // The user usually wants to manage the list.
+        // We'll keep the owner (the project.userId) and replace the others.
+        const ownerId = project.userId;
 
-      const memberIds = memberUsers
-        .map((u: { id: number }) => u.id)
-        .filter((id: number) => id !== ownerId);
+        // Get existing members to identify NEW members for notifications
+        const existingMembers = await prisma.projectMember.findMany({
+          where: { projectId: project.id },
+          select: { userId: true },
+        });
+        const existingMemberIds = new Set(
+          existingMembers.map((m: { userId: number }) => m.userId)
+        );
 
-      if (memberIds.length > 0) {
-        await prisma.projectMember.createMany({
-          data: memberIds.map((uid: number) => ({
-            projectId: project.id,
-            userId: uid,
-            role: "member",
-            invitedBy: dbUser?.id,
-          })),
-          skipDuplicates: true,
+        // Delete existing members
+        // If Master Admin, can delete anyone (including owner)
+        // If not, must preserve owner
+        const currentUser = await getAuthenticatedUser();
+        const isMasterAdmin = [
+          "admin",
+          "global-admin",
+          "master-admin",
+          "Administrator",
+          "Master Admin",
+        ].includes(currentUser?.role || "");
+
+        const deleteWhere: any = {
+          projectId: project.id,
+        };
+
+        if (!isMasterAdmin) {
+          deleteWhere.userId = { not: ownerId };
+        }
+
+        const memberUsers = await prisma.user.findMany({
+          where: { uid: { in: body.members } },
+          select: { id: true, email: true, name: true },
         });
 
-        // Notify NEW members
+        const memberIds = memberUsers
+          .map((u: { id: number }) => u.id)
+          .filter((id: number) => id !== ownerId);
+
+        // ATOMIC TRANSACTION: Delete & Re-create members
+        await prisma.$transaction(async (tx: any) => {
+          await tx.projectMember.deleteMany({
+            where: deleteWhere,
+          });
+
+          if (memberIds.length > 0) {
+            await tx.projectMember.createMany({
+              data: memberIds.map((uid: number) => ({
+                projectId: project.id,
+                userId: uid,
+                role: "member",
+                invitedBy: dbUser?.id,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        });
+
+        // Notify NEW members (outside transaction to avoid blocking)
         const addedUsers = memberUsers.filter(
           (u: { id: number }) =>
             !existingMemberIds.has(u.id) && u.id !== ownerId
@@ -352,145 +422,148 @@ export async function PUT(
           );
         }
       }
-    }
 
-    (revalidateTag as any)("projects");
+      (revalidateTag as any)("projects");
 
-    // Record Activity
-    if (dbUser) {
-      const activityData: any = { name: updated.name };
-      let action = "updated";
-      const changedFields: string[] = [];
+      // Record Activity
+      if (dbUser) {
+        const activityData: any = { name: updated.name };
+        let action = "updated";
+        const changedFields: string[] = [];
 
-      if (project.status !== updated.status) {
-        action = "status_changed";
-        activityData.status = updated.status;
-        activityData.oldStatus = project.status;
-        changedFields.push(
-          `status from ${project.status} to ${updated.status}`
+        if (project.status !== updated.status) {
+          action = "status_changed";
+          activityData.status = updated.status;
+          activityData.oldStatus = project.status;
+          changedFields.push(
+            `status from ${project.status} to ${updated.status}`
+          );
+        }
+        if (project.priority !== updated.priority) {
+          activityData.priority = updated.priority;
+          activityData.oldPriority = project.priority;
+          changedFields.push(
+            `priority from ${project.priority} to ${updated.priority}`
+          );
+        }
+        if (project.name !== updated.name) {
+          changedFields.push(`name to ${updated.name}`);
+        }
+        if (project.visibility !== updated.visibility) {
+          changedFields.push(`privacy to ${updated.visibility}`);
+        }
+        if (
+          body.deadline &&
+          new Date(project.deadline || 0).getTime() !==
+            new Date(body.deadline).getTime()
+        ) {
+          changedFields.push(
+            `deadline to ${new Date(body.deadline).toLocaleDateString()}`
+          );
+        }
+        // Simplified checks for arrays
+        if (
+          JSON.stringify(project.categories) !==
+          JSON.stringify(updated.categories)
+        ) {
+          changedFields.push("categories");
+        }
+        if (JSON.stringify(project.tags) !== JSON.stringify(updated.tags)) {
+          changedFields.push("tags");
+        }
+        if (project.description !== updated.description) {
+          changedFields.push("description");
+        }
+
+        if (changedFields.length > 0) {
+          activityData.summary = `Updated ${changedFields.join(", ")}`;
+        }
+
+        await recordActivity(
+          dbUser.id,
+          "project",
+          project.uid,
+          action as any,
+          activityData
         );
       }
-      if (project.priority !== updated.priority) {
-        activityData.priority = updated.priority;
-        activityData.oldPriority = project.priority;
-        changedFields.push(
-          `priority from ${project.priority} to ${updated.priority}`
-        );
-      }
-      if (project.name !== updated.name) {
-        changedFields.push(`name to ${updated.name}`);
-      }
-      if (project.visibility !== updated.visibility) {
-        changedFields.push(`privacy to ${updated.visibility}`);
-      }
-      if (
-        body.deadline &&
-        new Date(project.deadline || 0).getTime() !==
-          new Date(body.deadline).getTime()
-      ) {
-        changedFields.push(
-          `deadline to ${new Date(body.deadline).toLocaleDateString()}`
-        );
-      }
-      // Simplified checks for arrays
-      if (
-        JSON.stringify(project.categories) !==
-        JSON.stringify(updated.categories)
-      ) {
-        changedFields.push("categories");
-      }
-      if (JSON.stringify(project.tags) !== JSON.stringify(updated.tags)) {
-        changedFields.push("tags");
-      }
-      if (project.description !== updated.description) {
-        changedFields.push("description");
-      }
 
-      if (changedFields.length > 0) {
-        activityData.summary = `Updated ${changedFields.join(", ")}`;
-      }
-
-      await recordActivity(
-        dbUser.id,
-        "project",
-        project.uid,
-        action as any,
-        activityData
+      return NextResponse.json({ success: true, project: updated });
+    } catch (error) {
+      console.error("Update error:", error);
+      return NextResponse.json(
+        { error: "Failed to update project" },
+        { status: 500 }
       );
     }
-
-    return NextResponse.json({ success: true, project: updated });
-  } catch (error) {
-    console.error("Update error:", error);
-    return NextResponse.json(
-      { error: "Failed to update project" },
-      { status: 500 }
-    );
   }
-}
+);
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await getAuthenticatedUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = await params;
-
-    // Resolve project (Slug -> UID -> ID)
-    let project = await prisma.project.findFirst({ where: { slug: id } });
-    if (!project)
-      project = await prisma.project.findFirst({ where: { uid: id } });
-    if (!project) {
-      const idAsInt = parseInt(id);
-      if (!isNaN(idAsInt)) {
-        project = await prisma.project.findUnique({ where: { id: idAsInt } });
+export const DELETE = withRateLimit(
+  RATE_LIMITS.MUTATION,
+  async (request: any, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const user = await getAuthenticatedUser();
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-    }
 
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
+      const { id } = await params;
 
-    // SECURITY: Only owner or admin can delete
-    const dbUser = await prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: { id: true, role: true },
-    });
+      // Resolve project (Slug -> UID -> ID)
+      let project = await prisma.project.findFirst({ where: { slug: id } });
+      if (!project)
+        project = await prisma.project.findFirst({ where: { uid: id } });
+      if (!project) {
+        const idAsInt = parseInt(id);
+        if (!isNaN(idAsInt)) {
+          project = await prisma.project.findUnique({ where: { id: idAsInt } });
+        }
+      }
 
-    const isAdmin = ["admin", "global-admin", "master-admin"].includes(
-      dbUser?.role || ""
-    );
-    if (!isAdmin && project.userId !== dbUser?.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+      if (!project) {
+        return NextResponse.json(
+          { error: "Project not found" },
+          { status: 404 }
+        );
+      }
 
-    const projectName = project.name;
-    const projectUid = project.uid;
-
-    await prisma.project.delete({
-      where: { id: project.id },
-    });
-
-    (revalidateTag as any)("projects");
-
-    // Record Activity
-    if (dbUser) {
-      await recordActivity(dbUser.id, "project", projectUid, "deleted", {
-        name: projectName,
+      // SECURITY: Only owner or admin can delete
+      const dbUser = await prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { id: true, role: true },
       });
-    }
 
-    return NextResponse.json({ success: true, message: "Project deleted" });
-  } catch (error) {
-    console.error("Delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete project" },
-      { status: 500 }
-    );
+      const isAdmin = ["admin", "global-admin", "master-admin"].includes(
+        dbUser?.role || ""
+      );
+      if (!isAdmin && project.userId !== dbUser?.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      const projectName = project.name;
+      const projectUid = project.uid;
+
+      await prisma.project.delete({
+        where: { id: project.id },
+      });
+
+      (revalidateTag as any)("projects");
+
+      // Record Activity
+      if (dbUser) {
+        await recordActivity(dbUser.id, "project", projectUid, "deleted", {
+          name: projectName,
+        });
+      }
+
+      return NextResponse.json({ success: true, message: "Project deleted" });
+    } catch (error) {
+      console.error("Delete error:", error);
+      return NextResponse.json(
+        { error: "Failed to delete project" },
+        { status: 500 }
+      );
+    }
   }
-}
+);

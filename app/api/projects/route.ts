@@ -8,6 +8,8 @@ import { logProjectEvent } from "@/lib/utils";
 import { recordActivity } from "@/lib/activity";
 import { shouldReturnMockData } from "@/lib/mock-helper";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { createProjectSchema, validateRequest } from "@/lib/schemas/validation";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +138,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withRateLimit(RATE_LIMITS.MUTATION, async (req: any) => {
   // SECURITY: Require authentication to create projects
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -169,6 +171,20 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    // SECURITY: Validate input with Zod
+    const validation = validateRequest(createProjectSchema, body);
+    if (!validation.success || !validation.data) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validation.error?.message || "Validation failed",
+          details: validation.error?.details.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       description,
@@ -180,6 +196,7 @@ export async function POST(req: Request) {
       clientName,
       clientId,
       tags,
+      categories,
       visibility,
       color,
       cover,
@@ -188,14 +205,7 @@ export async function POST(req: Request) {
       members,
       sla,
       attachments,
-    } = body;
-
-    if (!name) {
-      return NextResponse.json(
-        { success: false, error: "Project name is required." },
-        { status: 400 }
-      );
-    }
+    } = validation.data;
 
     // Generate Slug
     let slug = name
@@ -205,17 +215,7 @@ export async function POST(req: Request) {
       .replace(/[\s_-]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-    // Ensure uniqueness (simple append for now, or assume name is unique enough + uid handles collision by failing? No, we need unique slug)
-    // For now, let's append a random short string to ensure uniqueness basically always
-    // Or better, check if exists? Checking adds latency.
-    // The user wants "use project name instead of uid".
-    // I will use `slug` as is, but if it fails (unique constraint), valid names might clash.
-    // Let's append 4 chars of random string to be safe and cleaner than UUID?
-    // Or just use name and catch error?
-    // User request: "slug: use project name instead of uid".
-    // I'll try to use name-slug. If it exists, I'll append a suffix.
-    // Actually, checking DB is safer.
-
+    // Ensure uniqueness
     let uniqueSlug = slug;
     const existing = await prisma.project.findFirst({
       where: { slug: uniqueSlug },
@@ -240,7 +240,7 @@ export async function POST(req: Request) {
     // Use current user's ID for the project
     const projectUserId = dbUser.id;
 
-    // Verify arrays are actually arrays to prevent adapter serialization errors
+    // Verify arrays are actually arrays
     const safeTags = Array.isArray(tags) ? tags : [];
     const safeCategories = Array.isArray(body.categories)
       ? body.categories
@@ -256,7 +256,7 @@ export async function POST(req: Request) {
         userId: projectUserId,
         startDate: startDate ? new Date(startDate) : null,
         deadline: deadline ? new Date(deadline) : null,
-        budget: budget ? parseFloat(budget) : null,
+        budget: budget ? parseFloat(String(budget)) : null,
         priority: priority || null,
         clientName: clientName || null,
         clientId: clientId || null,
@@ -321,7 +321,7 @@ export async function POST(req: Request) {
       try {
         await prisma.file.createMany({
           data: files.map((f: any) => ({
-            projectUid: project.uid, // Fixed: Use projectUid string reference
+            projectUid: project.uid,
             filename: f.name,
             fileUrl: f.url,
             fileSize: f.size,
@@ -379,4 +379,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

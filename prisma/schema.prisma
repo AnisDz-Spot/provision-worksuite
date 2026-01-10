@@ -97,9 +97,12 @@ model User {
   meetingParticipants MeetingParticipant[]
   starredProjects     StarredProject[]
   digestSettings      DigestSettings?
+  auditLogs           AuditLog[]
 
   @@index([email])
+  @@index([role])
   @@index([roleId])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -275,6 +278,8 @@ model Client {
 
   projects Project[]
 
+  @@index([status])
+  @@index([primaryEmail])
   @@map("clients")
 }
 
@@ -302,17 +307,19 @@ model ProjectMember {
 }
 
 model Milestone {
-  id          String    @id @default(uuid())
-  projectId   Int       @map("project_id")
-  name        String
-  description String?
-  startDate   DateTime? @map("start_date")
-  dueDate     DateTime? @map("due_date")
-  status      String    @default("pending") // pending, in-progress, completed
-  order       Int       @default(0)
-  metadata    Json?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id            String    @id @default(uuid())
+  projectId     Int       @map("project_id")
+  name          String
+  description   String?
+  startDate     DateTime? @map("start_date")
+  dueDate       DateTime? @map("due_date")
+  status        String    @default("pending") // pending, in-progress, completed
+  order         Int       @default(0)
+  amount        Float?
+  paymentStatus String    @default("unpaid") @map("payment_status") // unpaid, paid, partially_paid
+  metadata      Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relations
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -791,6 +798,23 @@ model SystemSetting {
 
   @@index([settingKey])
   @@map("system_settings")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String // e.g. "LOGIN", "UPDATE_SETTINGS", "DELETE_PROJECT"
+  resource  String? // e.g. "project_123"
+  details   Json? // e.g. { "ip": "1.2.3.4", "userAgent": "Chrome..." }
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // =============================================================================

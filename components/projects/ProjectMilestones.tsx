@@ -4,7 +4,20 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { CalendarDays, Flag, Trash2, Plus, Save, Edit2, X } from "lucide-react";
+import {
+  CalendarDays,
+  Flag,
+  Trash2,
+  Plus,
+  Save,
+  Edit2,
+  X,
+  Receipt,
+  DollarSign,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import {
   Milestone,
   getMilestonesByProject,
@@ -13,6 +26,7 @@ import {
 } from "@/lib/utils";
 import { useToaster } from "@/components/ui/Toaster";
 import { useLoading } from "@/context/LoadingContext";
+import { Badge } from "@/components/ui/Badge";
 
 export function ProjectMilestones({ projectId }: { projectId: string }) {
   const { show } = useToaster();
@@ -22,11 +36,15 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
   const [start, setStart] = React.useState("");
   const [target, setTarget] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [amount, setAmount] = React.useState("");
+
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitle, setEditTitle] = React.useState("");
   const [editStart, setEditStart] = React.useState("");
   const [editTarget, setEditTarget] = React.useState("");
   const [editDescription, setEditDescription] = React.useState("");
+  const [editAmount, setEditAmount] = React.useState("");
+
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
     id: string;
     title: string;
@@ -55,6 +73,8 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
         description: description.trim() || undefined,
         start: start || undefined,
         target: target || undefined,
+        amount: amount ? parseFloat(amount) : undefined,
+        paymentStatus: "unpaid",
       };
       await upsertMilestone(m);
       window.dispatchEvent(new Event("pv:milestonesUpdated"));
@@ -62,6 +82,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       setDescription("");
       setStart("");
       setTarget("");
+      setAmount("");
       setAdding(false);
       await refresh();
       show("success", "Milestone created successfully");
@@ -80,6 +101,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     setEditDescription(m.description || "");
     setEditStart(m.start || "");
     setEditTarget(m.target || "");
+    setEditAmount(m.amount ? String(m.amount) : "");
   };
 
   const saveEdit = async () => {
@@ -94,6 +116,9 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
         description: editDescription.trim() || undefined,
         start: editStart || undefined,
         target: editTarget || undefined,
+        amount: editAmount ? parseFloat(editAmount) : undefined,
+        paymentStatus:
+          items.find((i) => i.id === editingId)?.paymentStatus || "unpaid",
       };
       await upsertMilestone(m);
       window.dispatchEvent(new Event("pv:milestonesUpdated"));
@@ -115,6 +140,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     setEditTitle("");
     setEditStart("");
     setEditTarget("");
+    setEditAmount("");
   };
 
   const onDelete = async () => {
@@ -131,6 +157,56 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       show("error", "Failed to delete milestone");
     } finally {
       hideLoader();
+    }
+  };
+
+  const handleGenerateInvoice = async (m: Milestone) => {
+    if (!m.amount || m.amount <= 0) {
+      show("error", "Milestone has no amount to invoice");
+      return;
+    }
+    if (
+      confirm(`Generate invoice for milestone "${m.title}" ($${m.amount})?`)
+    ) {
+      showLoader("Generating Invoice...");
+      try {
+        const res = await fetch("/api/invoices", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: parseInt(projectId) || undefined, // Try to parse if numeric, handle UUID better if needed but API resolves it
+            milestoneId: m.id,
+            clientName: "Client For " + projectId, // Ideally fetch project client
+            dueDate: new Date().toISOString(), // Immediate due or logic
+            items: [
+              {
+                description: `Milestone: ${m.title}`,
+                amount: m.amount,
+                rate: m.amount,
+                quantity: 1,
+              },
+            ],
+            notes: `Generated from milestone ${m.id}`,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed");
+        show("success", "Invoice generated!");
+      } catch (e) {
+        show("error", "Failed to generate invoice");
+      } finally {
+        hideLoader();
+      }
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case "paid":
+        return <CheckCircle className="w-3 h-3 text-green-500" />;
+      case "partial":
+        return <Clock className="w-3 h-3 text-orange-500" />;
+      default:
+        return <AlertCircle className="w-3 h-3 text-gray-400" />;
     }
   };
 
@@ -156,6 +232,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                 setDescription("");
                 setStart("");
                 setTarget("");
+                setAmount("");
               }}
             >
               Cancel
@@ -173,8 +250,8 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
       </div>
 
       {adding && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 border p-3 rounded-md">
-          <div className="space-y-1">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border p-3 rounded-md">
+          <div className="md:col-span-2 space-y-1">
             <label className="text-xs font-medium">Title</label>
             <Input
               value={title}
@@ -183,22 +260,24 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium">Start</label>
+            <label className="text-xs font-medium">Amount ($)</label>
             <Input
-              type="date"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium">Target</label>
+            <label className="text-xs font-medium">Target Date</label>
             <Input
               type="date"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
             />
           </div>
-          <div className="md:col-span-3 space-y-1">
+
+          <div className="md:col-span-4 space-y-1">
             <label className="text-xs font-medium">Description</label>
             <Input
               value={description}
@@ -229,11 +308,22 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                   <div className="flex-1 min-w-0">
                     {isEditing ? (
                       <>
-                        <Input
-                          className="text-sm font-medium mb-2"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                        />
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <Input
+                            className="text-sm font-medium"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Start Date"
+                          />
+                          <Input
+                            type="number"
+                            className="text-sm"
+                            value={editAmount}
+                            onChange={(e) => setEditAmount(e.target.value)}
+                            placeholder="Amount"
+                          />
+                        </div>
+
                         <div className="flex items-center gap-4 text-xs mt-1">
                           <span className="flex items-center gap-1">
                             <CalendarDays className="w-3 h-3" />
@@ -265,7 +355,18 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                       </>
                     ) : (
                       <>
-                        <div className="text-sm font-medium">{m.title}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium">{m.title}</div>
+                          {m.amount && m.amount > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] h-5 px-1 gap-1"
+                            >
+                              {getStatusIcon(m.paymentStatus)}$
+                              {m.amount.toLocaleString()}
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">
                             <CalendarDays className="w-3 h-3" />
@@ -308,6 +409,15 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                       </>
                     ) : (
                       <>
+                        {m.amount && m.amount > 0 && (
+                          <button
+                            className="p-1 rounded hover:bg-accent text-blue-500 cursor-pointer"
+                            onClick={() => handleGenerateInvoice(m)}
+                            title="Generate Invoice"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           className="p-1 rounded hover:bg-accent cursor-pointer"
                           onClick={() => startEdit(m)}

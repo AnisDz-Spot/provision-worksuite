@@ -7,8 +7,9 @@ import {
   getEncryptionKey,
 } from "@/lib/auth/totp";
 import prisma from "@/lib/prisma";
+import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
   try {
     // 1. Verify user is authenticated
     const authUser = await getAuthenticatedUser();
@@ -68,4 +69,4 @@ export async function POST(request: NextRequest) {
     console.error("Error setting up 2FA:", error);
     return NextResponse.json({ error: "Failed to setup 2FA" }, { status: 500 });
   }
-}
+});
