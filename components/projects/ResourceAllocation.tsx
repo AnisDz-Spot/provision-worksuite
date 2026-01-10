@@ -241,13 +241,23 @@ export function ResourceAllocation({
               <select
                 value={baseCapacity}
                 onChange={(e) => setBaseCapacity(Number(e.target.value))}
-                className="bg-transparent border-b border-muted-foreground/30 py-0.5 px-1 focus:outline-none focus:border-primary text-foreground font-medium"
+                className="bg-card border-b border-muted-foreground/30 py-0.5 px-1 focus:outline-none focus:border-primary text-foreground font-medium rounded-t-sm"
               >
-                <option value={30}>30h / week</option>
-                <option value={35}>35h / week</option>
-                <option value={40}>40h / week (Std)</option>
-                <option value={45}>45h / week</option>
-                <option value={50}>50h / week</option>
+                <option value={30} className="bg-card text-foreground">
+                  30h / week
+                </option>
+                <option value={35} className="bg-card text-foreground">
+                  35h / week
+                </option>
+                <option value={40} className="bg-card text-foreground">
+                  40h / week (Std)
+                </option>
+                <option value={45} className="bg-card text-foreground">
+                  45h / week
+                </option>
+                <option value={50} className="bg-card text-foreground">
+                  50h / week
+                </option>
               </select>
             </div>
           </div>

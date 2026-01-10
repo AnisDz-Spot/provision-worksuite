@@ -20,6 +20,10 @@ import {
   getTaskCompletionForProject,
   getProjectTimeRollup,
 } from "@/lib/utils";
+import {
+  ProjectsProvider,
+  useProjects,
+} from "@/components/context/ProjectsContext";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 // Extend TableMeta to include custom methods
@@ -271,27 +275,16 @@ const columns: ColumnDef<Project>[] = [
 
 export function ProjectTable() {
   const router = useRouter();
-  const [data, setData] = React.useState<Project[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const {
+    projects: data,
+    isLoading: loading,
+    updateProject,
+    deleteProjectInCache,
+  } = useProjects();
+
   const [selectMode, setSelectMode] = React.useState(false);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
 
-  React.useEffect(() => {
-    async function fetchProjects() {
-      setLoading(true);
-      try {
-        const { loadProjects } = await import("@/lib/data");
-        const projects = await loadProjects();
-        setData(projects);
-      } catch (error) {
-        console.error("Failed to load projects:", error);
-        setData(PROJECTS); // Fallback to mock data
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProjects();
-  }, []);
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [sortBy, setSortBy] = React.useState<string>("name-asc");
@@ -327,50 +320,38 @@ export function ProjectTable() {
     },
     meta: {
       toggleStar: async (id: string) => {
-        setData((prev) => {
-          const next = prev.map((p) => {
-            if (p.id === id) {
-              const newStar = !p.starred;
-              try {
-                logProjectEvent(p.id, newStar ? "star" : "unstar");
-              } catch {}
-              return { ...p, starred: newStar };
-            }
-            return p;
-          });
+        const project = data.find((p) => p.id === id);
+        if (!project) return;
 
-          // Save to appropriate storage
-          (async () => {
-            try {
-              const { saveProjects } = await import("@/lib/data");
-              await saveProjects(next);
-            } catch (error) {
-              console.error("Failed to save projects:", error);
-            }
-          })();
+        const updatedProject = { ...project, starred: !project.starred };
+        updateProject(updatedProject);
 
-          return next;
-        });
+        try {
+          logProjectEvent(id, updatedProject.starred ? "star" : "unstar");
+          const { saveProjects } = await import("@/lib/data");
+          // Re-calculate full projects list for save
+          const nextProjects = data.map((p) =>
+            p.id === id ? updatedProject : p
+          );
+          await saveProjects(nextProjects);
+        } catch (error) {
+          console.error("Failed to save project star status:", error);
+        }
       },
     },
   });
 
   const deleteProject = async (id: string) => {
-    setData((prev) => {
-      const next = prev.filter((p) => p.id !== id);
+    deleteProjectInCache(id);
 
-      // Save to appropriate storage
-      (async () => {
-        try {
-          const { saveProjects } = await import("@/lib/data");
-          await saveProjects(next);
-        } catch (error) {
-          console.error("Failed to save projects:", error);
-        }
-      })();
+    try {
+      const { saveProjects } = await import("@/lib/data");
+      const nextProjects = data.filter((p) => p.id !== id);
+      await saveProjects(nextProjects);
+    } catch (error) {
+      console.error("Failed to save projects after deletion:", error);
+    }
 
-      return next;
-    });
     setDeleteConfirm(null);
     setDeleteInput("");
   };
@@ -520,18 +501,28 @@ export function ProjectTable() {
             <>
               <select
                 className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const val = e.target.value as Project["status"];
                   if (!val) return;
-                  setData((prev) => {
-                    const next = prev.map((p) =>
-                      selectedIds.has(p.id) ? { ...p, status: val } : p
-                    );
-                    try {
-                      localStorage.setItem("pv:projects", JSON.stringify(next));
-                    } catch {}
-                    return next;
+
+                  const updatedProjects = data.map((p) => {
+                    if (selectedIds.has(p.id)) {
+                      const updated = { ...p, status: val };
+                      updateProject(updated);
+                      return updated;
+                    }
+                    return p;
                   });
+
+                  try {
+                    const { saveProjects } = await import("@/lib/data");
+                    await saveProjects(updatedProjects);
+                  } catch (error) {
+                    console.error(
+                      "Failed to save projects after bulk update:",
+                      error
+                    );
+                  }
                   e.target.value = "";
                 }}
                 value=""
@@ -546,16 +537,25 @@ export function ProjectTable() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setData((prev) => {
-                    const next = prev.map((p) =>
-                      selectedIds.has(p.id) ? { ...p, archived: true } : p
-                    );
-                    try {
-                      localStorage.setItem("pv:projects", JSON.stringify(next));
-                    } catch {}
-                    return next;
+                onClick={async () => {
+                  const updatedProjects = data.map((p) => {
+                    if (selectedIds.has(p.id)) {
+                      const updated = { ...p, archived: true };
+                      updateProject(updated);
+                      return updated;
+                    }
+                    return p;
                   });
+
+                  try {
+                    const { saveProjects } = await import("@/lib/data");
+                    await saveProjects(updatedProjects);
+                  } catch (error) {
+                    console.error(
+                      "Failed to save projects after archive:",
+                      error
+                    );
+                  }
                   setSelectedIds(new Set());
                 }}
               >

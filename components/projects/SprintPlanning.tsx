@@ -129,16 +129,45 @@ export function SprintPlanning() {
   useEffect(() => {
     if (isMock) {
       setSprint(defaultSprint);
-    } else {
-      setSprint({
-        id: "sprint-empty",
-        name: "Current Sprint",
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-        capacity: 0,
-        tasks: [],
-      });
+      return;
     }
+
+    async function fetchSprints() {
+      try {
+        const res = await fetch("/api/sprints");
+        const result = await res.json();
+        if (result.success && result.data.length > 0) {
+          const s = result.data[0]; // Take current or first for now
+          setSprint({
+            id: s.id,
+            name: s.name || `Sprint ${s.number}`,
+            startDate: s.startDate,
+            endDate: s.endDate,
+            capacity: 40, // Default or fetch from somewhere
+            tasks: s.tasks.map((t: any) => ({
+              id: t.uid,
+              title: t.title,
+              assignee: t.assignee?.name || "Unassigned",
+              priority: t.priority?.toLowerCase() || "medium",
+              storyPoints: t.storyPoints || 0,
+              status:
+                t.status?.toLowerCase() === "done"
+                  ? "done"
+                  : t.status?.toLowerCase() === "todo"
+                    ? "todo"
+                    : t.status?.toLowerCase() === "backlog"
+                      ? "backlog"
+                      : t.status?.toLowerCase() === "in-progress"
+                        ? "in-progress"
+                        : "review",
+            })),
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch sprints:", err);
+      }
+    }
+    fetchSprints();
   }, [isMock]);
 
   const memberList = useMemo(() => {

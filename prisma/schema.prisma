@@ -195,19 +195,21 @@ model Project {
   client Client? @relation(fields: [clientId], references: [id])
 
   // Relations - tasks linked via projectId=uid
-  tasks          Task[]
-  expenses       Expense[]
-  invoices       Invoice[]
-  milestones     Milestone[]
-  files          File[]
-  comments       Comment[]
-  events         CalendarEvent[]
-  members        ProjectMember[]
-  chatGroups     ChatGroup[]
-  stars          StarredProject[]
-  meetings       Meeting[]
-  decisions      Decision[]
-  retrospectives Retrospective[]
+  tasks           Task[]
+  expenses        Expense[]
+  invoices        Invoice[]
+  milestones      Milestone[]
+  files           File[]
+  comments        Comment[]
+  events          CalendarEvent[]
+  members         ProjectMember[]
+  chatGroups      ChatGroup[]
+  stars           StarredProject[]
+  meetings        Meeting[]
+  decisions       Decision[]
+  retrospectives  Retrospective[]
+  sprints         Sprint[]
+  burndownMarkers BurndownMarker[]
 
   @@index([userId])
   @@index([clientId])
@@ -352,6 +354,8 @@ model Task {
   startedAt    DateTime? @map("started_at")
   blockedBy    String?   @map("blocked_by") // Reference to Blocker id
   watchers     String[]  @default([]) // Array of user UIDs
+  sprintId     String?   @map("sprint_id")
+  storyPoints  Int?      @map("story_points")
 
   // Recurrence fields
   isRecurring Boolean @default(false) @map("is_recurring")
@@ -367,6 +371,7 @@ model Task {
   comments   Comment[]
   files      File[]
   events     CalendarEvent[]
+  sprint     Sprint?         @relation(fields: [sprintId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([assigneeId])
@@ -376,7 +381,41 @@ model Task {
   @@index([parentTaskId])
   @@index([due]) // For deadline queries and filtering
   @@index([createdAt]) // For chronological sorting
+  @@index([sprintId])
   @@map("tasks")
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  number    Int
+  name      String?
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  status    String   @default("planned") // planned, active, completed
+  goal      String?
+  tasks     Task[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("sprints")
+}
+
+model BurndownMarker {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  date      DateTime
+  label     String
+  type      String   @default("scope-change") // scope-change, blocker, milestone
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [uid], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("burndown_markers")
 }
 
 model TimeLog {

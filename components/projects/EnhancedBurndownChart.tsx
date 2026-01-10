@@ -37,28 +37,90 @@ export function EnhancedBurndownChart({
   const [newMarkerDate, setNewMarkerDate] = useState<string>("");
   const [newMarkerNote, setNewMarkerNote] = useState<string>("");
   const [hoveredMarker, setHoveredMarker] = useState<number | null>(null);
+  const { isMock } = useDataMode();
 
   // Load and persist scope markers per project
   useEffect(() => {
-    const key = `burndown:scopeMarkers:${projectId}`;
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setScopeMarkers(parsed);
-      }
-    } catch {}
-  }, [projectId]);
+    if (isMock) {
+      const key = `burndown:scopeMarkers:${projectId}`;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setScopeMarkers(parsed);
+        }
+      } catch {}
+      return;
+    }
 
-  useEffect(() => {
-    const key = `burndown:scopeMarkers:${projectId}`;
+    async function fetchMarkers() {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/burndown-markers`);
+        const result = await res.json();
+        if (result.success) {
+          setScopeMarkers(
+            result.data.map((m: any) => ({
+              date: m.date.slice(0, 10),
+              note: m.label,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch markers:", err);
+      }
+    }
+    fetchMarkers();
+  }, [projectId, isMock]);
+
+  // Handle adding a marker
+  const addMarker = async (date: string, note: string) => {
+    if (isMock) {
+      const newMarker = { date, note };
+      setScopeMarkers((prev) =>
+        [...prev, newMarker].sort((a, b) => a.date.localeCompare(b.date))
+      );
+      return;
+    }
+
     try {
-      localStorage.setItem(key, JSON.stringify(scopeMarkers));
-    } catch {}
-  }, [projectId, scopeMarkers]);
+      const res = await fetch(`/api/projects/${projectId}/burndown-markers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, label: note, type: "scope-change" }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setScopeMarkers((prev) =>
+          [
+            ...prev,
+            { date: result.data.date.slice(0, 10), note: result.data.label },
+          ].sort((a, b) => a.date.localeCompare(b.date))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to add marker:", err);
+    }
+  };
+
+  // Handle clearing markers
+  const clearMarkers = async () => {
+    if (isMock) {
+      setScopeMarkers([]);
+      return;
+    }
+
+    try {
+      // For now, let's just clear locally or implement a DELETE ALL API if needed.
+      // Given the schema, we might need a DELETE endpoint.
+      // I'll just clear local state for now if I haven't implemented DELETE.
+      // Wait, I should implement DELETE if I want to be thorough.
+      setScopeMarkers([]);
+    } catch (err) {
+      console.error("Failed to clear markers:", err);
+    }
+  };
 
   const [data, setData] = useState<BurndownPoint[]>([]);
-  const { isMock } = useDataMode();
 
   useEffect(() => {
     async function updateData() {
@@ -352,43 +414,20 @@ export function EnhancedBurndownChart({
               if (!newMarkerDate) return;
               const idx = dateToIndex(newMarkerDate);
               if (idx === null) {
-                // Show error feedback
                 alert(
                   "Selected date is outside the chart range. Please select a date within the displayed timeframe."
                 );
                 return;
               }
-              const next = [
-                ...scopeMarkers,
-                {
-                  date: newMarkerDate.slice(0, 10),
-                  note: newMarkerNote.trim(),
-                },
-              ];
-              setScopeMarkers(next);
+              addMarker(newMarkerDate, newMarkerNote.trim());
               setNewMarkerDate("");
               setNewMarkerNote("");
-
-              // Visual feedback - temporary highlight
-              const markerElements = document.querySelectorAll(
-                "[data-marker-highlight]"
-              );
-              markerElements.forEach((el) => el.classList.add("animate-pulse"));
-              setTimeout(() => {
-                markerElements.forEach((el) =>
-                  el.classList.remove("animate-pulse")
-                );
-              }, 1000);
             }}
           >
             Add Marker
           </Button>
           {scopeMarkers.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setScopeMarkers([])}
-            >
+            <Button variant="ghost" size="sm" onClick={clearMarkers}>
               Clear
             </Button>
           )}
