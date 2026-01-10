@@ -613,20 +613,29 @@ export function ProjectTable() {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-accent">
             <table className="min-w-full text-sm">
               <thead className="bg-accent/20">
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
-                    {selectMode && <th className="p-4"></th>}
-                    {hg.headers.map((h) => (
-                      <th
-                        className="p-4 font-medium text-left text-muted-foreground"
-                        key={h.id}
-                      >
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </th>
-                    ))}
+                    {selectMode && <th className="p-4 w-10"></th>}
+                    {hg.headers.map((h) => {
+                      const isOwner = h.column.id === "owner";
+                      const isDeadline = h.column.id === "deadline";
+                      const isTime =
+                        h.column.id === "timeRollup" || h.id === "timeRollup";
+                      return (
+                        <th
+                          className={`p-4 font-medium text-left text-muted-foreground ${isOwner ? "hidden lg:table-cell" : ""} ${isDeadline ? "hidden md:table-cell" : ""} ${isTime ? "hidden xl:table-cell" : ""}`}
+                          key={h.id}
+                        >
+                          {flexRender(
+                            h.column.columnDef.header,
+                            h.getContext()
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 ))}
               </thead>
@@ -683,7 +692,7 @@ export function ProjectTable() {
                       </div>
                     </td>
 
-                    <td className="p-4">
+                    <td className="p-4 hidden lg:table-cell">
                       <Badge
                         variant={
                           p.status === "Active"
@@ -697,7 +706,7 @@ export function ProjectTable() {
                         {p.status}
                       </Badge>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 hidden md:table-cell">
                       {(() => {
                         if (!p.deadline) return "—";
                         try {
@@ -715,7 +724,7 @@ export function ProjectTable() {
                       })()}
                     </td>
                     {/* Time rollup */}
-                    <td className="p-4">
+                    <td className="p-4 hidden xl:table-cell">
                       {(() => {
                         const r = getProjectTimeRollup(p.id);
                         return (

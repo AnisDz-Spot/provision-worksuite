@@ -321,8 +321,8 @@ export function EnhancedBurndownChart({
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
+    <Card className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
             <TrendingDown className="w-5 h-5" />
@@ -334,11 +334,12 @@ export function EnhancedBurndownChart({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowIdeal(!showIdeal)}
+            className="flex-1 sm:flex-none"
           >
             <Calendar className="w-4 h-4 mr-1" />
             {showIdeal ? "Hide" : "Show"} Ideal
@@ -348,11 +349,17 @@ export function EnhancedBurndownChart({
               variant="outline"
               size="sm"
               onClick={() => setShowComparison(!showComparison)}
+              className="flex-1 sm:flex-none"
             >
               {showComparison ? "Hide" : "Show"} Comparison
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={exportData}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportData}
+            className="flex-1 sm:flex-none"
+          >
             <Download className="w-4 h-4 mr-1" />
             CSV
           </Button>
@@ -360,7 +367,7 @@ export function EnhancedBurndownChart({
       </div>
 
       {/* Date Range Selector */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex-1">
           <label className="text-xs text-muted-foreground block mb-1">
             Start Date
@@ -385,7 +392,7 @@ export function EnhancedBurndownChart({
 
       {/* Scope Markers Controls */}
       <div className="mb-4 p-3 rounded-lg border bg-muted/20">
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="flex-1">
             <label className="text-xs text-muted-foreground block mb-1">
               Marker Date
@@ -407,30 +414,33 @@ export function EnhancedBurndownChart({
               onChange={(e) => setNewMarkerNote(e.target.value)}
             />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (!newMarkerDate) return;
-              const idx = dateToIndex(newMarkerDate);
-              if (idx === null) {
-                alert(
-                  "Selected date is outside the chart range. Please select a date within the displayed timeframe."
-                );
-                return;
-              }
-              addMarker(newMarkerDate, newMarkerNote.trim());
-              setNewMarkerDate("");
-              setNewMarkerNote("");
-            }}
-          >
-            Add Marker
-          </Button>
-          {scopeMarkers.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearMarkers}>
-              Clear
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                if (!newMarkerDate) return;
+                const idx = dateToIndex(newMarkerDate);
+                if (idx === null) {
+                  alert(
+                    "Selected date is outside the chart range. Please select a date within the displayed timeframe."
+                  );
+                  return;
+                }
+                addMarker(newMarkerDate, newMarkerNote.trim());
+                setNewMarkerDate("");
+                setNewMarkerNote("");
+              }}
+            >
+              Add Marker
             </Button>
-          )}
+            {scopeMarkers.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearMarkers}>
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
         {scopeMarkers.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -471,8 +481,11 @@ export function EnhancedBurndownChart({
       )}
 
       {/* Chart */}
-      <div className="overflow-x-auto">
-        <svg width={chartWidth} height={chartHeight} className="mx-auto">
+      <div className="w-full">
+        <svg
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+          className="w-full h-auto mx-auto overflow-visible"
+        >
           <g transform={`translate(${padding.left}, ${padding.top})`}>
             {/* Grid lines */}
             {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {

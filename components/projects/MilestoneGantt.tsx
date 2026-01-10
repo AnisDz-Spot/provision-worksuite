@@ -270,175 +270,178 @@ export function MilestoneGantt({
           <p>No milestones found</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Timeline header */}
-          <div className="flex items-center gap-4">
-            <div className="w-64 shrink-0" /> {/* Spacer for milestone names */}
-            <div className="flex-1 relative">
-              <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                <span>
-                  {timeRange.start.toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-                <span>
-                  {new Date(
-                    (timeRange.start.getTime() + timeRange.end.getTime()) / 2
-                  ).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-                <span>
-                  {timeRange.end.toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
+        <div className="space-y-6 overflow-x-auto scrollbar-thin scrollbar-thumb-accent pb-4">
+          <div className="min-w-[800px] space-y-6">
+            {/* Timeline header */}
+            <div className="flex items-center gap-4">
+              <div className="w-64 shrink-0" />{" "}
+              {/* Spacer for milestone names */}
+              <div className="flex-1 relative">
+                <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                  <span>
+                    {timeRange.start.toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <span>
+                    {new Date(
+                      (timeRange.start.getTime() + timeRange.end.getTime()) / 2
+                    ).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <span>
+                    {timeRange.end.toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div className="h-1 bg-accent rounded-full" />
               </div>
-              <div className="h-1 bg-accent rounded-full" />
             </div>
-          </div>
 
-          {/* Projects and milestones */}
-          {projectGroups.map((group) => (
-            <div key={group.projectId} className="space-y-2">
-              {/* Project header */}
-              <button
-                onClick={() => toggleProject(group.projectId)}
-                className="flex items-center gap-2 w-full text-left hover:bg-accent/50 rounded px-2 py-1 transition-colors"
-              >
-                {expandedProjects.has(group.projectId) ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-                <span className="font-semibold text-sm">
-                  {group.projectName}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({group.milestones.length} milestones)
-                </span>
-              </button>
+            {/* Projects and milestones */}
+            {projectGroups.map((group) => (
+              <div key={group.projectId} className="space-y-2">
+                {/* Project header */}
+                <button
+                  onClick={() => toggleProject(group.projectId)}
+                  className="flex items-center gap-2 w-full text-left hover:bg-accent/50 rounded px-2 py-1 transition-colors"
+                >
+                  {expandedProjects.has(group.projectId) ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  <span className="font-semibold text-sm">
+                    {group.projectName}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({group.milestones.length} milestones)
+                  </span>
+                </button>
 
-              {/* Milestones */}
-              {expandedProjects.has(group.projectId) &&
-                group.milestones.map((milestone) => (
-                  <div
-                    key={milestone.id}
-                    className="flex items-center gap-4 group"
-                  >
-                    {/* Milestone info */}
-                    <div className="w-64 shrink-0 px-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        {getStatusIcon(milestone.status)}
-                        <span className="text-sm font-medium truncate">
-                          {milestone.title}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Due:{" "}
-                        {new Date(milestone.dueDate).toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "numeric" }
-                        )}
-                      </div>
-                      {milestone.tasks && (
+                {/* Milestones */}
+                {expandedProjects.has(group.projectId) &&
+                  group.milestones.map((milestone) => (
+                    <div
+                      key={milestone.id}
+                      className="flex items-center gap-4 group"
+                    >
+                      {/* Milestone info */}
+                      <div className="w-64 shrink-0 px-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getStatusIcon(milestone.status)}
+                          <span className="text-sm font-medium truncate">
+                            {milestone.title}
+                          </span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {milestone.tasks.filter((t) => t.completed).length}/
-                          {milestone.tasks.length} tasks
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Timeline bar */}
-                    <div className="flex-1 relative h-8">
-                      {/* Today indicator */}
-                      {todayPosition >= 0 && todayPosition <= 100 && (
-                        <div
-                          className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                          style={{ left: `${todayPosition}%` }}
-                        >
-                          <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full" />
-                        </div>
-                      )}
-
-                      {/* Milestone marker */}
-                      <div
-                        className="absolute top-1/2 -translate-y-1/2 transition-all"
-                        style={{
-                          left: `${getMilestonePosition(milestone.dueDate)}%`,
-                        }}
-                      >
-                        <div
-                          className={`w-3 h-3 ${getStatusColor(milestone.status)} rounded-full border-2 border-background shadow-lg group-hover:scale-150 transition-transform`}
-                        />
-
-                        {/* Progress bar leading to milestone */}
-                        {milestone.progress > 0 && (
-                          <div
-                            className="absolute right-full top-1/2 -translate-y-1/2 h-1 bg-linear-to-r from-transparent to-current transition-all"
-                            style={{
-                              width: "60px",
-                              color:
-                                milestone.status === "completed"
-                                  ? "#22c55e"
-                                  : "#3b82f6",
-                            }}
-                          />
-                        )}
-                      </div>
-
-                      {/* Hover tooltip */}
-                      <div
-                        className="absolute opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 bg-popover border border-border rounded-lg shadow-lg p-2 text-xs whitespace-nowrap"
-                        style={{
-                          left: `${getMilestonePosition(milestone.dueDate)}%`,
-                          top: "100%",
-                          marginTop: "8px",
-                          transform: "translateX(-50%)",
-                        }}
-                      >
-                        <div className="font-semibold">{milestone.title}</div>
-                        <div className="text-muted-foreground">
+                          Due:{" "}
                           {new Date(milestone.dueDate).toLocaleDateString(
                             "en-US",
-                            {
-                              weekday: "short",
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            }
+                            { month: "short", day: "numeric" }
                           )}
                         </div>
-                        <div className="text-muted-foreground">
-                          Progress: {milestone.progress}%
+                        {milestone.tasks && (
+                          <div className="text-xs text-muted-foreground">
+                            {milestone.tasks.filter((t) => t.completed).length}/
+                            {milestone.tasks.length} tasks
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Timeline bar */}
+                      <div className="flex-1 relative h-8">
+                        {/* Today indicator */}
+                        {todayPosition >= 0 && todayPosition <= 100 && (
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                            style={{ left: `${todayPosition}%` }}
+                          >
+                            <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full" />
+                          </div>
+                        )}
+
+                        {/* Milestone marker */}
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 transition-all"
+                          style={{
+                            left: `${getMilestonePosition(milestone.dueDate)}%`,
+                          }}
+                        >
+                          <div
+                            className={`w-3 h-3 ${getStatusColor(milestone.status)} rounded-full border-2 border-background shadow-lg group-hover:scale-150 transition-transform`}
+                          />
+
+                          {/* Progress bar leading to milestone */}
+                          {milestone.progress > 0 && (
+                            <div
+                              className="absolute right-full top-1/2 -translate-y-1/2 h-1 bg-linear-to-r from-transparent to-current transition-all"
+                              style={{
+                                width: "60px",
+                                color:
+                                  milestone.status === "completed"
+                                    ? "#22c55e"
+                                    : "#3b82f6",
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Hover tooltip */}
+                        <div
+                          className="absolute opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 bg-popover border border-border rounded-lg shadow-lg p-2 text-xs whitespace-nowrap"
+                          style={{
+                            left: `${getMilestonePosition(milestone.dueDate)}%`,
+                            top: "100%",
+                            marginTop: "8px",
+                            transform: "translateX(-50%)",
+                          }}
+                        >
+                          <div className="font-semibold">{milestone.title}</div>
+                          <div className="text-muted-foreground">
+                            {new Date(milestone.dueDate).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
+                          </div>
+                          <div className="text-muted-foreground">
+                            Progress: {milestone.progress}%
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-          ))}
+                  ))}
+              </div>
+            ))}
 
-          {/* Legend */}
-          <div className="flex items-center gap-6 pt-4 border-t border-border">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 bg-green-500 rounded-full" />
-              <span className="text-muted-foreground">Completed</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 bg-blue-500 rounded-full" />
-              <span className="text-muted-foreground">In Progress</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 bg-gray-400 rounded-full" />
-              <span className="text-muted-foreground">Pending</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-0.5 h-4 bg-red-500" />
-              <span className="text-muted-foreground">Today</span>
+            {/* Legend */}
+            <div className="flex items-center gap-6 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 bg-green-500 rounded-full" />
+                <span className="text-muted-foreground">Completed</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                <span className="text-muted-foreground">In Progress</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 bg-gray-400 rounded-full" />
+                <span className="text-muted-foreground">Pending</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-0.5 h-4 bg-red-500" />
+                <span className="text-muted-foreground">Today</span>
+              </div>
             </div>
           </div>
         </div>

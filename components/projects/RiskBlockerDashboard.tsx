@@ -383,7 +383,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
         <div className="p-3 rounded-lg border">
           <div className="text-xs text-muted-foreground mb-1">Open</div>
           <div className="text-2xl font-bold text-red-600">{stats.open}</div>
@@ -616,82 +616,87 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
             </Button>
           </div>
           <div
-            className={`border rounded-lg p-4 ${
-              graphExpanded
-                ? "max-h-[600px] overflow-y-auto overflow-x-auto"
-                : "overflow-x-auto max-h-[220px]"
+            className={`border rounded-lg p-4 overflow-x-auto scrollbar-thin scrollbar-thumb-accent ${
+              graphExpanded ? "max-h-[600px] overflow-y-auto" : "max-h-[220px]"
             }`}
           >
-            <svg
-              width="100%"
-              height={
-                graphExpanded
-                  ? filteredBlockers.reduce((total, b, i) => {
-                      const taskCount = Math.min(b.impactedTasks.length, 3);
-                      const lastTaskY = 20 + (i * 3 + taskCount - 1) * 30 + 28;
-                      return Math.max(total, lastTaskY);
-                    }, 220) + 40
-                  : 220
-              }
-              className="min-h-[220px]"
-            >
-              {/* simple horizontal flow layout: blockers on left, tasks on right */}
-              {filteredBlockers
-                .slice(0, graphExpanded ? filteredBlockers.length : 5)
-                .map((b, i) => {
-                  const y = 20 + i * 40;
-                  return (
-                    <g key={b.id}>
-                      {/* blocker node */}
-                      <rect
-                        x={10}
-                        y={y}
-                        width={160}
-                        height={28}
-                        rx={6}
-                        className="fill-red-500/10 stroke-red-500/30"
-                      />
-                      <text x={20} y={y + 18} className="text-xs fill-red-700">
-                        {b.title.slice(0, 22)}
-                        {b.title.length > 22 ? "…" : ""}
-                      </text>
-                      {/* edges to tasks */}
-                      {b.impactedTasks.slice(0, 3).map((t, ti) => {
-                        const ty = 20 + (i * 3 + ti) * 30;
-                        const tx = 340;
-                        return (
-                          <g key={`${b.id}-t-${ti}`}>
-                            <line
-                              x1={170}
-                              y1={y + 14}
-                              x2={tx}
-                              y2={ty + 14}
-                              className="stroke-muted-foreground"
-                              strokeOpacity={0.3}
-                            />
-                            <rect
-                              x={tx}
-                              y={ty}
-                              width={200}
-                              height={28}
-                              rx={6}
-                              className="fill-secondary stroke-border"
-                            />
-                            <text
-                              x={tx + 10}
-                              y={ty + 18}
-                              className="text-xs fill-muted-foreground"
-                            >
-                              {t.slice(0, 26)}
-                              {t.length > 26 ? "…" : ""}
-                            </text>
-                          </g>
-                        );
-                      })}
-                    </g>
-                  );
-                })}
-            </svg>
+            <div className="min-w-[550px]">
+              <svg
+                width="100%"
+                height={
+                  graphExpanded
+                    ? filteredBlockers.reduce((total, b, i) => {
+                        const taskCount = Math.min(b.impactedTasks.length, 3);
+                        const lastTaskY =
+                          20 + (i * 3 + taskCount - 1) * 30 + 28;
+                        return Math.max(total, lastTaskY);
+                      }, 220) + 40
+                    : 220
+                }
+                className="min-h-[220px]"
+              >
+                {/* simple horizontal flow layout: blockers on left, tasks on right */}
+                {filteredBlockers
+                  .slice(0, graphExpanded ? filteredBlockers.length : 5)
+                  .map((b, i) => {
+                    const y = 20 + i * 40;
+                    return (
+                      <g key={b.id}>
+                        {/* blocker node */}
+                        <rect
+                          x={10}
+                          y={y}
+                          width={160}
+                          height={28}
+                          rx={6}
+                          className="fill-red-500/10 stroke-red-500/30"
+                        />
+                        <text
+                          x={20}
+                          y={y + 18}
+                          className="text-xs fill-red-700"
+                        >
+                          {b.title.slice(0, 22)}
+                          {b.title.length > 22 ? "…" : ""}
+                        </text>
+                        {/* edges to tasks */}
+                        {b.impactedTasks.slice(0, 3).map((t, ti) => {
+                          const ty = 20 + (i * 3 + ti) * 30;
+                          const tx = 340;
+                          return (
+                            <g key={`${b.id}-t-${ti}`}>
+                              <line
+                                x1={170}
+                                y1={y + 14}
+                                x2={tx}
+                                y2={ty + 14}
+                                className="stroke-muted-foreground"
+                                strokeOpacity={0.3}
+                              />
+                              <rect
+                                x={tx}
+                                y={ty}
+                                width={200}
+                                height={28}
+                                rx={6}
+                                className="fill-secondary stroke-border"
+                              />
+                              <text
+                                x={tx + 10}
+                                y={ty + 18}
+                                className="text-xs fill-muted-foreground"
+                              >
+                                {t.slice(0, 26)}
+                                {t.length > 26 ? "…" : ""}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </g>
+                    );
+                  })}
+              </svg>
+            </div>
           </div>
         </div>
       )}

@@ -361,32 +361,42 @@ export function SprintPlanning() {
       </div>
 
       {/* Sprint stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-accent/50 rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">Total Points</div>
-          <div className="text-2xl font-bold">{stats.total}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
+        <div className="bg-accent/50 rounded-lg p-2 sm:p-3">
+          <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            Total Points
+          </div>
+          <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
         </div>
-        <div className="bg-green-500/10 rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">Completed</div>
-          <div className="text-2xl font-bold text-green-600">
+        <div className="bg-green-500/10 rounded-lg p-2 sm:p-3">
+          <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            Completed
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600">
             {stats.completed}
           </div>
         </div>
-        <div className="bg-amber-500/10 rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">In Progress</div>
-          <div className="text-2xl font-bold text-amber-600">
+        <div className="bg-amber-500/10 rounded-lg p-2 sm:p-3">
+          <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            In Progress
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-amber-600">
             {stats.inProgress}
           </div>
         </div>
-        <div className="bg-blue-500/10 rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">Remaining</div>
-          <div className="text-2xl font-bold text-blue-600">
+        <div className="bg-blue-500/10 rounded-lg p-2 sm:p-3">
+          <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            Remaining
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">
             {stats.remaining}
           </div>
         </div>
-        <div className="bg-purple-500/10 rounded-lg p-3">
-          <div className="text-xs text-muted-foreground mb-1">Velocity</div>
-          <div className="text-2xl font-bold text-purple-600">
+        <div className="bg-purple-500/10 rounded-lg p-2 sm:p-3 col-span-2 sm:col-span-1">
+          <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+            Velocity
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-600">
             {stats.velocity}%
           </div>
         </div>
@@ -416,7 +426,7 @@ export function SprintPlanning() {
       </div>
 
       {/* Kanban board */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         {columns.map((column) => (
           <div
             key={column.id}

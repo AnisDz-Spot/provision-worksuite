@@ -21,6 +21,7 @@ import {
   LayoutGrid,
   List,
   GanttChartIcon,
+  Plus,
 } from "lucide-react";
 import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -39,8 +40,8 @@ function ProjectsContent() {
   }, []);
 
   return (
-    <section className="p-4 md:p-8 flex flex-col gap-8">
-      <div className="flex items-center justify-between">
+    <section className="p-4 md:p-8 flex flex-col gap-6 md:gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-lg bg-primary/10 text-primary">
             <FolderKanbanIcon className="w-6 h-6" />
@@ -52,19 +53,18 @@ function ProjectsContent() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {/* Temporary Refresh Button for debugging/verification */}
           <Button
             variant="outline"
+            size="sm"
             onClick={() => refreshProjects()}
             title="Refresh Data"
             disabled={refreshing}
+            className="shrink-0"
           >
             {refreshing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-                Refreshing...
-              </>
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             ) : (
               "Refresh"
             )}
@@ -72,40 +72,47 @@ function ProjectsContent() {
 
           <Button
             variant={view === "grid" ? "primary" : "outline"}
+            size="sm"
             onClick={() => {
               setView("grid");
               localStorage.setItem("pv:projectsView", "grid");
             }}
             title="Grid view"
-            className="cursor-pointer"
+            className="cursor-pointer shrink-0"
           >
             <LayoutGrid className="w-4 h-4" />
           </Button>
           <Button
             variant={view === "list" ? "primary" : "outline"}
+            size="sm"
             onClick={() => {
               setView("list");
               localStorage.setItem("pv:projectsView", "list");
             }}
             title="List view"
-            className="cursor-pointer"
+            className="cursor-pointer shrink-0"
           >
             <List className="w-4 h-4" />
           </Button>
           <Button
             variant={view === "gantt" ? "primary" : "outline"}
+            size="sm"
             onClick={() => {
               setView("gantt");
               localStorage.setItem("pv:projectsView", "gantt");
             }}
             title="Timeline view"
-            className="cursor-pointer"
+            className="cursor-pointer shrink-0"
           >
-            <GanttChartIcon className="w-4 h-4 mr-1" />
+            <GanttChartIcon className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">Timeline</span>
           </Button>
-          <Button variant="primary" asChild>
-            <a href="/projects/new">+ New Project</a>
+          <Button variant="primary" size="sm" asChild className="shrink-0">
+            <a href="/projects/new">
+              <Plus className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">New Project</span>
+              <span className="sm:hidden">New</span>
+            </a>
           </Button>
         </div>
       </div>
