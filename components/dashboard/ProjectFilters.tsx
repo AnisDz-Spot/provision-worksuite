@@ -84,28 +84,6 @@ export function ProjectFilters({
   handleDeleteView,
 }: ProjectFiltersProps) {
   const { showToast } = useToast();
-  // Simple client-side cache singleton reference needs to be managed if we update projects?
-  // In ProjectGrid, cachedProjects is a module-level variable.
-  // We can't access it here directly to update it.
-  // We might need to handle the optimistic cache update via a callback prop or just ignore it here
-  // (ProjectGrid handles setProjects but we need to update cache too).
-  // Actually, in ProjectGrid line 559 `cachedProjects = next` is done inside setProjects updater.
-  // Since we pass setProjects, the updater function defined HERE will run.
-  // But `cachedProjects` is not in this scope.
-  // Use a hack: we can't write to `cachedProjects` variable in parent module from here.
-  // BUT the `setProjects` updater callback runs in the scope where it is defined? NO.
-  // It runs where it is executed by React.
-  // Wait, `setProjects((prev) => ...)` - the arrow function is defined HERE.
-  // So we cannot update `cachedProjects` global variable of ProjectGrid.tsx from here.
-  // This is a functionality change risk.
-  // However, `cachedProjects` is mainly for "initial load". Detailed updates might be fine if missed,
-  // OR we should pass a specific callback "updateProjects" that handles both state and cache.
-
-  // Let's refactor `setProjects` calls in bulk actions to use a prop method `onBulkUpdate`?
-  // Ideally yes, to keep the cache logic in ProjectGrid.
-
-  // Implementation below assumes we fix that by adding two callbacks: onBulkUpdateStatus and onBulkArchive.
-
   return (
     <>
       <div className="p-3 border rounded-xl mb-4 bg-card space-y-4">
@@ -203,7 +181,7 @@ export function ProjectFilters({
             </select>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t md:border-t-0 md:pt-0">
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t md:border-t-0 md:pt-0">
           {!selectMode && (
             <Button
               variant="outline"

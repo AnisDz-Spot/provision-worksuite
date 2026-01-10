@@ -346,7 +346,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-red-500/10 text-red-600">
             <AlertTriangle className="w-5 h-5" />
@@ -359,7 +359,10 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
           </div>
         </div>
         {!isMock && (
-          <Button onClick={() => setModalOpen(true)}>
+          <Button
+            onClick={() => setModalOpen(true)}
+            className="w-full sm:w-auto"
+          >
             <Plus className="w-4 h-4 mr-1" />
             Report Blocker
           </Button>

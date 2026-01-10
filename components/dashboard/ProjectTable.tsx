@@ -478,7 +478,7 @@ export function ProjectTable() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t md:border-t-0 md:pt-0">
+        <div className="flex flex-wrap items-center justify-center sm:justify-between gap-3 pt-2 border-t md:border-t-0 md:pt-0">
           <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
             <input
               type="checkbox"
@@ -494,7 +494,7 @@ export function ProjectTable() {
             </span>
           </label>
 
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center justify-center gap-2 sm:ml-auto">
             {!selectMode && (
               <Button
                 variant="outline"

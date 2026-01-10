@@ -322,23 +322,16 @@ export function SprintPlanning() {
 
   return (
     <Card className="p-6">
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Columns3 className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">{sprint.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {new Date(sprint.startDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}{" "}
-              -{" "}
-              {new Date(sprint.endDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
+            <h3 className="text-lg font-semibold">{sprint.name}</h3>
+            <p className="text-xs text-muted-foreground">
+              {new Date(sprint.startDate).toLocaleDateString()} -{" "}
+              {new Date(sprint.endDate).toLocaleDateString()}
               <span className="ml-2">
                 •{" "}
                 {daysRemaining > 0

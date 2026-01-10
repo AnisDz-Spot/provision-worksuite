@@ -54,7 +54,7 @@ function ProjectsContent() {
           </div>
         </div>
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          {/* Row 1 on Mobile: Refresh & Timeline */}
+          {/* Row 1 on Mobile: Refresh & New Project */}
           <Button
             variant="outline"
             size="sm"
@@ -71,21 +71,19 @@ function ProjectsContent() {
           </Button>
 
           <Button
-            variant={view === "gantt" ? "primary" : "outline"}
+            variant="primary"
             size="sm"
-            onClick={() => {
-              setView("gantt");
-              localStorage.setItem("pv:projectsView", "gantt");
-            }}
-            title="Timeline view"
-            className="w-full sm:w-auto cursor-pointer order-2"
+            asChild
+            className="w-full sm:w-auto order-2"
           >
-            <GanttChartIcon className="w-4 h-4 mr-1" />
-            <span>Timeline</span>
+            <a href="/projects/new">
+              <Plus className="w-4 h-4 mr-1" />
+              <span>New Project</span>
+            </a>
           </Button>
 
-          {/* Row 2 on Mobile: Grid & List */}
-          <div className="flex gap-2 w-full sm:w-auto order-3">
+          {/* Row 2 on Mobile: View Toggles */}
+          <div className="flex gap-2 w-full sm:w-auto col-span-2 sm:col-span-1 order-3">
             <Button
               variant={view === "grid" ? "primary" : "outline"}
               size="sm"
@@ -110,20 +108,21 @@ function ProjectsContent() {
             >
               <List className="w-4 h-4" />
             </Button>
+            <Button
+              variant={view === "gantt" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => {
+                setView("gantt");
+                localStorage.setItem("pv:projectsView", "gantt");
+              }}
+              title="Timeline view"
+              className="flex-1 sm:flex-none cursor-pointer"
+            >
+              <GanttChartIcon className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Timeline</span>
+              <span className="sm:hidden">Time</span>
+            </Button>
           </div>
-
-          {/* Row 3 on Mobile: New Project */}
-          <Button
-            variant="primary"
-            size="sm"
-            asChild
-            className="w-full sm:w-auto col-span-2 sm:col-span-1 order-4"
-          >
-            <a href="/projects/new">
-              <Plus className="w-4 h-4 mr-1" />
-              <span>New Project</span>
-            </a>
-          </Button>
         </div>
       </div>
 

@@ -337,9 +337,8 @@ export function EnhancedBurndownChart({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
             onClick={() => setShowIdeal(!showIdeal)}
-            className="flex-1 sm:flex-none"
+            className="w-full sm:w-auto"
           >
             <Calendar className="w-4 h-4 mr-1" />
             {showIdeal ? "Hide" : "Show"} Ideal
@@ -347,18 +346,16 @@ export function EnhancedBurndownChart({
           {compareProjects.length > 0 && (
             <Button
               variant="outline"
-              size="sm"
               onClick={() => setShowComparison(!showComparison)}
-              className="flex-1 sm:flex-none"
+              className="w-full sm:w-auto"
             >
               {showComparison ? "Hide" : "Show"} Comparison
             </Button>
           )}
           <Button
             variant="outline"
-            size="sm"
             onClick={exportData}
-            className="flex-1 sm:flex-none"
+            className="w-full sm:w-auto"
           >
             <Download className="w-4 h-4 mr-1" />
             CSV
