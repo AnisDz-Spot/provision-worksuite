@@ -125,7 +125,7 @@ const columns: ColumnDef<Project>[] = [
       );
     },
   },
-  { accessorKey: "owner", header: "Owner" },
+
   {
     accessorKey: "status",
     header: "Status",
@@ -261,36 +261,7 @@ const columns: ColumnDef<Project>[] = [
       );
     },
   },
-  {
-    id: "members",
-    header: () => "Members",
-    cell: ({ row }) => {
-      const members = row.original.members || [];
-      const shown = members.slice(0, 5);
-      const extra = members.length - shown.length;
-      return (
-        <div className="flex items-center">
-          {shown.map((m, idx) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={idx}
-              src={
-                m.avatarUrl ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-              }
-              alt={m.name}
-              className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
-            />
-          ))}
-          {extra > 0 && (
-            <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
-              +{extra}
-            </div>
-          )}
-        </div>
-      );
-    },
-  },
+
   {
     id: "actions",
     header: () => "Actions",
@@ -700,7 +671,7 @@ export function ProjectTable() {
                         </button>
                       </div>
                     </td>
-                    <td className="p-4">{p.owner}</td>
+
                     <td className="p-4">
                       <Badge
                         variant={
@@ -809,28 +780,6 @@ export function ProjectTable() {
                           </div>
                         );
                       })()}
-                    </td>
-                    {/* Members */}
-                    <td className="p-4">
-                      <div className="flex items-center">
-                        {(p.members || []).slice(0, 5).map((m, idx) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            key={idx}
-                            src={
-                              m.avatarUrl ||
-                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                            }
-                            alt={m.name}
-                            className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-white"
-                          />
-                        ))}
-                        {p.members && p.members.length > 5 && (
-                          <div className="w-6 h-6 rounded-full border -ml-2 first:ml-0 bg-muted text-foreground text-[10px] flex items-center justify-center">
-                            +{p.members.length - 5}
-                          </div>
-                        )}
-                      </div>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">

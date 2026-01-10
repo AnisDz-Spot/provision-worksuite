@@ -74,29 +74,47 @@ export async function GET() {
       return NextResponse.json({ success: true, data: {} });
     }
 
-    const isAdmin = dbUser.role === "admin" || dbUser.role === "global-admin";
+    const role = dbUser.role.toLowerCase();
+    const isAdmin =
+      role === "admin" ||
+      role === "global-admin" ||
+      role === "master admin" ||
+      role === "administrator" ||
+      user.uid === "admin-global";
     const userId = dbUser.id;
+
+    const commonWhere = isAdmin
+      ? { archivedAt: null }
+      : {
+          OR: [
+            { userId: userId },
+            { members: { some: { userId: userId } } },
+            { visibility: { in: ["public", "team-only"] } },
+          ],
+          archivedAt: null,
+        };
+
+    const commonTaskWhere = isAdmin
+      ? {}
+      : {
+          OR: [
+            { project: { userId: userId } },
+            { project: { members: { some: { userId: userId } } } },
+            { project: { visibility: { in: ["public", "team-only"] } } },
+            { assigneeId: userId },
+          ],
+        };
 
     // 1. Project Status Distribution
     const projectStatusCounts = await prisma.project.groupBy({
       by: ["status"],
-      where: isAdmin
-        ? { archivedAt: null }
-        : {
-            OR: [{ userId: userId }, { members: { some: { userId: userId } } }],
-            archivedAt: null,
-          },
+      where: commonWhere,
       _count: true,
     });
 
     // 2. Project Health (Top 12)
     const projectsRaw = await prisma.project.findMany({
-      where: isAdmin
-        ? { archivedAt: null }
-        : {
-            OR: [{ userId: userId }, { members: { some: { userId: userId } } }],
-            archivedAt: null,
-          },
+      where: commonWhere,
       take: 12,
       orderBy: { createdAt: "desc" },
       include: {
@@ -125,15 +143,7 @@ export async function GET() {
     // 3. Tasks by Priority
     const taskPriorityCounts = await prisma.task.groupBy({
       by: ["priority"],
-      where: isAdmin
-        ? {}
-        : {
-            OR: [
-              { project: { userId: userId } },
-              { project: { members: { some: { userId: userId } } } },
-              { assigneeId: userId },
-            ],
-          },
+      where: commonTaskWhere,
       _count: true,
     });
 
@@ -141,15 +151,7 @@ export async function GET() {
     const totalUsers = await prisma.user.count();
     const taskStatusCounts = await prisma.task.groupBy({
       by: ["status"],
-      where: isAdmin
-        ? {}
-        : {
-            OR: [
-              { project: { userId: userId } },
-              { project: { members: { some: { userId: userId } } } },
-              { assigneeId: userId },
-            ],
-          },
+      where: commonTaskWhere,
       _count: true,
     });
 
@@ -172,15 +174,7 @@ export async function GET() {
 
       const dayTasks = await prisma.task.findMany({
         where: {
-          ...(isAdmin
-            ? {}
-            : {
-                OR: [
-                  { project: { userId: userId } },
-                  { project: { members: { some: { userId: userId } } } },
-                  { assigneeId: userId },
-                ],
-              }),
+          ...commonTaskWhere,
           createdAt: { gte: start, lt: end },
         },
         select: { status: true },

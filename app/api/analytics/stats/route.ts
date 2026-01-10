@@ -46,49 +46,54 @@ export async function GET() {
       });
     }
 
-    const isAdmin = dbUser.role === "admin" || dbUser.role === "global-admin";
+    const role = dbUser.role.toLowerCase();
+    const isAdmin =
+      role === "admin" ||
+      role === "global-admin" ||
+      role === "master admin" ||
+      role === "administrator" ||
+      user.uid === "admin-global";
     const userId = dbUser.id;
+
+    const commonWhere = isAdmin
+      ? {}
+      : {
+          OR: [
+            { userId: userId },
+            { members: { some: { userId: userId } } },
+            { visibility: { in: ["public", "team-only"] } },
+          ],
+        };
+
+    const commonTaskWhere = isAdmin
+      ? {}
+      : {
+          OR: [
+            { project: { userId: userId } },
+            { project: { members: { some: { userId: userId } } } },
+            { project: { visibility: { in: ["public", "team-only"] } } },
+            { assigneeId: userId },
+          ],
+        };
 
     // 1. Projects Count
     const totalProjectsCount = await prisma.project.count({
-      where: isAdmin
-        ? {}
-        : {
-            OR: [{ userId: userId }, { members: { some: { userId: userId } } }],
-          },
+      where: commonWhere,
     });
     const activeProjectsCount = await prisma.project.count({
-      where: isAdmin
-        ? { archivedAt: null }
-        : {
-            OR: [{ userId: userId }, { members: { some: { userId: userId } } }],
-            archivedAt: null,
-          },
+      where: {
+        ...commonWhere,
+        archivedAt: null,
+      },
     });
 
     // 2. Tasks Count (Completed vs Pending)
     const totalTasksCount = await prisma.task.count({
-      where: isAdmin
-        ? {}
-        : {
-            OR: [
-              { project: { userId: userId } },
-              { project: { members: { some: { userId: userId } } } },
-              { assigneeId: userId },
-            ],
-          },
+      where: commonTaskWhere,
     });
     const completedTasksCount = await prisma.task.count({
       where: {
-        ...(isAdmin
-          ? {}
-          : {
-              OR: [
-                { project: { userId: userId } },
-                { project: { members: { some: { userId: userId } } } },
-                { assigneeId: userId },
-              ],
-            }),
+        ...commonTaskWhere,
         status: { in: ["done", "completed"] },
       },
     });
@@ -113,29 +118,15 @@ export async function GET() {
 
     const projectsWithDeadlinesCount = await prisma.project.count({
       where: {
+        ...commonWhere,
         archivedAt: null,
         deadline: { not: null },
-        ...(isAdmin
-          ? {}
-          : {
-              OR: [
-                { userId: userId },
-                { members: { some: { userId: userId } } },
-              ],
-            }),
       },
     });
 
     const upcomingDeadlinesCount = await prisma.project.count({
       where: {
-        ...(isAdmin
-          ? {}
-          : {
-              OR: [
-                { userId: userId },
-                { members: { some: { userId: userId } } },
-              ],
-            }),
+        ...commonWhere,
         archivedAt: null,
         deadline: {
           gt: new Date(),
@@ -165,11 +156,8 @@ export async function GET() {
       );
     };
 
-    const projectTrend = await getTrend("project", isAdmin ? {} : { userId });
-    const taskTrend = await getTrend(
-      "task",
-      isAdmin ? {} : { assigneeId: userId }
-    );
+    const projectTrend = await getTrend("project", commonWhere);
+    const taskTrend = await getTrend("task", commonTaskWhere);
     const userTrend = [1, 2, 2, 3, 3, 4, totalUsersCount]; // Simple mock trend for users
     const deadlineTrend = [0, 1, 1, 2, 2, 3, upcomingDeadlinesCount]; // Simple mock trend for deadlines
 

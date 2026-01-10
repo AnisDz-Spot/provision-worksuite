@@ -5,9 +5,12 @@ import { ProjectsCharts } from "@/components/dashboard/ProjectsCharts";
 import { TasksCharts } from "@/components/dashboard/TasksCharts";
 import { TeamCharts } from "@/components/dashboard/TeamCharts";
 import { WeeklyDigest } from "@/components/reports/WeeklyDigest";
-// Note: Floating chat is handled by TeamChat in AppShell globally
+import { getAuthenticatedUser, isAdmin, isProjectManager } from "@/lib/auth";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const user = await getAuthenticatedUser();
+  const showDigest = isAdmin(user) || isProjectManager(user);
+
   return (
     <>
       <section className="flex flex-col gap-8 p-4 md:p-8">
@@ -62,7 +65,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Weekly Digest Section */}
-        <WeeklyDigest />
+        {showDigest && <WeeklyDigest />}
       </section>
     </>
   );
