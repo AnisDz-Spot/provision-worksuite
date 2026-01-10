@@ -108,99 +108,102 @@ export function ProjectFilters({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 p-3 border rounded-xl mb-4 bg-card">
-        <label htmlFor="search-projects" className="sr-only">
-          Search
-        </label>
-        <input
-          id="search-projects"
-          name="query"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            updateUrl({ query: e.target.value });
-          }}
-          placeholder="Search projects..."
-          className="w-48 lg:w-64 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-        />
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {/* Dynamic Status Filter */}
-          <select
-            id="filter-status"
-            name="status"
-            aria-label="Filter by Status"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              updateUrl({ status: e.target.value });
-            }}
-            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
-          >
-            <option value="all">Status: All</option>
-            {allStatuses.map((s) => (
-              <option key={s} value={s.toLowerCase()}>
-                {s}
-              </option>
-            ))}
-          </select>
+      <div className="p-3 border rounded-xl mb-4 bg-card space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full md:w-72">
+            <label htmlFor="search-projects" className="sr-only">
+              Search
+            </label>
+            <input
+              id="search-projects"
+              name="query"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                updateUrl({ query: e.target.value });
+              }}
+              placeholder="Search projects..."
+              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
+            <select
+              id="filter-status"
+              name="status"
+              aria-label="Filter by Status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                updateUrl({ status: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+            >
+              <option value="all">Status: All</option>
+              {allStatuses.map((s) => (
+                <option key={s} value={s.toLowerCase()}>
+                  {s}
+                </option>
+              ))}
+            </select>
 
-          <select
-            id="filter-category"
-            name="category"
-            aria-label="Filter by Category"
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              updateUrl({ category: e.target.value });
-            }}
-            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
-          >
-            <option value="all">Category: All</option>
-            {allCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            <select
+              id="filter-category"
+              name="category"
+              aria-label="Filter by Category"
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                updateUrl({ category: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+            >
+              <option value="all">Category: All</option>
+              {allCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
 
-          <select
-            id="filter-client"
-            name="client"
-            aria-label="Filter by Client"
-            value={clientFilter}
-            onChange={(e) => {
-              setClientFilter(e.target.value);
-              updateUrl({ client: e.target.value });
-            }}
-            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
-          >
-            <option value="all">Client: All</option>
-            {allClients.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            <select
+              id="filter-client"
+              name="client"
+              aria-label="Filter by Client"
+              value={clientFilter}
+              onChange={(e) => {
+                setClientFilter(e.target.value);
+                updateUrl({ client: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+            >
+              <option value="all">Client: All</option>
+              {allClients.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
 
-          <select
-            id="sort-projects"
-            name="sort"
-            aria-label="Sort Projects"
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              updateUrl({ sort: e.target.value });
-            }}
-            className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm min-w-[120px]"
-          >
-            <option value="name-asc">Sort: Name (A-Z)</option>
-            <option value="name-desc">Sort: Name (Z-A)</option>
-            <option value="deadline-asc">Sort: Deadline (Earliest)</option>
-            <option value="deadline-desc">Sort: Deadline (Latest)</option>
-            <option value="starred">Sort: Starred</option>
-          </select>
+            <select
+              id="sort-projects"
+              name="sort"
+              aria-label="Sort Projects"
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                updateUrl({ sort: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+            >
+              <option value="name-asc">Sort: Name (A-Z)</option>
+              <option value="name-desc">Sort: Name (Z-A)</option>
+              <option value="deadline-asc">Sort: Deadline (Earliest)</option>
+              <option value="deadline-desc">Sort: Deadline (Latest)</option>
+              <option value="starred">Sort: Starred</option>
+            </select>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t md:border-t-0 md:pt-0">
           {!selectMode && (
             <Button
               variant="outline"

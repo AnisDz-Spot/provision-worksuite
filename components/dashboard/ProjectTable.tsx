@@ -421,183 +421,193 @@ export function ProjectTable() {
   return (
     <div className="rounded-xl border shadow-md bg-card">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 md:p-4 border-b">
-        <Input
-          value={globalFilter}
-          onChange={(e) => {
-            setGlobalFilter(e.target.value);
-            setPageIndex(0);
-          }}
-          placeholder="Search projects..."
-          className="w-full sm:w-64"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPageIndex(0);
-          }}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-          title="Filter by status"
-        >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="paused">Paused</option>
-          <option value="in progress">In Progress</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-          title="Sort by"
-        >
-          <option value="name-asc">Name ↑</option>
-          <option value="name-desc">Name ↓</option>
-          <option value="deadline-asc">Deadline ↑</option>
-          <option value="deadline-desc">Deadline ↓</option>
-          <option value="time-remaining-desc">Remaining hours ↓</option>
-          <option value="time-over-desc">Over hours ↓</option>
-          <option value="starred">Starred first</option>
-        </select>
-        <select
-          value={timeFilter}
-          onChange={(e) => {
-            setTimeFilter(e.target.value);
-            setPageIndex(0);
-          }}
-          className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-          title="Filter by time"
-        >
-          <option value="all">All time states</option>
-          <option value="remaining">Remaining {">"} 0</option>
-          <option value="over">Logged {">"} Estimate</option>
-        </select>
-        <label className="flex items-center gap-2 ml-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={starredOnly}
+      <div className="p-3 md:p-4 border-b space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <Input
+            value={globalFilter}
             onChange={(e) => {
-              setStarredOnly(e.target.checked);
+              setGlobalFilter(e.target.value);
               setPageIndex(0);
             }}
-            className="cursor-pointer"
+            placeholder="Search projects..."
+            className="w-full md:w-72"
           />
-          Starred only
-        </label>
-        <div className="ml-auto flex items-center gap-2">
-          {!selectMode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectMode(true);
-                setSelectedIds(new Set());
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPageIndex(0);
               }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto"
+              title="Filter by status"
             >
-              Select
-            </Button>
-          )}
-          {selectMode && (
-            <>
-              <select
-                className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                onChange={async (e) => {
-                  const val = e.target.value as Project["status"];
-                  if (!val) return;
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+              <option value="in progress">In Progress</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto"
+              title="Sort by"
+            >
+              <option value="name-asc">Name ↑</option>
+              <option value="name-desc">Name ↓</option>
+              <option value="deadline-asc">Deadline ↑</option>
+              <option value="deadline-desc">Deadline ↓</option>
+              <option value="time-remaining-desc">Remaining hours ↓</option>
+              <option value="time-over-desc">Over hours ↓</option>
+              <option value="starred">Starred first</option>
+            </select>
+            <select
+              value={timeFilter}
+              onChange={(e) => {
+                setTimeFilter(e.target.value);
+                setPageIndex(0);
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto col-span-2 sm:col-span-1"
+              title="Filter by time"
+            >
+              <option value="all">All time states</option>
+              <option value="remaining">Remaining {">"} 0</option>
+              <option value="over">Logged {">"} Estimate</option>
+            </select>
+          </div>
+        </div>
 
-                  const changedProjects: Project[] = [];
-                  const updatedProjects = data.map((p) => {
-                    if (selectedIds.has(p.id)) {
-                      const updated = { ...p, status: val };
-                      changedProjects.push(updated);
-                      return updated;
-                    }
-                    return p;
-                  });
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t md:border-t-0 md:pt-0">
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={starredOnly}
+              onChange={(e) => {
+                setStarredOnly(e.target.checked);
+                setPageIndex(0);
+              }}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+            />
+            <span className="text-muted-foreground font-medium">
+              Starred only
+            </span>
+          </label>
 
-                  if (changedProjects.length > 0) {
-                    updateProjects(changedProjects);
-                  }
-
-                  try {
-                    const { saveProjects } = await import("@/lib/data");
-                    await saveProjects(updatedProjects);
-                  } catch (error) {
-                    console.error(
-                      "Failed to save projects after bulk update:",
-                      error
-                    );
-                  }
-                  e.target.value = "";
-                }}
-                value=""
-                title="Set status for selected"
-              >
-                <option value="">Set status…</option>
-                <option value="Active">Active</option>
-                <option value="Completed">Completed</option>
-                <option value="Paused">Paused</option>
-                <option value="In Progress">In Progress</option>
-              </select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  const changedProjects: Project[] = [];
-                  const updatedProjects = data.map((p) => {
-                    if (selectedIds.has(p.id)) {
-                      const updated = { ...p, archived: true };
-                      changedProjects.push(updated);
-                      return updated;
-                    }
-                    return p;
-                  });
-
-                  if (changedProjects.length > 0) {
-                    updateProjects(changedProjects);
-                  }
-
-                  try {
-                    const { saveProjects } = await import("@/lib/data");
-                    await saveProjects(updatedProjects);
-                  } catch (error) {
-                    console.error(
-                      "Failed to save projects after archive:",
-                      error
-                    );
-                  }
-                  setSelectedIds(new Set());
-                }}
-              >
-                Archive
-              </Button>
+          <div className="flex items-center gap-2 ml-auto">
+            {!selectMode && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setSelectMode(false);
+                  setSelectMode(true);
                   setSelectedIds(new Set());
                 }}
               >
-                Done
+                Select
               </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setStatusFilter("all");
-              setGlobalFilter("");
-              setSortBy("name-asc");
-              setStarredOnly(false);
-              setTimeFilter("all");
-              setPageIndex(0);
-            }}
-          >
-            Reset
-          </Button>
+            )}
+            {selectMode && (
+              <>
+                <select
+                  className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+                  onChange={async (e) => {
+                    const val = e.target.value as Project["status"];
+                    if (!val) return;
+
+                    const changedProjects: Project[] = [];
+                    const updatedProjects = data.map((p) => {
+                      if (selectedIds.has(p.id)) {
+                        const updated = { ...p, status: val };
+                        changedProjects.push(updated);
+                        return updated;
+                      }
+                      return p;
+                    });
+
+                    if (changedProjects.length > 0) {
+                      updateProjects(changedProjects);
+                    }
+
+                    try {
+                      const { saveProjects } = await import("@/lib/data");
+                      await saveProjects(updatedProjects);
+                    } catch (error) {
+                      console.error(
+                        "Failed to save projects after bulk update:",
+                        error
+                      );
+                    }
+                    e.target.value = "";
+                  }}
+                  value=""
+                  title="Set status for selected"
+                >
+                  <option value="">Set status…</option>
+                  <option value="Active">Active</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Paused">Paused</option>
+                  <option value="In Progress">In Progress</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const changedProjects: Project[] = [];
+                    const updatedProjects = data.map((p) => {
+                      if (selectedIds.has(p.id)) {
+                        const updated = { ...p, archived: true };
+                        changedProjects.push(updated);
+                        return updated;
+                      }
+                      return p;
+                    });
+
+                    if (changedProjects.length > 0) {
+                      updateProjects(changedProjects);
+                    }
+
+                    try {
+                      const { saveProjects } = await import("@/lib/data");
+                      await saveProjects(updatedProjects);
+                    } catch (error) {
+                      console.error(
+                        "Failed to save projects after archive:",
+                        error
+                      );
+                    }
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  Archive
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectMode(false);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  Done
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStatusFilter("all");
+                setGlobalFilter("");
+                setSortBy("name-asc");
+                setStarredOnly(false);
+                setTimeFilter("all");
+                setPageIndex(0);
+              }}
+            >
+              Reset
+            </Button>
+          </div>
         </div>
       </div>
 
