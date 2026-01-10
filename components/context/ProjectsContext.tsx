@@ -18,6 +18,7 @@ interface ProjectsContextType {
   error: string | null;
   refreshProjects: () => Promise<void>;
   updateProject: (updatedProject: Project) => void;
+  updateProjects: (updatedProjects: Project[]) => void;
   deleteProjectInCache: (projectId: string) => void;
   lastFetched: number | null;
 }
@@ -54,6 +55,17 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateProjects = (updatedProjectsList: Project[]) => {
+    setProjects((prev) => {
+      const current = prev || [];
+      const updatedMap = new Map(updatedProjectsList.map((p) => [p.id, p]));
+      return current.map((p) => {
+        const updated = updatedMap.get(p.id);
+        return updated ? updated : p;
+      });
+    });
+  };
+
   const deleteProjectInCache = (projectId: string) => {
     setProjects((prev) => (prev || []).filter((p) => p.id !== projectId));
   };
@@ -69,6 +81,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
           await refreshProjects();
         },
         updateProject,
+        updateProjects,
         deleteProjectInCache,
         lastFetched,
       }}

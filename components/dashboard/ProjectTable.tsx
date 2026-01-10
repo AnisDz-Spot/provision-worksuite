@@ -279,6 +279,7 @@ export function ProjectTable() {
     projects: data,
     isLoading: loading,
     updateProject,
+    updateProjects,
     deleteProjectInCache,
   } = useProjects();
 
@@ -505,14 +506,19 @@ export function ProjectTable() {
                   const val = e.target.value as Project["status"];
                   if (!val) return;
 
+                  const changedProjects: Project[] = [];
                   const updatedProjects = data.map((p) => {
                     if (selectedIds.has(p.id)) {
                       const updated = { ...p, status: val };
-                      updateProject(updated);
+                      changedProjects.push(updated);
                       return updated;
                     }
                     return p;
                   });
+
+                  if (changedProjects.length > 0) {
+                    updateProjects(changedProjects);
+                  }
 
                   try {
                     const { saveProjects } = await import("@/lib/data");
@@ -538,14 +544,19 @@ export function ProjectTable() {
                 variant="outline"
                 size="sm"
                 onClick={async () => {
+                  const changedProjects: Project[] = [];
                   const updatedProjects = data.map((p) => {
                     if (selectedIds.has(p.id)) {
                       const updated = { ...p, archived: true };
-                      updateProject(updated);
+                      changedProjects.push(updated);
                       return updated;
                     }
                     return p;
                   });
+
+                  if (changedProjects.length > 0) {
+                    updateProjects(changedProjects);
+                  }
 
                   try {
                     const { saveProjects } = await import("@/lib/data");
