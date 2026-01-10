@@ -4,13 +4,13 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAuthenticatedUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const projectId = params.id;
+  const { id: projectId } = await params;
 
   try {
     const markers = await prisma.burndownMarker.findMany({
@@ -30,13 +30,13 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getAuthenticatedUser();
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const projectId = params.id;
+  const { id: projectId } = await params;
 
   try {
     const body = await req.json();
