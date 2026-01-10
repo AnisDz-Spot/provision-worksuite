@@ -125,6 +125,7 @@ export function SprintPlanning() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("You");
   const { isMock } = useDataMode();
+  const [liveUsers, setLiveUsers] = useState<any[]>([]);
 
   useEffect(() => {
     if (isMock) {
@@ -132,18 +133,28 @@ export function SprintPlanning() {
       return;
     }
 
+    // Reset sprint to empty/loading state when entering live mode
+    setSprint({
+      id: "sprint-empty",
+      name: "No active sprint found",
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      capacity: 40,
+      tasks: [],
+    });
+
     async function fetchSprints() {
       try {
         const res = await fetch("/api/sprints");
         const result = await res.json();
         if (result.success && result.data.length > 0) {
-          const s = result.data[0]; // Take current or first for now
+          const s = result.data[0];
           setSprint({
             id: s.id,
             name: s.name || `Sprint ${s.number}`,
             startDate: s.startDate,
             endDate: s.endDate,
-            capacity: 40, // Default or fetch from somewhere
+            capacity: 40,
             tasks: s.tasks.map((t: any) => ({
               id: t.uid,
               title: t.title,
@@ -167,16 +178,31 @@ export function SprintPlanning() {
         console.error("Failed to fetch sprints:", err);
       }
     }
+
+    async function fetchUsers() {
+      try {
+        const res = await fetch("/api/users");
+        const result = await res.json();
+        if (result.success) {
+          setLiveUsers(result.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      }
+    }
+
     fetchSprints();
+    fetchUsers();
   }, [isMock]);
 
   const memberList = useMemo(() => {
-    return (isMock ? users : []) as Array<{
-      id: string;
-      name: string;
-      avatarColor?: string;
-    }>;
-  }, [isMock]);
+    if (isMock) return users;
+    return liveUsers.map((u) => ({
+      id: u.uid,
+      name: u.name,
+      avatarColor: u.avatarColor || "blue",
+    }));
+  }, [isMock, liveUsers]);
 
   const [newTaskPoints, setNewTaskPoints] = useState(3);
 
