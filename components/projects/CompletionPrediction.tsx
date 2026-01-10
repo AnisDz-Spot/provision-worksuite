@@ -85,7 +85,7 @@ function calculateVelocityMetrics(project: Project, progress: number) {
 
   // Velocity trend (positive = accelerating, negative = decelerating)
   const velocityTrend =
-    recentVelocities.length >= 2
+    recentVelocities.length >= 2 && recentVelocities[0] > 0
       ? ((recentVelocities[recentVelocities.length - 1] - recentVelocities[0]) /
           recentVelocities[0]) *
         100
@@ -114,6 +114,16 @@ function monteCarloSimulation(
 } {
   const now = new Date();
   const remainingProgress = 100 - currentProgress;
+
+  if (remainingProgress <= 0) {
+    return {
+      optimistic: now,
+      realistic: now,
+      pessimistic: now,
+      confidence: 100,
+    };
+  }
+
   const completionDays: number[] = [];
 
   for (let i = 0; i < iterations; i++) {
@@ -140,10 +150,10 @@ function monteCarloSimulation(
     completionDays.reduce((sum, d) => sum + Math.pow(d - meanDays, 2), 0) /
       iterations
   );
-  const confidence = Math.max(
-    40,
-    Math.min(95, 100 - (stdDev / meanDays) * 100)
-  );
+  const confidence =
+    meanDays === 0
+      ? 100
+      : Math.max(40, Math.min(95, 100 - (stdDev / meanDays) * 100));
 
   return {
     optimistic: new Date(now.getTime() + p10 * 24 * 60 * 60 * 1000),
