@@ -34,7 +34,13 @@ const PROVIDERS = [
   {
     id: "gemini",
     name: "Google Gemini",
-    models: ["gemini-1.5-pro", "gemini-1.5-flash"],
+    models: [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash-exp",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
+      "gemini-pro",
+    ],
     baseUrl: "",
   },
   {

@@ -12,11 +12,48 @@ export const createProjectSchema = z.object({
     .optional()
     .nullable(),
   status: z
-    .enum(["active", "completed", "on_hold", "cancelled"])
+    .string()
+    .transform((val) => {
+      // Normalize status to match database enum
+      const normalized = val.toLowerCase().replace(/-/g, "_");
+      if (
+        ["active", "completed", "on_hold", "cancelled", "paused"].includes(
+          normalized
+        )
+      ) {
+        return normalized;
+      }
+      return "active"; // default fallback
+    })
+    .pipe(z.enum(["active", "completed", "on_hold", "cancelled"]))
     .default("active"),
   startDate: z.string().datetime().optional().nullable(),
-  deadline: z.string().datetime().optional().nullable(),
-  budget: z.number().positive("Budget must be positive").optional().nullable(),
+  deadline: z
+    .union([
+      z.string().datetime(),
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // Accept YYYY-MM-DD format
+      z.string().length(0), // Accept empty string
+    ])
+    .optional()
+    .nullable()
+    .transform((val) => {
+      if (!val || val === "") return null;
+      // If it's just a date, add time component
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        return `${val}T00:00:00.000Z`;
+      }
+      return val;
+    }),
+  budget: z
+    .union([
+      z.number(),
+      z.string().transform((val) => {
+        const num = parseFloat(val);
+        return isNaN(num) ? null : num;
+      }),
+    ])
+    .optional()
+    .nullable(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional().nullable(),
   clientName: z.string().max(200).optional().nullable(),
   clientId: z.string().uuid("Invalid client ID").optional().nullable(),
