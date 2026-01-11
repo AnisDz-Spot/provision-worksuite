@@ -20,8 +20,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = parseInt(id);
-    if (isNaN(projectId)) {
+    const projectId = id;
+    if (!projectId || typeof projectId !== "string") {
       return NextResponse.json(
         { error: "Invalid Project ID" },
         { status: 400 }
