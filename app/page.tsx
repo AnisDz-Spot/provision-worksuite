@@ -67,6 +67,9 @@ export default async function DashboardPage() {
             {showDigest && <AuditSummary />}
             <RecentActivity />
           </div>
+
+          {/* Weekly Digest Email Configuration */}
+          {showDigest && <WeeklyDigest />}
         </div>
       </section>
     </>
