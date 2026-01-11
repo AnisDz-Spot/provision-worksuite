@@ -15,6 +15,7 @@ import { MeetingDetailView } from "./components/MeetingDetailView";
 
 import { Meeting, ActionItem } from "./types/meeting";
 import { useLoading } from "@/context/LoadingContext";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -165,7 +166,7 @@ export default function MeetingsPage() {
           actionItems:
             isEditing && selectedMeeting ? selectedMeeting.actionItems : [],
         };
-        const res = await fetch("/api/meetings", {
+        const res = await fetchWithCsrf("/api/meetings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -222,7 +223,7 @@ export default function MeetingsPage() {
     showLoader("Deleting meeting...");
     try {
       if (isRealMode()) {
-        const res = await fetch(`/api/meetings?id=${id}`, {
+        const res = await fetchWithCsrf(`/api/meetings?id=${id}`, {
           method: "DELETE",
         });
         const result = await res.json();
@@ -246,7 +247,7 @@ export default function MeetingsPage() {
     setMeetings(meetings.map((m) => (m.id === updated.id ? updated : m)));
     setSelectedMeeting(updated);
     if (isRealMode()) {
-      fetch("/api/meetings", {
+      fetchWithCsrf("/api/meetings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),

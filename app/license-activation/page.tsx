@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Key, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import { validateLicense, storeLicense, DEV_LICENSES } from "@/lib/license";
 import { setDataModePreference } from "@/lib/dataSource";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export default function LicenseActivationPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function LicenseActivationPage() {
     if (validation.valid) {
       try {
         // Validation passed locally, now activate on server
-        const res = await fetch("/api/check-license", {
+        const res = await fetchWithCsrf("/api/check-license", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ serial: licenseKey }),

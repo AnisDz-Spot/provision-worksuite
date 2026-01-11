@@ -22,6 +22,7 @@ import { AttendeeSelector } from "@/components/workflow/AttendeeSelector";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useLoading } from "@/context/LoadingContext";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type RetroItem = {
   id: string;
@@ -142,7 +143,7 @@ export default function RetrospectivesPage() {
             isEditing && selectedRetro ? selectedRetro.actionItems : [],
         };
 
-        const res = await fetch("/api/retrospectives", {
+        const res = await fetchWithCsrf("/api/retrospectives", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -214,7 +215,7 @@ export default function RetrospectivesPage() {
       const retroToSync = updatedRetros.find((r) => r.id === retroId);
       if (retroToSync) {
         try {
-          await fetch("/api/retrospectives", {
+          await fetchWithCsrf("/api/retrospectives", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(retroToSync),
@@ -231,7 +232,9 @@ export default function RetrospectivesPage() {
     showLoader("Deleting retrospective...");
     try {
       if (isRealMode()) {
-        await fetch(`/api/retrospectives?id=${id}`, { method: "DELETE" });
+        await fetchWithCsrf(`/api/retrospectives?id=${id}`, {
+          method: "DELETE",
+        });
       }
       setRetrospectives(retrospectives.filter((r) => r.id !== id));
     } catch (err) {

@@ -17,6 +17,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { useToaster } from "@/components/ui/Toaster";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 const CATEGORY_ICONS: Record<string, any> = {
   "Software Development": Code,
@@ -68,7 +69,7 @@ export function TemplatesClient() {
     if (!selectedTemplate || !projectName.trim()) return;
     try {
       // Create project using template data
-      const res = await fetch("/api/projects", {
+      const res = await fetchWithCsrf("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,7 +105,7 @@ export function TemplatesClient() {
   async function onDelete() {
     if (!deleteConfirm) return;
     try {
-      const res = await fetch(`/api/templates/${deleteConfirm.id}`, {
+      const res = await fetchWithCsrf(`/api/templates/${deleteConfirm.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete template");

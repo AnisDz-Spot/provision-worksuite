@@ -1,8 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { decrypt } from "./encryption";
+import { decrypt, decryptWithKey } from "./encryption";
+import { getTenantKey } from "./tenant-encryption";
 import prisma from "./prisma";
+import { getAuthenticatedUser } from "./auth";
 
 export type AIProvider =
   | "gemini"
@@ -39,8 +41,33 @@ export async function getTenantAIConfig(): Promise<AIConfig | null> {
 
     const config: Partial<AIConfig> = {};
 
+    // Get current user's tenant context if available
+    const user = await getAuthenticatedUser();
+    const dbUser = user?.email
+      ? await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { tenantId: true },
+        })
+      : null;
+
+    const tenantId = dbUser?.tenantId;
+    const tenantKey = tenantId ? await getTenantKey(tenantId) : null;
+
     settings.forEach((s: any) => {
-      const value = s.isEncrypted ? decrypt(s.settingValue) : s.settingValue;
+      let value = s.settingValue;
+      if (s.isEncrypted) {
+        // Try tenant key first, fallback to master key (legacy)
+        if (tenantKey) {
+          try {
+            value = decryptWithKey(s.settingValue, tenantKey);
+          } catch {
+            value = decrypt(s.settingValue);
+          }
+        } else {
+          value = decrypt(s.settingValue);
+        }
+      }
+
       if (s.settingKey === "ai_provider") config.provider = value as AIProvider;
       if (s.settingKey === "ai_model") config.model = value;
       if (s.settingKey === "ai_api_key") config.apiKey = value;

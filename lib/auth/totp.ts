@@ -198,6 +198,14 @@ export function getEncryptionKey(): string {
   const key = process.env.ENCRYPTION_KEY;
 
   if (!key) {
+    if (process.env.NODE_ENV !== "production") {
+      // In development, provide a default fallback so 2FA setup doesn't fail
+      // but warn the user to set a proper key for production.
+      console.warn(
+        "ENCRYPTION_KEY is missing. Using development fallback key. DO NOT USE THIS IN PRODUCTION."
+      );
+      return "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    }
     throw new Error(
       "ENCRYPTION_KEY environment variable not set. Generate one with: openssl rand -hex 32"
     );

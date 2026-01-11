@@ -99,9 +99,14 @@ model User {
   digestSettings      DigestSettings?
   auditLogs           AuditLog[]
 
+  // Multi-tenancy
+  tenantId String? @map("tenant_id")
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
   @@index([email])
   @@index([role])
   @@index([roleId])
+  @@index([tenantId])
   @@index([createdAt])
   @@map("users")
 }
@@ -1011,4 +1016,20 @@ model EmailSettings {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("email_settings")
+}
+
+// =============================================================================
+// MULTI-TENANCY & SECURITY
+// =============================================================================
+
+model Tenant {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  wrappedDek String   @map("wrapped_dek") // Data Encryption Key encrypted by Master Key
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("tenants")
 }

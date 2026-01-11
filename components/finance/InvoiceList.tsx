@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Plus, FileText, Download, Trash2, Mail } from "lucide-react";
 import { useToaster } from "@/components/ui/Toaster";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface Invoice {
   id: number;
@@ -51,7 +52,9 @@ export function InvoiceList({ projectId }: InvoiceListProps) {
   const handleDelete = async (uid: string) => {
     if (!confirm("Are you sure you want to delete this invoice?")) return;
     try {
-      const res = await fetch(`/api/invoices/${uid}`, { method: "DELETE" });
+      const res = await fetchWithCsrf(`/api/invoices/${uid}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Failed to delete invoice");
       show("success", "Invoice deleted");
       loadInvoices();
@@ -64,7 +67,9 @@ export function InvoiceList({ projectId }: InvoiceListProps) {
     if (!confirm("Send this invoice to the client via email?")) return;
     try {
       show("info", "Sending email...");
-      const res = await fetch(`/api/invoices/${uid}/send`, { method: "POST" });
+      const res = await fetchWithCsrf(`/api/invoices/${uid}/send`, {
+        method: "POST",
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send");
 

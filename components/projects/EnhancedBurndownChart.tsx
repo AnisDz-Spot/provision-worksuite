@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { getBurndownData, type BurndownPoint } from "@/lib/utils";
 import { Calendar, TrendingDown, AlertTriangle, Download } from "lucide-react";
 import { useDataMode } from "@/lib/hooks/useDataMode";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type EnhancedBurndownChartProps = {
   projectId: string;
@@ -83,11 +84,14 @@ export function EnhancedBurndownChart({
     }
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/burndown-markers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, label: note, type: "scope-change" }),
-      });
+      const res = await fetchWithCsrf(
+        `/api/projects/${projectId}/burndown-markers`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, label: note, type: "scope-change" }),
+        }
+      );
       const result = await res.json();
       if (result.success) {
         setScopeMarkers((prev) =>

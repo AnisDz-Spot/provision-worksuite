@@ -28,6 +28,7 @@ import { useToaster } from "@/components/ui/Toaster";
 import { useLoading } from "@/context/LoadingContext";
 import { Badge } from "@/components/ui/Badge";
 import { TaskGenerator } from "@/components/ai/TaskGenerator";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 export function ProjectMilestones({ projectId }: { projectId: string }) {
   const { show } = useToaster();
@@ -171,7 +172,7 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
     ) {
       showLoader("Generating Invoice...");
       try {
-        const res = await fetch("/api/invoices", {
+        const res = await fetchWithCsrf("/api/invoices", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
