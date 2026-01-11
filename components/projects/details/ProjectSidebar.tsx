@@ -30,30 +30,42 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
         uid: (project as any).ownerId,
         name: project.owner,
         avatarUrl: (project as any).ownerAvatar,
-        role: "Creator",
+        role: project.ownerRole || "Creator",
         isOwner: true,
       });
     }
 
-    // Sort to put owner first
+    // Role-based sorting hierarchy
+    const getRoleWeight = (role: string = "") => {
+      const r = role.toLowerCase().replace(/[-_]/g, " ");
+      if (r.includes("master admin")) return 1;
+      if (r.includes("admin")) return 2;
+      if (r.includes("project manager")) return 3;
+      return 10;
+    };
+
+    // Sort to follow requested hierarchy
     return list.sort((a, b) => {
-      const aName = a.user?.name || a.name;
-      const bName = b.user?.name || b.name;
+      const aName = a.user?.name || a.name || "";
+      const bName = b.user?.name || b.name || "";
       const aUid = a.user?.uid || a.uid || a.id;
       const bUid = b.user?.uid || b.uid || b.id;
+      const aRole = a.user?.role || a.role || "";
+      const bRole = b.user?.role || b.role || "";
 
-      const isAOwner =
-        a.isOwner ||
-        aUid === (project as any).ownerId ||
-        aName === project.owner;
-      const isBOwner =
-        b.isOwner ||
-        bUid === (project as any).ownerId ||
-        bName === project.owner;
+      const aWeight = getRoleWeight(aRole);
+      const bWeight = getRoleWeight(bRole);
 
+      if (aWeight !== bWeight) return aWeight - bWeight;
+
+      // If weights are equal, prioritize owner
+      const isAOwner = a.isOwner || aUid === (project as any).ownerId;
+      const isBOwner = b.isOwner || bUid === (project as any).ownerId;
       if (isAOwner && !isBOwner) return -1;
       if (!isAOwner && isBOwner) return 1;
-      return 0;
+
+      // Fallback to name sorting
+      return aName.localeCompare(bName);
     });
   }, [project]);
 

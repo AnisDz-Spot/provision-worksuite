@@ -5,12 +5,11 @@ export type Project = {
   uid?: string;
   slug?: string;
   name: string;
-  owner: string;
-  status: "Active" | "Completed" | "Paused" | "In Progress";
-  deadline: string;
-  priority?: "low" | "medium" | "high";
-  starred?: boolean;
-  members?: { uid?: string; name: string; avatarUrl?: string }[];
+  owner?: string;
+  ownerName?: string;
+  ownerRole?: string;
+  ownerAvatar?: string;
+  members?: { uid?: string; name: string; avatarUrl?: string; role?: string }[];
   cover?: string;
   tags?: string[];
   privacy?: "public" | "team" | "private";
@@ -54,11 +53,16 @@ export function useProjectDetails(projectId: string) {
           const p = projectData.project;
           if (p.members) {
             p.members = p.members.map((m: any) => ({
-              uid: m.user?.uid,
+              uid: m.user?.uid || m.uid,
               name: m.user?.name || m.name || "Member",
               avatarUrl: m.user?.avatarUrl || m.avatarUrl,
+              role: m.user?.role || m.role,
             }));
           }
+          // Also handle owner from creator userId if needed
+          p.ownerId = p.userId?.toString();
+          p.ownerRole = p.user?.role;
+          p.ownerAvatar = p.user?.avatarUrl;
           if (p.coverUrl) p.cover = p.coverUrl;
           if (p.budget) p.budget = p.budget.toString();
           if (p.sla) p.sla = p.sla.toString();

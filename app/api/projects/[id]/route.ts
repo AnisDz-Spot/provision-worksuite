@@ -50,6 +50,7 @@ export async function GET(
                 name: true,
                 avatarUrl: true,
                 email: true,
+                role: true,
               },
             },
           },
@@ -82,6 +83,7 @@ export async function GET(
                   name: true,
                   avatarUrl: true,
                   email: true,
+                  role: true,
                 },
               },
             },
@@ -113,6 +115,7 @@ export async function GET(
                     name: true,
                     avatarUrl: true,
                     email: true,
+                    role: true,
                   },
                 },
               },
@@ -201,6 +204,7 @@ export async function GET(
           name: true,
           avatarUrl: true,
           email: true,
+          role: true,
         },
       });
 

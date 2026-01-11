@@ -74,6 +74,7 @@ export async function GET() {
             name: true,
             email: true,
             avatarUrl: true,
+            role: true,
           },
         },
         members: {
@@ -83,6 +84,7 @@ export async function GET() {
                 uid: true,
                 name: true,
                 avatarUrl: true,
+                role: true,
               },
             },
           },

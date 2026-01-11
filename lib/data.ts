@@ -146,10 +146,12 @@ export async function loadProjects(): Promise<Project[]> {
       owner: p.owner || p.user?.name || "Unknown",
       ownerId: p.ownerId || p.user?.uid || p.userId,
       ownerAvatar: p.ownerAvatar || p.user?.avatarUrl,
+      ownerRole: p.ownerRole || p.user?.role || "Member",
       members: members.map((m: any) => ({
         uid: m.user?.uid || m.uid,
         name: m.user?.name || m.name || "Member",
         avatarUrl: m.user?.avatarUrl || m.avatarUrl,
+        role: m.user?.role || m.role || "Member",
       })),
       cover: p.coverUrl || p.cover,
       filesCount: p.filesCount || p._count?.files || 0,

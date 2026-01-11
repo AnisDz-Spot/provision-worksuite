@@ -19,6 +19,7 @@ export type Project = {
   filesCount?: number;
   ownerId?: string;
   ownerAvatar?: string;
+  ownerRole?: string;
   _count?: {
     tasks: number;
     milestones: number;
