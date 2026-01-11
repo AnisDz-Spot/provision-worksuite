@@ -9,6 +9,11 @@ export type Project = {
   ownerName?: string;
   ownerRole?: string;
   ownerAvatar?: string;
+  ownerId?: string;
+  status: "Active" | "Completed" | "Paused" | "In Progress";
+  deadline: string;
+  priority?: "low" | "medium" | "high";
+  starred?: boolean;
   members?: { uid?: string; name: string; avatarUrl?: string; role?: string }[];
   cover?: string;
   tags?: string[];
