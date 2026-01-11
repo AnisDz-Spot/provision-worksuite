@@ -27,6 +27,7 @@ import {
 import { useToaster } from "@/components/ui/Toaster";
 import { useLoading } from "@/context/LoadingContext";
 import { Badge } from "@/components/ui/Badge";
+import { TaskGenerator } from "@/components/ai/TaskGenerator";
 
 export function ProjectMilestones({ projectId }: { projectId: string }) {
   const { show } = useToaster();
@@ -418,6 +419,13 @@ export function ProjectMilestones({ projectId }: { projectId: string }) {
                             <Receipt className="w-4 h-4" />
                           </button>
                         )}
+                        <TaskGenerator
+                          projectId={projectId}
+                          milestoneId={m.id}
+                          milestoneTitle={m.title}
+                          milestoneDescription={m.description}
+                          onComplete={refresh}
+                        />
                         <button
                           className="p-1 rounded hover:bg-accent cursor-pointer"
                           onClick={() => startEdit(m)}

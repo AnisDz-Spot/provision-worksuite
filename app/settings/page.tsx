@@ -1,48 +1,33 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
-import { ThemePresets } from "@/components/settings/ThemePresets";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthContext";
+import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { Bell, Shield, Mail, HelpCircle, Video, Bot } from "lucide-react";
+
+// Components
 import { UserSettingsForm } from "@/components/settings/UserSettingsForm";
-import { SetupProfileForm } from "@/components/settings/SetupProfileForm";
 import { WorkspaceSettingsForm } from "@/components/settings/WorkspaceSettingsForm";
 import { BlockerCategorySettings } from "@/components/settings/BlockerCategorySettings";
 import RiskLevelSettings from "@/components/settings/RiskLevelSettings";
-import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
-import { Bell, Shield, Mail, HelpCircle, Video } from "lucide-react";
 import RolesSettings from "@/components/settings/RolesSettings";
-import { NotificationCenter } from "@/components/notifications/NotificationCenter";
-import { AlertRulesManager } from "@/components/notifications/AlertRulesManager";
-import { ProjectWatch } from "@/components/notifications/ProjectWatch";
-import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
-import { setDataModePreference, shouldUseDatabaseData } from "@/lib/dataSource";
-import { useRouter } from "next/navigation";
-import { fetchWithCsrf } from "@/lib/csrf-client";
-import { useLoading } from "@/context/LoadingContext";
-import {
-  isDatabaseConfigured,
-  markSetupComplete,
-  hasDatabaseTables,
-} from "@/lib/setup";
+import { AISettings } from "@/components/settings/AISettings";
 import { ChatGroupSettings } from "@/components/settings/ChatGroupSettings";
 import { ZegoSettingsForm } from "@/components/settings/ZegoSettingsForm";
 import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import { EmailSettings } from "@/components/settings/EmailSettings";
-import {
-  saveDatabaseConfig,
-  getDatabaseStatus,
-  resetConfiguration,
-  initializeSchema,
-} from "./database/actions";
-import { Input } from "@/components/ui/Input";
-import { Card } from "@/components/ui/Card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
-import { useAuth } from "@/components/auth/AuthContext";
-import { isGlobalAdmin } from "@/lib/auth-utils";
-import { Info } from "lucide-react";
-import { hasValidLicense } from "@/lib/license";
+import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
+
+// New Modular Components
+import { DataSourceSettings } from "@/components/settings/DataSourceSettings";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
+import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
+
+// Utils
+import { setDataModePreference } from "@/lib/dataSource";
+import { hasDatabaseTables } from "@/lib/setup";
 
 type TabKey =
   | "profile"
@@ -57,516 +42,24 @@ type TabKey =
   | "blockers"
   | "dataSource"
   | "video"
-  | "support";
-
-function DataSourceTab() {
-  const { currentUser } = useAuth();
-  const isAdminGlobal = currentUser ? isGlobalAdmin(currentUser as any) : false;
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { showLoader, hideLoader } = useLoading();
-  const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
-    if (typeof window === "undefined") return null;
-    const val = localStorage.getItem("pv:dataMode");
-    return val === "mock" || val === "real" ? val : null;
-  });
-
-  const [status, setStatus] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [showCustomForm, setShowCustomForm] = useState(false);
-
-  useEffect(() => {
-    loadStatus();
-
-    // Check for dbfail redirect
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("dbfail") === "1") {
-        // USER REQUEST: Deactivate dummy mode.
-        // setDataMode("mock"); // DISABLED
-        // localStorage.setItem("pv:dataMode", "mock");
-        setMessage({
-          type: "error",
-          text: "Database connection failed. Please check your configuration.",
-        });
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (status) {
-      // Sync local setup status to allow Account Setup access
-      markSetupComplete(
-        status.hasDatabaseConfig || status.hasEnvironmentVars,
-        status.isSetupComplete,
-        status.hasTables
-      );
-
-      // Open form by default only if we are missing BOTH env vars AND custom config
-      const isMissingEverything =
-        !status.hasEnvironmentVars && !status.hasDatabaseConfig;
-      setShowCustomForm(isMissingEverything);
-      setLoading(false);
-    }
-  }, [status]);
-
-  async function loadStatus() {
-    setLoading(true);
-    showLoader("Fetching system status...");
-    try {
-      const result = await getDatabaseStatus();
-      setStatus(result);
-    } finally {
-      if (status) setLoading(false);
-      hideLoader();
-    }
-  }
-
-  const hasLicense = hasValidLicense();
-
-  useEffect(() => {
-    // Check if we just failed DB connection to avoid infinite loop
-    const params =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search)
-        : null;
-    const hasDbFail = params?.get("dbfail") === "1";
-
-    // If we have a valid license, FORCE real mode
-    // UNLESS we just failed (dbfail=1), in which case we let it stay in mock/error state
-    // so user can fix settings.
-    if (hasLicense && dataMode !== "real" && !hasDbFail) {
-      setDataMode("real");
-      localStorage.setItem("pv:dataMode", "real");
-      setDataModePreference("real");
-    }
-  }, [hasLicense, dataMode]);
-
-  const handleDataModeChange = async (mode: "real" | "mock") => {
-    // Prevent switching to mock mode if valid license exists
-    if (hasLicense && mode === "mock") {
-      alert("You have a valid license active. Demo mode is disabled.");
-      return;
-    }
-
-    if (
-      !confirm(
-        `Switch to ${mode === "real" ? "Live" : "Demo"} mode? You will be logged out to apply changes.`
-      )
-    ) {
-      return;
-    }
-
-    // Check for license when switching to real mode
-    if (mode === "real" && !hasLicense) {
-      router.push("/license-activation");
-      return;
-    }
-
-    // If switching to real mode with license, check if master admin exists
-    if (mode === "real" && hasLicense) {
-      try {
-        const checkRes = await fetch("/api/setup/check-users");
-        const checkData = await checkRes.json();
-
-        if (checkData.success && !checkData.hasMasterAdmin) {
-          // No master admin exists, redirect to account setup
-          router.push("/setup/account");
-          return;
-        }
-      } catch (error) {
-        console.error("Error checking for master admin:", error);
-        // Continue anyway if check fails
-      }
-    }
-
-    setDataMode(mode);
-    setMessage(null);
-    showLoader(`Switching to ${mode === "real" ? "Live" : "Demo"} mode...`);
-
-    // 1. Clear Server-side session
-    try {
-      await fetchWithCsrf("/api/auth/logout", {
-        method: "POST",
-      });
-    } catch (e) {
-      console.error("Logout API failed", e);
-    }
-
-    // 2. Clear Client-side session and set preferences
-    localStorage.removeItem("pv:currentUser");
-    localStorage.removeItem("pv:session");
-    localStorage.setItem("pv:dataMode", mode);
-    setDataModePreference(mode);
-
-    if (mode === "mock") {
-      // Seed data if missing
-      const { seedLocalData } = await import("@/lib/seedData");
-      seedLocalData();
-      window.location.href = "/auth/login?mode=demo";
-    } else {
-      window.location.href = "/auth/login?mode=live";
-    }
-  };
-
-  async function handleSubmit(formData: FormData) {
-    setLoading(true);
-    setMessage(null);
-    showLoader("Saving database configuration...");
-
-    try {
-      const result = await saveDatabaseConfig(formData);
-
-      setLoading(false);
-      setMessage({
-        type: result.success ? "success" : "error",
-        text: result.message,
-      });
-
-      if (result.success) {
-        await loadStatus();
-      }
-    } finally {
-      hideLoader();
-    }
-  }
-
-  async function handleReset() {
-    if (
-      !confirm(
-        "Reset to environment variables? This will clear custom database credentials."
-      )
-    ) {
-      return;
-    }
-
-    setLoading(true);
-    const result = await resetConfiguration();
-    setLoading(false);
-    setMessage({
-      type: "success",
-      text: result.message,
-    });
-    await loadStatus();
-  }
-
-  return (
-    <div className="max-w-2xl space-y-6">
-      {/* Hide left navbar during mode selection */}
-      <style>{`.sidebar, .Navbar { display: none !important; }`}</style>
-
-      {isAdminGlobal && (
-        <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-800 dark:text-blue-200">
-            Global Admin Override Active
-          </AlertTitle>
-          <AlertDescription className="text-blue-700 dark:text-blue-300">
-            You are logged in as the Global Admin. For safety and compatibility
-            during the initial setup phase, your session is{" "}
-            <strong>always using Dummy Mode (Mock Data)</strong> regardless of
-            the settings below.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Data Source Mode</h2>
-        <p className="text-sm text-muted-foreground mb-3">
-          Choose between using real database data or dummy demo data.
-        </p>
-
-        <div className="flex items-center gap-2 mb-4">
-          <Button
-            variant={dataMode === "real" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleDataModeChange("real")}
-          >
-            Use Real Data (Live)
-          </Button>
-          <div className="relative group">
-            <Button
-              variant={dataMode === "mock" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handleDataModeChange("mock")}
-              disabled={hasLicense && dataMode === "real"}
-              className={cn(
-                hasLicense &&
-                  dataMode === "real" &&
-                  "opacity-50 cursor-not-allowed"
-              )}
-            >
-              Use Dummy Data (Demo)
-            </Button>
-            {hasLicense && dataMode === "real" && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                Demo mode is disabled when using a valid license
-              </div>
-            )}
-          </div>
-        </div>
-
-        {message && (
-          <Alert
-            variant={message.type === "error" ? "destructive" : "default"}
-            className="mb-4"
-          >
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
-
-        {dataMode === "mock" && (
-          <div className="mt-3 text-xs text-muted-foreground p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-            <p className="mb-2">
-              <strong>Demo Mode Active</strong>
-            </p>
-            <p>
-              Fake Admin: <span className="font-mono">admin@provision.com</span>{" "}
-              / <span className="font-mono">password123578951</span>
-            </p>
-          </div>
-        )}
-
-        {dataMode === "real" && (
-          <div className="space-y-6 mt-6">
-            {/* Loading State */}
-            {loading && !status && (
-              <div className="py-8 flex flex-col items-center justify-center text-muted-foreground animate-pulse">
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
-                <p>Checking database configuration...</p>
-              </div>
-            )}
-
-            {/* Initialization Required State */}
-            {status && status.hasEnvironmentVars && !status.hasTables && (
-              <Card className="p-6 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
-                <h3 className="text-lg font-semibold mb-2 text-amber-800 dark:text-amber-200">
-                  Initialization Required
-                </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
-                  Environment variables detected, but database tables are
-                  missing. Initialize the database to start using Live mode.
-                </p>
-
-                <Button
-                  onClick={async () => {
-                    if (
-                      !confirm(
-                        "This will create all necessary tables in your database. Continue?"
-                      )
-                    )
-                      return;
-                    setLoading(true);
-                    const res = await initializeSchema();
-                    setLoading(false);
-                    setMessage({
-                      type: res.success ? "success" : "error",
-                      text: res.message,
-                    });
-                    if (res.success) {
-                      await loadStatus();
-                      // Auto-redirect to setup
-                      router.push("/setup/account");
-                    }
-                  }}
-                  disabled={loading}
-                  variant="primary"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  {loading
-                    ? "Initializing Schema..."
-                    : "Initialize Database Tables"}
-                </Button>
-              </Card>
-            )}
-
-            {/* Everything Good State */}
-            {status &&
-              status.hasTables &&
-              (status.hasEnvironmentVars || status.hasDatabaseConfig) && (
-                <Card className="p-6 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">
-                        System Ready
-                      </h3>
-                      <p className="text-sm text-green-700 dark:text-green-300 mb-4">
-                        Database is configured and ready to use.
-                        {status.currentSource === "environment"
-                          ? " Using environment variables."
-                          : " Using custom credentials."}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Show continue button if setup is incomplete */}
-                  {!status.isSetupComplete && (
-                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800">
-                      <Button
-                        variant="primary"
-                        onClick={() => {
-                          if (!hasValidLicense()) {
-                            router.push("/license-activation");
-                          } else {
-                            // Set mode to real before redirecting
-                            setDataModePreference("real");
-                            setDataMode("real");
-                            router.push("/setup/account");
-                          }
-                        }}
-                        className="w-full sm:w-auto"
-                      >
-                        Complete Setup Now →
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              )}
-
-            {/* Status Card */}
-            {status && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">
-                  Configuration Status
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>Source:</strong>{" "}
-                    {status.currentSource === "database"
-                      ? "🗄️ Database (Custom)"
-                      : "🌍 Environment Variables"}
-                  </p>
-                  <p>
-                    <strong>Environment Variables:</strong>{" "}
-                    {status.hasEnvironmentVars ? "✅ Configured" : "❌ Missing"}
-                  </p>
-                  <p>
-                    <strong>Custom Database Config:</strong>{" "}
-                    {status.hasDatabaseConfig ? "✅ Configured" : "❌ Not Set"}
-                  </p>
-                  {status.hasTables !== undefined && (
-                    <p>
-                      <strong>Database Tables:</strong>{" "}
-                      {status.hasTables ? "✅ Created" : "❌ Missing"}
-                    </p>
-                  )}
-                </div>
-
-                {status.recommendations.length > 0 && (
-                  <Alert className="mt-4 bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-800">
-                    <AlertDescription>
-                      {status.recommendations.map((rec: string, i: number) => (
-                        <div key={i}>{rec}</div>
-                      ))}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Card>
-            )}
-
-            {/* Configuration Form */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    Custom Database Credentials
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {status?.hasEnvironmentVars
-                      ? "Optional: Override environment variables with custom credentials."
-                      : "Configure database connection."}
-                  </p>
-                </div>
-                {status?.hasEnvironmentVars && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCustomForm(!showCustomForm)}
-                  >
-                    {showCustomForm ? "Hide Form" : "Configure Override"}
-                  </Button>
-                )}
-              </div>
-
-              {(showCustomForm || !status?.hasEnvironmentVars) && (
-                <form action={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Postgres URL
-                    </label>
-                    <Input
-                      name="postgresUrl"
-                      type="text"
-                      placeholder="postgres://user:pass@host:5432/dbname"
-                      required
-                      className="font-mono text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Blob Storage Token
-                    </label>
-                    <Input
-                      name="blobToken"
-                      type="text"
-                      placeholder="vercel_blob_rw_..."
-                      required
-                      className="font-mono text-xs"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-4 pt-2">
-                    <Button type="submit" disabled={loading}>
-                      {loading
-                        ? "Testing & Saving..."
-                        : "Test & Save Configuration"}
-                    </Button>
-
-                    {status?.hasDatabaseConfig && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleReset}
-                        disabled={loading}
-                      >
-                        Reset to Env Vars
-                      </Button>
-                    )}
-                  </div>
-                </form>
-              )}
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+  | "support"
+  | "ai";
 
 function SettingsContent() {
+  const { currentUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
+
   const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
     if (typeof window === "undefined") return null;
     const val = localStorage.getItem("pv:dataMode");
     return val === "mock" || val === "real" ? val : null;
   });
+
   const isSetupMode = searchParams.get("setup") === "true";
 
-  // Check URL params first, then restore last selected main tab on mount
   useEffect(() => {
-    // If we are in "real" mode, DB is configured (we assume so if we are here and not blocked),
-    // but setup is NOT complete, force redirect to profile setup.
-    // We check this by seeing if isSetupMode is false but we know we might need it.
-    // However, isSetupComplete() is better checked via the 'status' we might load or simple logic:
-    // Actually, led's rely on the parent or handle it here if we can detect it.
-    // simpler: If we are not in setup mode, check if we need to be.
     const checkSetup = async () => {
       if (dataMode === "real") {
         if (typeof window !== "undefined") {
@@ -584,30 +77,33 @@ function SettingsContent() {
     } else {
       try {
         const saved = localStorage.getItem("pv:settingsTab");
-        if (
-          saved === "user" ||
-          saved === "workspace" ||
-          saved === "appearance" ||
-          saved === "notifications" ||
-          saved === "dataSource"
-        ) {
+        const validTabs: TabKey[] = [
+          "profile",
+          "user",
+          "workspace",
+          "appearance",
+          "security",
+          "roles",
+          "chat",
+          "email",
+          "notifications",
+          "blockers",
+          "dataSource",
+          "video",
+          "support",
+          "ai",
+        ];
+        if (saved && validTabs.includes(saved as TabKey)) {
           setTab(saved as TabKey);
         }
       } catch {}
     }
-  }, [searchParams, dataMode, isSetupMode]);
+  }, [searchParams, dataMode, isSetupMode, router]);
 
   const handleSetTab = (next: TabKey) => {
     setTab(next);
     try {
       localStorage.setItem("pv:settingsTab", next);
-    } catch {}
-  };
-
-  const handleDataModeChange = (mode: "real" | "mock") => {
-    setDataMode(mode);
-    try {
-      setDataModePreference(mode);
     } catch {}
   };
 
@@ -619,305 +115,208 @@ function SettingsContent() {
           Manage your profile and workspace configuration.
         </p>
       </div>
+
       {/* Navigation tabs */}
-      {true && (
-        <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
+      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
+        <Button
+          variant={tab === "profile" || tab === "user" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("profile")}
+          className={cn((tab === "profile" || tab === "user") && "shadow")}
+        >
+          Profile
+        </Button>
+        <Button
+          variant={tab === "workspace" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("workspace")}
+          className={cn(tab === "workspace" && "shadow")}
+        >
+          Workspace / Agency
+        </Button>
+        <Button
+          variant={tab === "dataSource" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("dataSource")}
+          className={cn(tab === "dataSource" && "shadow")}
+        >
+          Data Source
+        </Button>
+        <Button
+          variant={tab === "appearance" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("appearance")}
+          className={cn(tab === "appearance" && "shadow")}
+        >
+          Appearance
+        </Button>
+        <Button
+          variant={tab === "security" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("security")}
+          className={cn(tab === "security" && "shadow")}
+        >
+          <Shield className="w-4 h-4 mr-2" />
+          Security
+        </Button>
+        <Button
+          variant={tab === "roles" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("roles")}
+          className={cn(tab === "roles" && "shadow")}
+        >
+          Roles
+        </Button>
+        <Button
+          variant={tab === "blockers" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("blockers")}
+          className={cn(tab === "blockers" && "shadow")}
+        >
+          Blockers
+        </Button>
+        <Button
+          variant={tab === "chat" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("chat")}
+          className={cn(tab === "chat" && "shadow")}
+        >
+          Chat
+        </Button>
+        <Button
+          variant={tab === "video" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("video")}
+          className={cn(tab === "video" && "shadow")}
+        >
+          <Video className="w-4 h-4 mr-2" />
+          Video
+        </Button>
+        <Button
+          variant={tab === "email" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("email")}
+          className={cn(tab === "email" && "shadow")}
+        >
+          Email
+        </Button>
+        <Button
+          variant={tab === "notifications" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("notifications")}
+          className={cn(tab === "notifications" && "shadow")}
+        >
+          Notifications
+        </Button>
+        <Button
+          variant={tab === "support" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("support")}
+          className={cn(tab === "support" && "shadow")}
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          Support
+        </Button>
+        {currentUser?.role === "admin" && (
           <Button
-            variant={
-              tab === "profile" || tab === "user" ? "primary" : "outline"
-            }
+            variant={tab === "ai" ? "primary" : "outline"}
             size="sm"
-            onClick={() => handleSetTab("profile")}
-            className={cn((tab === "profile" || tab === "user") && "shadow")}
+            onClick={() => handleSetTab("ai")}
+            className={cn(tab === "ai" && "shadow")}
           >
-            Profile
+            <Bot className="w-4 h-4 mr-2" />
+            AI & Agents
           </Button>
-          <Button
-            variant={tab === "workspace" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("workspace")}
-            className={cn(tab === "workspace" && "shadow")}
-          >
-            Workspace / Agency
-          </Button>
-          <Button
-            variant={tab === "dataSource" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("dataSource")}
-            className={cn(tab === "dataSource" && "shadow")}
-          >
-            Data Source
-          </Button>
-          <Button
-            variant={tab === "appearance" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("appearance")}
-            className={cn(tab === "appearance" && "shadow")}
-          >
-            Appearance
-          </Button>
-          <Button
-            variant={tab === "security" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("security")}
-            className={cn(tab === "security" && "shadow")}
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Security
-          </Button>
-          <Button
-            variant={tab === "roles" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("roles")}
-            className={cn(tab === "roles" && "shadow")}
-          >
-            Roles
-          </Button>
-          <Button
-            variant={tab === "blockers" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("blockers")}
-            className={cn(tab === "blockers" && "shadow")}
-          >
-            Blockers
-          </Button>
-          <Button
-            variant={tab === "chat" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("chat")}
-            className={cn(tab === "chat" && "shadow")}
-          >
-            Chat
-          </Button>
-          <Button
-            variant={tab === "video" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("video")}
-            className={cn(tab === "video" && "shadow")}
-          >
-            <Video className="w-4 h-4 mr-2" />
-            Video
-          </Button>
-          <Button
-            variant={tab === "email" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("email")}
-            className={cn(tab === "email" && "shadow")}
-          >
-            Email
-          </Button>
-          <Button
-            variant={tab === "notifications" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("notifications")}
-            className={cn(tab === "notifications" && "shadow")}
-          >
-            Notifications
-          </Button>
-          <Button
-            variant={tab === "support" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => handleSetTab("support")}
-            className={cn(tab === "support" && "shadow")}
-          >
-            <HelpCircle className="w-4 h-4 mr-2" />
-            Support
-          </Button>
-        </div>
-      )}
-      {tab === "roles" && !isSetupMode && (
-        <div className="max-w-3xl space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold">Team Roles</h2>
-            <p className="text-sm text-muted-foreground">
-              Add, remove, or modify roles available to your teams. Only admins
-              can make changes.
-            </p>
-          </div>
-          <RolesSettings />
-        </div>
-      )}
+        )}
+      </div>
 
-      {(tab === "profile" || tab === "user") && <UserSettingsForm />}
-      {tab === "workspace" && !isSetupMode && <WorkspaceSettingsForm />}
-      {tab === "dataSource" && !isSetupMode && <DataSourceTab />}
+      <div className="tab-content pt-4">
+        {(tab === "profile" || tab === "user") && <UserSettingsForm />}
 
-      {tab === "appearance" && !isSetupMode && (
-        <div className="max-w-2xl space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Theme Mode</h2>
-            <p className="text-sm text-muted-foreground mb-3">
-              Toggle light/dark mode.
-            </p>
-            <ThemeSwitcher />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Color Presets</h2>
-            <p className="text-sm text-muted-foreground mb-3">
-              Pick a primary color. This updates the app accent.
-            </p>
-            <ThemePresets />
-          </div>
-        </div>
-      )}
+        {tab === "workspace" && !isSetupMode && <WorkspaceSettingsForm />}
 
-      {tab === "security" && !isSetupMode && <SecuritySettings />}
+        {tab === "dataSource" && !isSetupMode && <DataSourceSettings />}
 
-      {tab === "blockers" && !isSetupMode && (
-        <div className="max-w-3xl space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-xl font-bold">Blocker Categories</h2>
-            <p className="text-sm text-muted-foreground">
-              Define the categories used when reporting blockers. Categories
-              help route issues to the right owner group and set expectations
-              with target SLA days. You can edit labels, owners, SLAs, icons, or
-              add new categories. Changes are stored locally and work in
-              production without a backend.
-            </p>
-          </div>
-          <BlockerCategorySettings />
-          <div className="space-y-2 pt-4">
-            <h2 className="text-xl font-bold">Risk Levels</h2>
-            <p className="text-sm text-muted-foreground">
-              Configure the risk levels used in filters and badges. You can add,
-              rename, recolor, and reorder levels.
-            </p>
-          </div>
-          <RiskLevelSettings />
-        </div>
-      )}
-      {tab === "email" && !isSetupMode && (
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-primary/10 text-primary">
-              <Mail className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Email Configuration</h2>
+        {tab === "appearance" && !isSetupMode && <AppearanceSettings />}
+
+        {tab === "security" && !isSetupMode && <SecuritySettings />}
+
+        {tab === "ai" && !isSetupMode && <AISettings />}
+
+        {tab === "roles" && !isSetupMode && (
+          <div className="max-w-3xl space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Team Roles</h2>
               <p className="text-sm text-muted-foreground">
-                Configure email provider for sending notifications
+                Add, remove, or modify roles available to your teams. Only
+                admins can make changes.
               </p>
             </div>
+            <RolesSettings />
           </div>
-          <IntegrationSettings mode="email" />
-        </div>
-      )}
-      {tab === "chat" && !isSetupMode && (
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-primary/10 text-primary">
-              <Bell className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Chat Settings</h2>
+        )}
+
+        {tab === "blockers" && !isSetupMode && (
+          <div className="max-w-3xl space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Blocker Categories</h2>
               <p className="text-sm text-muted-foreground">
-                Manage chat groups and team conversations
+                Define the categories used when reporting blockers.
               </p>
             </div>
+            <BlockerCategorySettings />
+            <div className="space-y-2 pt-4">
+              <h2 className="text-xl font-bold">Risk Levels</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure the risk levels used in filters and badges.
+              </p>
+            </div>
+            <RiskLevelSettings />
           </div>
-          <ChatGroupSettings />
-        </div>
-      )}
-      {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
-      {tab === "email" && !isSetupMode && <EmailSettings />}
-      {tab === "support" && !isSetupMode && <SupportTab />}
-      {tab === "notifications" && !isSetupMode && <NotificationsSettingsTabs />}
+        )}
+
+        {tab === "email" && !isSetupMode && (
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                <Mail className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Email Configuration</h2>
+                <p className="text-sm text-muted-foreground">
+                  Configure email provider for sending notifications.
+                </p>
+              </div>
+            </div>
+            <IntegrationSettings mode="email" />
+            <EmailSettings />
+          </div>
+        )}
+
+        {tab === "chat" && !isSetupMode && (
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                <Bell className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Chat Settings</h2>
+                <p className="text-sm text-muted-foreground">
+                  Manage chat groups and team conversations.
+                </p>
+              </div>
+            </div>
+            <ChatGroupSettings />
+          </div>
+        )}
+
+        {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
+
+        {tab === "support" && !isSetupMode && <SupportTab />}
+
+        {tab === "notifications" && !isSetupMode && <NotificationsSettings />}
+      </div>
     </section>
-  );
-}
-
-function NotificationsSettingsTabs() {
-  const [activeTab, setActiveTab] = useState<
-    "notifications" | "rules" | "watch" | "integrations"
-  >("notifications");
-
-  // Restore last selected notifications sub-tab
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("pv:notificationsSubTab");
-      if (
-        saved === "notifications" ||
-        saved === "rules" ||
-        saved === "watch" ||
-        saved === "integrations"
-      ) {
-        setActiveTab(saved as any);
-      }
-    } catch {}
-  }, []);
-
-  const handleSetActive = (
-    next: "notifications" | "rules" | "watch" | "integrations"
-  ) => {
-    setActiveTab(next);
-    try {
-      localStorage.setItem("pv:notificationsSubTab", next);
-    } catch {}
-  };
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-lg bg-primary/10 text-primary">
-          <Bell className="w-6 h-6" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold">Notifications & Alerts</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage notifications, alerts, and integrations
-          </p>
-        </div>
-      </div>
-
-      <div className="border-b border-border">
-        <div className="flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => handleSetActive("notifications")}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "notifications"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Notifications
-          </button>
-          <button
-            onClick={() => handleSetActive("rules")}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "rules"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Alert Rules
-          </button>
-          <button
-            onClick={() => handleSetActive("watch")}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "watch"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Project Watch
-          </button>
-          <button
-            onClick={() => handleSetActive("integrations")}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "integrations"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Integrations
-          </button>
-        </div>
-      </div>
-
-      {activeTab === "notifications" && <NotificationCenter />}
-      {activeTab === "rules" && <AlertRulesManager />}
-      {activeTab === "watch" && <ProjectWatch />}
-      {activeTab === "integrations" && <IntegrationSettings mode="slack" />}
-    </div>
   );
 }
 
@@ -925,9 +324,9 @@ export default function SettingsPage() {
   return (
     <Suspense
       fallback={
-        <section className="p-4 md:p-8 max-w-5xl">
-          <div className="text-center">Loading settings...</div>
-        </section>
+        <div className="p-8 animate-pulse text-muted-foreground">
+          Loading settings...
+        </div>
       }
     >
       <SettingsContent />

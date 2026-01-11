@@ -5,6 +5,7 @@ import { ProjectsCharts } from "@/components/dashboard/ProjectsCharts";
 import { TasksCharts } from "@/components/dashboard/TasksCharts";
 import { TeamCharts } from "@/components/dashboard/TeamCharts";
 import { WeeklyDigest } from "@/components/reports/WeeklyDigest";
+import { AuditSummary } from "@/components/ai/AuditSummary";
 import { getAuthenticatedUser, isAdmin, isProjectManager } from "@/lib/auth";
 import { ProjectsProvider } from "@/components/context/ProjectsContext";
 
@@ -63,6 +64,7 @@ export default async function DashboardPage() {
             </ProjectsProvider>
           </div>
           <div className="flex flex-col gap-8">
+            {showDigest && <AuditSummary />}
             <RecentActivity />
           </div>
         </div>

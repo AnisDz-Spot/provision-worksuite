@@ -2,194 +2,44 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeftIcon, X } from "lucide-react";
-import { logProjectEvent } from "@/lib/utils";
+import { ArrowLeftIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { useToast } from "@/components/ui/Toast";
-import usersData from "@/data/users.json";
-import categoriesData from "@/data/categories.json";
-import { log } from "@/lib/logger";
-import Image from "next/image";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { ProjectDependencies } from "@/components/projects/ProjectDependencies";
 import { ProjectFiles } from "@/components/projects/ProjectFiles";
+import { log } from "@/lib/logger";
 
-type Project = {
-  id: string;
-  uid?: string;
-  slug?: string;
-  name: string;
-  owner: string;
-  status: "Active" | "Completed" | "Paused" | "In Progress";
-  deadline: string;
-  priority?: "low" | "medium" | "high";
-  starred?: boolean;
-  cover?: string;
-  tags?: string[];
-  privacy?: "public" | "team" | "private";
-  categories?: string[] | string;
-  description?: string;
-  isTemplate?: boolean;
-  client?: string;
-  clientId?: string;
-  budget?: string;
-  sla?: string;
-  members?: { uid: string; name: string; avatarUrl?: string }[];
-};
+// Hook
+import { useProjectEditData } from "@/hooks/useProjectEditData";
 
-// Local storage load removed
+// Components
+import { ProjectBasicInfo } from "@/components/projects/edit/ProjectBasicInfo";
+import { ProjectDetailsForm } from "@/components/projects/edit/ProjectDetailsForm";
+import { ProjectClientBudget } from "@/components/projects/edit/ProjectClientBudget";
+import { ProjectTaxonomy } from "@/components/projects/edit/ProjectTaxonomy";
+import { ProjectMembersForm } from "@/components/projects/edit/ProjectMembersForm";
+import { DeleteProjectSection } from "@/components/projects/edit/DeleteProjectSection";
 
 export default function ProjectEditPage() {
   const params = useParams();
   const router = useRouter();
   const { showToast } = useToast();
   const projectId = params.id as string;
-  const [project, setProject] = React.useState<Project | null>(null);
-  const [currentUser, setCurrentUser] = React.useState<any>(null);
-  const [users, setUsers] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+
+  const {
+    project,
+    setProject,
+    loading,
+    users,
+    clients,
+    allProjects,
+    allCategories,
+    setAllCategories,
+  } = useProjectEditData(projectId);
+
   const [isSaving, setIsSaving] = React.useState(false);
-  const [allProjects, setAllProjects] = React.useState<any[]>([]);
-  const [tagInput, setTagInput] = React.useState("");
-  const [categoryInput, setCategoryInput] = React.useState("");
-  const [allCategories, setAllCategories] = React.useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("pv:categories");
-      return saved ? JSON.parse(saved) : categoriesData;
-    }
-    return categoriesData;
-  });
-
-  const [clients, setClients] = React.useState<any[]>([]);
-
-  // Delete Modal State
-  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = React.useState("");
-  const [isDeleting, setIsDeleting] = React.useState(false);
-
-  const handleDeleteProject = async () => {
-    if (deleteConfirmation !== project?.name) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetchWithCsrf(`/api/projects/${projectId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        showToast("Project deleted successfully", "success");
-        // Clear cache to ensure list is updated immediately despite staleTime
-        const { invalidateCache } = await import("@/lib/cache");
-        invalidateCache("projects");
-
-        router.push("/projects");
-        router.refresh();
-      } else {
-        throw new Error("Failed to delete");
-      }
-    } catch (error) {
-      console.error(error);
-      showToast("Failed to delete project", "error");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [authRes, projectRes, clientsRes, usersRes, allProjectsRes] =
-          await Promise.all([
-            fetch("/api/auth/me"),
-            fetch(`/api/projects/${projectId}`),
-            fetch("/api/clients"),
-            fetch("/api/users"),
-            fetch("/api/projects"),
-          ]);
-
-        if (authRes.ok) {
-          const authData = await authRes.json();
-          if (authData.success) {
-            const user = authData.user;
-            setCurrentUser(user);
-
-            // Check RBAC
-            const role = user.role?.toLowerCase() || "";
-            const isAuthorized =
-              [
-                "admin",
-                "administrator",
-                "master admin",
-                "project manager",
-              ].includes(role) || user.uid === "admin-global";
-
-            if (!isAuthorized) {
-              showToast(
-                "Unauthorized: Only admins and project managers can edit projects",
-                "error"
-              );
-              router.push(`/projects/${projectId}`);
-              return;
-            }
-          }
-        }
-
-        if (projectRes.ok) {
-          const data = await projectRes.json();
-          if (data.success) {
-            const p = data.project;
-            // Map API response to local state structure
-            setProject({
-              id: p.id.toString(),
-              uid: p.uid,
-              slug: p.slug,
-              name: p.name,
-              owner: p.userId ? p.userId.toString() : "",
-              status: p.status,
-              deadline: p.deadline ? p.deadline.split("T")[0] : "",
-              priority: p.priority,
-              cover: p.coverUrl,
-              tags: p.tags,
-              privacy: p.visibility,
-              categories: p.categories,
-              description: p.description,
-              client: p.clientName,
-              clientId: p.clientId,
-              budget: p.budget ? p.budget.toString() : "",
-              sla: p.sla ? p.sla.toString() : "",
-              isTemplate: p.isTemplate,
-              members: (p.members || []).map((m: any) => ({
-                uid: m.user?.uid || "",
-                name: m.user?.name || "Member",
-                avatarUrl: m.user?.avatarUrl,
-              })),
-            });
-          }
-        }
-
-        if (allProjectsRes.ok) {
-          const data = await allProjectsRes.json();
-          if (data.success) setAllProjects(data.data);
-        }
-
-        if (clientsRes.ok) {
-          const data = await clientsRes.json();
-          if (data.success) setClients(data.data);
-        }
-
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          if (data.success) setUsers(data.data);
-        }
-      } catch (error) {
-        console.error(error);
-        showToast("Failed to load data", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [projectId]);
 
   const handleSave = async () => {
     if (!project || isSaving) return;
@@ -297,520 +147,33 @@ export default function ProjectEditPage() {
           </Button>
         </Link>
         <h1 className="text-2xl font-bold">Edit Project</h1>
-        <div className="w-32" /> {/* Spacer for centering */}
+        <div className="w-32" />
       </div>
 
       <Card className="p-8">
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Project Title</label>
-              <input
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.name || ""}
-                onChange={(e) =>
-                  setProject((p) => (p ? { ...p, name: e.target.value } : p))
-                }
-                placeholder="Title"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Project Image</label>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                  value={project.cover || ""}
-                  onChange={(e) =>
-                    setProject((p) => (p ? { ...p, cover: e.target.value } : p))
-                  }
-                  placeholder="https://..."
-                />
-                <input
-                  type="file"
-                  id="cover-upload"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 2 * 1024 * 1024) {
-                        showToast("Image must be less than 2MB", "error");
-                        e.target.value = "";
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setProject((p) =>
-                          p ? { ...p, cover: reader.result as string } : p
-                        );
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-[42px] shrink-0"
-                  onClick={() =>
-                    document.getElementById("cover-upload")?.click()
-                  }
-                >
-                  Upload
-                </Button>
-              </div>
-              {project.cover && (
-                <div className="mt-3 rounded-lg border border-border overflow-hidden bg-muted relative group">
-                  <Image
-                    src={project.cover}
-                    alt="Project cover preview"
-                    width={800}
-                    height={192}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                      const parent = (e.target as HTMLElement).parentElement;
-                      if (parent && !parent.querySelector(".error-message")) {
-                        const errorDiv = document.createElement("div");
-                        errorDiv.className =
-                          "error-message flex items-center justify-center h-48 text-sm text-muted-foreground";
-                        errorDiv.textContent = "Invalid image URL";
-                        parent.appendChild(errorDiv);
-                      }
-                    }}
-                    onLoad={(e) => {
-                      (e.target as HTMLImageElement).style.display = "block";
-                      const parent = (e.target as HTMLElement).parentElement;
-                      const errorDiv = parent?.querySelector(".error-message");
-                      if (errorDiv) errorDiv.remove();
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setProject((p) => (p ? { ...p, cover: "" } : p))
-                    }
-                    className="absolute top-2 right-2 p-1.5 rounded-md bg-destructive/90 text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100"
-                    title="Remove image"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Enter URL or upload an image (max 2MB)
-              </p>
-            </div>
-          </div>
+          <ProjectBasicInfo project={project} setProject={setProject} />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
-            <RichTextEditor
-              value={project.description || ""}
-              onChange={(value) =>
-                setProject((p) => (p ? { ...p, description: value } : p))
-              }
-            />
-          </div>
+          <ProjectDetailsForm project={project} setProject={setProject} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.priority || "medium"}
-                onChange={(e) =>
-                  setProject((p) =>
-                    p ? { ...p, priority: e.target.value as any } : p
-                  )
-                }
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.status || "In Progress"}
-                onChange={(e) =>
-                  setProject((p) =>
-                    p ? { ...p, status: e.target.value as any } : p
-                  )
-                }
-              >
-                <option>In Progress</option>
-                <option>Active</option>
-                <option>Completed</option>
-                <option>Paused</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Deadline</label>
-              <input
-                type="date"
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.deadline || ""}
-                onChange={(e) =>
-                  setProject((p) =>
-                    p ? { ...p, deadline: e.target.value } : p
-                  )
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Privacy</label>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.privacy || "team"}
-                onChange={(e) =>
-                  setProject((p) =>
-                    p ? { ...p, privacy: e.target.value as any } : p
-                  )
-                }
-              >
-                <option value="public">Public</option>
-                <option value="team">Team</option>
-                <option value="private">Private</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Client</label>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.clientId || ""}
-                onChange={(e) => {
-                  const cid = e.target.value;
-                  const c = clients.find((cl) => cl.id === cid);
-                  setProject((p) =>
-                    p ? { ...p, clientId: cid, client: c?.name || "" } : p
-                  );
-                }}
-              >
-                <option value="">-- Select Client --</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <ProjectClientBudget
+            project={project}
+            setProject={setProject}
+            clients={clients}
+          />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Budget (USD)</label>
-              <input
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.budget || ""}
-                onChange={(e) =>
-                  setProject((p) => (p ? { ...p, budget: e.target.value } : p))
-                }
-                placeholder="e.g., 50000"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                <abbr
-                  className="border-b border-dashed border-current no-underline cursor-help"
-                  title="Service Level Agreement"
-                >
-                  SLA
-                </abbr>{" "}
-                Target (days)
-              </label>
-              <input
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={project.sla || ""}
-                onChange={(e) =>
-                  setProject((p) => (p ? { ...p, sla: e.target.value } : p))
-                }
-                placeholder="e.g., 30"
-              />
-            </div>
-          </div>
+          <ProjectTaxonomy
+            project={project}
+            setProject={setProject}
+            allCategories={allCategories}
+            setAllCategories={setAllCategories}
+          />
 
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-              <input
-                type="checkbox"
-                checked={project.isTemplate || false}
-                onChange={(e) =>
-                  setProject((p) =>
-                    p ? { ...p, isTemplate: e.target.checked } : p
-                  )
-                }
-                className="w-4 h-4 rounded border-border"
-              />
-              Mark as Template
-            </label>
-            <p className="text-xs text-muted-foreground">
-              Allow this project to be used as a template for new projects
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Categories</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(Array.isArray(project.categories)
-                  ? project.categories
-                  : []
-                ).map((cat: string, idx: number) => (
-                  <span
-                    key={idx}
-                    className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
-                  >
-                    {cat}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cats = Array.isArray(project.categories)
-                          ? project.categories
-                          : [];
-                        setProject((p) =>
-                          p
-                            ? {
-                                ...p,
-                                categories: cats.filter((_, i) => i !== idx),
-                              }
-                            : p
-                        );
-                      }}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <select
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm mb-2"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const cats = Array.isArray(project.categories)
-                    ? project.categories
-                    : [];
-                  if (value && !cats.includes(value)) {
-                    setProject((p) =>
-                      p ? { ...p, categories: [...cats, value] } : p
-                    );
-                  }
-                  e.target.value = "";
-                }}
-                value=""
-              >
-                <option value="">+ Select Category</option>
-                {allCategories
-                  .filter(
-                    (c) =>
-                      !(
-                        Array.isArray(project.categories)
-                          ? project.categories
-                          : []
-                      ).includes(c)
-                  )
-                  .map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-              </select>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                  value={categoryInput}
-                  onChange={(e) => setCategoryInput(e.target.value)}
-                  placeholder="Add new category"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && categoryInput.trim()) {
-                      e.preventDefault();
-                      const newCat = categoryInput.trim();
-                      if (!allCategories.includes(newCat)) {
-                        const updated = [...allCategories, newCat];
-                        setAllCategories(updated);
-                        localStorage.setItem(
-                          "pv:categories",
-                          JSON.stringify(updated)
-                        );
-                      }
-                      const cats = Array.isArray(project.categories)
-                        ? project.categories
-                        : [];
-                      if (!cats.includes(newCat)) {
-                        setProject((p) =>
-                          p ? { ...p, categories: [...cats, newCat] } : p
-                        );
-                      }
-                      setCategoryInput("");
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm hover:bg-accent"
-                  onClick={() => {
-                    if (categoryInput.trim()) {
-                      const newCat = categoryInput.trim();
-                      if (!allCategories.includes(newCat)) {
-                        const updated = [...allCategories, newCat];
-                        setAllCategories(updated);
-                        localStorage.setItem(
-                          "pv:categories",
-                          JSON.stringify(updated)
-                        );
-                      }
-                      const cats = Array.isArray(project.categories)
-                        ? project.categories
-                        : [];
-                      if (!cats.includes(newCat)) {
-                        setProject((p) =>
-                          p ? { ...p, categories: [...cats, newCat] } : p
-                        );
-                      }
-                      setCategoryInput("");
-                    }
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Select from list or add new category
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tags</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(project.tags || []).map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-accent px-2 py-1 rounded-md text-xs flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setProject((p) =>
-                          p
-                            ? {
-                                ...p,
-                                tags: (p.tags || []).filter(
-                                  (_, i) => i !== idx
-                                ),
-                              }
-                            : p
-                        )
-                      }
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && tagInput.trim()) {
-                    e.preventDefault();
-                    setProject((p) =>
-                      p
-                        ? { ...p, tags: [...(p.tags || []), tagInput.trim()] }
-                        : p
-                    );
-                    setTagInput("");
-                  }
-                }}
-                placeholder="Type tag and press Enter"
-              />
-              <p className="text-xs text-muted-foreground">
-                Press Enter to add a tag
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Team Members</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {(project.members || []).map((m, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 bg-accent px-2 py-1 rounded-md"
-                >
-                  <Image
-                    src={
-                      m.avatarUrl ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}`
-                    }
-                    alt={m.name}
-                    width={20}
-                    height={20}
-                    className="w-5 h-5 rounded-full"
-                  />
-                  <span className="text-xs">{m.name}</span>
-                  <button
-                    onClick={() => {
-                      setProject((p) =>
-                        p
-                          ? {
-                              ...p,
-                              members: (p.members || []).filter(
-                                (_, i) => i !== idx
-                              ),
-                            }
-                          : p
-                      );
-                    }}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <select
-              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-              onChange={(e) => {
-                const selected = users.find((u) => u.name === e.target.value);
-                if (
-                  selected &&
-                  !project.members?.find((m) => m.uid === selected.uid)
-                ) {
-                  setProject((p) =>
-                    p
-                      ? {
-                          ...p,
-                          members: [
-                            ...(p.members || []),
-                            {
-                              uid: selected.uid,
-                              name: selected.name,
-                              avatarUrl:
-                                selected.avatarUrl ||
-                                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selected.name)}`,
-                            },
-                          ],
-                        }
-                      : p
-                  );
-                }
-                e.target.value = "";
-              }}
-              value=""
-            >
-              <option value="">Select members…</option>
-              {users.map((u) => (
-                <option key={u.uid} value={u.name}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
-          </div>
+          <ProjectMembersForm
+            project={project}
+            setProject={setProject}
+            users={users}
+          />
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
@@ -831,67 +194,7 @@ export default function ProjectEditPage() {
         </div>
       </Card>
 
-      <Card className="p-8 border-destructive/50">
-        <h3 className="text-xl font-bold text-destructive mb-4">Danger Zone</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Once you delete a project, there is no going back. Please be certain.
-        </p>
-        <Button variant="destructive" onClick={() => setShowDeleteModal(true)}>
-          Delete Project
-        </Button>
-      </Card>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 space-y-6 shadow-2xl border-destructive/20 from-destructive/5 to-background bg-gradient-to-b">
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-destructive flex items-center gap-2">
-                <span className="p-2 bg-destructive/10 rounded-full">⚠️</span>
-                Delete Project?
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                This action cannot be undone. This will permanently delete the
-                project <strong>{project.name}</strong> and all associated data
-                (tasks, files, members).
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-uppercase text-muted-foreground font-semibold">
-                Type "{project.name}" to confirm
-              </label>
-              <input
-                className="w-full p-2 border rounded-md text-sm bg-background"
-                value={deleteConfirmation}
-                onChange={(e) => setDeleteConfirmation(e.target.value)}
-                placeholder={project.name}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteConfirmation("");
-                }}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={deleteConfirmation !== project.name || isDeleting}
-                onClick={handleDeleteProject}
-                loading={isDeleting}
-              >
-                {isDeleting ? "Deleting..." : "Confirm Delete"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <DeleteProjectSection project={project} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ProjectDependencies
