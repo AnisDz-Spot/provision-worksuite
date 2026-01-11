@@ -14,6 +14,7 @@ import {
 } from "@/lib/project-health";
 import { getTaskCompletionForProject } from "@/lib/utils";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { HealthBadge } from "@/components/projects/HealthBadge";
 
 interface ProjectCardProps {
   project: Project;
@@ -148,8 +149,8 @@ export function ProjectCard({
             </div>
           )}
 
-          {/* Status badge */}
-          <div className="absolute top-3 left-3 flex gap-2">
+          {/* Status & Health badges */}
+          <div className="absolute top-3 left-3 flex gap-2 items-center">
             <span
               className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-md ${(() => {
                 const statusLower = (project.status || "")
@@ -177,6 +178,14 @@ export function ProjectCard({
             >
               {project.status}
             </span>
+
+            <HealthBadge
+              score={health.score}
+              level={health.level}
+              factors={health.factors}
+              size="sm"
+              className="backdrop-blur-md shadow-xs"
+            />
           </div>
 
           {/* Star Button */}

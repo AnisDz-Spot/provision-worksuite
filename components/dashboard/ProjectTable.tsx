@@ -25,6 +25,8 @@ import {
   useProjects,
 } from "@/components/context/ProjectsContext";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
+import { calculateProjectHealth } from "@/lib/project-health";
+import { HealthBadge } from "@/components/projects/HealthBadge";
 
 // Extend TableMeta to include custom methods
 declare module "@tanstack/react-table" {
@@ -148,6 +150,30 @@ const columns: ColumnDef<Project>[] = [
         >
           {status}
         </Badge>
+      );
+    },
+  },
+  {
+    id: "health",
+    header: () => "Health",
+    cell: ({ row }) => {
+      const project = row.original;
+      const taskStats = getTaskCompletionForProject(project.id);
+      const progress = taskStats?.percent || 0;
+
+      const health = calculateProjectHealth({
+        progress,
+        deadline: project.deadline,
+        status: project.status,
+      });
+
+      return (
+        <HealthBadge
+          score={health.score}
+          level={health.level}
+          factors={health.factors}
+          size="sm"
+        />
       );
     },
   },

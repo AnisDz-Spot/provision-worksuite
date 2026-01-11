@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Calendar, ChevronLeft, ChevronRight, Circle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { calculateProjectHealth } from "@/lib/project-health";
+import { HealthBadge } from "@/components/projects/HealthBadge";
+import { getTaskCompletionForProject } from "@/lib/utils";
 
 // ... [rest of the file is the same, but I'll provide the return block correctly]
 // Wait, I should just provide the whole file to be safe.
@@ -16,6 +19,7 @@ type Project = {
   status: string;
   deadline?: string;
   owner: string;
+  tasks?: any[];
 };
 
 interface GanttChartProps {
@@ -251,8 +255,28 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                             </div>
                             {isHovered && (
                               <div className="absolute left-0 top-full mt-2 bg-card border-2 border-primary rounded-lg p-3 shadow-2xl z-50 min-w-[250px] text-xs">
-                                <div className="font-semibold mb-2 text-base">
-                                  {project.name}
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="font-semibold text-base leading-tight">
+                                    {project.name}
+                                  </div>
+                                  {(() => {
+                                    const taskStats =
+                                      getTaskCompletionForProject(project.id);
+                                    const progress = taskStats?.percent || 0;
+                                    const health = calculateProjectHealth({
+                                      progress,
+                                      deadline: project.deadline || "",
+                                      status: project.status,
+                                    });
+                                    return (
+                                      <HealthBadge
+                                        score={health.score}
+                                        level={health.level}
+                                        factors={health.factors}
+                                        size="sm"
+                                      />
+                                    );
+                                  })()}
                                 </div>
                                 <div className="space-y-1">
                                   <div className="text-muted-foreground">

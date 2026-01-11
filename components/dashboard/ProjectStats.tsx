@@ -288,57 +288,86 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
 
       {/* Health Overview Card */}
       <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
-        <div className="absolute inset-0 bg-linear-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                Health Score
-              </p>
-              <p className="text-4xl font-bold text-purple-600">
-                {avgHealthScore}
-              </p>
-              <div className="flex items-center gap-1 text-xs text-purple-600 mt-1">
-                <Heart className="w-3 h-3" />
-                <span>Average health</span>
+        {(() => {
+          const avgLevel: HealthLevel =
+            avgHealthScore >= 80
+              ? "healthy"
+              : avgHealthScore >= 60
+                ? "warning"
+                : avgHealthScore >= 40
+                  ? "at-risk"
+                  : "critical";
+          const hColor = getHealthColor(avgLevel);
+
+          return (
+            <>
+              <div
+                className={`absolute inset-0 bg-linear-to-br ${hColor.bg} opacity-0 group-hover:opacity-100 transition-opacity`}
+              />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                      Health Score
+                    </p>
+                    <p className={`text-4xl font-bold ${hColor.text}`}>
+                      {avgHealthScore}
+                    </p>
+                    <div
+                      className={`flex items-center gap-1 text-xs ${hColor.text} mt-1`}
+                    >
+                      <Heart className="w-3 h-3 fill-current" />
+                      <span>{getHealthLabel(avgLevel)} avg</span>
+                    </div>
+                  </div>
+                  <div className={`p-3 rounded-xl ${hColor.bg}`}>
+                    <Heart className={`w-8 h-8 ${hColor.text}`} />
+                  </div>
+                </div>
+
+                {/* Health breakdown */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div className="text-xs text-muted-foreground flex-1">
+                      Healthy
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {healthyProjects}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                    <div className="text-xs text-muted-foreground flex-1">
+                      Warning
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {warningProjects}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                    <div className="text-xs text-muted-foreground flex-1">
+                      At Risk
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {atRiskProjects}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                    <div className="text-xs text-muted-foreground flex-1">
+                      Critical
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {criticalProjects}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="p-3 rounded-xl bg-purple-500/10">
-              <Heart className="w-8 h-8 text-purple-600" />
-            </div>
-          </div>
-          {/* Health breakdown */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <div className="text-xs text-muted-foreground flex-1">
-                Healthy
-              </div>
-              <div className="text-xs font-semibold">{healthyProjects}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-              <div className="text-xs text-muted-foreground flex-1">
-                Warning
-              </div>
-              <div className="text-xs font-semibold">{warningProjects}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <div className="text-xs text-muted-foreground flex-1">
-                At Risk
-              </div>
-              <div className="text-xs font-semibold">{atRiskProjects}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <div className="text-xs text-muted-foreground flex-1">
-                Critical
-              </div>
-              <div className="text-xs font-semibold">{criticalProjects}</div>
-            </div>
-          </div>
-        </div>
+            </>
+          );
+        })()}
       </Card>
     </div>
   );
