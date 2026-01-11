@@ -64,7 +64,7 @@ export default async function DashboardPage() {
 
           {/* Weekly Activity Pulse and Recent Activity - Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {showDigest && <WeeklyDigest />}
+            {showDigest && <AuditSummary />}
             <RecentActivity />
           </div>
         </div>
