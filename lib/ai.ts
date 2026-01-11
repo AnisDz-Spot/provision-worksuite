@@ -37,15 +37,18 @@ function validateAndCorrectModelName(
 
   switch (provider) {
     case "gemini":
-      // Gemini model name corrections
-      if (modelLower.includes("1.5-pro") && !modelLower.includes("latest")) {
-        return "gemini-1.5-pro-latest";
+      // Gemini model name corrections (based on official Google AI docs)
+      if (modelLower.includes("1.5-pro")) {
+        return "gemini-1.5-pro";
       }
-      if (modelLower.includes("1.5-flash") && !modelLower.includes("latest")) {
-        return "gemini-1.5-flash-latest";
+      if (modelLower.includes("1.5-flash")) {
+        return "gemini-1.5-flash";
       }
       if (modelLower === "gemini-pro" || modelLower === "gemini") {
         return "gemini-pro";
+      }
+      if (modelLower.includes("pro-vision")) {
+        return "gemini-pro-vision";
       }
       // Return as-is if already correct
       return model;
