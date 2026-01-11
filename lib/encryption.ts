@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import * as crypto from "node:crypto";
 
 const ENCRYPTION_KEY =
   process.env.ENCRYPTION_KEY || "provision-default-key-change-in-production";

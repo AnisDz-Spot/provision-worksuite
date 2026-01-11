@@ -57,7 +57,7 @@ export function DeleteProjectSection({ project }: DeleteProjectSectionProps) {
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6 space-y-6 shadow-2xl border-destructive/20 from-destructive/5 to-background bg-gradient-to-b">
+          <Card className="w-full max-w-md p-6 space-y-6 shadow-2xl border-destructive/20 from-destructive/5 to-background bg-linear-to-b">
             <div className="space-y-2">
               <h3 className="text-xl font-bold text-destructive flex items-center gap-2">
                 <span className="p-2 bg-destructive/10 rounded-full">⚠️</span>

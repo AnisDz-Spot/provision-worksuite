@@ -11,16 +11,16 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { params } = context;
+    const { id } = await context.params;
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const projectId = parseInt(params.id);
+    const projectId = parseInt(id);
     if (isNaN(projectId)) {
       return NextResponse.json(
         { error: "Invalid Project ID" },
