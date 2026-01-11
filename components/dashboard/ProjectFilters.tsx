@@ -90,10 +90,10 @@ export function ProjectFilters({
   const { showToast } = useToast();
   return (
     <>
-      <div className="p-3 border rounded-xl mb-4 bg-card flex flex-col lg:flex-row lg:items-center gap-4">
+      <div className="p-3 border rounded-xl mb-4 bg-card flex flex-col xl:flex-row gap-4">
         {/* Filter Fields Group */}
-        <div className="flex flex-col md:flex-row gap-4 flex-1">
-          <div className="w-full md:w-72">
+        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-w-0">
+          <div className="w-full lg:w-64 shrink-0">
             <label htmlFor="search-projects" className="sr-only">
               Search
             </label>
@@ -109,7 +109,7 @@ export function ProjectFilters({
               className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full">
+          <div className="flex flex-row flex-wrap lg:flex-nowrap items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             <select
               id="filter-health"
               name="health"
@@ -119,7 +119,7 @@ export function ProjectFilters({
                 setHealthFilter(e.target.value);
                 updateUrl({ health: e.target.value });
               }}
-              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
             >
               <option value="all">Health: All</option>
               <option value="healthy">Healthy</option>
@@ -137,7 +137,7 @@ export function ProjectFilters({
                 setStatus(e.target.value);
                 updateUrl({ status: e.target.value });
               }}
-              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
             >
               <option value="all">Status: All</option>
               {allStatuses.map((s) => (
@@ -156,7 +156,7 @@ export function ProjectFilters({
                 setCategoryFilter(e.target.value);
                 updateUrl({ category: e.target.value });
               }}
-              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
             >
               <option value="all">Category: All</option>
               {allCategories.map((c) => (
@@ -175,7 +175,7 @@ export function ProjectFilters({
                 setClientFilter(e.target.value);
                 updateUrl({ client: e.target.value });
               }}
-              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
             >
               <option value="all">Client: All</option>
               {allClients.map((c) => (
@@ -194,7 +194,7 @@ export function ProjectFilters({
                 setSortBy(e.target.value);
                 updateUrl({ sort: e.target.value });
               }}
-              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
             >
               <option value="name-asc">Sort: Name (A-Z)</option>
               <option value="name-desc">Sort: Name (Z-A)</option>
@@ -206,7 +206,7 @@ export function ProjectFilters({
         </div>
 
         {/* Action Buttons Group */}
-        <div className="flex flex-wrap items-center gap-2 lg:border-l lg:pl-4">
+        <div className="flex flex-wrap items-center gap-2 xl:border-l xl:pl-4 shrink-0">
           {!selectMode && (
             <Button
               variant="outline"
