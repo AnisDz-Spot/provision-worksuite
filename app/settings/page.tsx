@@ -97,7 +97,7 @@ function SettingsContent() {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      const offset = 80; // Adjust for sticky headers if any
+      const offset = 120; // Adjust for sticky headers if any
       const bodyRect = document.body.getBoundingClientRect().top;
       const elementRect = el.getBoundingClientRect().top;
       const elementPosition = elementRect - bodyRect;
@@ -142,7 +142,7 @@ function SettingsContent() {
       </div>
 
       {/* Navigation tabs */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 py-2 md:-mx-8 md:px-8 border-b border-border shadow-sm">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 py-4 md:-mx-8 md:px-8 border-b border-border shadow-md">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
           <Button
             variant={tab === "account" ? "primary" : "outline"}
@@ -210,7 +210,7 @@ function SettingsContent() {
 
         {/* SUB NAVIGATION (Anchor Links) */}
         {subNavs[tab].length > 0 && (
-          <div className="flex gap-4 mt-2 py-2 border-t border-border animate-in slide-in-from-top-2 duration-300 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-4 mt-4 py-3 border-t border-border animate-in slide-in-from-top-2 duration-300 overflow-x-auto scrollbar-hide">
             {subNavs[tab].map((sub) => (
               <button
                 key={sub.id}
