@@ -9,10 +9,10 @@ import { Project } from "./types";
 import { useRouter } from "next/navigation";
 import {
   calculateProjectHealth,
-  getTaskCompletionForProject,
-  snapshotHealth,
-  getHealthSeries,
-} from "@/lib/utils";
+  getHealthColor,
+  getHealthLabel,
+} from "@/lib/project-health";
+import { getTaskCompletionForProject } from "@/lib/utils";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 interface ProjectCardProps {
@@ -68,10 +68,15 @@ export function ProjectCard({
       )
     : null;
 
-  const health = React.useMemo(
-    () => calculateProjectHealth(project),
-    [project]
-  );
+  const health = React.useMemo(() => {
+    const taskCompletion = getTaskCompletionForProject(project.id);
+    const progress = taskCompletion?.percent || project.progress || 0;
+    return calculateProjectHealth({
+      progress,
+      deadline: project.deadline,
+      status: project.status,
+    });
+  }, [project]);
   const taskStats = React.useMemo(() => {
     // If we have API-provided tasks, use them (priority)
     if (project.tasks && project.tasks.length > 0) {
@@ -99,12 +104,7 @@ export function ProjectCard({
         ? 100
         : 0;
 
-  // Create health snapshot if healthy
-  React.useEffect(() => {
-    if (health.score > 80) {
-      snapshotHealth(project.id, health.score);
-    }
-  }, [project.id, health.score]);
+  // Health score is calculated above
 
   const totalMembers = (project.members || []).length;
   const hasTasks = taskStats.total > 0;

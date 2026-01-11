@@ -1,9 +1,22 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Project } from "@/lib/data";
 import { Card } from "@/components/ui/Card";
-import { CheckCircle2, Clock, AlertCircle, TrendingUp } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  TrendingUp,
+  Heart,
+} from "lucide-react";
+import {
+  calculateProjectHealth,
+  getHealthColor,
+  getHealthLabel,
+  type HealthLevel,
+} from "@/lib/project-health";
+import { getTaskCompletionForProject } from "@/lib/utils";
 
 interface ProjectStatsProps {
   projects: Project[];
@@ -111,8 +124,49 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
     isStatus(p.status, "paused", "on hold", "blocked")
   );
 
+  // 4. Health Score Calculation
+  const healthScores = useMemo(() => {
+    return projects.map((project) => {
+      const taskCompletion = getTaskCompletionForProject(project.id);
+      const progress = taskCompletion?.percent || project.progress || 0;
+
+      return {
+        projectId: project.id,
+        health: calculateProjectHealth({
+          progress,
+          deadline: project.deadline,
+          status: project.status,
+          // Add more data as available
+        }),
+      };
+    });
+  }, [projects]);
+
+  // Group by health level
+  const healthyProjects = healthScores.filter(
+    (h) => h.health.level === "healthy"
+  ).length;
+  const warningProjects = healthScores.filter(
+    (h) => h.health.level === "warning"
+  ).length;
+  const atRiskProjects = healthScores.filter(
+    (h) => h.health.level === "at-risk"
+  ).length;
+  const criticalProjects = healthScores.filter(
+    (h) => h.health.level === "critical"
+  ).length;
+
+  // Average health score
+  const avgHealthScore =
+    projects.length > 0
+      ? Math.round(
+          healthScores.reduce((sum, h) => sum + h.health.score, 0) /
+            projects.length
+        )
+      : 0;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Completed Projects Card */}
       <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
         <div className="absolute inset-0 bg-linear-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -227,6 +281,61 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
                 }{" "}
                 Blocked
               </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Health Overview Card */}
+      <Card className="p-6 relative overflow-hidden group hover:shadow-xl transition-all">
+        <div className="absolute inset-0 bg-linear-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">
+                Health Score
+              </p>
+              <p className="text-4xl font-bold text-purple-600">
+                {avgHealthScore}
+              </p>
+              <div className="flex items-center gap-1 text-xs text-purple-600 mt-1">
+                <Heart className="w-3 h-3" />
+                <span>Average health</span>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-500/10">
+              <Heart className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+          {/* Health breakdown */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <div className="text-xs text-muted-foreground flex-1">
+                Healthy
+              </div>
+              <div className="text-xs font-semibold">{healthyProjects}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-yellow-500" />
+              <div className="text-xs text-muted-foreground flex-1">
+                Warning
+              </div>
+              <div className="text-xs font-semibold">{warningProjects}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              <div className="text-xs text-muted-foreground flex-1">
+                At Risk
+              </div>
+              <div className="text-xs font-semibold">{atRiskProjects}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <div className="text-xs text-muted-foreground flex-1">
+                Critical
+              </div>
+              <div className="text-xs font-semibold">{criticalProjects}</div>
             </div>
           </div>
         </div>

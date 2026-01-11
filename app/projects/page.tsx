@@ -76,7 +76,10 @@ function ProjectsContent() {
             asChild
             className="w-full sm:w-auto order-2"
           >
-            <a href="/projects/new">
+            <a
+              href="/projects/new"
+              className="flex items-center whitespace-nowrap"
+            >
               <Plus className="w-4 h-4 mr-1" />
               <span>New Project</span>
             </a>
