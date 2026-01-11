@@ -30,7 +30,7 @@ export async function POST(
 
     // 1. Fetch comprehensive project data
     const project = await prisma.project.findUnique({
-      where: { id: projectId },
+      where: { uid: projectId },
       include: {
         tasks: {
           take: 30, // Limit context size
