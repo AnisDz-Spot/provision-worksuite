@@ -113,17 +113,17 @@ export function ProjectCard({
     // If owner isn't in members, add them
     const hasOwner = rawMembers.some((m) => {
       const mName = m.user?.name || m.name;
-      const mUid = m.user?.uid || m.uid;
-      return (
-        mName === project.owner || (mUid && mUid === (project as any).ownerId)
-      );
+      const mUid = m.user?.uid || m.uid || m.id;
+      return mUid === project.ownerId || mName === project.owner;
     });
 
     let list = [...rawMembers];
-    if (!hasOwner && project.owner) {
+    if (!hasOwner && project.owner && project.ownerId) {
       list.push({
+        id: project.ownerId,
+        uid: project.ownerId,
         name: project.owner,
-        avatarUrl: (project as any).ownerAvatar,
+        avatarUrl: project.ownerAvatar,
         role: "Creator",
         isOwner: true,
       });
@@ -133,13 +133,19 @@ export function ProjectCard({
     return list.sort((a, b) => {
       const aName = a.user?.name || a.name;
       const bName = b.user?.name || b.name;
-      const isAOwner = aName === project.owner || a.isOwner;
-      const isBOwner = bName === project.owner || b.isOwner;
-      if (isAOwner) return -1;
-      if (isBOwner) return 1;
+      const aUid = a.user?.uid || a.uid || a.id;
+      const bUid = b.user?.uid || b.uid || b.id;
+
+      const isAOwner =
+        a.isOwner || aUid === project.ownerId || aName === project.owner;
+      const isBOwner =
+        b.isOwner || bUid === project.ownerId || bName === project.owner;
+
+      if (isAOwner && !isBOwner) return -1;
+      if (!isAOwner && isBOwner) return 1;
       return 0;
     });
-  }, [project]);
+  }, [project.members, project.owner, project.ownerId, project.ownerAvatar]);
 
   const totalMembers = processedMembers.length;
   const hasTasks = taskStats.total > 0;
@@ -147,7 +153,7 @@ export function ProjectCard({
   return (
     <Card className="group relative transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-card border-border overflow-visible">
       {selectMode && (
-        <div className="absolute top-2 left-2 z-30">
+        <div className="absolute top-2 left-2 z-40">
           <input
             type="checkbox"
             checked={selectedIds.has(project.id)}

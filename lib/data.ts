@@ -87,9 +87,12 @@ export async function loadProjects(): Promise<Project[]> {
       });
       const result = await res.json();
       if (result.success && result.data) {
-        // Normalize members to avoid mock data display issues
+        // Normalize projects to ensure expected properties exist
         return result.data.map((p: any) => ({
           ...p,
+          owner: p.owner || p.user?.name || "Unknown",
+          ownerId: (p as any).ownerId || p.user?.uid || p.userId,
+          ownerAvatar: (p as any).ownerAvatar || p.user?.avatarUrl,
           members: (p.members || []).map((m: any) => ({
             uid: m.user?.uid || m.uid,
             name: m.user?.name || m.name || "Member",
@@ -106,15 +109,52 @@ export async function loadProjects(): Promise<Project[]> {
   }
   // Fallback behavior only if explicitly NOT in database mode
   const stored = localStorage.getItem("pv:projects");
+  let projectsList: any[] = [];
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed as Project[];
+        projectsList = parsed;
       }
     } catch {}
   }
-  return PROJECTS as Project[];
+
+  if (projectsList.length === 0) {
+    projectsList = PROJECTS;
+  }
+
+  // Normalize all projects (database or mock)
+  return projectsList.map((p: any) => {
+    // If it's mock data from projects.json, it might have teamIds instead of members
+    // Map them to mock members if needed
+    const members =
+      p.members ||
+      (p.teamIds || []).map((tid: string) => ({
+        uid: tid,
+        name:
+          tid === "u1"
+            ? "Alice"
+            : tid === "u2"
+              ? "Bob"
+              : tid === "u3"
+                ? "Carol"
+                : "Dave",
+      }));
+
+    return {
+      ...p,
+      owner: p.owner || p.user?.name || "Unknown",
+      ownerId: p.ownerId || p.user?.uid || p.userId,
+      ownerAvatar: p.ownerAvatar || p.user?.avatarUrl,
+      members: members.map((m: any) => ({
+        uid: m.user?.uid || m.uid,
+        name: m.user?.name || m.name || "Member",
+        avatarUrl: m.user?.avatarUrl || m.avatarUrl,
+      })),
+      cover: p.coverUrl || p.cover,
+      filesCount: p.filesCount || p._count?.files || 0,
+    };
+  }) as Project[];
 }
 
 /**

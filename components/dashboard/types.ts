@@ -17,6 +17,8 @@ export type Project = {
   categories?: string[];
   client?: string;
   filesCount?: number;
+  ownerId?: string;
+  ownerAvatar?: string;
   _count?: {
     tasks: number;
     milestones: number;

@@ -19,15 +19,15 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
     // If owner isn't in members, add them
     const hasOwner = rawMembers.some((m) => {
       const mName = m.user?.name || m.name;
-      const mUid = m.user?.uid || m.uid;
-      return (
-        mName === project.owner || (mUid && mUid === (project as any).ownerId)
-      );
+      const mUid = m.user?.uid || m.uid || m.id;
+      return mUid === (project as any).ownerId || mName === project.owner;
     });
 
     let list = [...rawMembers];
-    if (!hasOwner && project.owner) {
+    if (!hasOwner && project.owner && (project as any).ownerId) {
       list.push({
+        id: (project as any).ownerId,
+        uid: (project as any).ownerId,
         name: project.owner,
         avatarUrl: (project as any).ownerAvatar,
         role: "Creator",
@@ -39,10 +39,20 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
     return list.sort((a, b) => {
       const aName = a.user?.name || a.name;
       const bName = b.user?.name || b.name;
-      const isAOwner = aName === project.owner || a.isOwner;
-      const isBOwner = bName === project.owner || b.isOwner;
-      if (isAOwner) return -1;
-      if (isBOwner) return 1;
+      const aUid = a.user?.uid || a.uid || a.id;
+      const bUid = b.user?.uid || b.uid || b.id;
+
+      const isAOwner =
+        a.isOwner ||
+        aUid === (project as any).ownerId ||
+        aName === project.owner;
+      const isBOwner =
+        b.isOwner ||
+        bUid === (project as any).ownerId ||
+        bName === project.owner;
+
+      if (isAOwner && !isBOwner) return -1;
+      if (!isAOwner && isBOwner) return 1;
       return 0;
     });
   }, [project]);
