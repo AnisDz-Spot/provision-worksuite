@@ -94,6 +94,44 @@ function SettingsContent() {
     } catch {}
   };
 
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const offset = 80; // Adjust for sticky headers if any
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = el.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const subNavs: Record<TabKey, { id: string; label: string }[]> = {
+    account: [
+      { id: "profile", label: "Profile" },
+      { id: "security", label: "Security" },
+      { id: "appearance", label: "Appearance" },
+    ],
+    workspace: [
+      { id: "organization", label: "Organization" },
+      { id: "roles", label: "Roles" },
+      { id: "methodology", label: "Methodology" },
+      { id: "infrastructure", label: "Infrastructure" },
+    ],
+    communications: [
+      { id: "notifications", label: "Notifications" },
+      { id: "email", label: "Email" },
+      { id: "chat", label: "Chat" },
+      { id: "video", label: "Video" },
+    ],
+    ai: [],
+    help: [],
+  };
+
   return (
     <section className="p-4 md:p-8 flex flex-col gap-8">
       <div>
@@ -104,62 +142,96 @@ function SettingsContent() {
       </div>
 
       {/* Navigation tabs */}
-      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto scrollbar-hide">
-        <Button
-          variant={tab === "account" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("account")}
-          className={cn(tab === "account" && "shadow", "transition-all")}
-        >
-          <UserCircle2 className="w-4 h-4 mr-2" />
-          Account
-        </Button>
-        <Button
-          variant={tab === "workspace" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("workspace")}
-          className={cn(tab === "workspace" && "shadow", "transition-all")}
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Workspace
-        </Button>
-        <Button
-          variant={tab === "communications" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("communications")}
-          className={cn(tab === "communications" && "shadow", "transition-all")}
-        >
-          <MessageCircle className="w-4 h-4 mr-2" />
-          Integrations
-        </Button>
-        {isAdmin && (
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm -mx-4 px-4 py-2 md:-mx-8 md:px-8 border-b border-border shadow-sm">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
           <Button
-            variant={tab === "ai" ? "primary" : "outline"}
+            variant={tab === "account" ? "primary" : "outline"}
             size="sm"
-            onClick={() => handleSetTab("ai")}
-            className={cn(tab === "ai" && "shadow", "transition-all")}
+            onClick={() => handleSetTab("account")}
+            className={cn(
+              tab === "account" && "shadow",
+              "transition-all min-w-fit"
+            )}
           >
-            <Bot className="w-4 h-4 mr-2" />
-            AI & Agents
+            <UserCircle2 className="w-4 h-4 mr-2" />
+            Account
           </Button>
+          <Button
+            variant={tab === "workspace" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("workspace")}
+            className={cn(
+              tab === "workspace" && "shadow",
+              "transition-all min-w-fit"
+            )}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Workspace
+          </Button>
+          <Button
+            variant={tab === "communications" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("communications")}
+            className={cn(
+              tab === "communications" && "shadow",
+              "transition-all min-w-fit"
+            )}
+          >
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Integrations
+          </Button>
+          {isAdmin && (
+            <Button
+              variant={tab === "ai" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handleSetTab("ai")}
+              className={cn(
+                tab === "ai" && "shadow",
+                "transition-all min-w-fit"
+              )}
+            >
+              <Bot className="w-4 h-4 mr-2" />
+              AI & Agents
+            </Button>
+          )}
+          <Button
+            variant={tab === "help" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => handleSetTab("help")}
+            className={cn(
+              tab === "help" && "shadow",
+              "transition-all min-w-fit"
+            )}
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Help & Support
+          </Button>
+        </div>
+
+        {/* SUB NAVIGATION (Anchor Links) */}
+        {subNavs[tab].length > 0 && (
+          <div className="flex gap-4 mt-2 py-2 border-t border-border animate-in slide-in-from-top-2 duration-300 overflow-x-auto scrollbar-hide">
+            {subNavs[tab].map((sub) => (
+              <button
+                key={sub.id}
+                onClick={() => scrollToSection(sub.id)}
+                className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors whitespace-nowrap uppercase tracking-wider px-1"
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
         )}
-        <Button
-          variant={tab === "help" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("help")}
-          className={cn(tab === "help" && "shadow", "transition-all")}
-        >
-          <HelpCircle className="w-4 h-4 mr-2" />
-          Help & Support
-        </Button>
       </div>
 
       <div className="tab-content pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* ACCOUNT TAB */}
         {tab === "account" && (
           <div className="space-y-12">
-            <UserSettingsForm />
-            <div className="border-t pt-10">
+            <div id="profile">
+              <UserSettingsForm />
+            </div>
+            <div id="security" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Shield className="w-5 h-5 text-indigo-500" />
@@ -168,7 +240,7 @@ function SettingsContent() {
               </div>
               <SecuritySettings />
             </div>
-            <div className="border-t pt-10">
+            <div id="appearance" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold">Theme & UI Preferences</h3>
               </div>
@@ -180,8 +252,10 @@ function SettingsContent() {
         {/* WORKSPACE TAB */}
         {tab === "workspace" && (
           <div className="space-y-12">
-            {!isSetupMode && <WorkspaceSettingsForm />}
-            <div className="border-t pt-10">
+            <div id="organization">
+              {!isSetupMode && <WorkspaceSettingsForm />}
+            </div>
+            <div id="roles" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold">Team Roles & Access</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -190,7 +264,7 @@ function SettingsContent() {
               </div>
               <RolesSettings />
             </div>
-            <div className="border-t pt-10">
+            <div id="methodology" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold">
                   Methodology (Blockers & Risk)
@@ -204,7 +278,7 @@ function SettingsContent() {
                 <RiskLevelSettings />
               </div>
             </div>
-            <div className="border-t pt-10">
+            <div id="infrastructure" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold">
                   Infrastructure (Data Source)
@@ -218,8 +292,10 @@ function SettingsContent() {
         {/* COMMUNICATIONS TAB */}
         {tab === "communications" && (
           <div className="space-y-12">
-            <NotificationsSettings />
-            <div className="border-t pt-10">
+            <div id="notifications">
+              <NotificationsSettings />
+            </div>
+            <div id="email" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Mail className="w-5 h-5 text-indigo-500" />
@@ -231,7 +307,7 @@ function SettingsContent() {
                 <EmailSettings />
               </div>
             </div>
-            <div className="border-t pt-10">
+            <div id="chat" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <MessageCircle className="w-5 h-5 text-indigo-500" />
@@ -240,7 +316,7 @@ function SettingsContent() {
               </div>
               <ChatGroupSettings />
             </div>
-            <div className="border-t pt-10">
+            <div id="video" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Video className="w-5 h-5 text-indigo-500" />
