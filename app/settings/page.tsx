@@ -46,7 +46,7 @@ type TabKey =
   | "ai";
 
 function SettingsContent() {
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>("user");
@@ -217,7 +217,7 @@ function SettingsContent() {
           <HelpCircle className="w-4 h-4 mr-2" />
           Support
         </Button>
-        {currentUser?.role === "admin" && (
+        {isAdmin && (
           <Button
             variant={tab === "ai" ? "primary" : "outline"}
             size="sm"
