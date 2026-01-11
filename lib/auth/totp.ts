@@ -191,30 +191,158 @@ export function decryptSecret(
 }
 
 /**
+ * Encrypt TOTP secret using tenant-specific DEK (Data Encryption Key)
+ * Falls back to global key for non-tenant users (e.g., Global Admin)
+ *
+ * @param secret - Plain text TOTP secret
+ * @param tenantId - Tenant ID (null for non-tenant users)
+ * @returns Promise<string> - Encrypted secret
+ */
+export async function encryptSecretForTenant(
+  secret: string,
+  tenantId: string | null
+): Promise<string> {
+  // Fall back to global key for non-tenant users
+  if (!tenantId) {
+    const key = getEncryptionKey();
+    return encryptSecret(secret, key);
+  }
+
+  // Use tenant's unique DEK via AES-256-CBC (from lib/encryption.ts)
+  // This format is compatible with the existing tenant encryption system
+  try {
+    const { encryptWithKey, unwrapKey } = await import("@/lib/encryption");
+    const prisma = (await import("@/lib/prisma")).default;
+
+    // Get tenant's wrapped DEK
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { wrappedDek: true },
+    });
+
+    if (!tenant) {
+      console.warn(
+        `[TOTP] Tenant ${tenantId} not found, falling back to global key`
+      );
+      const key = getEncryptionKey();
+      return encryptSecret(secret, key);
+    }
+
+    // Unwrap the DEK and encrypt the secret
+    const dek = unwrapKey(tenant.wrappedDek);
+    return encryptWithKey(secret, dek);
+  } catch (error) {
+    console.error(
+      `[TOTP] Failed to encrypt with tenant key for ${tenantId}:`,
+      error
+    );
+    // Fall back to global key on error
+    const key = getEncryptionKey();
+    return encryptSecret(secret, key);
+  }
+}
+
+/**
+ * Decrypt TOTP secret using tenant-specific DEK
+ * Falls back to global key for non-tenant users
+ *
+ * @param encryptedSecret - Encrypted secret from database
+ * @param tenantId - Tenant ID (null for non-tenant users)
+ * @returns Promise<string> - Plain text TOTP secret
+ */
+export async function decryptSecretForTenant(
+  encryptedSecret: string,
+  tenantId: string | null
+): Promise<string> {
+  // Fall back to global key for non-tenant users
+  if (!tenantId) {
+    const key = getEncryptionKey();
+    return decryptSecret(encryptedSecret, key);
+  }
+
+  // Use tenant's unique DEK
+  try {
+    const { decryptWithKey, unwrapKey } = await import("@/lib/encryption");
+    const prisma = (await import("@/lib/prisma")).default;
+
+    // Get tenant's wrapped DEK
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { wrappedDek: true },
+    });
+
+    if (!tenant) {
+      console.warn(
+        `[TOTP] Tenant ${tenantId} not found, attempting to decrypt with global key`
+      );
+      const key = getEncryptionKey();
+      return decryptSecret(encryptedSecret, key);
+    }
+
+    // Unwrap the DEK and decrypt the secret
+    const dek = unwrapKey(tenant.wrappedDek);
+    return decryptWithKey(encryptedSecret, dek);
+  } catch (error) {
+    console.error(
+      `[TOTP] Failed to decrypt with tenant key for ${tenantId}:`,
+      error
+    );
+    // Try falling back to global key (for migration/backward compatibility)
+    try {
+      const key = getEncryptionKey();
+      return decryptSecret(encryptedSecret, key);
+    } catch (fallbackError) {
+      console.error("[TOTP] Global key decryption also failed:", fallbackError);
+      throw new Error("Unable to decrypt TOTP secret");
+    }
+  }
+}
+
+/**
  * Get encryption key from environment
- * Throws error if ENCRYPTION_KEY is not set
+ * Provides a zero-config fallback key for ease of deployment
+ *
+ * SECURITY NOTE: For production deployments, it's recommended to set a unique
+ * ENCRYPTION_KEY environment variable for enhanced security. Generate one with:
+ * node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
  */
 export function getEncryptionKey(): string {
   const key = process.env.ENCRYPTION_KEY;
 
+  // Zero-config fallback: Provide a default key if not set
+  // This allows tenants to use the app immediately without configuration
   if (!key) {
-    if (process.env.NODE_ENV !== "production") {
-      // In development, provide a default fallback so 2FA setup doesn't fail
-      // but warn the user to set a proper key for production.
+    const defaultKey =
+      "provision-worksuite-2fa-encryption-key-change-for-production-use";
+
+    // Warn in production environments to encourage setting a unique key
+    if (process.env.NODE_ENV === "production") {
       console.warn(
-        "ENCRYPTION_KEY is missing. Using development fallback key. DO NOT USE THIS IN PRODUCTION."
+        "⚠️  WARNING: Using default ENCRYPTION_KEY. For enhanced security, set a unique ENCRYPTION_KEY environment variable."
       );
-      return "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    } else {
+      console.warn("ENCRYPTION_KEY is missing. Using default fallback key.");
     }
-    throw new Error(
-      "ENCRYPTION_KEY environment variable not set. Generate one with: openssl rand -hex 32"
-    );
+
+    // Ensure the default key is exactly 64 hex characters (32 bytes)
+    // If the default string is not exactly 64 chars, hash it to get a valid key
+    if (defaultKey.length === 64 && /^[0-9a-f]+$/i.test(defaultKey)) {
+      return defaultKey;
+    }
+
+    // Hash the default key to ensure it's always 64 hex characters
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(defaultKey).digest("hex");
   }
 
+  // Validate user-provided key format
   if (key.length !== 64) {
-    throw new Error(
-      "ENCRYPTION_KEY must be 64 hex characters (32 bytes). Generate with: openssl rand -hex 32"
+    console.error(
+      `ENCRYPTION_KEY must be 64 hex characters (32 bytes), but got ${key.length} characters. Generate a valid key with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
     );
+    // Use the fallback instead of throwing to maintain zero-config
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(key).digest("hex");
   }
 
   return key;

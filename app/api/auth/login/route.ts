@@ -7,8 +7,7 @@ import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { log } from "@/lib/logger";
 import {
   verifyToken,
-  getEncryptionKey,
-  decryptSecret,
+  decryptSecretForTenant,
   verifyBackupCode,
   hashBackupCode,
 } from "@/lib/auth/totp";
@@ -99,6 +98,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
           twoFactorEnabled: true,
           twoFactorSecret: true,
           backupCodes: true,
+          tenantId: true,
         },
       });
     } catch (dbError: any) {
@@ -218,8 +218,10 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       } else {
         // Check TOTP
         try {
-          const encryptionKey = getEncryptionKey();
-          const secret = decryptSecret(user.twoFactorSecret!, encryptionKey);
+          const secret = await decryptSecretForTenant(
+            user.twoFactorSecret!,
+            user.tenantId
+          );
           isVerified = verifyToken(secret, twoFactorCode);
         } catch (err) {
           log.error({ err }, "Decryption failed during 2FA login");

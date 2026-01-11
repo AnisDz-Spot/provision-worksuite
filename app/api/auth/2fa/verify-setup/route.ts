@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 import {
   verifyToken,
-  encryptSecret,
-  getEncryptionKey,
   generateBackupCodes,
-  decryptSecret,
+  decryptSecretForTenant,
 } from "@/lib/auth/totp";
 import prisma from "@/lib/prisma";
 import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -19,10 +17,10 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user from DB
+    // Get user from DB with tenantId
     const user = await prisma.user.findUnique({
       where: { uid: authUser.uid },
-      select: { id: true, twoFactorSecret: true },
+      select: { id: true, twoFactorSecret: true, tenantId: true },
     });
 
     if (!user) {
@@ -47,10 +45,12 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       );
     }
 
-    // 4. Decrypt secret
+    // 4. Decrypt secret using tenant-specific DEK
     try {
-      const encryptionKey = getEncryptionKey();
-      const secret = decryptSecret(dbUser.twoFactorSecret, encryptionKey);
+      const secret = await decryptSecretForTenant(
+        dbUser.twoFactorSecret,
+        user.tenantId
+      );
 
       // 5. Verify token against secret
       const isValid = verifyToken(secret, token);

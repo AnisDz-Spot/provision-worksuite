@@ -3,8 +3,7 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import {
   generateSecret,
   generateQRCode,
-  encryptSecret,
-  getEncryptionKey,
+  encryptSecretForTenant,
 } from "@/lib/auth/totp";
 import prisma from "@/lib/prisma";
 import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -18,10 +17,10 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user from DB to get the numeric ID
+    // Get user from DB to get the numeric ID and tenantId
     const user = await prisma.user.findUnique({
       where: { uid: authUser.uid },
-      select: { id: true, email: true },
+      select: { id: true, email: true, tenantId: true },
     });
 
     if (!user) {
@@ -31,10 +30,12 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     // 2. Generate new TOTP secret (base32)
     const secret = generateSecret();
 
-    // 3. Encrypt secret for storage
+    // 3. Encrypt secret for storage using tenant-specific DEK
     try {
-      const encryptionKey = getEncryptionKey();
-      const encryptedSecret = encryptSecret(secret, encryptionKey);
+      const encryptedSecret = await encryptSecretForTenant(
+        secret,
+        user.tenantId
+      );
 
       // 4. Update user with new secret (but keep 2FA disabled until verification)
       await prisma.user.update({
