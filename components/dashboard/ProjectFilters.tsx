@@ -22,6 +22,8 @@ interface ProjectFiltersProps {
   setSortBy: (s: string) => void;
   starredOnly: boolean;
   setStarredOnly: (b: boolean) => void;
+  healthFilter: string;
+  setHealthFilter: (h: string) => void;
 
   allStatuses: string[];
   allCategories: string[];
@@ -63,6 +65,8 @@ export function ProjectFilters({
   setSortBy,
   starredOnly,
   setStarredOnly,
+  healthFilter,
+  setHealthFilter,
   allStatuses,
   allCategories,
   allClients,
@@ -105,7 +109,25 @@ export function ProjectFilters({
               className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
             />
           </div>
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full">
+          <div className="flex flex-wrap items-center gap-2 w-full">
+            <select
+              id="filter-health"
+              name="health"
+              aria-label="Filter by Health"
+              value={healthFilter}
+              onChange={(e) => {
+                setHealthFilter(e.target.value);
+                updateUrl({ health: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm w-full sm:w-auto min-w-[120px]"
+            >
+              <option value="all">Health: All</option>
+              <option value="healthy">Healthy</option>
+              <option value="warning">Warning</option>
+              <option value="at-risk">At Risk</option>
+              <option value="critical">Critical</option>
+            </select>
+
             <select
               id="filter-status"
               name="status"
@@ -374,6 +396,7 @@ export function ProjectFilters({
             onClick={() => {
               setQuery("");
               setStatus("all");
+              setHealthFilter("all");
               updateUrl({
                 query: "",
                 status: null,
@@ -381,6 +404,7 @@ export function ProjectFilters({
                 tag: null,
                 client: null,
                 starred: null,
+                health: null,
               });
               setSortBy("name-asc");
               setStarredOnly(false);
@@ -424,6 +448,45 @@ export function ProjectFilters({
           </div>
         </div>
       )}
+
+      {/* Quick Filters */}
+      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-2">
+        <Button
+          variant={healthFilter === "at-risk" ? "primary" : "outline"}
+          size="sm"
+          className="rounded-full text-xs whitespace-nowrap"
+          onClick={() => {
+            const next = healthFilter === "at-risk" ? "all" : "at-risk";
+            setHealthFilter(next);
+            updateUrl({ health: next });
+          }}
+        >
+          ⚠️ At Risk
+        </Button>
+        <Button
+          variant={healthFilter === "critical" ? "primary" : "outline"}
+          size="sm"
+          className="rounded-full text-xs whitespace-nowrap"
+          onClick={() => {
+            const next = healthFilter === "critical" ? "all" : "critical";
+            setHealthFilter(next);
+            updateUrl({ health: next });
+          }}
+        >
+          🚨 Critical
+        </Button>
+        <Button
+          variant={starredOnly ? "primary" : "outline"}
+          size="sm"
+          className="rounded-full text-xs whitespace-nowrap"
+          onClick={() => {
+            setStarredOnly(!starredOnly);
+            updateUrl({ starred: (!starredOnly).toString() });
+          }}
+        >
+          ⭐ Starred
+        </Button>
+      </div>
     </>
   );
 }

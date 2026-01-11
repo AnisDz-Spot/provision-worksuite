@@ -50,6 +50,9 @@ export function ProjectGrid() {
   const [tagFilter, setTagFilter] = React.useState(
     searchParams.get("tag") || "all"
   );
+  const [healthFilter, setHealthFilter] = React.useState(
+    searchParams.get("health") || "all"
+  );
 
   const [currentPage, setCurrentPage] = React.useState(
     parseInt(searchParams.get("page") || "1")
@@ -263,6 +266,7 @@ export function ProjectGrid() {
     setSortBy(view.sortBy);
     setStarredOnly(view.starredOnly);
     setClientFilter(view.clientFilter || "all");
+    setHealthFilter("all");
   };
 
   const handleDeleteView = (id: string) => {
@@ -292,7 +296,28 @@ export function ProjectGrid() {
         (p.categories || []).includes(categoryFilter);
       const tagOk = tagFilter === "all" || (p.tags || []).includes(tagFilter);
 
-      return matches && statusOk && starOk && clientOk && categoryOk && tagOk;
+      let healthOk = true;
+      if (healthFilter !== "all") {
+        const { calculateProjectHealth } = require("@/lib/project-health");
+        const health = calculateProjectHealth({
+          progress: (p as any).progress || 0,
+          deadline: p.deadline,
+          status: p.status,
+          budget: p.budget,
+          spent: p.spent,
+        });
+        healthOk = health.level === healthFilter;
+      }
+
+      return (
+        matches &&
+        statusOk &&
+        starOk &&
+        clientOk &&
+        categoryOk &&
+        tagOk &&
+        healthOk
+      );
     });
     const sorted = [...base].sort((a, b) => {
       switch (sortBy) {
@@ -320,6 +345,7 @@ export function ProjectGrid() {
     clientFilter,
     categoryFilter,
     tagFilter,
+    healthFilter,
   ]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -331,7 +357,15 @@ export function ProjectGrid() {
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [query, status, starredOnly, clientFilter, categoryFilter, tagFilter]);
+  }, [
+    query,
+    status,
+    starredOnly,
+    clientFilter,
+    categoryFilter,
+    tagFilter,
+    healthFilter,
+  ]);
 
   const handleStatusUpdate = async (
     project: Project,
@@ -431,6 +465,8 @@ export function ProjectGrid() {
         setSortBy={setSortBy}
         starredOnly={starredOnly}
         setStarredOnly={setStarredOnly}
+        healthFilter={healthFilter}
+        setHealthFilter={setHealthFilter}
         allStatuses={allStatuses}
         allCategories={allCategories}
         allClients={allClients}

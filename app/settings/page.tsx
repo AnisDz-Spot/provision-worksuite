@@ -29,6 +29,7 @@ import { SupportTab } from "@/components/settings/SupportTab";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import { EmailSettings } from "@/components/settings/EmailSettings";
 import { IntegrationSettings } from "@/components/notifications/IntegrationSettings";
+import { DepartmentSettings } from "@/components/settings/DepartmentSettings";
 
 // New Modular Components
 import { DataSourceSettings } from "@/components/settings/DataSourceSettings";
@@ -118,6 +119,7 @@ function SettingsContent() {
     ],
     workspace: [
       { id: "organization", label: "Organization" },
+      { id: "departments", label: "Departments" },
       { id: "roles", label: "Roles" },
       { id: "methodology", label: "Methodology" },
       { id: "infrastructure", label: "Infrastructure" },
@@ -255,6 +257,11 @@ function SettingsContent() {
             <div id="organization">
               {!isSetupMode && <WorkspaceSettingsForm />}
             </div>
+            {isAdmin && (
+              <div id="departments" className="border-t pt-10">
+                <DepartmentSettings />
+              </div>
+            )}
             <div id="roles" className="border-t pt-10">
               <div className="mb-6">
                 <h3 className="text-lg font-bold">Team Roles & Access</h3>

@@ -97,12 +97,35 @@ export function HealthBadge({
               <FactorRow label="Blockers" score={factors.blockers} />
               <FactorRow label="Budget" score={factors.budget} />
             </div>
+            <div className="space-y-1.5 pt-2 border-t border-border">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-wider text-center">
+                Health Legend
+              </p>
+              <div className="grid grid-cols-2 gap-x-1 gap-y-1 text-[9px]">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <span>80-100: Healthy</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  <span>60-79: Warning</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                  <span>40-59: At Risk</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  <span>0-39: Critical</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Arrow */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px pointer-events-none">
             <div className="border-8 border-transparent border-t-border" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-full border-[7px] border-transparent border-t-popover" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+1px)] border-[7px] border-transparent border-t-popover" />
           </div>
         </div>
       )}

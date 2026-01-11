@@ -325,43 +325,67 @@ export function ProjectStats({ projects }: ProjectStatsProps) {
                   </div>
                 </div>
 
+                {/* Health distribution bar */}
+                <div className="flex h-2 w-full rounded-full overflow-hidden bg-accent my-3">
+                  <div
+                    className="h-full bg-green-500"
+                    style={{
+                      width: `${(healthyProjects / projects.length) * 100}%`,
+                    }}
+                    title={`Healthy: ${healthyProjects}`}
+                  />
+                  <div
+                    className="h-full bg-yellow-500"
+                    style={{
+                      width: `${(warningProjects / projects.length) * 100}%`,
+                    }}
+                    title={`Warning: ${warningProjects}`}
+                  />
+                  <div
+                    className="h-full bg-orange-500"
+                    style={{
+                      width: `${(atRiskProjects / projects.length) * 100}%`,
+                    }}
+                    title={`At Risk: ${atRiskProjects}`}
+                  />
+                  <div
+                    className="h-full bg-red-500"
+                    style={{
+                      width: `${(criticalProjects / projects.length) * 100}%`,
+                    }}
+                    title={`Critical: ${criticalProjects}`}
+                  />
+                </div>
+
                 {/* Health breakdown */}
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <div className="text-xs text-muted-foreground flex-1">
+                    <div className="text-[10px] text-muted-foreground flex-1 uppercase font-semibold">
                       Healthy
                     </div>
-                    <div className="text-xs font-semibold">
-                      {healthyProjects}
-                    </div>
+                    <div className="text-xs font-bold">{healthyProjects}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                    <div className="text-xs text-muted-foreground flex-1">
+                    <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                    <div className="text-[10px] text-muted-foreground flex-1 uppercase font-semibold">
                       Warning
                     </div>
-                    <div className="text-xs font-semibold">
-                      {warningProjects}
-                    </div>
+                    <div className="text-xs font-bold">{warningProjects}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <div className="text-xs text-muted-foreground flex-1">
+                    <div className="text-[10px] text-muted-foreground flex-1 uppercase font-semibold">
                       At Risk
                     </div>
-                    <div className="text-xs font-semibold">
-                      {atRiskProjects}
-                    </div>
+                    <div className="text-xs font-bold">{atRiskProjects}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <div className="text-xs text-muted-foreground flex-1">
+                    <div className="text-[10px] text-muted-foreground flex-1 uppercase font-semibold">
                       Critical
                     </div>
-                    <div className="text-xs font-semibold">
-                      {criticalProjects}
-                    </div>
+                    <div className="text-xs font-bold">{criticalProjects}</div>
                   </div>
                 </div>
               </div>

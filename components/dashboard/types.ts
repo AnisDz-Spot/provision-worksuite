@@ -12,6 +12,10 @@ export type Project = {
   cover?: string;
   tags?: string[];
   isTemplate?: boolean;
+  progress?: number;
+  budget?: number;
+  spent?: number;
+  createdAt?: string;
   archived?: boolean;
   category?: string;
   categories?: string[];

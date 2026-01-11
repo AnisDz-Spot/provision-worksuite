@@ -49,6 +49,9 @@ export async function GET() {
         socials: true,
         statusMessage: true,
         statusEmoji: true,
+        department: {
+          select: { name: true },
+        },
       },
       orderBy: { id: "asc" }, // Fetch by ID asc to easily identify first user
     });
@@ -108,6 +111,7 @@ export async function GET() {
           socials: user.socials || {},
           statusMessage: user.statusMessage,
           statusEmoji: user.statusEmoji,
+          department: (user as any).department?.name || "-",
         };
       }
     );

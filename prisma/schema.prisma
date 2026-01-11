@@ -99,6 +99,13 @@ model User {
   digestSettings      DigestSettings?
   auditLogs           AuditLog[]
 
+  // Departments
+  departmentId String?     @map("department_id")
+  department   Department? @relation("UserDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+
+  // Assigned Department Admin (if this user is an admin of a department)
+  administeredDepartment Department? @relation("DepartmentAdmin")
+
   // Multi-tenancy
   tenantId String? @map("tenant_id")
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
@@ -225,6 +232,23 @@ model Project {
   @@index([visibility])
   @@index([archivedAt])
   @@map("projects")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // The admin of this department
+  adminId Int?  @unique @map("admin_id")
+  admin   User? @relation("DepartmentAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+
+  // All users in this department
+  users User[] @relation("UserDepartment")
+
+  @@map("departments")
 }
 
 model StarredProject {
