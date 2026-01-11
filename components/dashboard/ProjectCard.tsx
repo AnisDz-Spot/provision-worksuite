@@ -70,7 +70,7 @@ export function ProjectCard({
 
   const health = React.useMemo(() => {
     const taskCompletion = getTaskCompletionForProject(project.id);
-    const progress = taskCompletion?.percent || project.progress || 0;
+    const progress = taskCompletion?.percent || 0;
     return calculateProjectHealth({
       progress,
       deadline: project.deadline,
