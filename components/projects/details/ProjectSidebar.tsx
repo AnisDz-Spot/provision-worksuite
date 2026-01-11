@@ -1,3 +1,4 @@
+import * as React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
@@ -11,7 +12,42 @@ interface ProjectSidebarProps {
 
 export function ProjectSidebar({ project }: ProjectSidebarProps) {
   const router = useRouter();
-  const members = project.members || [];
+
+  // Member normalization and creator priority
+  const processedMembers = React.useMemo(() => {
+    const rawMembers = (project.members || []) as any[];
+    // If owner isn't in members, add them
+    const hasOwner = rawMembers.some((m) => {
+      const mName = m.user?.name || m.name;
+      const mUid = m.user?.uid || m.uid;
+      return (
+        mName === project.owner || (mUid && mUid === (project as any).ownerId)
+      );
+    });
+
+    let list = [...rawMembers];
+    if (!hasOwner && project.owner) {
+      list.push({
+        name: project.owner,
+        avatarUrl: (project as any).ownerAvatar,
+        role: "Creator",
+        isOwner: true,
+      });
+    }
+
+    // Sort to put owner first
+    return list.sort((a, b) => {
+      const aName = a.user?.name || a.name;
+      const bName = b.user?.name || b.name;
+      const isAOwner = aName === project.owner || a.isOwner;
+      const isBOwner = bName === project.owner || b.isOwner;
+      if (isAOwner) return -1;
+      if (isBOwner) return 1;
+      return 0;
+    });
+  }, [project]);
+
+  const members = processedMembers;
 
   const categories = Array.isArray(project.categories)
     ? project.categories
@@ -27,7 +63,7 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
       <Card className="p-4">
         <h3 className="text-sm font-semibold mb-3">Team Members</h3>
         <div className="space-y-2">
-          {members.slice(0, 8).map((m, idx) => (
+          {members.slice(0, 8).map((m: any, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <Image
                 src={

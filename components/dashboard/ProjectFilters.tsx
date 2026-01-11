@@ -86,8 +86,9 @@ export function ProjectFilters({
   const { showToast } = useToast();
   return (
     <>
-      <div className="p-3 border rounded-xl mb-4 bg-card space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="p-3 border rounded-xl mb-4 bg-card flex flex-col lg:flex-row lg:items-center gap-4">
+        {/* Filter Fields Group */}
+        <div className="flex flex-col md:flex-row gap-4 flex-1">
           <div className="w-full md:w-72">
             <label htmlFor="search-projects" className="sr-only">
               Search
@@ -181,7 +182,9 @@ export function ProjectFilters({
             </select>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t md:border-t-0 md:pt-0">
+
+        {/* Action Buttons Group */}
+        <div className="flex flex-wrap items-center gap-2 lg:border-l lg:pl-4">
           {!selectMode && (
             <Button
               variant="outline"
@@ -207,14 +210,11 @@ export function ProjectFilters({
 
                   const selectedProjectIds = Array.from(selectedIds);
                   try {
-                    // Optimistic update - this bypasses cache update in parent module but updates state
+                    // Optimistic update
                     setProjects((prev) => {
                       const next = prev.map((p) =>
                         selectedIds.has(p.id) ? { ...p, status: val } : p
                       );
-                      // cachedProjects update skipped here because we can't reach it.
-                      // This is a trade-off. We could pass a "updateCache" callback?
-                      // For now, simple state update is enough for UI.
                       return next;
                     });
 
@@ -222,7 +222,7 @@ export function ProjectFilters({
                     await Promise.all(
                       selectedProjectIds.map((id) =>
                         fetchWithCsrf(`/api/projects/${id}`, {
-                          method: "PUT", // Assuming PUT for status update
+                          method: "PUT",
                           headers: {
                             "Content-Type": "application/json",
                           },
@@ -269,7 +269,7 @@ export function ProjectFilters({
                     await Promise.all(
                       selectedProjectIds.map((id) =>
                         fetchWithCsrf(`/api/projects/${id}`, {
-                          method: "PUT", // Assuming PUT for archiving
+                          method: "PUT",
                           headers: {
                             "Content-Type": "application/json",
                           },

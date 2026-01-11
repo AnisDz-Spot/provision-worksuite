@@ -107,13 +107,47 @@ export function ProjectCard({
 
   // Health score is calculated above
 
-  const totalMembers = (project.members || []).length;
+  // Member normalization and creator priority
+  const processedMembers = React.useMemo(() => {
+    const rawMembers = project.members || [];
+    // If owner isn't in members, add them
+    const hasOwner = rawMembers.some((m) => {
+      const mName = m.user?.name || m.name;
+      const mUid = m.user?.uid || m.uid;
+      return (
+        mName === project.owner || (mUid && mUid === (project as any).ownerId)
+      );
+    });
+
+    let list = [...rawMembers];
+    if (!hasOwner && project.owner) {
+      list.push({
+        name: project.owner,
+        avatarUrl: (project as any).ownerAvatar,
+        role: "Creator",
+        isOwner: true,
+      });
+    }
+
+    // Sort to put owner first
+    return list.sort((a, b) => {
+      const aName = a.user?.name || a.name;
+      const bName = b.user?.name || b.name;
+      const isAOwner = aName === project.owner || a.isOwner;
+      const isBOwner = bName === project.owner || b.isOwner;
+      if (isAOwner) return -1;
+      if (isBOwner) return 1;
+      return 0;
+    });
+  }, [project]);
+
+  const totalMembers = processedMembers.length;
   const hasTasks = taskStats.total > 0;
 
   return (
     <Card className="group relative transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-card border-border overflow-visible">
       {selectMode && (
-        <div className="absolute top-2 left-2 z-20">
+        <div className="absolute top-2 left-2 z-30">
           <input
             type="checkbox"
             checked={selectedIds.has(project.id)}
@@ -127,13 +161,13 @@ export function ProjectCard({
         </div>
       )}
       <div
-        className="cursor-pointer rounded-xl overflow-hidden"
+        className="cursor-pointer rounded-xl"
         onClick={() =>
           router.push(`/projects/${project.slug || project.uid || project.id}`)
         }
       >
-        {/* Cover Image */}
-        <div className="h-32 bg-muted relative overflow-hidden rounded-t-xl">
+        {/* Cover Image Wrapper */}
+        <div className="h-32 bg-muted relative rounded-t-xl overflow-hidden">
           {project.cover ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -148,59 +182,52 @@ export function ProjectCard({
               </span>
             </div>
           )}
-
-          {/* Status & Health badges */}
-          <div className="absolute top-3 left-3 flex gap-2 items-center">
-            <span
-              className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-md ${(() => {
-                const statusLower = (project.status || "")
-                  .toLowerCase()
-                  .replace(/\s+/g, "");
-                if (statusLower === "active")
-                  return "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30";
-                if (statusLower === "completed")
-                  return "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30";
-                if (
-                  statusLower === "inprogress" ||
-                  statusLower === "in_progress"
-                )
-                  return "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30";
-                if (
-                  statusLower === "onhold" ||
-                  statusLower === "on_hold" ||
-                  statusLower === "paused"
-                )
-                  return "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30";
-                if (statusLower === "cancelled")
-                  return "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30";
-                return "bg-background/80 text-muted-foreground border-muted";
-              })()}`}
-            >
-              {project.status}
-            </span>
-
-            <HealthBadge
-              score={health.score}
-              level={health.level}
-              factors={health.factors}
-              size="sm"
-              className="backdrop-blur-md shadow-xs"
-            />
-          </div>
-
-          {/* Star Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleStar(project.id);
-            }}
-            className="absolute top-3 right-3 p-2 rounded-full bg-background/80 backdrop-blur-md shadow-xs hover:bg-background transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-          >
-            <Star
-              className={`w-4 h-4 ${project.starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
-            />
-          </button>
         </div>
+
+        {/* Status & Health badges - MOVED OUTSIDE overflow-hidden container to show tooltips */}
+        <div className="absolute top-3 left-3 flex gap-2 items-center z-20">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-full shadow-xs backdrop-blur-sm ${(() => {
+              const statusLower = (project.status || "")
+                .toLowerCase()
+                .replace(/\s+/g, "");
+              if (statusLower === "active")
+                return "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30";
+              if (statusLower === "completed")
+                return "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30";
+              if (statusLower === "inprogress" || statusLower === "in_progress")
+                return "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30";
+              if (
+                statusLower === "onhold" ||
+                statusLower === "on_hold" ||
+                statusLower === "paused"
+              )
+                return "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30";
+              return "bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30";
+            })()}`}
+          >
+            {project.status || "Unknown"}
+          </span>
+          <HealthBadge
+            score={health.score}
+            level={health.level}
+            factors={health.factors}
+            size="sm"
+          />
+        </div>
+
+        {/* Star Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleStar(project.id);
+          }}
+          className="absolute top-3 right-3 p-2 rounded-full bg-background/80 backdrop-blur-md shadow-xs hover:bg-background transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 z-20"
+        >
+          <Star
+            className={`w-4 h-4 ${project.starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+          />
+        </button>
 
         <div className="p-4 space-y-4">
           {/* Header */}
@@ -331,7 +358,7 @@ export function ProjectCard({
           {/* Actions & Team */}
           <div className="flex items-center justify-between pt-2">
             <div className="flex -space-x-2 overflow-visible">
-              {(project.members || []).slice(0, 4).map((m: any, idx) => {
+              {processedMembers.slice(0, 4).map((m: any, idx) => {
                 const name = m.user?.name || m.name || "Member";
                 const avatar = m.user?.avatarUrl || m.avatarUrl;
                 const uid = m.user?.uid || m.uid || m.id; // Ensure we have an ID
