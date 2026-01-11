@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { upsertTask } from "@/lib/utils/tasks";
 import { useToaster } from "@/components/ui/Toaster";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface GeneratedTask {
   title: string;
@@ -56,7 +57,7 @@ export function TaskGenerator({
     setTasks([]);
     setSelectedIndices([]);
     try {
-      const res = await fetch("/api/ai/breakdown-milestone", {
+      const res = await fetchWithCsrf("/api/ai/breakdown-milestone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

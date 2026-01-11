@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface PulseSummary {
   title: string;
@@ -44,7 +45,7 @@ export function AuditSummary() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/ai/summarize-activity", {
+      const res = await fetchWithCsrf("/api/ai/summarize-activity", {
         method: "POST",
       });
       const data = await res.json();

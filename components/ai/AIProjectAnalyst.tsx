@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Shield,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface AnalysisResult {
   healthScore: number;
@@ -42,7 +43,7 @@ export function AIProjectAnalyst({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/ai/analyze-project/${projectId}`, {
+      const res = await fetchWithCsrf(`/api/ai/analyze-project/${projectId}`, {
         method: "POST",
       });
       const data = await res.json();

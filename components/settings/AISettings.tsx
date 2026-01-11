@@ -12,6 +12,7 @@ import {
   Loader2,
   Shield,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 /**
  * AI Provider Registry
@@ -91,7 +92,7 @@ export function AISettings() {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/settings/ai", {
+      const res = await fetchWithCsrf("/api/settings/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
