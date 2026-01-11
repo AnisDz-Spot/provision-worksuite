@@ -73,6 +73,7 @@ export async function GET() {
             uid: true,
             name: true,
             email: true,
+            avatarUrl: true,
           },
         },
         members: {
