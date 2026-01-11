@@ -37,12 +37,16 @@ function validateAndCorrectModelName(
 
   switch (provider) {
     case "gemini":
-      // Gemini model name corrections (based on official Google AI docs)
-      // Latest models as of 2026
-      if (modelLower.includes("2.5") && modelLower.includes("flash")) {
+      // Gemini model name corrections
+      // Default to gemini-2.5-flash (latest recommended model per official docs)
+      if (
+        modelLower.includes("2.5") ||
+        modelLower.includes("flash") ||
+        modelLower === "gemini"
+      ) {
         return "gemini-2.5-flash";
       }
-      if (modelLower.includes("2.0") && modelLower.includes("flash")) {
+      if (modelLower.includes("2.0")) {
         return "gemini-2.0-flash-exp";
       }
       if (modelLower.includes("1.5") && modelLower.includes("pro")) {
@@ -51,11 +55,11 @@ function validateAndCorrectModelName(
       if (modelLower.includes("1.5") && modelLower.includes("flash")) {
         return "gemini-1.5-flash";
       }
-      if (modelLower === "gemini-pro" || modelLower === "gemini") {
-        return "gemini-1.5-pro"; // Default to 1.5 Pro
+      if (modelLower.includes("pro") && !modelLower.includes("1.5")) {
+        return "gemini-pro";
       }
-      if (modelLower.includes("pro-vision")) {
-        return "gemini-1.5-pro-vision";
+      if (modelLower.includes("vision")) {
+        return "gemini-pro-vision";
       }
       // Return as-is if already correct
       return model;
