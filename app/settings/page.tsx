@@ -4,7 +4,17 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { Bell, Shield, Mail, HelpCircle, Video, Bot } from "lucide-react";
+import {
+  Bell,
+  Shield,
+  Mail,
+  HelpCircle,
+  Video,
+  Bot,
+  UserCircle2,
+  Settings,
+  MessageCircle,
+} from "lucide-react";
 
 // Components
 import { UserSettingsForm } from "@/components/settings/UserSettingsForm";
@@ -29,27 +39,13 @@ import { NotificationsSettings } from "@/components/settings/NotificationsSettin
 import { setDataModePreference } from "@/lib/dataSource";
 import { hasDatabaseTables } from "@/lib/setup";
 
-type TabKey =
-  | "profile"
-  | "user"
-  | "workspace"
-  | "appearance"
-  | "security"
-  | "roles"
-  | "chat"
-  | "email"
-  | "notifications"
-  | "blockers"
-  | "dataSource"
-  | "video"
-  | "support"
-  | "ai";
+type TabKey = "account" | "workspace" | "communications" | "ai" | "help";
 
 function SettingsContent() {
   const { currentUser, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<TabKey>("user");
+  const [tab, setTab] = useState<TabKey>("account");
 
   const [dataMode, setDataMode] = useState<"real" | "mock" | null>(() => {
     if (typeof window === "undefined") return null;
@@ -64,7 +60,7 @@ function SettingsContent() {
       if (dataMode === "real") {
         if (typeof window !== "undefined") {
           if (!hasDatabaseTables()) {
-            router.push("/settings?tab=dataSource");
+            router.push("/settings?tab=workspace");
           }
         }
       }
@@ -72,26 +68,17 @@ function SettingsContent() {
     checkSetup();
 
     const urlTab = searchParams.get("tab");
-    if (urlTab === "profile") {
-      setTab("profile");
+    if (urlTab) {
+      setTab(urlTab as TabKey);
     } else {
       try {
         const saved = localStorage.getItem("pv:settingsTab");
         const validTabs: TabKey[] = [
-          "profile",
-          "user",
+          "account",
           "workspace",
-          "appearance",
-          "security",
-          "roles",
-          "chat",
-          "email",
-          "notifications",
-          "blockers",
-          "dataSource",
-          "video",
-          "support",
+          "communications",
           "ai",
+          "help",
         ];
         if (saved && validTabs.includes(saved as TabKey)) {
           setTab(saved as TabKey);
@@ -112,209 +99,168 @@ function SettingsContent() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground text-sm">
-          Manage your profile and workspace configuration.
+          Manage your profile, workspace, and platform configuration.
         </p>
       </div>
 
       {/* Navigation tabs */}
-      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto">
+      <div className="flex gap-2 border-b border-border pb-2 overflow-x-auto scrollbar-hide">
         <Button
-          variant={tab === "profile" || tab === "user" ? "primary" : "outline"}
+          variant={tab === "account" ? "primary" : "outline"}
           size="sm"
-          onClick={() => handleSetTab("profile")}
-          className={cn((tab === "profile" || tab === "user") && "shadow")}
+          onClick={() => handleSetTab("account")}
+          className={cn(tab === "account" && "shadow", "transition-all")}
         >
-          Profile
+          <UserCircle2 className="w-4 h-4 mr-2" />
+          Account
         </Button>
         <Button
           variant={tab === "workspace" ? "primary" : "outline"}
           size="sm"
           onClick={() => handleSetTab("workspace")}
-          className={cn(tab === "workspace" && "shadow")}
+          className={cn(tab === "workspace" && "shadow", "transition-all")}
         >
-          Workspace / Agency
+          <Settings className="w-4 h-4 mr-2" />
+          Workspace
         </Button>
         <Button
-          variant={tab === "dataSource" ? "primary" : "outline"}
+          variant={tab === "communications" ? "primary" : "outline"}
           size="sm"
-          onClick={() => handleSetTab("dataSource")}
-          className={cn(tab === "dataSource" && "shadow")}
+          onClick={() => handleSetTab("communications")}
+          className={cn(tab === "communications" && "shadow", "transition-all")}
         >
-          Data Source
-        </Button>
-        <Button
-          variant={tab === "appearance" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("appearance")}
-          className={cn(tab === "appearance" && "shadow")}
-        >
-          Appearance
-        </Button>
-        <Button
-          variant={tab === "security" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("security")}
-          className={cn(tab === "security" && "shadow")}
-        >
-          <Shield className="w-4 h-4 mr-2" />
-          Security
-        </Button>
-        <Button
-          variant={tab === "roles" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("roles")}
-          className={cn(tab === "roles" && "shadow")}
-        >
-          Roles
-        </Button>
-        <Button
-          variant={tab === "blockers" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("blockers")}
-          className={cn(tab === "blockers" && "shadow")}
-        >
-          Blockers
-        </Button>
-        <Button
-          variant={tab === "chat" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("chat")}
-          className={cn(tab === "chat" && "shadow")}
-        >
-          Chat
-        </Button>
-        <Button
-          variant={tab === "video" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("video")}
-          className={cn(tab === "video" && "shadow")}
-        >
-          <Video className="w-4 h-4 mr-2" />
-          Video
-        </Button>
-        <Button
-          variant={tab === "email" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("email")}
-          className={cn(tab === "email" && "shadow")}
-        >
-          Email
-        </Button>
-        <Button
-          variant={tab === "notifications" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("notifications")}
-          className={cn(tab === "notifications" && "shadow")}
-        >
-          Notifications
-        </Button>
-        <Button
-          variant={tab === "support" ? "primary" : "outline"}
-          size="sm"
-          onClick={() => handleSetTab("support")}
-          className={cn(tab === "support" && "shadow")}
-        >
-          <HelpCircle className="w-4 h-4 mr-2" />
-          Support
+          <MessageCircle className="w-4 h-4 mr-2" />
+          Integrations
         </Button>
         {isAdmin && (
           <Button
             variant={tab === "ai" ? "primary" : "outline"}
             size="sm"
             onClick={() => handleSetTab("ai")}
-            className={cn(tab === "ai" && "shadow")}
+            className={cn(tab === "ai" && "shadow", "transition-all")}
           >
             <Bot className="w-4 h-4 mr-2" />
             AI & Agents
           </Button>
         )}
+        <Button
+          variant={tab === "help" ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleSetTab("help")}
+          className={cn(tab === "help" && "shadow", "transition-all")}
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          Help & Support
+        </Button>
       </div>
 
-      <div className="tab-content pt-4">
-        {(tab === "profile" || tab === "user") && <UserSettingsForm />}
-
-        {tab === "workspace" && !isSetupMode && <WorkspaceSettingsForm />}
-
-        {tab === "dataSource" && !isSetupMode && <DataSourceSettings />}
-
-        {tab === "appearance" && !isSetupMode && <AppearanceSettings />}
-
-        {tab === "security" && !isSetupMode && <SecuritySettings />}
-
-        {tab === "ai" && !isSetupMode && <AISettings />}
-
-        {tab === "roles" && !isSetupMode && (
-          <div className="max-w-3xl space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold">Team Roles</h2>
-              <p className="text-sm text-muted-foreground">
-                Add, remove, or modify roles available to your teams. Only
-                admins can make changes.
-              </p>
-            </div>
-            <RolesSettings />
-          </div>
-        )}
-
-        {tab === "blockers" && !isSetupMode && (
-          <div className="max-w-3xl space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold">Blocker Categories</h2>
-              <p className="text-sm text-muted-foreground">
-                Define the categories used when reporting blockers.
-              </p>
-            </div>
-            <BlockerCategorySettings />
-            <div className="space-y-2 pt-4">
-              <h2 className="text-xl font-bold">Risk Levels</h2>
-              <p className="text-sm text-muted-foreground">
-                Configure the risk levels used in filters and badges.
-              </p>
-            </div>
-            <RiskLevelSettings />
-          </div>
-        )}
-
-        {tab === "email" && !isSetupMode && (
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                <Mail className="w-6 h-6" />
+      <div className="tab-content pt-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {/* ACCOUNT TAB */}
+        {tab === "account" && (
+          <div className="space-y-12">
+            <UserSettingsForm />
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-indigo-500" />
+                  Security & Authentication
+                </h3>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">Email Configuration</h2>
-                <p className="text-sm text-muted-foreground">
-                  Configure email provider for sending notifications.
+              <SecuritySettings />
+            </div>
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold">Theme & UI Preferences</h3>
+              </div>
+              <AppearanceSettings />
+            </div>
+          </div>
+        )}
+
+        {/* WORKSPACE TAB */}
+        {tab === "workspace" && (
+          <div className="space-y-12">
+            {!isSetupMode && <WorkspaceSettingsForm />}
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold">Team Roles & Access</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add, remove, or modify roles available to your teams.
                 </p>
               </div>
+              <RolesSettings />
             </div>
-            <IntegrationSettings mode="email" />
-            <EmailSettings />
-          </div>
-        )}
-
-        {tab === "chat" && !isSetupMode && (
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                <Bell className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">Chat Settings</h2>
-                <p className="text-sm text-muted-foreground">
-                  Manage chat groups and team conversations.
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold">
+                  Methodology (Blockers & Risk)
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Define how blockers and project risks are categorized.
                 </p>
               </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <BlockerCategorySettings />
+                <RiskLevelSettings />
+              </div>
             </div>
-            <ChatGroupSettings />
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold">
+                  Infrastructure (Data Source)
+                </h3>
+              </div>
+              <DataSourceSettings />
+            </div>
           </div>
         )}
 
-        {tab === "video" && !isSetupMode && <ZegoSettingsForm />}
+        {/* COMMUNICATIONS TAB */}
+        {tab === "communications" && (
+          <div className="space-y-12">
+            <NotificationsSettings />
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-indigo-500" />
+                  Email Infrastructure
+                </h3>
+              </div>
+              <IntegrationSettings mode="email" />
+              <div className="mt-8">
+                <EmailSettings />
+              </div>
+            </div>
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-indigo-500" />
+                  Team Communication
+                </h3>
+              </div>
+              <ChatGroupSettings />
+            </div>
+            <div className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Video className="w-5 h-5 text-indigo-500" />
+                  Video & Meetings
+                </h3>
+              </div>
+              <ZegoSettingsForm />
+            </div>
+          </div>
+        )}
 
-        {tab === "support" && !isSetupMode && <SupportTab />}
+        {/* AI TAB */}
+        {tab === "ai" && (
+          <div className="animate-in slide-in-from-right-4 duration-500">
+            <AISettings />
+          </div>
+        )}
 
-        {tab === "notifications" && !isSetupMode && <NotificationsSettings />}
+        {/* HELP TAB */}
+        {tab === "help" && <SupportTab />}
       </div>
     </section>
   );
