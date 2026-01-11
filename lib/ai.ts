@@ -26,6 +26,79 @@ export interface AIResponse {
 }
 
 /**
+ * Validates and corrects AI model names for each provider.
+ * Maps common variations to the correct API model names.
+ */
+function validateAndCorrectModelName(
+  provider: AIProvider,
+  model: string
+): string {
+  const modelLower = model.toLowerCase();
+
+  switch (provider) {
+    case "gemini":
+      // Gemini model name corrections
+      if (modelLower.includes("1.5-pro") && !modelLower.includes("latest")) {
+        return "gemini-1.5-pro-latest";
+      }
+      if (modelLower.includes("1.5-flash") && !modelLower.includes("latest")) {
+        return "gemini-1.5-flash-latest";
+      }
+      if (modelLower === "gemini-pro" || modelLower === "gemini") {
+        return "gemini-pro";
+      }
+      // Return as-is if already correct
+      return model;
+
+    case "openai":
+      // OpenAI model name corrections
+      if (modelLower.includes("gpt-4") && !modelLower.includes("turbo")) {
+        return "gpt-4-turbo-preview";
+      }
+      if (modelLower === "gpt-3.5") {
+        return "gpt-3.5-turbo";
+      }
+      if (modelLower === "gpt-4o") {
+        return "gpt-4o";
+      }
+      return model;
+
+    case "anthropic":
+      // Anthropic model name corrections
+      if (modelLower.includes("claude-3") && modelLower.includes("opus")) {
+        return "claude-3-opus-20240229";
+      }
+      if (modelLower.includes("claude-3") && modelLower.includes("sonnet")) {
+        return "claude-3-5-sonnet-20241022";
+      }
+      if (modelLower.includes("claude-3") && modelLower.includes("haiku")) {
+        return "claude-3-5-haiku-20241022";
+      }
+      return model;
+
+    case "groq":
+      // Groq model name corrections
+      if (modelLower.includes("llama") && modelLower.includes("70b")) {
+        return "llama-3.1-70b-versatile";
+      }
+      if (modelLower.includes("llama") && modelLower.includes("8b")) {
+        return "llama-3.1-8b-instant";
+      }
+      if (modelLower.includes("mixtral")) {
+        return "mixtral-8x7b-32768";
+      }
+      return model;
+
+    case "together":
+      // Together AI uses various model names, generally pass through
+      return model;
+
+    default:
+      return model;
+  }
+}
+
+/**
  * Fetches the AI configuration for the current tenant from the system settings.
  * Returns null if the AI is not configured.
  */
@@ -75,6 +148,9 @@ export async function getTenantAIConfig(): Promise<AIConfig | null> {
     });
 
     if (!config.provider || !config.model || !config.apiKey) return null;
+
+    // Validate and correct model name
+    config.model = validateAndCorrectModelName(config.provider, config.model);
 
     return config as AIConfig;
   } catch (error) {
