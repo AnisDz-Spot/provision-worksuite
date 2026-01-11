@@ -57,20 +57,17 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="col-span-2 flex flex-col gap-8">
-            <ProjectsProvider>
-              <ProjectTable />
-            </ProjectsProvider>
-          </div>
-          <div className="flex flex-col gap-8">
-            {showDigest && <AuditSummary />}
+        <div className="flex flex-col gap-8">
+          <ProjectsProvider>
+            <ProjectTable />
+          </ProjectsProvider>
+
+          {/* Weekly Activity Pulse and Recent Activity - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {showDigest && <WeeklyDigest />}
             <RecentActivity />
           </div>
         </div>
-
-        {/* Weekly Digest Section */}
-        {showDigest && <WeeklyDigest />}
       </section>
     </>
   );
