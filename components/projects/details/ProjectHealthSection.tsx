@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/Button";
 import { calculateProjectHealth } from "@/lib/project-health";
-import { HealthBadge } from "@/components/projects/HealthBadge";
 import { getTaskCompletionForProject } from "@/lib/utils";
 import { Project } from "@/hooks/useProjectDetails";
 
@@ -23,14 +22,6 @@ export function ProjectHealthSection({
 
   return (
     <div className="flex items-center gap-4">
-      <HealthBadge
-        projectId={project.uid || project.id}
-        projectName={project.name}
-        score={health.score}
-        level={health.level}
-        factors={health.factors}
-        size="lg"
-      />
       <Button variant="outline" size="sm" onClick={onViewHistory}>
         View history
       </Button>

@@ -26,6 +26,8 @@ import { MemberAcceptanceStatus } from "@/components/projects/MemberAcceptanceSt
 import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { RiskMatrix } from "@/components/projects/RiskMatrix";
 import { AIProjectAnalyst } from "@/components/ai/AIProjectAnalyst";
+import { ProjectFinance } from "@/components/projects/ProjectFinance";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 
 // Utils
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -101,113 +103,143 @@ export default function ProjectDetailsPage() {
           onSaveAsTemplate={() => setTemplateModalOpen(true)}
         />
 
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main Content - Left Side */}
-            <div className="lg:col-span-2 space-y-6">
-              <ProjectHealthSection
-                project={project}
-                onViewHistory={() => setHistoryOpen(true)}
-              />
-
-              <ProjectTimeRollup project={project} />
-
-              {project.description && (
-                <Card className="p-6 bg-linear-to-br from-card to-accent/5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-1 h-5 bg-primary rounded-full"></div>
-                    <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-                      Project Description
-                    </h3>
-                  </div>
-                  <div
-                    className="text-sm text-foreground/90 prose prose-sm max-w-none leading-relaxed pl-3"
-                    dangerouslySetInnerHTML={{
-                      __html: sanitizeHtml(project.description),
-                    }}
-                  />
-                </Card>
-              )}
-
-              <AIProjectAnalyst projectId={project.uid || project.id} />
-              <ProjectMilestones projectId={project.uid || project.id} />
-              <ProjectComments projectId={project.uid || project.id} />
-
-              <ProjectDependencies
-                projectId={project.uid || project.id}
-                availableProjects={allProjects}
-                readOnly={true}
-              />
-
-              <ProjectFiles
-                projectId={project.uid || project.id}
-                readOnly={true}
-              />
-
-              <MemberAcceptanceStatus projectId={project.uid || project.id} />
-            </div>
-
-            {/* Right Sidebar */}
-            <ProjectSidebar project={project} />
+        <Tabs defaultValue="overview" className="w-full">
+          <div className="border-b px-6 bg-muted/30">
+            <TabsList className="bg-transparent h-12 p-0 space-x-6">
+              <TabsTrigger
+                value="overview"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="finance"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+              >
+                Finance & Budget
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          {/* Tasks (Kanban) - Full Width */}
-          <div className="mt-6" ref={tasksRef}>
-            <h3 className="text-sm font-semibold mb-2">Tasks</h3>
-            <KanbanBoard
-              projectId={project.uid || project.id}
-              projectUid={project.uid}
-              projectMembers={project.members || []}
-              onTaskUpdate={refresh}
-            />
-          </div>
+          <TabsContent value="overview" className="p-6 space-y-4 mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Content - Left Side */}
+              <div className="lg:col-span-2 space-y-6">
+                <ProjectHealthSection
+                  project={project}
+                  onViewHistory={() => setHistoryOpen(true)}
+                />
 
-          {/* Risk Management Matrix */}
-          <div className="mt-6">
-            <RiskMatrix
-              projectId={project.uid || project.id}
-              projectName={project.name}
-              projectMembers={project.members || []}
-            />
-          </div>
+                <ProjectTimeRollup project={project} />
 
-          {/* Recent Time Logs List */}
-          {recentTimeLogs.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-sm font-semibold mb-2">Recent Time Logs</h3>
-              <div className="space-y-1">
-                {recentTimeLogs.map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between text-xs border border-border rounded px-2 py-1.5 bg-card/50 gap-2"
-                  >
-                    <span
-                      className="font-medium truncate max-w-[30%]"
-                      title={titleMap.get(l.taskId) || "Task"}
-                    >
-                      {titleMap.get(l.taskId) || "Task"}
-                    </span>
-                    <span
-                      className="text-muted-foreground truncate max-w-[25%]"
-                      title={l.loggedBy || "Unknown"}
-                    >
-                      {l.loggedBy || "Unknown"}
-                    </span>
-                    <span className="text-muted-foreground whitespace-nowrap text-[10px]">
-                      {new Date(l.loggedAt).toLocaleDateString()}
-                    </span>
-                    <span
-                      className="px-2 py-0.5 rounded bg-background/60 font-semibold shrink-0"
-                      title={`${l.hours} hours`}
-                    >
-                      {l.hours}h
-                    </span>
-                  </div>
-                ))}
+                {project.description && (
+                  <Card className="p-6 bg-linear-to-br from-card to-accent/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-5 bg-primary rounded-full"></div>
+                      <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                        Project Description
+                      </h3>
+                    </div>
+                    <div
+                      className="text-sm text-foreground/90 prose prose-sm max-w-none leading-relaxed pl-3"
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtml(project.description),
+                      }}
+                    />
+                  </Card>
+                )}
+
+                <AIProjectAnalyst projectId={project.uid || project.id} />
+                <ProjectMilestones projectId={project.uid || project.id} />
+                <ProjectComments projectId={project.uid || project.id} />
+
+                <ProjectDependencies
+                  projectId={project.uid || project.id}
+                  availableProjects={allProjects}
+                  readOnly={true}
+                />
+
+                <ProjectFiles
+                  projectId={project.uid || project.id}
+                  readOnly={true}
+                />
+
+                <MemberAcceptanceStatus projectId={project.uid || project.id} />
               </div>
+
+              {/* Right Sidebar */}
+              <ProjectSidebar project={project} />
             </div>
-          )}
-        </div>
+
+            {/* Tasks (Kanban) - Full Width */}
+            <div className="mt-6" ref={tasksRef}>
+              <h3 className="text-sm font-semibold mb-2">Tasks</h3>
+              <KanbanBoard
+                projectId={project.uid || project.id}
+                projectUid={project.uid}
+                projectMembers={project.members || []}
+                onTaskUpdate={refresh}
+              />
+            </div>
+
+            {/* Risk Management Matrix */}
+            <div className="mt-6">
+              <RiskMatrix
+                projectId={project.uid || project.id}
+                projectName={project.name}
+                projectMembers={project.members || []}
+              />
+            </div>
+
+            {/* Recent Time Logs List */}
+            {recentTimeLogs.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold mb-2">Recent Time Logs</h3>
+                <div className="space-y-1">
+                  {recentTimeLogs.map((l) => (
+                    <div
+                      key={l.id}
+                      className="flex items-center justify-between text-xs border border-border rounded px-2 py-1.5 bg-card/50 gap-2"
+                    >
+                      <span
+                        className="font-medium truncate max-w-[30%]"
+                        title={titleMap.get(l.taskId) || "Task"}
+                      >
+                        {titleMap.get(l.taskId) || "Task"}
+                      </span>
+                      <span
+                        className="text-muted-foreground truncate max-w-[25%]"
+                        title={l.loggedBy || "Unknown"}
+                      >
+                        {l.loggedBy || "Unknown"}
+                      </span>
+                      <span className="text-muted-foreground whitespace-nowrap text-[10px]">
+                        {new Date(l.loggedAt).toLocaleDateString()}
+                      </span>
+                      <span
+                        className="px-2 py-0.5 rounded bg-background/60 font-semibold shrink-0"
+                        title={`${l.hours} hours`}
+                      >
+                        {l.hours}h
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="finance" className="p-6 mt-0">
+            <ProjectFinance
+              projectId={project.id}
+              projectUid={project.uid}
+              projectName={project.name}
+              budget={project.budget || 0}
+              spent={project.spent || 0}
+              onUpdate={refresh}
+            />
+          </TabsContent>
+        </Tabs>
       </Card>
 
       {/* Floating Tasks Icon */}

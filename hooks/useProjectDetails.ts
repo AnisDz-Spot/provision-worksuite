@@ -21,7 +21,8 @@ export type Project = {
   categories?: string[] | string;
   description?: string;
   isTemplate?: boolean;
-  budget?: string;
+  budget?: number;
+  spent?: number;
   sla?: string;
   client?: string;
   clientLogo?: string;
@@ -70,7 +71,6 @@ export function useProjectDetails(projectId: string) {
           p.ownerRole = p.user?.role;
           p.ownerAvatar = p.user?.avatarUrl;
           if (p.coverUrl) p.cover = p.coverUrl;
-          if (p.budget) p.budget = p.budget.toString();
           if (p.sla) p.sla = p.sla.toString();
           setProject(p);
         } else {
