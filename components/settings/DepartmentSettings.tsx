@@ -40,6 +40,20 @@ export function DepartmentSettings() {
     React.useState<Partial<Department> | null>(null);
   const { showToast } = useToast();
 
+  const filteredAdmins = React.useMemo(() => {
+    return allUsers.filter((u) => {
+      const r = u.role?.toLowerCase() || "";
+      return (
+        r === "admin" ||
+        r === "master-admin" ||
+        r === "administrator" ||
+        r === "master admin" ||
+        u.role === "Admin" ||
+        u.role === "Master Admin"
+      );
+    });
+  }, [allUsers]);
+
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -190,7 +204,7 @@ export function DepartmentSettings() {
                   }
                 >
                   <option value="">No Admin Assigned</option>
-                  {allUsers.map((u) => (
+                  {filteredAdmins.map((u) => (
                     <option key={u.uid} value={u.id}>
                       {u.name} ({u.email})
                     </option>

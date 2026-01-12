@@ -738,7 +738,7 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
             onClick={() => setMenuOpen(null)}
           />
           <div
-            className="fixed z-50 w-48 bg-card border border-border rounded-lg shadow-xl py-1 overflow-hidden"
+            className="fixed z-50 w-48 bg-card border border-border rounded-lg shadow-xl py-1 max-h-64 overflow-y-auto"
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             {isAdmin && (
