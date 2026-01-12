@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -33,6 +34,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
   const [hoveredProject, setHoveredProject] = React.useState<string | null>(
     null
   );
+  const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
   // Calculate view range (show 3 months)
   const startDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
@@ -173,7 +175,13 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                   <div
                     key={project.id}
                     className="flex hover:bg-accent/20 transition-colors relative"
-                    onMouseEnter={() => setHoveredProject(project.id)}
+                    onMouseEnter={(e) => {
+                      setHoveredProject(project.id);
+                      setMousePos({ x: e.clientX, y: e.clientY });
+                    }}
+                    onMouseMove={(e) => {
+                      setMousePos({ x: e.clientX, y: e.clientY });
+                    }}
                     onMouseLeave={() => setHoveredProject(null)}
                   >
                     <div
@@ -253,72 +261,82 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                             <div className="px-2 py-1 text-white text-xs font-medium truncate h-full flex items-center">
                               {project.name}
                             </div>
-                            {isHovered && (
-                              <div className="absolute left-0 bottom-full mb-2 bg-card border-2 border-primary rounded-lg p-3 shadow-2xl z-100 min-w-[250px] text-xs pointer-events-none">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="font-semibold text-base leading-tight">
-                                    {project.name}
+                            {isHovered &&
+                              typeof document !== "undefined" &&
+                              createPortal(
+                                <div
+                                  className="fixed bg-card border-2 border-primary rounded-lg p-3 shadow-2xl z-9999 min-w-[280px] text-xs pointer-events-none transition-transform duration-75"
+                                  style={{
+                                    left: mousePos.x + 20,
+                                    top: mousePos.y - 40,
+                                    transform: "translateY(-50%)",
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="font-semibold text-base leading-tight">
+                                      {project.name}
+                                    </div>
+                                    {(() => {
+                                      const taskStats =
+                                        getTaskCompletionForProject(project.id);
+                                      const progress = taskStats?.percent || 0;
+                                      const health = calculateProjectHealth({
+                                        progress,
+                                        deadline: project.deadline || "",
+                                        status: project.status,
+                                      });
+                                      return (
+                                        <HealthBadge
+                                          score={health.score}
+                                          level={health.level}
+                                          factors={health.factors}
+                                          size="sm"
+                                        />
+                                      );
+                                    })()}
                                   </div>
-                                  {(() => {
-                                    const taskStats =
-                                      getTaskCompletionForProject(project.id);
-                                    const progress = taskStats?.percent || 0;
-                                    const health = calculateProjectHealth({
-                                      progress,
-                                      deadline: project.deadline || "",
-                                      status: project.status,
-                                    });
-                                    return (
-                                      <HealthBadge
-                                        score={health.score}
-                                        level={health.level}
-                                        factors={health.factors}
-                                        size="sm"
-                                      />
-                                    );
-                                  })()}
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="text-muted-foreground">
-                                    <span className="font-medium text-foreground">
-                                      Owner:
-                                    </span>{" "}
-                                    {project.owner}
-                                  </div>
-                                  <div className="text-muted-foreground">
-                                    <span className="font-medium text-foreground">
-                                      Status:
-                                    </span>{" "}
-                                    {project.status}
-                                  </div>
-                                  {project.deadline && (
+                                  <div className="space-y-1">
                                     <div className="text-muted-foreground">
                                       <span className="font-medium text-foreground">
-                                        Due:
+                                        Owner:
                                       </span>{" "}
-                                      {new Date(
-                                        project.deadline
-                                      ).toLocaleDateString()}
+                                      {project.owner}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      <span className="font-medium text-foreground">
+                                        Status:
+                                      </span>{" "}
+                                      {project.status}
+                                    </div>
+                                    {project.deadline && (
+                                      <div className="text-muted-foreground">
+                                        <span className="font-medium text-foreground">
+                                          Due:
+                                        </span>{" "}
+                                        {new Date(
+                                          project.deadline
+                                        ).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {deps.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-border">
+                                      <div className="font-medium mb-1 text-foreground">
+                                        Depends on:
+                                      </div>
+                                      {deps.map((dep, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="text-muted-foreground text-xs"
+                                        >
+                                          • {dep?.sourceName}
+                                        </div>
+                                      ))}
                                     </div>
                                   )}
-                                </div>
-                                {deps.length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-border">
-                                    <div className="font-medium mb-1 text-foreground">
-                                      Depends on:
-                                    </div>
-                                    {deps.map((dep, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="text-muted-foreground text-xs"
-                                      >
-                                        • {dep?.sourceName}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                </div>,
+                                document.body
+                              )}
                           </div>
                         </div>
                       )}
