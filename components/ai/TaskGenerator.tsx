@@ -90,29 +90,36 @@ export function TaskGenerator({
   async function saveSelectedTasks() {
     try {
       const selectedTasks = tasks.filter((_, i) => selectedIndices.includes(i));
-      for (const t of selectedTasks) {
-        // Generate a pseudo-unique ID for the task
-        const taskId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      let successCount = 0;
 
-        await upsertTask({
-          id: taskId,
-          projectId,
-          milestoneId,
-          title: t.title,
-          description: t.description,
-          priority: (t.priority === "urgent" ? "high" : t.priority) as any,
-          estimateHours: t.estimateHours,
-          status: "todo",
-          type: t.type,
-          loggedHours: 0,
+      for (const t of selectedTasks) {
+        const res = await fetchWithCsrf("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId,
+            milestoneId,
+            title: t.title,
+            description: t.description,
+            priority: t.priority === "urgent" ? "high" : t.priority,
+            estimateHours: t.estimateHours,
+            status: "todo",
+            type: t.type,
+          }),
         });
+
+        if (res.ok) {
+          successCount++;
+        }
       }
-      show(
-        "success",
-        `Injected ${selectedTasks.length} agentic tasks into Project!`
-      );
-      setIsOpen(false);
-      onComplete(); // Refresh parent view
+
+      if (successCount > 0) {
+        show("success", `Injected ${successCount} agentic tasks into Project!`);
+        setIsOpen(false);
+        onComplete(); // Refresh parent view
+      } else {
+        show("error", "Failed to save tasks. Please check your connection.");
+      }
     } catch (err) {
       console.error(err);
       show("error", "Failed to save tasks to workspace.");

@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const expense = await prisma.expense.create({
       data: {
         uid,
-        projectId,
+        projectId: parseInt(String(projectId), 10),
         date: new Date(date),
         vendor: vendor || null,
         amount: parseFloat(amount),
