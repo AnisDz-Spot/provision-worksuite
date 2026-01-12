@@ -307,8 +307,18 @@ export function TeamTable({ onAddClick, onChatClick }: TeamTableProps) {
       setMenuOpen(null);
     } else {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const menuHeight = 250; // Estimated max height with scroll
+      const windowHeight = window.innerHeight;
+      const spaceBelow = windowHeight - rect.bottom;
+
+      let top = rect.bottom + window.scrollY + 5;
+      if (spaceBelow < menuHeight && rect.top > menuHeight) {
+        // Position above if not enough space below but enough space above
+        top = rect.top + window.scrollY - menuHeight - 5;
+      }
+
       setMenuPos({
-        top: rect.bottom + window.scrollY + 5,
+        top,
         left: rect.right - 160 + window.scrollX,
       });
       setMenuOpen(id);

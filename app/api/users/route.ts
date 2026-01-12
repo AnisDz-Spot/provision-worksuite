@@ -111,6 +111,7 @@ export async function GET() {
           socials: user.socials || {},
           statusMessage: user.statusMessage,
           statusEmoji: user.statusEmoji,
+          id: user.id,
           department: (user as any).department?.name || "-",
         };
       }
