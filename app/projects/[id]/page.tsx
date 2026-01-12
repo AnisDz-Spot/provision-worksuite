@@ -35,6 +35,8 @@ import { getTasksByProject, getTimeLogsForTask } from "@/lib/utils";
 
 export default function ProjectDetailsPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const projectId = params.id as string;
   const tasksRef = React.useRef<HTMLDivElement>(null);
 
@@ -43,6 +45,21 @@ export default function ProjectDetailsPage() {
 
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [templateModalOpen, setTemplateModalOpen] = React.useState(false);
+
+  // Derived state (needs to check project existence first usually, but for primitives it's fine)
+  // We can compute currentTab here safely
+  const currentTab = searchParams?.get("tab") || "overview";
+
+  const handleTabChange = (value: string) => {
+    // Update URL without full reload
+    // We need project.uid, so we must be careful if project is null.
+    // However, this function is only passed to Tabs which is only rendered if project exists.
+    if (project) {
+      router.replace(`/projects/${project.uid}?tab=${value}`, {
+        scroll: false,
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -87,16 +104,6 @@ export default function ProjectDetailsPage() {
   const recentTimeLogs = allLogs
     .sort((a, b) => b.loggedAt - a.loggedAt)
     .slice(0, 10);
-
-  // Handle Tab Persistence
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const currentTab = searchParams?.get("tab") || "overview";
-
-  const handleTabChange = (value: string) => {
-    // Update URL without full reload
-    router.replace(`/projects/${project.uid}?tab=${value}`, { scroll: false });
-  };
 
   return (
     <section className="flex flex-col gap-8 p-4 md:p-8">
