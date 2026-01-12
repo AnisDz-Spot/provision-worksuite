@@ -731,7 +731,7 @@ export function ProjectTable() {
                           />
                         </button>
                         <button
-                          className="text-foreground hover:underline"
+                          className="text-foreground hover:underline font-semibold"
                           title="Open project"
                           onClick={() => openProject(p.slug || p.uid || p.id)}
                         >
@@ -739,8 +739,12 @@ export function ProjectTable() {
                         </button>
                       </div>
                     </td>
-
-                    <td className="p-4 hidden lg:table-cell">
+                    <td className="p-4">
+                      <span className="text-muted-foreground font-medium">
+                        {p.department?.name || "—"}
+                      </span>
+                    </td>
+                    <td className="p-4 hidden sm:table-cell">
                       <Badge
                         variant={
                           p.status === "Active"

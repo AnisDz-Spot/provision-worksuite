@@ -63,39 +63,8 @@ function ProjectsContent() {
           </div>
         </div>
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-          {/* Row 1 on Mobile: Refresh & New Project */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refreshProjects()}
-            title="Refresh Data"
-            disabled={refreshing}
-            className="w-full sm:w-auto order-1"
-          >
-            {refreshing ? (
-              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-            ) : (
-              "Refresh"
-            )}
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            asChild
-            className="w-full sm:w-auto order-2"
-          >
-            <a
-              href="/projects/new"
-              className="flex items-center whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              <span>New Project</span>
-            </a>
-          </Button>
-
-          {/* Row 2 on Mobile: View Toggles */}
-          <div className="flex gap-2 w-full sm:w-auto col-span-2 sm:col-span-1 order-3">
+          {/* View Toggles first */}
+          <div className="flex gap-2 w-full sm:w-auto col-span-2 sm:col-span-1 order-1">
             <Button
               variant={view === "grid" ? "primary" : "outline"}
               size="sm"
@@ -134,21 +103,54 @@ function ProjectsContent() {
               <span className="hidden sm:inline">Timeline</span>
               <span className="sm:hidden">Time</span>
             </Button>
+          </div>
+
+          <div className="flex gap-2 w-full sm:w-auto col-span-2 sm:col-span-1 order-2">
             <Button
-              variant={view === "analytics" ? "primary" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => {
-                setView("analytics");
-                localStorage.setItem("pv:projectsView", "analytics");
-              }}
-              title="Departmental Analytics"
-              className="flex-1 sm:flex-none cursor-pointer"
+              onClick={() => refreshProjects()}
+              title="Refresh Data"
+              disabled={refreshing}
+              className="w-full sm:w-auto"
             >
-              <TrendingUp className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Analytics</span>
-              <span className="sm:hidden">Stats</span>
+              {refreshing ? (
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+              ) : (
+                "Refresh"
+              )}
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              asChild
+              className="w-full sm:w-auto"
+            >
+              <a
+                href="/projects/new"
+                className="flex items-center whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                <span>New Project</span>
+              </a>
             </Button>
           </div>
+
+          <Button
+            variant={view === "analytics" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => {
+              setView("analytics");
+              localStorage.setItem("pv:projectsView", "analytics");
+            }}
+            title="Departmental Analytics"
+            className="flex-1 sm:flex-none cursor-pointer order-3"
+          >
+            <TrendingUp className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Analytics</span>
+            <span className="sm:hidden">Stats</span>
+          </Button>
         </div>
       </div>
 

@@ -271,9 +271,15 @@ export function ProjectCard({
                 Updated {new Date().toLocaleDateString()}
               </p>
               {project.department && (
-                <p className="text-[10px] font-semibold text-primary mt-0.5">
-                  {project.department.name}
-                </p>
+                <div className="mt-1.5">
+                  <Badge
+                    variant="info"
+                    pill
+                    className="text-[9px] px-2 py-0 font-bold uppercase tracking-wider"
+                  >
+                    {project.department.name}
+                  </Badge>
+                </div>
               )}
             </div>
 

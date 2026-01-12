@@ -49,6 +49,17 @@ export function ProjectDetailsHeader({
             No thumbnail
           </div>
         )}
+        {project.department && (
+          <div className="absolute top-4 left-4">
+            <Badge
+              variant="info"
+              pill
+              className="px-3 py-1 shadow-md bg-card/90 backdrop-blur-sm border-2 border-primary/20"
+            >
+              {project.department.name}
+            </Badge>
+          </div>
+        )}
         {project.client && (
           <div className="absolute top-4 right-4 flex items-center gap-3 bg-card/95 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-lg border border-border">
             {project.clientLogo && (
@@ -166,11 +177,6 @@ export function ProjectDetailsHeader({
                 SLA
               </abbr>
               : {project.sla} days
-            </Badge>
-          )}
-          {project.department && (
-            <Badge variant="info" pill>
-              {project.department.name}
             </Badge>
           )}
         </div>

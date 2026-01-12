@@ -254,7 +254,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                               {project.name}
                             </div>
                             {isHovered && (
-                              <div className="absolute left-0 top-full mt-2 bg-card border-2 border-primary rounded-lg p-3 shadow-2xl z-50 min-w-[250px] text-xs">
+                              <div className="absolute left-0 bottom-full mb-2 bg-card border-2 border-primary rounded-lg p-3 shadow-2xl z-100 min-w-[250px] text-xs pointer-events-none">
                                 <div className="flex items-start justify-between mb-2">
                                   <div className="font-semibold text-base leading-tight">
                                     {project.name}

@@ -15,7 +15,7 @@ export function ProjectDetailsForm({
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
+        <div className="space-y-2 col-span-full">
           <label className="text-sm font-medium">Description</label>
           <RichTextEditor
             value={project.description || ""}
