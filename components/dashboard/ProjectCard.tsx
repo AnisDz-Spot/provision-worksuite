@@ -240,6 +240,8 @@ export function ProjectCard({
             {project.status || "Unknown"}
           </span>
           <HealthBadge
+            projectId={project.uid || project.id}
+            projectName={project.name}
             score={health.score}
             level={health.level}
             factors={health.factors}

@@ -7,14 +7,21 @@ import {
   AlertCircle,
   AlertTriangle,
   XCircle,
+  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import {
   getHealthColor,
   getHealthLabel,
   type HealthLevel,
 } from "@/lib/project-health";
 
+import { RecoveryPlanModal } from "./RecoveryPlanModal";
+import { Sparkles, Loader2 } from "lucide-react";
+
 interface HealthBadgeProps {
+  projectId?: string;
+  projectName?: string;
   score: number;
   level: HealthLevel;
   factors?: {
@@ -29,6 +36,8 @@ interface HealthBadgeProps {
 }
 
 export function HealthBadge({
+  projectId,
+  projectName = "Project",
   score,
   level,
   factors,
@@ -37,8 +46,37 @@ export function HealthBadge({
   className = "",
 }: HealthBadgeProps) {
   const [showDetails, setShowDetails] = React.useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = React.useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = React.useState(false);
+  const [recoveryPlan, setRecoveryPlan] = React.useState<string | null>(null);
+
   const colors = getHealthColor(level);
   const label = getHealthLabel(level);
+
+  const handleGetRecoveryPlan = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!projectId) return;
+
+    setIsPlanModalOpen(true);
+    setIsGeneratingPlan(true);
+    setRecoveryPlan(null);
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/recovery-plan`);
+      const data = await res.json();
+      if (data.success) {
+        setRecoveryPlan(data.plan);
+      } else {
+        console.error("Failed to generate plan:", data.error);
+      }
+    } catch (err) {
+      console.error("Error generating recovery plan:", err);
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
 
   // Size classes
   const sizeClasses = {
@@ -62,74 +100,104 @@ export function HealthBadge({
   }[level];
 
   return (
-    <div className="relative inline-block">
-      <div
-        className={`
-          flex items-center gap-1.5 rounded-full font-semibold
-          ${colors.bg} ${colors.text} ${colors.border} border
-          ${sizeClasses[size]}
-          ${showTooltip ? "cursor-help" : ""}
-          ${className}
-          transition-all hover:shadow-md
-        `}
-        onMouseEnter={() => showTooltip && setShowDetails(true)}
-        onMouseLeave={() => setShowDetails(false)}
-        title={showTooltip ? undefined : `Health: ${score}`}
-      >
-        <Icon className={iconSizes[size]} />
-        <span>{score}</span>
+    <>
+      <div className="relative inline-block">
+        <div
+          className={`
+            flex items-center gap-1.5 rounded-full font-semibold
+            ${colors.bg} ${colors.text} ${colors.border} border
+            ${sizeClasses[size]}
+            ${showTooltip ? "cursor-help" : ""}
+            ${className}
+            transition-all hover:shadow-md
+          `}
+          onMouseEnter={() => showTooltip && setShowDetails(true)}
+          onMouseLeave={() => setShowDetails(false)}
+          title={showTooltip ? undefined : `Health: ${score}`}
+        >
+          <Icon className={iconSizes[size]} />
+          <span>{score}</span>
+        </div>
+
+        {/* Tooltip */}
+        {showTooltip && showDetails && factors && (
+          <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-popover border border-border rounded-lg shadow-xl">
+            <div className="text-xs space-y-2">
+              <div className="font-semibold text-center border-b border-border pb-2">
+                Health Score: {score}
+                <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                  {label}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <FactorRow label="Timeline" score={factors.timeline} />
+                <FactorRow label="Velocity" score={factors.velocity} />
+                <FactorRow label="Blockers" score={factors.blockers} />
+                <FactorRow label="Budget" score={factors.budget} />
+              </div>
+
+              {(level === "at-risk" || level === "critical") && (
+                <div className="pt-2 border-t border-border mt-2">
+                  <Button
+                    size="sm"
+                    className="w-full text-[10px] h-8 bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+                    variant="outline"
+                    onClick={handleGetRecoveryPlan}
+                    disabled={isGeneratingPlan}
+                  >
+                    {isGeneratingPlan ? (
+                      <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3 h-3 mr-1.5" />
+                    )}
+                    Get Recovery Plan
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-wider text-center">
+                  Health Legend
+                </p>
+                <div className="grid grid-cols-2 gap-x-1 gap-y-1 text-[9px]">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <span>80-100: Healthy</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                    <span>60-79: Warning</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    <span>40-59: At Risk</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span>0-39: Critical</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px pointer-events-none">
+              <div className="border-8 border-transparent border-t-border" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+1px)] border-[7px] border-transparent border-t-popover" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tooltip */}
-      {showTooltip && showDetails && factors && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-popover border border-border rounded-lg shadow-xl">
-          <div className="text-xs space-y-2">
-            <div className="font-semibold text-center border-b border-border pb-2">
-              Health Score: {score}
-              <div className="text-[10px] text-muted-foreground font-normal mt-0.5">
-                {label}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <FactorRow label="Timeline" score={factors.timeline} />
-              <FactorRow label="Velocity" score={factors.velocity} />
-              <FactorRow label="Blockers" score={factors.blockers} />
-              <FactorRow label="Budget" score={factors.budget} />
-            </div>
-            <div className="space-y-1.5 pt-2 border-t border-border">
-              <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1 tracking-wider text-center">
-                Health Legend
-              </p>
-              <div className="grid grid-cols-2 gap-x-1 gap-y-1 text-[9px]">
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span>80-100: Healthy</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                  <span>60-79: Warning</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                  <span>40-59: At Risk</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  <span>0-39: Critical</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Arrow */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px pointer-events-none">
-            <div className="border-8 border-transparent border-t-border" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[calc(100%+1px)] border-[7px] border-transparent border-t-popover" />
-          </div>
-        </div>
-      )}
-    </div>
+      <RecoveryPlanModal
+        open={isPlanModalOpen}
+        onOpenChange={setIsPlanModalOpen}
+        projectName={projectName}
+        plan={recoveryPlan}
+        isLoading={isGeneratingPlan}
+      />
+    </>
   );
 }
 

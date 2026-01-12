@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { CalendarDays } from "lucide-react";
 import { Project } from "@/hooks/useProjectDetails";
+import { HealthBadge } from "@/components/projects/HealthBadge";
+import { calculateProjectHealth } from "@/lib/project-health";
+import { getTaskCompletionForProject } from "@/lib/utils";
 
 interface ProjectDetailsHeaderProps {
   project: Project;
@@ -32,6 +35,12 @@ export function ProjectDetailsHeader({
     color = "text-amber-600 dark:text-amber-400";
     bgColor = "bg-amber-100 dark:bg-amber-900/30";
   }
+
+  const health = calculateProjectHealth({
+    progress: getTaskCompletionForProject(project.id)?.percent || 0,
+    deadline: project.deadline || "",
+    status: project.status,
+  });
 
   return (
     <div className="bg-card border-b">
@@ -82,9 +91,19 @@ export function ProjectDetailsHeader({
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {project.name}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">
+                {project.name}
+              </h1>
+              <HealthBadge
+                projectId={project.uid || project.id}
+                projectName={project.name}
+                score={health.score}
+                level={health.level}
+                factors={health.factors}
+                size="md"
+              />
+            </div>
             <div
               className={`flex items-center gap-2 mt-2 px-3 py-1.5 rounded-md ${bgColor} ${color} font-semibold text-base w-fit`}
             >

@@ -13,8 +13,7 @@ export function ProjectHealthSection({
   project,
   onViewHistory,
 }: ProjectHealthSectionProps) {
-  const taskStats = getTaskCompletionForProject(project.id);
-  const progress = taskStats?.percent || 0;
+  const progress = getTaskCompletionForProject(project.id)?.percent || 0;
 
   const health = calculateProjectHealth({
     progress,
@@ -25,6 +24,8 @@ export function ProjectHealthSection({
   return (
     <div className="flex items-center gap-4">
       <HealthBadge
+        projectId={project.uid || project.id}
+        projectName={project.name}
         score={health.score}
         level={health.level}
         factors={health.factors}

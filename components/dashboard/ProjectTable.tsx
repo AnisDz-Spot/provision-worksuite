@@ -180,6 +180,8 @@ const columns: ColumnDef<Project>[] = [
 
       return (
         <HealthBadge
+          projectId={project.uid || project.id}
+          projectName={project.name}
           score={health.score}
           level={health.level}
           factors={health.factors}
