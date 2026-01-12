@@ -270,6 +270,11 @@ export function ProjectCard({
               <p className="text-xs text-muted-foreground">
                 Updated {new Date().toLocaleDateString()}
               </p>
+              {project.department && (
+                <p className="text-[10px] font-semibold text-primary mt-0.5">
+                  {project.department.name}
+                </p>
+              )}
             </div>
 
             {/* Delete/Options Menu */}

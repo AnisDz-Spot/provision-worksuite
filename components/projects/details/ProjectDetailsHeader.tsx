@@ -168,6 +168,11 @@ export function ProjectDetailsHeader({
               : {project.sla} days
             </Badge>
           )}
+          {project.department && (
+            <Badge variant="info" pill>
+              {project.department.name}
+            </Badge>
+          )}
         </div>
       </div>
     </div>

@@ -24,7 +24,9 @@ export function ProjectDetailsForm({
             }
           />
         </div>
+      </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium">Department</label>
           <select
@@ -44,9 +46,7 @@ export function ProjectDetailsForm({
             ))}
           </select>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium">Priority</label>
           <select
@@ -67,19 +67,23 @@ export function ProjectDetailsForm({
           <label className="text-sm font-medium">Status</label>
           <select
             className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
-            value={project.status || "In Progress"}
+            value={project.status}
             onChange={(e) =>
               setProject((p) =>
                 p ? { ...p, status: e.target.value as any } : p
               )
             }
           >
-            <option>In Progress</option>
-            <option>Active</option>
-            <option>Completed</option>
-            <option>Paused</option>
+            <option value="Active">Active</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Paused">Paused</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Completed">Completed</option>
           </select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-medium">Deadline</label>
           <input

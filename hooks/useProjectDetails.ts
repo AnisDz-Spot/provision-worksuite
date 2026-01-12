@@ -28,6 +28,7 @@ export type Project = {
   clientName?: string;
   clientId?: string;
   tasks?: any[];
+  department?: { name: string };
 };
 
 export function useProjectDetails(projectId: string) {

@@ -24,6 +24,7 @@ export type Project = {
   budget?: string;
   sla?: string;
   departmentId?: string;
+  department?: { name: string };
   members?: { uid: string; name: string; avatarUrl?: string }[];
 };
 

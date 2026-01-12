@@ -48,6 +48,7 @@ type Project = {
   members?: { name: string; avatarUrl?: string; user?: any }[];
   isTemplate?: boolean;
   archived?: boolean;
+  department?: { name: string };
   // Database fields
   _count?: { tasks: number; milestones: number };
   tasks?: {
@@ -104,7 +105,6 @@ const PROJECTS: Project[] = [
     members: [{ name: "David" }, { name: "Eve" }],
   },
 ];
-
 const columns: ColumnDef<Project>[] = [
   {
     accessorKey: "name",
@@ -128,6 +128,17 @@ const columns: ColumnDef<Project>[] = [
           </button>
           <span>{p.name}</span>
         </div>
+      );
+    },
+  },
+  {
+    header: "Department",
+    cell: ({ row }) => {
+      const dept = row.original.department;
+      return (
+        <span className="text-muted-foreground font-medium">
+          {dept?.name || "—"}
+        </span>
       );
     },
   },
@@ -342,7 +353,8 @@ export function ProjectTable() {
       return (
         p.name.toLowerCase().includes(f) ||
         p.owner.toLowerCase().includes(f) ||
-        (p.status || "").toLowerCase().includes(f)
+        (p.status || "").toLowerCase().includes(f) ||
+        (p.department?.name || "").toLowerCase().includes(f)
       );
     },
     meta: {
