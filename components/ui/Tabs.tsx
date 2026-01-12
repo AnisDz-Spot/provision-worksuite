@@ -12,10 +12,21 @@ interface TabsProps {
   defaultValue: string;
   className?: string;
   children: React.ReactNode;
+  onValueChange?: (value: string) => void;
 }
 
-export function Tabs({ defaultValue, className, children }: TabsProps) {
-  const [activeTab, setActiveTab] = React.useState(defaultValue);
+export function Tabs({
+  defaultValue,
+  className,
+  children,
+  onValueChange,
+}: TabsProps) {
+  const [activeTab, setActiveTabState] = React.useState(defaultValue);
+
+  const setActiveTab = (value: string) => {
+    setActiveTabState(value);
+    onValueChange?.(value);
+  };
 
   return (
     <TabsContext.Provider value={{ activeTab, setActiveTab }}>

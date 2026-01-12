@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 
 // Hooks
@@ -88,6 +88,16 @@ export default function ProjectDetailsPage() {
     .sort((a, b) => b.loggedAt - a.loggedAt)
     .slice(0, 10);
 
+  // Handle Tab Persistence
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentTab = searchParams?.get("tab") || "overview";
+
+  const handleTabChange = (value: string) => {
+    // Update URL without full reload
+    router.replace(`/projects/${project.uid}?tab=${value}`, { scroll: false });
+  };
+
   return (
     <section className="flex flex-col gap-8 p-4 md:p-8">
       <Link href="/projects">
@@ -103,7 +113,12 @@ export default function ProjectDetailsPage() {
           onSaveAsTemplate={() => setTemplateModalOpen(true)}
         />
 
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs
+          key={currentTab}
+          defaultValue={currentTab}
+          className="w-full"
+          onValueChange={handleTabChange}
+        >
           <div className="border-b px-6 bg-muted/30">
             <TabsList className="bg-transparent h-12 p-0 space-x-6">
               <TabsTrigger

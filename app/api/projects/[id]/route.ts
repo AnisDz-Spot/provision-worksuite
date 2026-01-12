@@ -576,3 +576,5 @@ export const DELETE = withRateLimit(
     }
   }
 );
+
+export const PATCH = PUT;

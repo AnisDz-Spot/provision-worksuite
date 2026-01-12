@@ -58,6 +58,19 @@ export function ProjectFinance({
   const [editBudgetOpen, setEditBudgetOpen] = useState(false);
   const [newBudget, setNewBudget] = useState(String(budget));
 
+  // Invoice State
+  const [addInvoiceOpen, setAddInvoiceOpen] = useState(false);
+  const [newInvoice, setNewInvoice] = useState({
+    clientName: "",
+    issueDate: new Date().toISOString().slice(0, 10),
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10),
+    items: [{ description: "Project Services", quantity: 1, rate: 0 }],
+    status: "draft",
+    notes: "",
+  });
+
   useEffect(() => {
     // Determine which ID to use for fetching.
     // The API mostly uses integer IDs for relations but might accept UID in query params if adjusted.
@@ -71,16 +84,7 @@ export function ProjectFinance({
           (r) => r.json()
         );
         if (res.success) {
-          // Client-side filtering if API doesn't support filter exactly by ID type, but ?project= is supported in ExpensesPage logic
-          // Actually existing ExpensesPage logic: filters.projectId && e.projectId !== filters.projectId
-          // So if we pass projectId, the API returns all and we filter? No, check API.
-          // API GET returns ALL expenses. We need to filter client side or update API.
-          // For now, let's filter client side as per existing pattern
           const all = res.data || [];
-          // Check if projectId matches.
-          // Note: projectId prop might be "1" (string) or 1 (number). DB stores Int.
-          // projectUid is string.
-          // e.projectId is Int.
           setExpenses(
             all.filter(
               (e: any) =>
@@ -101,7 +105,14 @@ export function ProjectFinance({
           (r) => r.json()
         );
         if (res.success) {
-          setInvoices(res.data || []);
+          const all = res.data || [];
+          setInvoices(
+            all.filter(
+              (i: any) =>
+                String(i.projectId) === String(projectId) ||
+                i.project?.uid === projectUid
+            )
+          );
         }
       } catch (e) {
         console.error("Failed to load invoices", e);
@@ -111,6 +122,64 @@ export function ProjectFinance({
     if (activeTab === "expenses" || activeTab === "overview") fetchExpenses();
     if (activeTab === "invoices" || activeTab === "overview") fetchInvoices();
   }, [projectId, projectUid, activeTab]);
+
+  const handleCreateInvoice = async () => {
+    if (!newInvoice.clientName || newInvoice.items.length === 0) return;
+    showLoader("Creating invoice...");
+    try {
+      const total = newInvoice.items.reduce(
+        (sum, item) => sum + item.quantity * item.rate,
+        0
+      );
+
+      const res = await fetchWithCsrf("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: Number(projectId) || projectId,
+          ...newInvoice,
+          total,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        show("success", "Invoice created");
+        setAddInvoiceOpen(false);
+        setNewInvoice({
+          clientName: "",
+          issueDate: new Date().toISOString().slice(0, 10),
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .slice(0, 10),
+          items: [{ description: "Project Services", quantity: 1, rate: 0 }],
+          status: "draft",
+          notes: "",
+        });
+
+        // Refresh invoices
+        const refreshed = await fetch(
+          `/api/invoices?project=${projectId}`
+        ).then((r) => r.json());
+        if (refreshed.success) {
+          const all = refreshed.data || [];
+          setInvoices(
+            all.filter(
+              (i: any) =>
+                String(i.projectId) === String(projectId) ||
+                i.project?.uid === projectUid
+            )
+          );
+        }
+      } else {
+        show("error", data.error || "Failed to create invoice");
+      }
+    } catch (e) {
+      show("error", "Error creating invoice");
+    } finally {
+      hideLoader();
+    }
+  };
 
   const handleAddExpense = async () => {
     if (!newExpense.amount || !newExpense.description) return;
@@ -356,14 +425,51 @@ export function ProjectFinance({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Invoices</CardTitle>
-              <Button size="sm" variant="outline" disabled>
-                <Plus className="w-4 h-4 mr-2" /> Create Invoice (Coming Soon)
+              <Button size="sm" onClick={() => setAddInvoiceOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Create Invoice
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Invoicing module integration coming soon.
-              </div>
+              {invoices.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No invoices found.
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-3 text-left">Date</th>
+                        <th className="p-3 text-left">Client</th>
+                        <th className="p-3 text-left">Status</th>
+                        <th className="p-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map((i) => (
+                        <tr key={i.id} className="border-t">
+                          <td className="p-3">
+                            {new Date(i.issueDate).toLocaleDateString()}
+                          </td>
+                          <td className="p-3">{i.clientName || "—"}</td>
+                          <td className="p-3">
+                            <Badge
+                              variant={
+                                i.status === "paid" ? "default" : "secondary"
+                              }
+                            >
+                              {i.status}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {formatCurrency(i.total)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -453,6 +559,90 @@ export function ProjectFinance({
                 variant="outline"
                 className="flex-1"
                 onClick={() => setAddExpenseOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={addInvoiceOpen} onOpenChange={setAddInvoiceOpen} size="md">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Create New Invoice</h3>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Client Name</label>
+              <Input
+                value={newInvoice.clientName}
+                onChange={(e) =>
+                  setNewInvoice({ ...newInvoice, clientName: e.target.value })
+                }
+                placeholder="Client Name"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Item Description</label>
+              <Input
+                value={newInvoice.items[0].description}
+                onChange={(e) => {
+                  const newItems = [...newInvoice.items];
+                  newItems[0].description = e.target.value;
+                  setNewInvoice({ ...newInvoice, items: newItems });
+                }}
+                placeholder="Service or Product"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Rate</label>
+                <Input
+                  type="number"
+                  value={newInvoice.items[0].rate}
+                  onChange={(e) => {
+                    const newItems = [...newInvoice.items];
+                    newItems[0].rate = parseFloat(e.target.value);
+                    setNewInvoice({ ...newInvoice, items: newItems });
+                  }}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Quantity</label>
+                <Input
+                  type="number"
+                  value={newInvoice.items[0].quantity}
+                  onChange={(e) => {
+                    const newItems = [...newInvoice.items];
+                    newItems[0].quantity = parseFloat(e.target.value);
+                    setNewInvoice({ ...newInvoice, items: newItems });
+                  }}
+                  placeholder="1"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Due Date</label>
+              <Input
+                type="date"
+                value={newInvoice.dueDate}
+                onChange={(e) =>
+                  setNewInvoice({ ...newInvoice, dueDate: e.target.value })
+                }
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1" onClick={handleCreateInvoice}>
+                Create Invoice (
+                {formatCurrency(
+                  newInvoice.items[0].rate * newInvoice.items[0].quantity
+                )}
+                )
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setAddInvoiceOpen(false)}
               >
                 Cancel
               </Button>
