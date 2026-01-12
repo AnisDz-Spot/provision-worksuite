@@ -209,6 +209,10 @@ model Project {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   client Client? @relation(fields: [clientId], references: [id])
 
+  // Department assignment
+  departmentId String?     @map("department_id")
+  department   Department? @relation("DepartmentProjects", fields: [departmentId], references: [id], onDelete: SetNull)
+
   // Relations - tasks linked via projectId=uid
   tasks           Task[]
   expenses        Expense[]
@@ -231,6 +235,7 @@ model Project {
   @@index([status])
   @@index([visibility])
   @@index([archivedAt])
+  @@index([departmentId])
   @@map("projects")
 }
 
@@ -247,6 +252,9 @@ model Department {
 
   // All users in this department
   users User[] @relation("UserDepartment")
+
+  // Projects belonging to this department
+  projects Project[] @relation("DepartmentProjects")
 
   @@map("departments")
 }

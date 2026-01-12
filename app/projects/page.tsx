@@ -11,6 +11,7 @@ import { MilestoneGantt } from "@/components/projects/MilestoneGantt";
 import { SprintPlanning } from "@/components/projects/SprintPlanning";
 import { ResourceAllocation } from "@/components/projects/ResourceAllocation";
 import { ProjectStats } from "@/components/dashboard/ProjectStats";
+import { DepartmentDashboard } from "@/components/analytics/DepartmentDashboard";
 import {
   ProjectsProvider,
   useProjects,
@@ -22,6 +23,7 @@ import {
   List,
   GanttChartIcon,
   Plus,
+  TrendingUp,
 } from "lucide-react";
 import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -29,13 +31,20 @@ import { getProjectDependencies } from "@/lib/utils";
 
 function ProjectsContent() {
   const { projects, isLoading, refreshing, refreshProjects } = useProjects();
-  const [view, setView] = useState<"grid" | "list" | "gantt">("grid");
+  const [view, setView] = useState<"grid" | "list" | "gantt" | "analytics">(
+    "grid"
+  );
   const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("pv:projectsView");
-    if (saved === "list" || saved === "grid" || saved === "gantt") {
-      setView(saved);
+    if (
+      saved === "list" ||
+      saved === "grid" ||
+      saved === "gantt" ||
+      saved === "analytics"
+    ) {
+      setView(saved as any);
     }
   }, []);
 
@@ -125,6 +134,20 @@ function ProjectsContent() {
               <span className="hidden sm:inline">Timeline</span>
               <span className="sm:hidden">Time</span>
             </Button>
+            <Button
+              variant={view === "analytics" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => {
+                setView("analytics");
+                localStorage.setItem("pv:projectsView", "analytics");
+              }}
+              title="Departmental Analytics"
+              className="flex-1 sm:flex-none cursor-pointer"
+            >
+              <TrendingUp className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">Stats</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -159,6 +182,8 @@ function ProjectsContent() {
         />
       ) : view === "list" ? (
         <ProjectTable />
+      ) : view === "analytics" ? (
+        <DepartmentDashboard />
       ) : (
         <ProjectGrid />
       )}

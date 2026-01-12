@@ -28,6 +28,9 @@ interface ProjectFiltersProps {
   allStatuses: string[];
   allCategories: string[];
   allClients: string[];
+  allDepartments: any[];
+  deptFilter: string;
+  setDeptFilter: (d: string) => void;
 
   updateUrl: (params: Record<string, string | null>) => void;
 
@@ -70,6 +73,9 @@ export function ProjectFilters({
   allStatuses,
   allCategories,
   allClients,
+  allDepartments,
+  deptFilter,
+  setDeptFilter,
   updateUrl,
   selectMode,
   setSelectMode,
@@ -110,6 +116,25 @@ export function ProjectFilters({
             />
           </div>
           <div className="flex flex-row flex-wrap lg:flex-nowrap items-center gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
+            <select
+              id="filter-dept"
+              name="dept"
+              aria-label="Filter by Department"
+              value={deptFilter}
+              onChange={(e) => {
+                setDeptFilter(e.target.value);
+                updateUrl({ dept: e.target.value });
+              }}
+              className="rounded-md border border-border bg-card text-foreground px-2 py-2 text-xs w-auto min-w-[100px] shrink-0"
+            >
+              <option value="all">Dept: All</option>
+              {allDepartments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+
             <select
               id="filter-health"
               name="health"
@@ -397,6 +422,7 @@ export function ProjectFilters({
               setQuery("");
               setStatus("all");
               setHealthFilter("all");
+              setDeptFilter("all");
               updateUrl({
                 query: "",
                 status: null,
@@ -405,6 +431,7 @@ export function ProjectFilters({
                 client: null,
                 starred: null,
                 health: null,
+                dept: null,
               });
               setSortBy("name-asc");
               setStarredOnly(false);

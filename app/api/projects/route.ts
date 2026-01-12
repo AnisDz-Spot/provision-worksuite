@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { log } from "@/lib/logger";
 import { getAuthenticatedUser } from "@/lib/auth";
@@ -13,7 +13,7 @@ import { withRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   // SECURITY: Require authentication to view projects
   const currentUser = await getAuthenticatedUser();
   if (!currentUser) {
@@ -23,11 +23,20 @@ export async function GET() {
     );
   }
 
+  const { searchParams } = new URL(req.url);
+  const deptFilter = searchParams.get("departmentId");
+
   // In demo mode or for global admin, return mock projects
   if (!shouldUseDatabaseData() || shouldReturnMockData(currentUser)) {
+    let mockData = MOCK_PROJECTS;
+    if (deptFilter && deptFilter !== "all") {
+      // For mock data, we might not have departments mapped perfectly, 
+      // but let's assume we filter if they match the ID string as a category fallback or similar
+      mockData = MOCK_PROJECTS.filter((p: any) => p.departmentId === deptFilter);
+    }
     return NextResponse.json({
       success: true,
-      data: MOCK_PROJECTS,
+      data: mockData,
       source: "mock",
     });
   }
@@ -54,20 +63,20 @@ export async function GET() {
       "Master Admin",
     ].includes(currentUser.role);
 
-    const whereClause = isAdmin
-      ? { archivedAt: null } // Admins see all non-archived projects
-      : {
-          OR: [
-            { userId: dbUser.id },
-            { members: { some: { userId: dbUser.id } } },
-            { visibility: { in: ["public", "team-only"] } },
-          ],
           archivedAt: null,
         };
 
+    const finalWhere: any = { ...whereClause };
+    if (deptFilter && deptFilter !== "all") {
+      finalWhere.departmentId = deptFilter;
+    }
+
     const projects = await prisma.project.findMany({
-      where: whereClause,
+      where: finalWhere,
       include: {
+        department: {
+          select: { name: true }
+        },
         user: {
           select: {
             uid: true,
@@ -208,6 +217,7 @@ export const POST = withRateLimit(RATE_LIMITS.MUTATION, async (req: any) => {
       members,
       sla,
       attachments,
+      departmentId,
     } = validation.data;
 
     // Generate Slug
@@ -270,6 +280,7 @@ export const POST = withRateLimit(RATE_LIMITS.MUTATION, async (req: any) => {
         coverUrl: cover || null,
         clientLogo: clientLogo || null,
         sla: sla || null,
+        departmentId: departmentId || null,
       },
       include: {
         user: true,

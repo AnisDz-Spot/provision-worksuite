@@ -88,6 +88,7 @@ export const createProjectSchema = z.object({
     .optional()
     .default([]),
   attachments: z.array(z.string().url()).max(50).optional().default([]),
+  departmentId: z.string().uuid("Invalid department ID").optional().nullable(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial().extend({
@@ -193,6 +194,7 @@ export const projectFilterSchema = z.object({
     .optional(),
   visibility: z.enum(["all", "public", "private", "team-only"]).optional(),
   clientId: z.string().uuid().optional(),
+  departmentId: z.string().uuid().optional(),
   page: z.number().int().positive().optional().default(1),
   limit: z.number().int().positive().max(100).optional().default(20),
 });

@@ -53,6 +53,10 @@ export function ProjectGrid() {
   const [healthFilter, setHealthFilter] = React.useState(
     searchParams.get("health") || "all"
   );
+  const [deptFilter, setDeptFilter] = React.useState(
+    searchParams.get("dept") || "all"
+  );
+  const [departments, setDepartments] = React.useState<any[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(
     parseInt(searchParams.get("page") || "1")
@@ -78,7 +82,20 @@ export function ProjectGrid() {
 
   React.useEffect(() => {
     setSavedViews(getSavedViews());
+    loadDepartments();
   }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const res = await fetch("/api/departments");
+      const data = await res.json();
+      if (data.success) {
+        setDepartments(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to load departments:", error);
+    }
+  };
 
   // Sync state to URL
   const updateUrl = React.useCallback(
@@ -267,6 +284,7 @@ export function ProjectGrid() {
     setStarredOnly(view.starredOnly);
     setClientFilter(view.clientFilter || "all");
     setHealthFilter("all");
+    setDeptFilter("all");
   };
 
   const handleDeleteView = (id: string) => {
@@ -295,6 +313,7 @@ export function ProjectGrid() {
         (p.category || "") === categoryFilter ||
         (p.categories || []).includes(categoryFilter);
       const tagOk = tagFilter === "all" || (p.tags || []).includes(tagFilter);
+      const deptOk = deptFilter === "all" || p.departmentId === deptFilter;
 
       let healthOk = true;
       if (healthFilter !== "all") {
@@ -316,7 +335,8 @@ export function ProjectGrid() {
         clientOk &&
         categoryOk &&
         tagOk &&
-        healthOk
+        healthOk &&
+        deptOk
       );
     });
     const sorted = [...base].sort((a, b) => {
@@ -346,6 +366,7 @@ export function ProjectGrid() {
     categoryFilter,
     tagFilter,
     healthFilter,
+    deptFilter,
   ]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -365,6 +386,7 @@ export function ProjectGrid() {
     categoryFilter,
     tagFilter,
     healthFilter,
+    deptFilter,
   ]);
 
   const handleStatusUpdate = async (
@@ -467,9 +489,12 @@ export function ProjectGrid() {
         setStarredOnly={setStarredOnly}
         healthFilter={healthFilter}
         setHealthFilter={setHealthFilter}
+        deptFilter={deptFilter}
+        setDeptFilter={setDeptFilter}
         allStatuses={allStatuses}
         allCategories={allCategories}
         allClients={allClients}
+        allDepartments={departments}
         updateUrl={updateUrl}
         selectMode={selectMode}
         setSelectMode={setSelectMode}
