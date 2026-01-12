@@ -23,6 +23,7 @@ export type Project = {
   clientId?: string;
   budget?: string;
   sla?: string;
+  departmentId?: string;
   members?: { uid: string; name: string; avatarUrl?: string }[];
 };
 
@@ -34,6 +35,7 @@ export function useProjectEditData(projectId: string) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [allProjects, setAllProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,14 +50,21 @@ export function useProjectEditData(projectId: string) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [authRes, projectRes, clientsRes, usersRes, allProjectsRes] =
-          await Promise.all([
-            fetch("/api/auth/me"),
-            fetch(`/api/projects/${projectId}`),
-            fetch("/api/clients"),
-            fetch("/api/users"),
-            fetch("/api/projects"),
-          ]);
+        const [
+          authRes,
+          projectRes,
+          clientsRes,
+          usersRes,
+          allProjectsRes,
+          departmentsRes,
+        ] = await Promise.all([
+          fetch("/api/auth/me"),
+          fetch(`/api/projects/${projectId}`),
+          fetch("/api/clients"),
+          fetch("/api/users"),
+          fetch("/api/projects"),
+          fetch("/api/departments"),
+        ]);
 
         if (authRes.ok) {
           const authData = await authRes.json();
@@ -105,6 +114,7 @@ export function useProjectEditData(projectId: string) {
               clientId: p.clientId,
               budget: p.budget ? p.budget.toString() : "",
               sla: p.sla ? p.sla.toString() : "",
+              departmentId: p.departmentId || "",
               isTemplate: p.isTemplate,
               members: (p.members || []).map((m: any) => ({
                 uid: m.user?.uid || "",
@@ -129,6 +139,11 @@ export function useProjectEditData(projectId: string) {
           const data = await usersRes.json();
           if (data.success) setUsers(data.data);
         }
+
+        if (departmentsRes.ok) {
+          const data = await departmentsRes.json();
+          if (data.success) setDepartments(data.data);
+        }
       } catch (error) {
         console.error(error);
         showToast("Failed to load data", "error");
@@ -149,5 +164,6 @@ export function useProjectEditData(projectId: string) {
     loading,
     allCategories,
     setAllCategories,
+    departments,
   };
 }

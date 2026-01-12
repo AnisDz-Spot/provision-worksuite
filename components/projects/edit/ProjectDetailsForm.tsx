@@ -4,22 +4,46 @@ import { Project } from "@/hooks/useProjectEditData";
 interface ProjectDetailsFormProps {
   project: Project;
   setProject: React.Dispatch<React.SetStateAction<Project | null>>;
+  departments?: any[];
 }
 
 export function ProjectDetailsForm({
   project,
   setProject,
+  departments = [],
 }: ProjectDetailsFormProps) {
   return (
     <>
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Description</label>
-        <RichTextEditor
-          value={project.description || ""}
-          onChange={(value) =>
-            setProject((p) => (p ? { ...p, description: value } : p))
-          }
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Description</label>
+          <RichTextEditor
+            value={project.description || ""}
+            onChange={(value) =>
+              setProject((p) => (p ? { ...p, description: value } : p))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Department</label>
+          <select
+            className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+            value={project.departmentId || ""}
+            onChange={(e) =>
+              setProject((p) =>
+                p ? { ...p, departmentId: e.target.value } : p
+              )
+            }
+          >
+            <option value="">No Department</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -58,6 +58,7 @@ export default function NewProjectPage() {
     // User requested removal. I will remove them from usage.
     budget: "",
     sla: "",
+    departmentId: "",
     files: [] as ProjectFile[],
   });
 
@@ -71,6 +72,7 @@ export default function NewProjectPage() {
     return categoriesData;
   });
   const [clients, setClients] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   // Uploading states
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
@@ -79,9 +81,10 @@ export default function NewProjectPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, clientsRes] = await Promise.all([
+        const [usersRes, clientsRes, deptsRes] = await Promise.all([
           fetch("/api/users"),
           fetch("/api/clients"),
+          fetch("/api/departments"),
         ]);
 
         if (usersRes.ok) {
@@ -92,6 +95,11 @@ export default function NewProjectPage() {
         if (clientsRes.ok) {
           const data = await clientsRes.json();
           if (data.success) setClients(data.data);
+        }
+
+        if (deptsRes.ok) {
+          const data = await deptsRes.json();
+          if (data.success) setDepartments(data.data);
         }
       } catch (error) {
         console.error("Failed to fetch data", error);
@@ -179,6 +187,7 @@ export default function NewProjectPage() {
 
       budget: (tpl as any).budget || "",
       sla: (tpl as any).sla || "",
+      departmentId: (tpl as any).departmentId || "",
       files: [],
     });
   };
@@ -297,6 +306,7 @@ export default function NewProjectPage() {
         files: finalFiles, // API needs to handle this!
         members: draft.members.map((m) => m.uid), // Send member UIDs
         categories: draft.categories,
+        departmentId: draft.departmentId,
       };
 
       const res = await fetchWithCsrf("/api/projects", {
@@ -508,6 +518,23 @@ export default function NewProjectPage() {
               onChange={(e) => setDraft({ ...draft, sla: e.target.value })}
               placeholder="e.g., 30"
             />
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-sm font-medium">Department</label>
+            <select
+              value={draft.departmentId}
+              onChange={(e) =>
+                setDraft({ ...draft, departmentId: e.target.value })
+              }
+              className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
+            >
+              <option value="">-- Select Department --</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">

@@ -37,6 +37,7 @@ export default function ProjectEditPage() {
     allProjects,
     allCategories,
     setAllCategories,
+    departments,
   } = useProjectEditData(projectId);
 
   const [isSaving, setIsSaving] = React.useState(false);
@@ -65,6 +66,7 @@ export default function ProjectEditPage() {
           cover: project.cover,
           sla: project.sla,
           isTemplate: project.isTemplate,
+          departmentId: project.departmentId,
           members: (project.members || []).map((m) => m.uid).filter(Boolean),
         }),
       });
@@ -154,7 +156,11 @@ export default function ProjectEditPage() {
         <div className="space-y-6">
           <ProjectBasicInfo project={project} setProject={setProject} />
 
-          <ProjectDetailsForm project={project} setProject={setProject} />
+          <ProjectDetailsForm
+            project={project}
+            setProject={setProject}
+            departments={departments}
+          />
 
           <ProjectClientBudget
             project={project}

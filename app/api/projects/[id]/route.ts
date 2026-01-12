@@ -319,6 +319,7 @@ export const PUT = withRateLimit(
           coverUrl: body.cover,
           sla: body.sla,
           isTemplate: body.isTemplate,
+          departmentId: body.departmentId || null,
           // clientLogo is removed as per requirement, but if passed and needed for fallback:
           // clientLogo: body.clientLogo
         },
