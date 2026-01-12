@@ -15,6 +15,7 @@ export type Project = {
   progress?: number;
   budget?: number;
   spent?: number;
+  departmentId?: string | null;
   createdAt?: string;
   archived?: boolean;
   category?: string;

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const stats = departments.map((dept) => {
+    const stats = departments.map((dept: any) => {
       const projects = dept.projects;
       const totalProjects = projects.length;
 
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
         cancelled: 0,
       };
 
-      projects.forEach((p) => {
+      projects.forEach((p: any) => {
         // Health calculation
         const health = calculateProjectHealth({
           progress: p.progress || 0,

@@ -203,6 +203,8 @@ model Project {
   coverUrl    String?   @map("cover_url")
   clientLogo  String?   @map("client_logo")
   sla         String?
+  progress    Float     @default(0)
+  spent       Float     @default(0)
 
   // Creator/Owner reference (legacy support)
   userId Int     @map("user_id")

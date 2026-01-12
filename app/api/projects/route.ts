@@ -30,9 +30,11 @@ export async function GET(req: NextRequest) {
   if (!shouldUseDatabaseData() || shouldReturnMockData(currentUser)) {
     let mockData = MOCK_PROJECTS;
     if (deptFilter && deptFilter !== "all") {
-      // For mock data, we might not have departments mapped perfectly, 
+      // For mock data, we might not have departments mapped perfectly,
       // but let's assume we filter if they match the ID string as a category fallback or similar
-      mockData = MOCK_PROJECTS.filter((p: any) => p.departmentId === deptFilter);
+      mockData = MOCK_PROJECTS.filter(
+        (p: any) => p.departmentId === deptFilter
+      );
     }
     return NextResponse.json({
       success: true,
@@ -63,6 +65,14 @@ export async function GET(req: NextRequest) {
       "Master Admin",
     ].includes(currentUser.role);
 
+    const whereClause = isAdmin
+      ? { archivedAt: null }
+      : {
+          OR: [
+            { userId: dbUser.id },
+            { members: { some: { userId: dbUser.id } } },
+            { visibility: { in: ["public", "team-only"] } },
+          ],
           archivedAt: null,
         };
 
@@ -75,7 +85,7 @@ export async function GET(req: NextRequest) {
       where: finalWhere,
       include: {
         department: {
-          select: { name: true }
+          select: { name: true },
         },
         user: {
           select: {

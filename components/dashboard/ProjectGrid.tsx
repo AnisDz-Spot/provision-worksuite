@@ -19,6 +19,7 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { QuickTaskModal } from "./QuickTaskModal";
 import { Project } from "./types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { calculateProjectHealth } from "@/lib/project-health";
 
 /* Project type moved to ./types.ts */
 
@@ -317,7 +318,6 @@ export function ProjectGrid() {
 
       let healthOk = true;
       if (healthFilter !== "all") {
-        const { calculateProjectHealth } = require("@/lib/project-health");
         const health = calculateProjectHealth({
           progress: (p as any).progress || 0,
           deadline: p.deadline,
