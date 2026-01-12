@@ -115,6 +115,7 @@ export function TaskGenerator({
 
       if (successCount > 0) {
         show("success", `Injected ${successCount} agentic tasks into Project!`);
+        window.dispatchEvent(new Event("pv:tasksUpdated"));
         setIsOpen(false);
         onComplete(); // Refresh parent view
       } else {

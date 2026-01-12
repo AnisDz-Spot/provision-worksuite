@@ -159,7 +159,13 @@ export function KanbanBoard({
         if (data.success) setCurrentUser(data.user);
       })
       .catch((err) => console.error("Error fetching user:", err));
-  }, []);
+
+    // Listen for task updates
+    const handleTaskUpdate = () => refreshTasks();
+    window.addEventListener("pv:tasksUpdated", handleTaskUpdate);
+    return () =>
+      window.removeEventListener("pv:tasksUpdated", handleTaskUpdate);
+  }, [refreshTasks]);
 
   // Derived State
   const isAuthorized = useMemo(() => {

@@ -44,19 +44,29 @@ export async function POST(req: Request) {
 
     const uid = `expense_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-    const expense = await prisma.expense.create({
-      data: {
-        uid,
-        projectId: parseInt(String(projectId), 10),
-        date: new Date(date),
-        vendor: vendor || null,
-        amount: parseFloat(amount),
-        note: note || null,
-      },
-      include: {
-        project: true,
-      },
-    });
+    const [expense] = await prisma.$transaction([
+      prisma.expense.create({
+        data: {
+          uid,
+          projectId: parseInt(String(projectId), 10),
+          date: new Date(date),
+          vendor: vendor || null,
+          amount: parseFloat(amount),
+          note: note || null,
+        },
+        include: {
+          project: true,
+        },
+      }),
+      prisma.project.update({
+        where: { id: parseInt(String(projectId), 10) },
+        data: {
+          spent: {
+            increment: parseFloat(amount),
+          },
+        },
+      }),
+    ]);
 
     log.info({ expenseId: expense.id, projectId, amount }, "Expense created");
 
