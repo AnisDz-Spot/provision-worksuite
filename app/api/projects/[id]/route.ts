@@ -42,6 +42,7 @@ export async function GET(
     let project = await prisma.project.findFirst({
       where: { slug: id },
       include: {
+        department: true,
         members: {
           include: {
             user: {
@@ -75,6 +76,7 @@ export async function GET(
       project = await prisma.project.findFirst({
         where: { uid: id },
         include: {
+          department: true,
           members: {
             include: {
               user: {
@@ -107,6 +109,7 @@ export async function GET(
         project = await prisma.project.findUnique({
           where: { id: idAsInt },
           include: {
+            department: true,
             members: {
               include: {
                 user: {
@@ -304,6 +307,7 @@ export const PUT = withRateLimit(
 
       const updated = await prisma.project.update({
         where: { id: project.id },
+        include: { department: true },
         data: {
           name: body.name,
           description: body.description,

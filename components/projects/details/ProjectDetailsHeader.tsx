@@ -49,33 +49,35 @@ export function ProjectDetailsHeader({
             No thumbnail
           </div>
         )}
-        <div className="absolute top-4 right-4 flex items-center gap-3">
-          {project.department && (
-            <Badge
-              variant="info"
-              pill
-              className="px-3 py-1 shadow-md bg-card/90 backdrop-blur-sm border-2 border-primary/20"
-            >
-              {project.department.name}
-            </Badge>
-          )}
-          {project.client && (
-            <div className="flex items-center gap-3 bg-card/95 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-lg border border-border">
-              {project.clientLogo && (
-                <Image
-                  src={project.clientLogo}
-                  alt={project.client}
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded object-cover"
-                />
-              )}
-              <span className="text-lg font-bold text-foreground">
-                {project.client}
-              </span>
-            </div>
-          )}
-        </div>
+        {(project.department || project.client) && (
+          <div className="absolute top-4 right-4 flex items-center gap-3">
+            {project.department && (
+              <Badge
+                variant="info"
+                pill
+                className="px-3 py-1 shadow-md bg-card/90 backdrop-blur-sm border-2 border-primary/20"
+              >
+                {project.department.name}
+              </Badge>
+            )}
+            {project.client && (
+              <div className="flex items-center gap-3 bg-card/95 backdrop-blur-sm px-4 py-2.5 rounded-lg shadow-lg border border-border">
+                {project.clientLogo && (
+                  <Image
+                    src={project.clientLogo}
+                    alt={project.client}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded object-cover"
+                  />
+                )}
+                <span className="text-lg font-bold text-foreground">
+                  {project.client}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
