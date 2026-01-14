@@ -231,6 +231,7 @@ model Project {
   retrospectives  Retrospective[]
   sprints         Sprint[]
   burndownMarkers BurndownMarker[]
+  wikiPages       WikiPage[]
 
   @@index([userId])
   @@index([clientId])
@@ -239,6 +240,26 @@ model Project {
   @@index([archivedAt])
   @@index([departmentId])
   @@map("projects")
+}
+
+model WikiPage {
+  id          String   @id @default(uuid())
+  projectId   Int      @map("project_id")
+  title       String
+  content     String?  @db.Text
+  parentId    String?  @map("parent_id")
+  isPublished Boolean  @default(true) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  project  Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   WikiPage?  @relation("WikiHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children WikiPage[] @relation("WikiHierarchy")
+
+  @@index([projectId])
+  @@index([parentId])
+  @@map("wiki_pages")
 }
 
 model Department {

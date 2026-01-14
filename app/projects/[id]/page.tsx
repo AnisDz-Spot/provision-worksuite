@@ -27,6 +27,8 @@ import { KanbanBoard } from "@/components/tasks/KanbanBoard";
 import { RiskMatrix } from "@/components/projects/RiskMatrix";
 import { AIProjectAnalyst } from "@/components/ai/AIProjectAnalyst";
 import { ProjectFinance } from "@/components/projects/ProjectFinance";
+import { ProjectWiki } from "@/components/wiki/ProjectWiki";
+import { ProjectGantt } from "@/components/projects/gantt/ProjectGantt";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 
 // Utils
@@ -119,7 +121,6 @@ export default function ProjectDetailsPage() {
           project={project}
           onSaveAsTemplate={() => setTemplateModalOpen(true)}
         />
-
         <Tabs
           key={currentTab}
           defaultValue={currentTab}
@@ -127,16 +128,28 @@ export default function ProjectDetailsPage() {
           onValueChange={handleTabChange}
         >
           <div className="border-b px-6 bg-muted/30">
-            <TabsList className="bg-transparent h-12 p-0 space-x-6">
+            <TabsList className="bg-transparent h-12 p-0 space-x-6 w-full justify-start overflow-x-auto">
               <TabsTrigger
                 value="overview"
-                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium whitespace-nowrap"
               >
                 Overview
               </TabsTrigger>
               <TabsTrigger
+                value="gantt"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium whitespace-nowrap"
+              >
+                Gantt Chart
+              </TabsTrigger>
+              <TabsTrigger
+                value="wiki"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium whitespace-nowrap"
+              >
+                Docs & Wiki
+              </TabsTrigger>
+              <TabsTrigger
                 value="finance"
-                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium"
+                className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-medium whitespace-nowrap"
               >
                 Finance & Budget
               </TabsTrigger>
@@ -144,6 +157,7 @@ export default function ProjectDetailsPage() {
           </div>
 
           <TabsContent value="overview" className="p-6 space-y-4 mt-0">
+            {/* ... existing overview content ... */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main Content - Left Side */}
               <div className="lg:col-span-2 space-y-6">
@@ -249,6 +263,14 @@ export default function ProjectDetailsPage() {
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="gantt" className="p-6 mt-0">
+            <ProjectGantt tasks={tasks} />
+          </TabsContent>
+
+          <TabsContent value="wiki" className="p-6 mt-0">
+            <ProjectWiki projectUid={project.uid || ""} />
           </TabsContent>
 
           <TabsContent value="finance" className="p-6 mt-0">
