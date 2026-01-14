@@ -56,12 +56,22 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
     setIsEditing(false);
   };
 
+  // Helper to get CSRF token from cookies
+  const getCsrfToken = () => {
+    if (typeof document === "undefined") return "";
+    const match = document.cookie.match(new RegExp("(^| )csrf-token=([^;]+)"));
+    return match ? match[2] : "";
+  };
+
   const handleCreate = async () => {
     const newTitle = "Untitled Page";
     try {
       const res = await fetch(`/api/projects/${projectUid}/wiki`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": getCsrfToken(),
+        },
         body: JSON.stringify({ title: newTitle, content: "" }),
       });
 
@@ -71,6 +81,9 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
         selectPage(data.page);
         setIsEditing(true); // Auto enter edit mode
         show("success", "Page created");
+      } else {
+        const err = await res.json();
+        show("error", err.error || "Failed to create page");
       }
     } catch (error) {
       show("error", "Failed to create page");
@@ -85,7 +98,10 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
         `/api/projects/${projectUid}/wiki/${selectedPageId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": getCsrfToken(),
+          },
           body: JSON.stringify({ title: editorTitle, content: editorContent }),
         }
       );
@@ -102,6 +118,9 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
         );
         setIsEditing(false);
         show("success", "Saved changes");
+      } else {
+        const err = await res.json();
+        show("error", err.error || "Failed to save");
       }
     } catch (error) {
       show("error", "Failed to save");
@@ -120,6 +139,9 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
         `/api/projects/${projectUid}/wiki/${selectedPageId}`,
         {
           method: "DELETE",
+          headers: {
+            "x-csrf-token": getCsrfToken(),
+          },
         }
       );
 
@@ -131,6 +153,9 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
         setEditorContent("");
         if (newPages.length > 0) selectPage(newPages[0]);
         show("success", "Page deleted");
+      } else {
+        const err = await res.json();
+        show("error", err.error || "Failed to delete");
       }
     } catch (error) {
       show("error", "Failed to delete");
