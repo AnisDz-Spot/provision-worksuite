@@ -39,8 +39,10 @@ export async function GET(
     }
 
     // Access Check (Basic: Public, or Member, or Owner)
-    const isMember = project.members.some((m) => m.userId === user.id);
-    const isOwner = project.userId === user.id;
+    // AuthUser.id is a string, but DB stores userId as Int. We try to match either.
+    const userIdNum = user.id ? parseInt(user.id) : -1;
+    const isMember = project.members.some((m: any) => m.userId === userIdNum);
+    const isOwner = project.userId === userIdNum;
     if (project.visibility === "private" && !isMember && !isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
