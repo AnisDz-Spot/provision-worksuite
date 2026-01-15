@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/auth";
+import { getAuthenticatedUser, isAdmin } from "@/lib/auth";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 
 export async function PUT(
@@ -40,8 +40,9 @@ export async function PUT(
     const userIdNum = user.id ? parseInt(user.id) : -1;
     const isMember = project.members.some((m: any) => m.userId === userIdNum);
     const isOwner = project.userId === userIdNum;
+    const isUserAdmin = isAdmin(user);
 
-    if (!isMember && !isOwner) {
+    if (!isMember && !isOwner && !isUserAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -106,8 +107,9 @@ export async function DELETE(
     const userIdNum = user.id ? parseInt(user.id) : -1;
     const isMember = project.members.some((m: any) => m.userId === userIdNum);
     const isOwner = project.userId === userIdNum;
+    const isUserAdmin = isAdmin(user);
 
-    if (!isMember && !isOwner) {
+    if (!isMember && !isOwner && !isUserAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
