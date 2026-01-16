@@ -63,7 +63,7 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
     return match ? match[2] : "";
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (parentId?: string | null) => {
     const newTitle = "Untitled Page";
     try {
       const res = await fetch(`/api/projects/${projectUid}/wiki`, {
@@ -72,7 +72,11 @@ export function ProjectWiki({ projectUid }: ProjectWikiProps) {
           "Content-Type": "application/json",
           "x-csrf-token": getCsrfToken(),
         },
-        body: JSON.stringify({ title: newTitle, content: "" }),
+        body: JSON.stringify({
+          title: newTitle,
+          content: "",
+          parentId: parentId || null,
+        }),
       });
 
       if (res.ok) {
