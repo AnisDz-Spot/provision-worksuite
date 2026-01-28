@@ -55,7 +55,12 @@ export async function signToken(payload: AuthUser): Promise<string> {
 export async function verifyToken(token: string): Promise<AuthUser | null> {
   try {
     const secret = new TextEncoder().encode(getJwtSecret());
+    console.log("[Auth] Verifying token...", {
+      tokenPrefix: token.substring(0, 10),
+      secretPrefix: getJwtSecret().substring(0, 5),
+    });
     const { payload } = await jwtVerify(token, secret);
+    console.log("[Auth] Token verified successfully");
     return payload as unknown as AuthUser;
   } catch (error: any) {
     console.error("[Auth] Token verification failed:", error?.message || error);
