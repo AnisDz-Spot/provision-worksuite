@@ -33,7 +33,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
           error: "Invalid credentials format",
           details: validation.error,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -71,7 +71,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
               error:
                 "Global Admin access is disabled in Live Mode. Please use your registered administrator account.",
             },
-            { status: 403 }
+            { status: 403 },
           );
         }
       } catch (e) {
@@ -111,7 +111,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       ) {
         log.warn(
           { err: dbError },
-          "DB query failed, but allowing global admin backdoor"
+          "DB query failed, but allowing global admin backdoor",
         );
         dbUser = null; // Will be handled below
       } else {
@@ -144,13 +144,17 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     }
 
     if (!user) {
-      log.warn({ email }, "Login attempt with non-existent email");
+      log.warn(
+        { email },
+        "Login attempt with non-existent email (returning 401)",
+      );
       return NextResponse.json(
         {
           success: false,
           error: "Invalid email or password",
+          debug: "User not found",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -158,16 +162,20 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     if (user.uid !== "admin-global") {
       const passwordMatch = await bcrypt.compare(
         password,
-        user.passwordHash || ""
+        user.passwordHash || "",
       );
       if (!passwordMatch) {
-        log.warn({ email }, "Login attempt with incorrect password");
+        log.warn(
+          { email },
+          "Login attempt with incorrect password (returning 401)",
+        );
         return NextResponse.json(
           {
             success: false,
             error: "Invalid email or password",
+            debug: "Password mismatch",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
     }
@@ -183,7 +191,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
             requires2FA: true,
             message: "Two-factor authentication required",
           },
-          { status: 200 }
+          { status: 200 },
         ); // Using 200 so client sees body, or use 401? Standard is 200 with specific payload or 403
       }
 
@@ -200,7 +208,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
         // If hashed, we need to hash input code and check existance
         // If stored plain:
         const codeIndex = user.backupCodes.findIndex(
-          (c: string) => c === twoFactorCode
+          (c: string) => c === twoFactorCode,
         );
 
         if (codeIndex !== -1) {
@@ -220,7 +228,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
         try {
           const secret = await decryptSecretForTenant(
             user.twoFactorSecret!,
-            user.tenantId
+            user.tenantId,
           );
           isVerified = verifyToken(secret, twoFactorCode);
         } catch (err) {
@@ -236,7 +244,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
             error: "Invalid authentication code",
             requires2FA: true,
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
     }
@@ -260,7 +268,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
           });
           log.info(
             { userId: user.id },
-            "Synchronized Master Admin role in database"
+            "Synchronized Master Admin role in database",
           );
           // Update local user object so the JWT contains the correct role
           user.role = "Master Admin";
@@ -285,7 +293,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     } catch (e) {
       console.warn(
         "[Login] Failed to create session record, but proceeding with token",
-        e
+        e,
       );
     }
 
@@ -322,7 +330,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     };
 
     console.log(
-      `[Login] Setting auth-token. Production: ${isProduction}, Localhost: ${isLocalhost}, Secure: ${cookieOptions.secure}`
+      `[Login] Setting auth-token. Production: ${isProduction}, Localhost: ${isLocalhost}, Secure: ${cookieOptions.secure}`,
     );
 
     response.cookies.set(cookieOptions);
@@ -343,7 +351,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
           error: "Database not initialized. Please run setup.",
           setupRequired: true,
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -355,7 +363,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
         debug:
           process.env.NODE_ENV === "development" ? error?.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
