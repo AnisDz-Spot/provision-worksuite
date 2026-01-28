@@ -27,7 +27,8 @@ const getJwtSecret = () => {
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
       throw new Error(
-        "CRITICAL SECURITY ERROR: JWT_SECRET is missing in production environment.",
+        "CRITICAL SECURITY ERROR: JWT_SECRET is missing. " +
+          "For On-Premise installations, please run 'node scripts/setup-secrets.js' or set the JWT_SECRET environment variable.",
       );
     }
     console.warn(

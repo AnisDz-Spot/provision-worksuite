@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/migrate.js && next build",
+    "build": "node scripts/setup-secrets.js && node scripts/migrate.js && next build",
     "build:skip-migrate": "SKIP_DB_MIGRATE=true next build",
     "start": "next start",
     "lint": "eslint",

@@ -3,6 +3,9 @@ set -e
 
 echo "ProVision WorkSuite - Starting..."
 
+# Ensure security secrets are set for this installation
+node scripts/setup-secrets.js
+
 # Check if database URL is set
 if [ -z "$DATABASE_URL" ] && [ -z "$POSTGRES_URL" ]; then
   echo "ERROR: No database URL configured."
