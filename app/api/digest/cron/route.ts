@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   if (secret !== CRON_SECRET) {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -75,13 +75,12 @@ export async function GET(req: Request) {
 
       // 6. Gather data and send
       console.log(
-        `[Digest Cron] Triggering digest for user: ${setting.user.email}`
+        `[Digest Cron] Triggering digest for user: ${setting.user.email}`,
       );
       try {
         // Gather data based on users uid (which is what tasks/projects project_id/user_id use)
-        // Note: Currently getDigestData uses global prisma, so it might need the uid if we want filtered data.
-        // For now we use the global gatherer.
-        const digestData = await getDigestData();
+        // Now getDigestData supports userId (setting.userId is the Int ID)
+        const digestData = await getDigestData(setting.userId);
         const htmlContent = generateHTMLDigest(digestData);
 
         const subject = `Weekly Project Digest - ${digestData.weekRange}`;
@@ -92,7 +91,7 @@ export async function GET(req: Request) {
             subject,
             text: `Weekly Project Digest for ${digestData.weekRange}\n\nView the full digest in HTML email.`,
             html: htmlContent,
-          })
+          }),
         );
 
         const sendResults = await Promise.all(sendPromises);
@@ -113,7 +112,7 @@ export async function GET(req: Request) {
       } catch (err: any) {
         console.error(
           `[Digest Cron] Error processing user ${setting.user.email}:`,
-          err
+          err,
         );
         results.push({
           user: setting.user.email,
@@ -133,7 +132,7 @@ export async function GET(req: Request) {
     console.error("[Digest Cron] Global error:", error);
     return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

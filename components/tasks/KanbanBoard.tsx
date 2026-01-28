@@ -88,7 +88,7 @@ export function KanbanBoard({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("You");
   const [newTaskDue, setNewTaskDue] = useState(
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   );
   const [newTaskPriority, setNewTaskPriority] = useState("medium");
   const [newTaskEstimate, setNewTaskEstimate] = useState<string>("");
@@ -173,7 +173,7 @@ export function KanbanBoard({
     const role = currentUser.role?.toLowerCase() || "";
     return (
       ["admin", "administrator", "master admin", "project manager"].includes(
-        role
+        role,
       ) || currentUser.uid === "admin-global"
     );
   }, [currentUser]);
@@ -202,7 +202,7 @@ export function KanbanBoard({
           !projectId ||
           t.projectId === projectId ||
           t.projectId === projectUid ||
-          (shouldUseMockData() && !t.projectId)
+          (shouldUseMockData() && !t.projectId),
       )
       .map((t: any) => ({
         id: t.uid || t.id,
@@ -308,7 +308,7 @@ export function KanbanBoard({
         ) {
           list.add(t.assignee);
         }
-      })
+      }),
     );
     return Array.from(list);
   }, [columns, projectMembers, currentUser]);
@@ -317,7 +317,7 @@ export function KanbanBoard({
   const onDragStart = (
     e: React.DragEvent<HTMLDivElement>,
     colId: string,
-    taskId: string
+    taskId: string,
   ) => {
     setDraggedTask(taskId);
     e.dataTransfer.setData("text/plain", JSON.stringify({ colId, taskId }));
@@ -335,7 +335,7 @@ export function KanbanBoard({
     if (!isAuthorized) {
       show(
         "error",
-        "Unauthorized: Only admins and project managers can manage tasks"
+        "Unauthorized: Only admins and project managers can manage tasks",
       );
       return;
     }
@@ -348,7 +348,7 @@ export function KanbanBoard({
       if (colId === targetColId) return;
 
       const taskToMove = allTasks?.find(
-        (t: any) => (t.uid || t.id) === taskId
+        (t: any) => (t.uid || t.id) === taskId,
       ) as any;
       if (!taskToMove || !projectId) return;
 
@@ -368,7 +368,7 @@ export function KanbanBoard({
         // Optimistic update
         if (allTasks) {
           const nextTasks = allTasks.map((t: any) =>
-            (t.uid || t.id) === taskId ? { ...t, status: targetColId } : t
+            (t.uid || t.id) === taskId ? { ...t, status: targetColId } : t,
           );
           setAllTasks(nextTasks);
         }
@@ -401,7 +401,9 @@ export function KanbanBoard({
     setNewTaskTitle("");
     setNewTaskAssignee("You");
     setNewTaskDue(
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
     );
     setNewTaskPriority("medium");
     setNewTaskEstimate("");
@@ -418,7 +420,7 @@ export function KanbanBoard({
     setEditDue(task.due);
     setEditPriority(task.priority);
     setEditEstimate(
-      task.estimateHours != null ? task.estimateHours.toString() : ""
+      task.estimateHours != null ? task.estimateHours.toString() : "",
     );
     setEditMilestone(task.milestoneId || "");
     setEditDescription(task.description || "");
@@ -502,7 +504,7 @@ export function KanbanBoard({
       return prev.map((t: Task) =>
         t.id === detailTask.id
           ? { ...t, loggedHours: optimisticLoggedHours }
-          : t
+          : t,
       );
     });
 
@@ -518,7 +520,7 @@ export function KanbanBoard({
         projectId,
         value,
         timeLogNote.trim(),
-        detailTask.assignee
+        detailTask.assignee,
       );
 
       if (result) {
@@ -537,7 +539,7 @@ export function KanbanBoard({
           return prev.map((t: Task) =>
             t.id === detailTask.id
               ? { ...t, loggedHours: previousLoggedHours }
-              : t
+              : t,
           );
         });
         setDetailTask((prev: any) => ({
@@ -553,7 +555,7 @@ export function KanbanBoard({
         return prev.map((t: Task) =>
           t.id === detailTask.id
             ? { ...t, loggedHours: previousLoggedHours }
-            : t
+            : t,
         );
       });
       setDetailTask((prev: any) => ({
@@ -749,11 +751,11 @@ export function KanbanBoard({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex overflow-x-auto pb-4 gap-6 snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
         {isLoading && !allTasks ? (
           <>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="space-y-4">
+              <div key={i} className="min-w-[85vw] md:min-w-0 space-y-4">
                 <Skeleton className="h-10 w-full rounded-xl" />
                 <Skeleton className="h-32 w-full rounded-xl" />
                 <Skeleton className="h-32 w-full rounded-xl" />
@@ -763,53 +765,54 @@ export function KanbanBoard({
         ) : (
           columns
             .filter((c) =>
-              filterStatus === "all" ? true : c.id === filterStatus
+              filterStatus === "all" ? true : c.id === filterStatus,
             )
             .map((col) => (
-              <BoardColumn
-                key={col.id}
-                col={col}
-                filterAssignee={filterAssignee}
-                filterMilestone={filterMilestone}
-                isAuthorized={isAuthorized}
-                selectMode={selectMode}
-                selectedIds={selectedIds}
-                draggedTask={draggedTask}
-                priorityColors={priorityColors}
-                onDragOver={onDragOver}
-                onDrop={onDrop}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-                onTaskClick={(task) => {
-                  if (selectMode) {
-                    const next = new Set(selectedIds);
-                    if (next.has(task.id)) {
-                      next.delete(task.id);
+              <div key={col.id} className="min-w-[85vw] md:min-w-0 snap-center">
+                <BoardColumn
+                  col={col}
+                  filterAssignee={filterAssignee}
+                  filterMilestone={filterMilestone}
+                  isAuthorized={isAuthorized}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  draggedTask={draggedTask}
+                  priorityColors={priorityColors}
+                  onDragOver={onDragOver}
+                  onDrop={onDrop}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  onTaskClick={(task) => {
+                    if (selectMode) {
+                      const next = new Set(selectedIds);
+                      if (next.has(task.id)) {
+                        next.delete(task.id);
+                      } else {
+                        next.add(task.id);
+                      }
+                      setSelectedIds(next);
                     } else {
-                      next.add(task.id);
+                      setDetailTask(task);
+                      setDetailOpen(true);
                     }
+                  }}
+                  onSelectToggle={(taskId, selected) => {
+                    const next = new Set(selectedIds);
+                    if (selected) next.add(taskId);
+                    else next.delete(taskId);
                     setSelectedIds(next);
-                  } else {
-                    setDetailTask(task);
-                    setDetailOpen(true);
-                  }
-                }}
-                onSelectToggle={(taskId, selected) => {
-                  const next = new Set(selectedIds);
-                  if (selected) next.add(taskId);
-                  else next.delete(taskId);
-                  setSelectedIds(next);
-                }}
-                onDeleteTaskClick={(colId, tId, tTitle) => {
-                  setDeleteCardConfirm({
-                    columnId: colId,
-                    taskId: tId,
-                    taskTitle: tTitle,
-                  });
-                }}
-                onAddTaskClick={openAddModal}
-                checkIsBlocked={checkIsBlocked}
-              />
+                  }}
+                  onDeleteTaskClick={(colId, tId, tTitle) => {
+                    setDeleteCardConfirm({
+                      columnId: colId,
+                      taskId: tId,
+                      taskTitle: tTitle,
+                    });
+                  }}
+                  onAddTaskClick={openAddModal}
+                  checkIsBlocked={checkIsBlocked}
+                />
+              </div>
             ))
         )}
       </div>

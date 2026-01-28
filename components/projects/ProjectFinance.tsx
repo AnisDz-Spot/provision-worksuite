@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -8,7 +9,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToaster } from "@/components/ui/Toaster";
 import { useLoading } from "@/context/LoadingContext";
-import { fetchWithCsrf } from "@/lib/csrf-client";
+import {
+  addExpense,
+  createInvoice,
+  updateProjectBudget,
+} from "@/actions/finance";
 import {
   DollarSign,
   Receipt,
@@ -27,6 +32,8 @@ interface ProjectFinanceProps {
   budget?: number;
   spent?: number;
   onUpdate?: () => void;
+  initialExpenses?: any[];
+  initialInvoices?: any[];
 }
 
 export function ProjectFinance({
@@ -36,14 +43,30 @@ export function ProjectFinance({
   budget = 0,
   spent = 0,
   onUpdate,
+  initialExpenses = [],
+  initialInvoices = [],
 }: ProjectFinanceProps) {
   const { show } = useToaster();
   const { showLoader, hideLoader } = useLoading();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      show("success", "Payment successful! Invoice updated.");
+      // Optional: Clear param
+      router.replace(`/projects/${projectId}?tab=invoices`);
+      onUpdate?.(); // Refresh data
+    } else if (searchParams.get("payment") === "cancelled") {
+      show("error", "Payment cancelled.");
+      router.replace(`/projects/${projectId}?tab=invoices`);
+    }
+  }, [searchParams, projectId, show, router, onUpdate]);
   const [activeTab, setActiveTab] = useState<
     "overview" | "expenses" | "invoices" | "budget"
   >("overview");
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>(initialExpenses);
+  const [invoices, setInvoices] = useState<any[]>(initialInvoices);
 
   // Expense State
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
@@ -72,16 +95,14 @@ export function ProjectFinance({
   });
 
   useEffect(() => {
-    // Determine which ID to use for fetching.
-    // The API mostly uses integer IDs for relations but might accept UID in query params if adjusted.
-    // For now, let's assume we can fetch by project UID if the API supports it, or we rely on the parent to pass data.
-    // However, to be self-contained, we should fetch.
+    // Only fetch if initial data is missing (client-side navigation/updates)
+    // If initialExpenses is provided (SSR), we assume it's fresh enough for initial render.
 
     // Fetch Expenses
     const fetchExpenses = async () => {
       try {
         const res = await fetch(`/api/expenses?project=${projectId}`).then(
-          (r) => r.json()
+          (r) => r.json(),
         );
         if (res.success) {
           const all = res.data || [];
@@ -89,8 +110,8 @@ export function ProjectFinance({
             all.filter(
               (e: any) =>
                 String(e.projectId) === String(projectId) ||
-                e.project?.uid === projectUid
-            )
+                e.project?.uid === projectUid,
+            ),
           );
         }
       } catch (e) {
@@ -102,7 +123,7 @@ export function ProjectFinance({
     const fetchInvoices = async () => {
       try {
         const res = await fetch(`/api/invoices?project=${projectId}`).then(
-          (r) => r.json()
+          (r) => r.json(),
         );
         if (res.success) {
           const all = res.data || [];
@@ -110,8 +131,8 @@ export function ProjectFinance({
             all.filter(
               (i: any) =>
                 String(i.projectId) === String(projectId) ||
-                i.project?.uid === projectUid
-            )
+                i.project?.uid === projectUid,
+            ),
           );
         }
       } catch (e) {
@@ -119,9 +140,23 @@ export function ProjectFinance({
       }
     };
 
-    if (activeTab === "expenses" || activeTab === "overview") fetchExpenses();
-    if (activeTab === "invoices" || activeTab === "overview") fetchInvoices();
-  }, [projectId, projectUid, activeTab]);
+    if (
+      (activeTab === "expenses" || activeTab === "overview") &&
+      initialExpenses.length === 0
+    )
+      fetchExpenses();
+    if (
+      (activeTab === "invoices" || activeTab === "overview") &&
+      initialInvoices.length === 0
+    )
+      fetchInvoices();
+  }, [
+    projectId,
+    projectUid,
+    activeTab,
+    initialExpenses.length,
+    initialInvoices.length,
+  ]);
 
   const handleCreateInvoice = async () => {
     if (!newInvoice.clientName || newInvoice.items.length === 0) return;
@@ -129,21 +164,16 @@ export function ProjectFinance({
     try {
       const total = newInvoice.items.reduce(
         (sum, item) => sum + item.quantity * item.rate,
-        0
+        0,
       );
 
-      const res = await fetchWithCsrf("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: Number(projectId) || projectId,
-          ...newInvoice,
-          total,
-        }),
+      const res = await createInvoice({
+        projectId: Number(projectId) || projectId,
+        ...newInvoice,
+        total,
       });
 
-      const data = await res.json();
-      if (data.success) {
+      if (res.success) {
         show("success", "Invoice created");
         setAddInvoiceOpen(false);
         setNewInvoice({
@@ -157,22 +187,11 @@ export function ProjectFinance({
           notes: "",
         });
 
-        // Refresh invoices
-        const refreshed = await fetch(
-          `/api/invoices?project=${projectId}`
-        ).then((r) => r.json());
-        if (refreshed.success) {
-          const all = refreshed.data || [];
-          setInvoices(
-            all.filter(
-              (i: any) =>
-                String(i.projectId) === String(projectId) ||
-                i.project?.uid === projectUid
-            )
-          );
-        }
+        // Optimistic / Local update
+        setInvoices([res.data, ...invoices]);
+        onUpdate?.();
       } else {
-        show("error", data.error || "Failed to create invoice");
+        show("error", res.error || "Failed to create invoice");
       }
     } catch (e) {
       show("error", "Error creating invoice");
@@ -185,17 +204,16 @@ export function ProjectFinance({
     if (!newExpense.amount || !newExpense.description) return;
     showLoader("Adding expense...");
     try {
-      const res = await fetchWithCsrf("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: Number(projectId) || projectId, // Ensure we pass what the API expects (likely number if ID)
-          ...newExpense,
-          note: newExpense.description,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const formData = new FormData();
+      formData.append("projectId", String(projectId));
+      formData.append("amount", newExpense.amount);
+      formData.append("description", newExpense.description);
+      formData.append("vendor", newExpense.vendor);
+      formData.append("date", newExpense.date);
+
+      const res = await addExpense(formData);
+
+      if (res.success) {
         show("success", "Expense added");
         setAddExpenseOpen(false);
         setNewExpense({
@@ -204,22 +222,12 @@ export function ProjectFinance({
           date: new Date().toISOString().slice(0, 10),
           vendor: "",
         });
+
+        // Local Update
+        setExpenses([res.data, ...expenses]);
         onUpdate?.(); // Trigger parent refresh (for health score etc)
-        // Refresh local list
-        const refreshed = await fetch(
-          `/api/expenses?project=${projectId}`
-        ).then((r) => r.json());
-        if (refreshed.success) {
-          setExpenses(
-            refreshed.data.filter(
-              (e: any) =>
-                String(e.projectId) === String(projectId) ||
-                e.project?.uid === projectUid
-            )
-          );
-        }
       } else {
-        show("error", data.error || "Failed to add expense");
+        show("error", res.error || "Failed to add expense");
       }
     } catch (e) {
       show("error", "Error creating expense");
@@ -229,26 +237,41 @@ export function ProjectFinance({
   };
 
   const handleUpdateBudget = async () => {
-    if (!newBudget) return;
+    if (!newBudget || !projectUid) return;
     showLoader("Updating budget...");
     try {
-      // We'll use the generic project update endpoint (which we might need to verify exists or create)
-      // Usually PUT /api/projects/[uid]
-      const res = await fetchWithCsrf(`/api/projects/${projectUid}`, {
-        method: "PATCH", // or PUT
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ budget: parseFloat(newBudget) }),
-      });
+      const res = await updateProjectBudget(projectUid, parseFloat(newBudget));
 
-      if (res.ok) {
+      if (res.success) {
         show("success", "Budget updated");
         setEditBudgetOpen(false);
         onUpdate?.();
       } else {
-        show("error", "Failed to update budget");
+        show("error", res.error || "Failed to update budget");
       }
     } catch (e) {
       show("error", "Error updating budget");
+    } finally {
+      hideLoader();
+    }
+  };
+
+  const handlePayNow = async (invoiceId: string) => {
+    showLoader("Preparing checkout...");
+    try {
+      const res = await fetch("/api/payments/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId, projectId: projectId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        show("error", data.error || "Failed to create checkout session");
+      }
+    } catch (e) {
+      show("error", "Payment initialization failed");
     } finally {
       hideLoader();
     }
@@ -388,14 +411,16 @@ export function ProjectFinance({
                   No expenses recorded.
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="p-3 text-left">Date</th>
-                        <th className="p-3 text-left">Description</th>
-                        <th className="p-3 text-left">Vendor</th>
-                        <th className="p-3 text-right">Amount</th>
+                        <th className="p-3 text-left min-w-[100px]">Date</th>
+                        <th className="p-3 text-left min-w-[200px]">
+                          Description
+                        </th>
+                        <th className="p-3 text-left min-w-[100px]">Vendor</th>
+                        <th className="p-3 text-right min-w-[100px]">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -435,14 +460,15 @@ export function ProjectFinance({
                   No invoices found.
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="p-3 text-left">Date</th>
-                        <th className="p-3 text-left">Client</th>
-                        <th className="p-3 text-left">Status</th>
-                        <th className="p-3 text-right">Total</th>
+                        <th className="p-3 text-left min-w-[100px]">Date</th>
+                        <th className="p-3 text-left min-w-[150px]">Client</th>
+                        <th className="p-3 text-left min-w-[100px]">Status</th>
+                        <th className="p-3 text-right min-w-[100px]">Total</th>
+                        <th className="p-3 text-right w-[100px]">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -463,6 +489,17 @@ export function ProjectFinance({
                           </td>
                           <td className="p-3 text-right font-medium">
                             {formatCurrency(i.total)}
+                          </td>
+                          <td className="p-3 text-right">
+                            {i.status !== "paid" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePayNow(i.id)}
+                              >
+                                Pay Now
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -635,7 +672,7 @@ export function ProjectFinance({
               <Button className="flex-1" onClick={handleCreateInvoice}>
                 Create Invoice (
                 {formatCurrency(
-                  newInvoice.items[0].rate * newInvoice.items[0].quantity
+                  newInvoice.items[0].rate * newInvoice.items[0].quantity,
                 )}
                 )
               </Button>

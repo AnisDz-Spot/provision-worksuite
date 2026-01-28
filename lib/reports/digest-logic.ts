@@ -4,11 +4,15 @@ import { DigestData } from "@/components/reports/digest/types";
  * Gather data for the weekly digest
  * Can be used by both API routes and background tasks
  */
-export async function getDigestData(projectId?: string): Promise<DigestData> {
+export async function getDigestData(
+  userId?: number,
+  projectId?: string,
+): Promise<DigestData> {
   const { shouldUseDatabaseData } = await import("@/lib/dataSource");
 
   // Mock Data Logic
   if (!shouldUseDatabaseData()) {
+    // ... keep existing mock logic unchanged ...
     return {
       weekRange: "Dec 3 - Dec 9, 2025",
       summary: {
@@ -74,37 +78,60 @@ export async function getDigestData(projectId?: string): Promise<DigestData> {
   try {
     const prisma = (await import("@/lib/prisma")).default;
 
+    // Build WhereInput for Projects
+    // If specific projectId is requested, use that.
+    // Else if userId is provided, filter by membership/ownership.
+    // Note: Schema for ProjectMember is `model ProjectMember { user User ... }`
+    // And Project has `members ProjectMember[]`
+
+    let projectWhere: any = {};
+
+    if (projectId) {
+      projectWhere.uid = projectId;
+    } else if (userId) {
+      projectWhere.OR = [
+        // User is a member
+        { members: { some: { userId: userId } } },
+        // OR User is the creator/owner (if such field exists, usually handled by membership, but checking Project schema...)
+        // Project schema: createdBy is not explicitly a relation to User ID usually in this schema style?
+        // Let's rely on members list. If creator isn't in members, they won't see it? usually they are added.
+      ];
+    }
+
     // Load projects and tasks directly from DB
-    const [projects, tasks] = await Promise.all([
-      prisma.project.findMany({
-        where: projectId ? { uid: projectId } : {},
-        select: {
-          id: true,
-          uid: true,
-          name: true,
-          status: true,
-          deadline: true,
-          priority: true,
-          _count: {
-            select: {
-              tasks: { where: { status: { in: ["Done", "Completed"] } } },
-            },
+    const projects = await prisma.project.findMany({
+      where: projectWhere,
+      select: {
+        id: true,
+        uid: true,
+        name: true,
+        status: true,
+        deadline: true,
+        priority: true,
+        _count: {
+          select: {
+            tasks: { where: { status: { in: ["Done", "Completed"] } } },
           },
         },
-      }),
-      prisma.task.findMany({
-        where: projectId ? { projectId } : {},
-      }),
-    ]);
+      },
+    });
+
+    // Get IDs to fetch tasks
+    const projectIds = projects.map((p: any) => p.id);
+
+    // Fetch tasks for these projects
+    const tasks = await prisma.task.findMany({
+      where: { projectId: { in: projectIds } },
+    });
 
     const completed = tasks.filter(
-      (t: any) => t.status === "Done" || t.status === "Completed"
+      (t: any) => t.status === "Done" || t.status === "Completed",
     ).length;
     const inProgress = tasks.filter(
-      (t: any) => t.status === "In Progress" || t.status === "in_progress"
+      (t: any) => t.status === "In Progress" || t.status === "in_progress",
     ).length;
     const blocked = tasks.filter(
-      (t: any) => t.status === "Blocked" || t.status === "blocked"
+      (t: any) => t.status === "Blocked" || t.status === "blocked",
     ).length;
     const overallProgress =
       tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
@@ -133,7 +160,7 @@ export async function getDigestData(projectId?: string): Promise<DigestData> {
       const pTasks = tasks.filter((t: any) => t.projectId === ps.id);
       if (pTasks.length > 0) {
         const pCompleted = pTasks.filter(
-          (t: any) => t.status === "Done" || t.status === "Completed"
+          (t: any) => t.status === "Done" || t.status === "Completed",
         ).length;
         ps.progress = Math.round((pCompleted / pTasks.length) * 100);
       }

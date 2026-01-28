@@ -25,8 +25,13 @@ const GLOBAL_ADMIN = {
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "CRITICAL SECURITY ERROR: JWT_SECRET is missing in production environment.",
+      );
+    }
     console.warn(
-      "⚠️ WARNING: JWT_SECRET is missing. Using fallback secret for Dummy Mode."
+      "⚠️ WARNING: JWT_SECRET is missing. Using fallback secret for Dummy Mode (Dev only).",
     );
     return "dummy-jwt-secret-dev-only";
   }
