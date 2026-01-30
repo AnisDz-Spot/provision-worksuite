@@ -25,15 +25,18 @@ type Project = {
 
 interface GanttChartProps {
   projects: Project[];
-  dependencies: { projectId: string; dependsOn: string[] }[];
+  dependencies: {
+    projectId: string | number;
+    dependsOn: (string | number)[];
+  }[];
 }
 
 export function GanttChart({ projects, dependencies }: GanttChartProps) {
   const router = useRouter();
   const [viewDate, setViewDate] = React.useState(new Date());
-  const [hoveredProject, setHoveredProject] = React.useState<string | null>(
-    null,
-  );
+  const [hoveredProject, setHoveredProject] = React.useState<
+    string | number | null
+  >(null);
   const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
   // Calculate view range (show 3 months)
@@ -71,15 +74,18 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
     return { left, width, startOffset, endOffset };
   };
 
-  const getDependencyLines = (projectId: string) => {
-    const dep = dependencies.find((d) => d.projectId === projectId);
+  const getDependencyLines = (projectId: string | number) => {
+    const pid = String(projectId);
+    const dep = dependencies.find((d) => String(d.projectId) === pid);
     if (!dep || dep.dependsOn.length === 0) return [];
 
     return dep.dependsOn
       .map((depId) => {
-        const sourceProject = projects.find((p) => p.id === depId);
+        const sourceProject = projects.find(
+          (p) => String(p.id) === String(depId),
+        );
         if (!sourceProject) return null;
-        return { sourceId: depId, sourceName: sourceProject.name };
+        return { sourceId: String(depId), sourceName: sourceProject.name };
       })
       .filter(Boolean);
   };
