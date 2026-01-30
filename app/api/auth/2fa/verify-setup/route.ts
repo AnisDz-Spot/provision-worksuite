@@ -41,7 +41,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     if (!dbUser?.twoFactorSecret) {
       return NextResponse.json(
         { error: "2FA setup not initiated. Request new setup." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -49,8 +49,15 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
     try {
       const secret = await decryptSecretForTenant(
         dbUser.twoFactorSecret,
-        user.tenantId
+        user.tenantId,
       );
+
+      if (!secret) {
+        return NextResponse.json(
+          { error: "Decryption failed. Your encryption key may have changed." },
+          { status: 500 },
+        );
+      }
 
       // 5. Verify token against secret
       const isValid = verifyToken(secret, token);
@@ -58,7 +65,7 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       if (!isValid) {
         return NextResponse.json(
           { error: "Invalid verification code" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -89,14 +96,14 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
       console.error("2FA verification error:", error);
       return NextResponse.json(
         { error: "Verification failed due to server error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
   } catch (error) {
     console.error("Error verifying 2FA setup:", error);
     return NextResponse.json(
       { error: "Failed to verify 2FA Setup" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 });
