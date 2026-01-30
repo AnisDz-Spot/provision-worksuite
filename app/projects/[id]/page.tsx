@@ -14,9 +14,20 @@ export default async function ProjectDetailsPage({
 
   if (!id) return notFound();
 
-  // Parallel data fetching for performance
-  const [project, allProjects] = await Promise.all([
-    prisma.project.findUnique({
+  // Try finding by Slug first, then UID, then ID (Int)
+  let project = await prisma.project.findFirst({
+    where: { slug: id },
+    include: {
+      members: { include: { user: true } },
+      tasks: { include: { assignee: true } },
+      milestones: true,
+      department: true,
+      client: true,
+    },
+  });
+
+  if (!project) {
+    project = await prisma.project.findFirst({
       where: { uid: id },
       include: {
         members: { include: { user: true } },
@@ -25,11 +36,28 @@ export default async function ProjectDetailsPage({
         department: true,
         client: true,
       },
-    }),
-    prisma.project.findMany({
-      select: { id: true, uid: true, name: true },
-    }),
-  ]);
+    });
+  }
+
+  if (!project) {
+    const idAsInt = parseInt(id);
+    if (!isNaN(idAsInt)) {
+      project = await prisma.project.findUnique({
+        where: { id: idAsInt },
+        include: {
+          members: { include: { user: true } },
+          tasks: { include: { assignee: true } },
+          milestones: true,
+          department: true,
+          client: true,
+        },
+      });
+    }
+  }
+
+  const allProjects = await prisma.project.findMany({
+    select: { id: true, uid: true, name: true, slug: true },
+  });
 
   if (!project) {
     return (
