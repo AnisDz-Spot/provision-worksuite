@@ -45,28 +45,33 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
     };
 
     // Sort to follow requested hierarchy
-    return list.sort((a, b) => {
-      const aName = a.user?.name || a.name || "";
-      const bName = b.user?.name || b.name || "";
-      const aUid = a.user?.uid || a.uid || a.id;
-      const bUid = b.user?.uid || b.uid || b.id;
-      const aRole = a.user?.role || a.role || "";
-      const bRole = b.user?.role || b.role || "";
+    return list
+      .sort((a, b) => {
+        const aName = a.user?.name || a.name || "";
+        const bName = b.user?.name || b.name || "";
+        const aUid = a.user?.uid || a.uid || a.id;
+        const bUid = b.user?.uid || b.uid || b.id;
+        const aRole = a.user?.role || a.role || "";
+        const bRole = b.user?.role || b.role || "";
 
-      const aWeight = getRoleWeight(aRole);
-      const bWeight = getRoleWeight(bRole);
+        const aWeight = getRoleWeight(aRole);
+        const bWeight = getRoleWeight(bRole);
 
-      if (aWeight !== bWeight) return aWeight - bWeight;
+        if (aWeight !== bWeight) return aWeight - bWeight;
 
-      // If weights are equal, prioritize owner
-      const isAOwner = a.isOwner || aUid === (project as any).ownerId;
-      const isBOwner = b.isOwner || bUid === (project as any).ownerId;
-      if (isAOwner && !isBOwner) return -1;
-      if (!isAOwner && isBOwner) return 1;
+        // If weights are equal, prioritize owner
+        const isAOwner = a.isOwner || aUid === (project as any).ownerId;
+        const isBOwner = b.isOwner || bUid === (project as any).ownerId;
+        if (isAOwner && !isBOwner) return -1;
+        if (!isAOwner && isBOwner) return 1;
 
-      // Fallback to name sorting
-      return aName.localeCompare(bName);
-    });
+        // Fallback to name sorting
+        return aName.localeCompare(bName);
+      })
+      .map((m) => ({
+        ...m,
+        name: m.user?.name || m.name || "Unknown Member",
+      }));
   }, [project]);
 
   const members = processedMembers;
@@ -98,16 +103,18 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
                 className="w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition-transform"
                 title={m.name}
                 onClick={() =>
+                  m.name !== "Unknown Member" &&
                   router.push(
-                    `/team/${m.name.toLowerCase().replace(/\s+/g, "-")}`
+                    `/team/${m.name.toLowerCase().replace(/\s+/g, "-")}`,
                   )
                 }
               />
               <button
                 className="text-sm hover:underline cursor-pointer"
                 onClick={() =>
+                  m.name !== "Unknown Member" &&
                   router.push(
-                    `/team/${m.name.toLowerCase().replace(/\s+/g, "-")}`
+                    `/team/${m.name.toLowerCase().replace(/\s+/g, "-")}`,
                   )
                 }
               >
