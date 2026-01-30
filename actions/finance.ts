@@ -32,20 +32,42 @@ async function verifyProjectAccess(
   return true;
 }
 
-export async function addExpense(formData: FormData) {
+export async function addExpense(input: FormData | any) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const projectId = Number(formData.get("projectId"));
-  const amount = Number(formData.get("amount"));
-  const description = formData.get("description") as string;
-  const vendor = formData.get("vendor") as string;
-  const dateStr = formData.get("date") as string;
+  let projectId: number;
+  let amount: number;
+  let description: string;
+  let vendor: string;
+  let dateStr: string;
+
+  if (input instanceof FormData) {
+    projectId = Number(input.get("projectId"));
+    amount = Number(input.get("amount"));
+    description =
+      (input.get("description") as string) || (input.get("note") as string);
+    vendor = input.get("vendor") as string;
+    dateStr = input.get("date") as string;
+  } else {
+    projectId = Number(input.projectId);
+    amount = Number(input.amount);
+    description = input.note || input.description;
+    vendor = input.vendor;
+    dateStr =
+      input.date instanceof Date
+        ? input.date.toISOString()
+        : String(input.date);
+  }
 
   if (!projectId || !amount || !description || !dateStr) {
-    return { success: false, error: "Missing required fields" };
+    return {
+      success: false,
+      error:
+        "Missing required fields (projectId, amount, note/description, date)",
+    };
   }
 
   const hasAccess = await verifyProjectAccess(projectId, user.uid, user.role);

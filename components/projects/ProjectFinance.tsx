@@ -101,7 +101,7 @@ export function ProjectFinance({
     // Fetch Expenses
     const fetchExpenses = async () => {
       try {
-        const res = await fetch(`/api/expenses?project=${projectId}`).then(
+        const res = await fetch(`/api/expenses?projectId=${projectId}`).then(
           (r) => r.json(),
         );
         if (res.success) {
@@ -122,7 +122,7 @@ export function ProjectFinance({
     // Fetch Invoices
     const fetchInvoices = async () => {
       try {
-        const res = await fetch(`/api/invoices?project=${projectId}`).then(
+        const res = await fetch(`/api/invoices?projectId=${projectId}`).then(
           (r) => r.json(),
         );
         if (res.success) {

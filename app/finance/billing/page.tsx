@@ -43,11 +43,13 @@ export default function BillingPage() {
           if (data?.success) {
             t = (data.data || []).map((row: any) => ({
               id: row.id,
-              projectId: row.project_id,
-              userId: row.logged_by,
+              projectId: String(row.projectId),
+              userId: String(row.loggedBy || row.userId || ""),
               hours: Number(row.hours) || 0,
               rate: undefined,
-              date: new Date(row.logged_at).toISOString().slice(0, 10),
+              date: row.loggedAt
+                ? new Date(row.loggedAt).toISOString().slice(0, 10)
+                : row.date || new Date().toISOString().slice(0, 10),
             }));
           }
         } catch {}
@@ -105,7 +107,7 @@ export default function BillingPage() {
     if (filters.to) params.set("to", filters.to);
     router.replace(
       params.toString() ? `${pathname}?${params.toString()}` : `${pathname}`,
-      { scroll: false }
+      { scroll: false },
     );
   }, [filters, pathname, router]);
 
@@ -140,7 +142,7 @@ export default function BillingPage() {
     const hours = Object.values(byProject).reduce((s, m) => s + m.hours, 0);
     const billable = Object.values(byProject).reduce(
       (s, m) => s + m.billable,
-      0
+      0,
     );
     return { hours, billable };
   }, [byProject]);
