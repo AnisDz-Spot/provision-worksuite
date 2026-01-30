@@ -230,9 +230,29 @@ export const POST = withRateLimit(RATE_LIMITS.AUTH, async (request: any) => {
             user.twoFactorSecret!,
             user.tenantId,
           );
-          isVerified = verifyToken(secret, twoFactorCode);
+
+          if (secret) {
+            isVerified = verifyToken(secret, twoFactorCode);
+          } else {
+            // Decryption failed (potential key mismatch)
+            log.error(
+              { email: user.email },
+              "Decryption failed during 2FA login (ENCRYPTION_KEY mismatch?)",
+            );
+
+            return NextResponse.json(
+              {
+                success: false,
+                error:
+                  "Encryption mismatch. Please use a backup code to recover your account.",
+                requires2FA: true,
+                encryptionError: true,
+              },
+              { status: 401 },
+            );
+          }
         } catch (err) {
-          log.error({ err }, "Decryption failed during 2FA login");
+          log.error({ err }, "Unexpected error during 2FA verification");
           isVerified = false;
         }
       }

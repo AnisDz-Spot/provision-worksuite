@@ -41,7 +41,7 @@ export function generateSecret(): string {
 export async function generateQRCode(
   email: string,
   secret: string,
-  issuer: string = "ProVision WorkSuite"
+  issuer: string = "ProVision WorkSuite",
 ): Promise<string> {
   const otpauthUrl = authenticator.keyuri(email, issuer, secret);
 
@@ -173,21 +173,26 @@ export function encryptSecret(secret: string, encryptionKey: string): string {
  */
 export function decryptSecret(
   encryptedSecret: string,
-  encryptionKey: string
-): string {
-  const [ivHex, encryptedHex, authTagHex] = encryptedSecret.split(":");
+  encryptionKey: string,
+): string | null {
+  try {
+    const [ivHex, encryptedHex, authTagHex] = encryptedSecret.split(":");
 
-  const key = Buffer.from(encryptionKey, "hex");
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
+    const key = Buffer.from(encryptionKey, "hex");
+    const iv = Buffer.from(ivHex, "hex");
+    const authTag = Buffer.from(authTagHex, "hex");
 
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(authTag);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
 
-  let decrypted = decipher.update(encryptedHex, "hex", "utf8");
-  decrypted += decipher.final("utf8");
+    let decrypted = decipher.update(encryptedHex, "hex", "utf8");
+    decrypted += decipher.final("utf8");
 
-  return decrypted;
+    return decrypted;
+  } catch (error) {
+    console.error("[TOTP] Decryption failed:", error);
+    return null;
+  }
 }
 
 /**
@@ -200,7 +205,7 @@ export function decryptSecret(
  */
 export async function encryptSecretForTenant(
   secret: string,
-  tenantId: string | null
+  tenantId: string | null,
 ): Promise<string> {
   // Fall back to global key for non-tenant users
   if (!tenantId) {
@@ -222,7 +227,7 @@ export async function encryptSecretForTenant(
 
     if (!tenant) {
       console.warn(
-        `[TOTP] Tenant ${tenantId} not found, falling back to global key`
+        `[TOTP] Tenant ${tenantId} not found, falling back to global key`,
       );
       const key = getEncryptionKey();
       return encryptSecret(secret, key);
@@ -234,7 +239,7 @@ export async function encryptSecretForTenant(
   } catch (error) {
     console.error(
       `[TOTP] Failed to encrypt with tenant key for ${tenantId}:`,
-      error
+      error,
     );
     // Fall back to global key on error
     const key = getEncryptionKey();
@@ -252,8 +257,8 @@ export async function encryptSecretForTenant(
  */
 export async function decryptSecretForTenant(
   encryptedSecret: string,
-  tenantId: string | null
-): Promise<string> {
+  tenantId: string | null,
+): Promise<string | null> {
   // Fall back to global key for non-tenant users
   if (!tenantId) {
     const key = getEncryptionKey();
@@ -273,7 +278,7 @@ export async function decryptSecretForTenant(
 
     if (!tenant) {
       console.warn(
-        `[TOTP] Tenant ${tenantId} not found, attempting to decrypt with global key`
+        `[TOTP] Tenant ${tenantId} not found, attempting to decrypt with global key`,
       );
       const key = getEncryptionKey();
       return decryptSecret(encryptedSecret, key);
@@ -285,7 +290,7 @@ export async function decryptSecretForTenant(
   } catch (error) {
     console.error(
       `[TOTP] Failed to decrypt with tenant key for ${tenantId}:`,
-      error
+      error,
     );
     // Try falling back to global key (for migration/backward compatibility)
     try {
@@ -293,7 +298,7 @@ export async function decryptSecretForTenant(
       return decryptSecret(encryptedSecret, key);
     } catch (fallbackError) {
       console.error("[TOTP] Global key decryption also failed:", fallbackError);
-      throw new Error("Unable to decrypt TOTP secret");
+      return null;
     }
   }
 }
@@ -318,7 +323,7 @@ export function getEncryptionKey(): string {
     // Warn in production environments to encourage setting a unique key
     if (process.env.NODE_ENV === "production") {
       console.warn(
-        "⚠️  WARNING: Using default ENCRYPTION_KEY. For enhanced security, set a unique ENCRYPTION_KEY environment variable."
+        "⚠️  WARNING: Using default ENCRYPTION_KEY. For enhanced security, set a unique ENCRYPTION_KEY environment variable.",
       );
     } else {
       console.warn("ENCRYPTION_KEY is missing. Using default fallback key.");
@@ -338,7 +343,7 @@ export function getEncryptionKey(): string {
   // Validate user-provided key format
   if (key.length !== 64) {
     console.error(
-      `ENCRYPTION_KEY must be 64 hex characters (32 bytes), but got ${key.length} characters. Generate a valid key with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+      `ENCRYPTION_KEY must be 64 hex characters (32 bytes), but got ${key.length} characters. Generate a valid key with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`,
     );
     // Use the fallback instead of throwing to maintain zero-config
     const crypto = require("crypto");
