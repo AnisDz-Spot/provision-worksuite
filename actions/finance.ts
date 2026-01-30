@@ -3,18 +3,15 @@
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { isAdmin, isProjectManager, AuthUser } from "@/lib/auth-utils";
 
 /**
  * Helper to verify project access
  */
-async function verifyProjectAccess(
-  projectId: number,
-  userUid: string,
-  userRole: string,
-) {
-  if (["admin", "global-admin", "manager"].includes(userRole)) return true; // simplified global check
+async function verifyProjectAccess(projectId: number, user: AuthUser) {
+  if (isAdmin(user) || isProjectManager(user)) return true;
 
-  const dbUser = await prisma.user.findUnique({ where: { uid: userUid } });
+  const dbUser = await prisma.user.findUnique({ where: { uid: user.uid } });
   if (!dbUser) return false;
 
   const member = await prisma.projectMember.findUnique({
@@ -70,7 +67,7 @@ export async function addExpense(input: FormData | any) {
     };
   }
 
-  const hasAccess = await verifyProjectAccess(projectId, user.uid, user.role);
+  const hasAccess = await verifyProjectAccess(projectId, user);
   if (!hasAccess) {
     return { success: false, error: "Forbidden: Insufficient permissions" };
   }
@@ -133,7 +130,7 @@ export async function createInvoice(data: any) {
     return { success: false, error: "Invalid invoice data" };
   }
 
-  const hasAccess = await verifyProjectAccess(pId, user.uid, user.role);
+  const hasAccess = await verifyProjectAccess(pId, user);
   if (!hasAccess) {
     return { success: false, error: "Forbidden" };
   }
@@ -177,7 +174,7 @@ export async function updateProjectBudget(projectUid: string, budget: number) {
 
   // Reuse verifyProjectAccess logic manually or via helper if possible
   // Since helper uses ID and we have it from project found:
-  const hasAccess = await verifyProjectAccess(project.id, user.uid, user.role);
+  const hasAccess = await verifyProjectAccess(project.id, user);
   if (!hasAccess) return { success: false, error: "Forbidden" };
 
   try {
