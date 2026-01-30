@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
 export type Project = {
-  id: string;
-  uid?: string;
+  id: number;
+  uid: string;
   slug?: string;
   name: string;
   owner?: string;
@@ -10,26 +10,28 @@ export type Project = {
   ownerRole?: string;
   ownerAvatar?: string;
   ownerId?: string;
-  status: "Active" | "Completed" | "Paused" | "In Progress";
+  status: string;
   deadline: string;
-  priority?: "low" | "medium" | "high";
+  priority?: string;
   starred?: boolean;
-  members?: { uid?: string; name: string; avatarUrl?: string; role?: string }[];
-  cover?: string;
+  members?: any[];
+  coverUrl?: string; // Real DB field
+  cover?: string; // Legacy fallback
   tags?: string[];
-  privacy?: "public" | "team" | "private";
+  visibility?: string; // Real DB field
+  privacy?: string; // Legacy fallback
   categories?: string[] | string;
   description?: string;
   isTemplate?: boolean;
   budget?: number;
   spent?: number;
   sla?: string;
-  client?: string;
+  client?: any; // Object from relation
   clientLogo?: string;
   clientName?: string;
   clientId?: string;
   tasks?: any[];
-  department?: { name: string };
+  department?: any; // Object from relation
 };
 
 export function useProjectDetails(projectId: string) {

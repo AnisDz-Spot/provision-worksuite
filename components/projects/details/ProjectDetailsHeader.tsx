@@ -18,26 +18,39 @@ export function ProjectDetailsHeader({
   onSaveAsTemplate,
 }: ProjectDetailsHeaderProps) {
   const today = new Date();
-  const deadline = new Date(project.deadline);
-  const daysLeft = Math.ceil(
-    (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
+
+  // Guard against missing deadline
+  const deadlineDate = project.deadline ? new Date(project.deadline) : null;
+  const daysLeft = deadlineDate
+    ? Math.ceil(
+        (deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      )
+    : null;
 
   let color = "text-green-600 dark:text-green-400";
   let bgColor = "bg-green-100 dark:bg-green-900/30";
-  if (daysLeft < 0) {
-    color = "text-red-600 dark:text-red-400";
-    bgColor = "bg-red-100 dark:bg-red-900/30";
-  } else if (daysLeft <= 7) {
-    color = "text-orange-600 dark:text-orange-400";
-    bgColor = "bg-orange-100 dark:bg-orange-900/30";
-  } else if (daysLeft <= 14) {
-    color = "text-amber-600 dark:text-amber-400";
-    bgColor = "bg-amber-100 dark:bg-amber-900/30";
+
+  if (daysLeft !== null) {
+    if (daysLeft < 0) {
+      color = "text-red-600 dark:text-red-400";
+      bgColor = "bg-red-100 dark:bg-red-900/30";
+    } else if (daysLeft <= 7) {
+      color = "text-orange-600 dark:text-orange-400";
+      bgColor = "bg-orange-100 dark:bg-orange-900/30";
+    } else if (daysLeft <= 14) {
+      color = "text-amber-600 dark:text-amber-400";
+      bgColor = "bg-amber-100 dark:bg-amber-900/30";
+    }
   }
 
+  // Use provided tasks for completion calculation to avoid fetching from localStorage
+  const completion = getTaskCompletionForProject(
+    project.uid || project.id.toString(),
+    project.tasks || [],
+  );
+
   const health = calculateProjectHealth({
-    progress: getTaskCompletionForProject(project.id)?.percent || 0,
+    progress: completion?.percent || 0,
     deadline: project.deadline || "",
     status: project.status,
   });
@@ -45,9 +58,9 @@ export function ProjectDetailsHeader({
   return (
     <div className="bg-card border-b">
       <div className="h-56 bg-muted relative">
-        {project.cover ? (
+        {project.coverUrl ? (
           <Image
-            src={project.cover}
+            src={project.coverUrl}
             alt={project.name}
             width={1200}
             height={224}
@@ -74,14 +87,14 @@ export function ProjectDetailsHeader({
                 {project.clientLogo && (
                   <Image
                     src={project.clientLogo}
-                    alt={project.client}
+                    alt={project.client.name || project.client}
                     width={32}
                     height={32}
                     className="w-8 h-8 rounded object-cover"
                   />
                 )}
                 <span className="text-lg font-bold text-foreground">
-                  {project.client}
+                  {project.client.name || project.client}
                 </span>
               </div>
             )}
@@ -96,7 +109,7 @@ export function ProjectDetailsHeader({
                 {project.name}
               </h1>
               <HealthBadge
-                projectId={project.uid || project.id}
+                projectId={project.uid || project.id.toString()}
                 projectName={project.name}
                 score={health.score}
                 level={health.level}
@@ -120,12 +133,12 @@ export function ProjectDetailsHeader({
                       .replace(/\//g, "-")
                   : "—"}
               </span>
-              {daysLeft >= 0 && (
+              {daysLeft !== null && daysLeft >= 0 && (
                 <span className="text-sm">
                   ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)
                 </span>
               )}
-              {daysLeft < 0 && (
+              {daysLeft !== null && daysLeft < 0 && (
                 <span className="text-sm">
                   ({Math.abs(daysLeft)}{" "}
                   {Math.abs(daysLeft) === 1 ? "day" : "days"} overdue)
@@ -150,9 +163,10 @@ export function ProjectDetailsHeader({
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant={
-              project.status === "Active"
+              project.status === "Active" || project.status === "active"
                 ? "info"
-                : project.status === "Completed"
+                : project.status === "Completed" ||
+                    project.status === "completed"
                   ? "success"
                   : "warning"
             }
@@ -163,7 +177,7 @@ export function ProjectDetailsHeader({
           {project.priority && (
             <Badge
               variant={
-                project.priority === "high"
+                project.priority === "high" || project.priority === "urgent"
                   ? "warning"
                   : project.priority === "medium"
                     ? "info"
@@ -174,9 +188,9 @@ export function ProjectDetailsHeader({
               {project.priority}
             </Badge>
           )}
-          {project.privacy && (
+          {project.visibility && (
             <Badge variant="secondary" pill>
-              {project.privacy}
+              {project.visibility}
             </Badge>
           )}
           {project.isTemplate && (
