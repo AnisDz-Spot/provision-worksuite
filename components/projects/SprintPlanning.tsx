@@ -232,7 +232,7 @@ export function SprintPlanning() {
         acc[col.id] = sprint.tasks.filter((t) => t.status === col.id);
         return acc;
       },
-      {} as Record<string, SprintTask[]>
+      {} as Record<string, SprintTask[]>,
     );
   }, [sprint.tasks]);
 
@@ -271,7 +271,7 @@ export function SprintPlanning() {
       tasks: prev.tasks.map((t) =>
         t.id === draggedTask
           ? { ...t, status: columnId as SprintTask["status"] }
-          : t
+          : t,
       ),
     }));
     setDraggedTask(null);
@@ -317,7 +317,7 @@ export function SprintPlanning() {
 
   const daysRemaining = Math.ceil(
     (new Date(sprint.endDate).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24),
   );
 
   return (
@@ -458,14 +458,14 @@ export function SprintPlanning() {
                         <div className="flex items-center gap-2">
                           {(() => {
                             const m = memberList.find(
-                              (u) => u.name === task.assignee
+                              (u) => u.name === task.assignee,
                             );
                             const cls = getAvatarColorClass(m?.avatarColor);
                             return (
                               <div
                                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
                               >
-                                {task.assignee.charAt(0)}
+                                {task.assignee ? task.assignee.charAt(0) : "U"}
                               </div>
                             );
                           })()}
@@ -563,7 +563,7 @@ export function SprintPlanning() {
                   onChange={(e) => {
                     if (editTaskId)
                       setEditTask((t) =>
-                        t ? { ...t, title: e.target.value } : t
+                        t ? { ...t, title: e.target.value } : t,
                       );
                     else setNewTaskTitle(e.target.value);
                   }}
@@ -592,7 +592,7 @@ export function SprintPlanning() {
                             <div
                               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${cls}`}
                             >
-                              {name.charAt(0)}
+                              {name ? name.charAt(0) : "U"}
                             </div>
                             <span className="text-sm">{name}</span>
                           </>
@@ -606,13 +606,13 @@ export function SprintPlanning() {
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${getAvatarColorClass(m.avatarColor)}`}
                       >
-                        {m.name.charAt(0)}
+                        {m.name ? m.name.charAt(0) : "U"}
                       </div>
                     ),
                     onClick: () => {
                       if (editTaskId)
                         setEditTask((t) =>
-                          t ? { ...t, assignee: m.name } : t
+                          t ? { ...t, assignee: m.name } : t,
                         );
                       else setNewTaskAssignee(m.name);
                     },
@@ -645,11 +645,11 @@ export function SprintPlanning() {
                                   | "medium"
                                   | "high",
                               }
-                            : t
+                            : t,
                         );
                       else
                         setNewTaskPriority(
-                          e.target.value as "low" | "medium" | "high"
+                          e.target.value as "low" | "medium" | "high",
                         );
                     }}
                   >
@@ -674,7 +674,7 @@ export function SprintPlanning() {
                       const val = parseInt(e.target.value) || 1;
                       if (editTaskId)
                         setEditTask((t) =>
-                          t ? { ...t, storyPoints: val } : t
+                          t ? { ...t, storyPoints: val } : t,
                         );
                       else setNewTaskPoints(val);
                     }}
@@ -689,7 +689,7 @@ export function SprintPlanning() {
                       setSprint((prev) => ({
                         ...prev,
                         tasks: prev.tasks.map((t) =>
-                          t.id === editTaskId ? { ...t, ...editTask } : t
+                          t.id === editTaskId ? { ...t, ...editTask } : t,
                         ),
                       }));
                       setEditTaskId(null);

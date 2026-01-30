@@ -211,7 +211,7 @@ export function ProjectCard({
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/5 to-primary/10">
               <span className="text-4xl font-black text-primary/20 select-none">
-                {project.name.charAt(0).toUpperCase()}
+                {project.name ? project.name.charAt(0).toUpperCase() : "P"}
               </span>
             </div>
           )}

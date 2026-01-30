@@ -229,7 +229,7 @@ export default function ClientsPage() {
                         />
                       ) : (
                         <div className="text-lg font-bold text-primary">
-                          {client.name.charAt(0)}
+                          {client.name ? client.name.charAt(0) : "C"}
                         </div>
                       )}
                     </div>

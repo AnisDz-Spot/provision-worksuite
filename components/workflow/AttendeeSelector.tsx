@@ -111,7 +111,7 @@ export function AttendeeSelector({
                       />
                     ) : (
                       <span className="text-xs font-bold text-muted-foreground">
-                        {m.name.charAt(0).toUpperCase()}
+                        {m.name ? m.name.charAt(0).toUpperCase() : "U"}
                       </span>
                     )}
                   </div>

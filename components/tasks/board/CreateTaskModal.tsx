@@ -106,7 +106,7 @@ export function CreateTaskModal({
                             cls,
                           )}
                         >
-                          {newTaskAssignee.charAt(0)}
+                          {newTaskAssignee ? newTaskAssignee.charAt(0) : "U"}
                         </div>
                         <span className="text-sm">
                           {m?.name || newTaskAssignee}
@@ -125,7 +125,7 @@ export function CreateTaskModal({
                       getAvatarColorClass((m as any).avatarColor),
                     )}
                   >
-                    {m.name.charAt(0)}
+                    {m.name ? m.name.charAt(0) : "U"}
                   </div>
                 ),
                 onClick: () => setNewTaskAssignee(m.uid || m.id || m.name),

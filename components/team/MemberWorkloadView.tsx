@@ -51,7 +51,7 @@ export function MemberWorkloadView({ projectId }: MemberWorkloadViewProps) {
               ({ calculateWorkloadStats }) => {
                 const stats = calculateWorkloadStats(mappedTasks, logs);
                 setWorkloads(stats);
-              }
+              },
             );
           })
           .catch((err) => console.error("Failed to load workload stats", err));
@@ -95,7 +95,9 @@ export function MemberWorkloadView({ projectId }: MemberWorkloadViewProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                    {member.memberName.charAt(0).toUpperCase()}
+                    {member.memberName
+                      ? member.memberName.charAt(0).toUpperCase()
+                      : "U"}
                   </div>
                   <div>
                     <p className="font-medium">{member.memberName}</p>

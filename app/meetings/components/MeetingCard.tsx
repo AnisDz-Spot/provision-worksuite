@@ -104,7 +104,7 @@ export function MeetingCard({
               className="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-bold overflow-hidden"
               title={attendee}
             >
-              {attendee.charAt(0).toUpperCase()}
+              {attendee ? attendee.charAt(0).toUpperCase() : "U"}
             </div>
           ))}
           {meeting.attendees.length > 3 && (

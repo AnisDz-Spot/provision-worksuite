@@ -167,7 +167,7 @@ export function TaskDetailsModal({
                           <div
                             className={cn(
                               "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                              cls
+                              cls,
                             )}
                           >
                             {editAssignee ? editAssignee.charAt(0) : "?"}
@@ -186,10 +186,10 @@ export function TaskDetailsModal({
                     <div
                       className={cn(
                         "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                        getAvatarColorClass((m as any).avatarColor)
+                        getAvatarColorClass((m as any).avatarColor),
                       )}
                     >
-                      {m.name.charAt(0)}
+                      {m.name ? m.name.charAt(0) : "U"}
                     </div>
                   ),
                   onClick: () => setEditAssignee(m.name),
@@ -246,7 +246,7 @@ export function TaskDetailsModal({
                   <span
                     className={cn(
                       priorityColors[task.priority],
-                      "w-3 h-3 rounded-full"
+                      "w-3 h-3 rounded-full",
                     )}
                   />
                   <span className="font-medium capitalize">
@@ -428,7 +428,7 @@ export function TaskDetailsModal({
                       "w-full rounded-md border bg-background px-3 py-2 text-sm min-h-16 resize-none focus:outline-none focus:ring-2 focus:ring-ring transition-colors",
                       !timeLogNote.trim() && timeLogInput.trim()
                         ? "border-destructive/50"
-                        : "border-input"
+                        : "border-input",
                     )}
                     value={timeLogNote}
                     onChange={(e) => setTimeLogNote(e.target.value)}
