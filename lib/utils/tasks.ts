@@ -41,8 +41,9 @@ function writeTasks(tasks: TaskItem[]) {
   } catch {}
 }
 
-export function getTasksByProject(projectId: string): TaskItem[] {
-  return readTasks().filter((t) => t.projectId === projectId);
+export function getTasksByProject(projectId: string | number): TaskItem[] {
+  const pid = String(projectId);
+  return readTasks().filter((t) => t.projectId === pid);
 }
 
 export function getTasksByAssignee(assignee: string): TaskItem[] {
@@ -63,14 +64,15 @@ export function deleteTask(taskId: string) {
 }
 
 export function getTaskCompletionForProject(
-  projectId: string,
-  providedTasks?: TaskItem[]
+  projectId: string | number,
+  providedTasks?: TaskItem[],
 ): {
   total: number;
   done: number;
   percent: number;
 } {
-  const tasks = providedTasks || getTasksByProject(projectId);
+  const pid = String(projectId);
+  const tasks = providedTasks || getTasksByProject(pid);
   const total = tasks.length;
   const done = tasks.filter((t) => t.status === "done").length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;

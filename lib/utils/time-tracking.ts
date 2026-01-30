@@ -41,17 +41,18 @@ export function getTimeLogsForTask(taskId: string): TimeLog[] {
 
 export async function addTimeLog(
   taskId: string,
-  projectId: string,
+  projectId: string | number,
   hours: number,
   note?: string,
-  loggedBy?: string
+  loggedBy?: string,
 ): Promise<TimeLog | null> {
+  const pid = String(projectId);
   if (!hours || hours <= 0) return null;
 
   const logEntry: TimeLog = {
     id: `tl_${Date.now()}_${Math.random().toString(16).slice(2)}`,
     taskId,
-    projectId,
+    projectId: pid,
     hours,
     note,
     loggedAt: Date.now(),
@@ -75,12 +76,12 @@ export async function addTimeLog(
         });
 
         // 3. Log activity
-        await logProjectEvent(projectId, "timelog", {
+        await logProjectEvent(pid, "timelog", {
           taskId,
           taskTitle: data.task.title,
           hours,
           note,
-          projectId,
+          projectId: pid,
         });
 
         return logEntry;
@@ -110,12 +111,12 @@ export async function addTimeLog(
     }
 
     // Log activity in localStorage
-    logProjectEvent(projectId, "timelog", {
+    logProjectEvent(pid, "timelog", {
       taskId,
       taskTitle: current.title,
       hours,
       note,
-      projectId,
+      projectId: pid,
     });
   }
 
@@ -123,14 +124,15 @@ export async function addTimeLog(
 }
 
 export function getProjectTimeRollup(
-  projectId: string,
-  providedTasks?: TaskItem[]
+  projectId: string | number,
+  providedTasks?: TaskItem[],
 ): {
   estimate: number;
   logged: number;
   remaining: number;
 } {
-  const tasks = providedTasks || getTasksByProject(projectId);
+  const pid = String(projectId);
+  const tasks = providedTasks || getTasksByProject(pid);
   const estimate = tasks.reduce((sum, t) => sum + (t.estimateHours || 0), 0);
   const logged = tasks.reduce((sum, t) => sum + (t.loggedHours || 0), 0);
   const remaining = Math.max(0, parseFloat((estimate - logged).toFixed(2)));

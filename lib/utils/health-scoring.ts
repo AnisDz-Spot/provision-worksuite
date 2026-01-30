@@ -42,21 +42,22 @@ export function setHealthWeights(weights: HealthWeights) {
   try {
     localStorage.setItem(
       "pv:healthWeights",
-      JSON.stringify({ ...readHealthWeights(), ...weights })
+      JSON.stringify({ ...readHealthWeights(), ...weights }),
     );
   } catch {}
 }
 
 export function calculateProjectHealth(
   project: {
-    id: string;
+    id: string | number;
     deadline?: string;
     status?: string;
     [key: string]: any;
   },
   providedTasks?: any[],
-  providedMilestones?: any[]
+  providedMilestones?: any[],
 ): HealthScore {
+  const pid = String(project.id);
   let score = 100;
   const factors = {
     deadline: 100,
@@ -69,7 +70,7 @@ export function calculateProjectHealth(
   if (project.deadline) {
     const daysLeft = Math.ceil(
       (new Date(project.deadline).getTime() - Date.now()) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     );
     if (daysLeft < 0) {
       factors.deadline = 0; // Overdue
@@ -84,9 +85,9 @@ export function calculateProjectHealth(
   }
 
   // Activity factor (20% weight) - based on recent events
-  const events = getProjectEvents(project.id);
+  const events = getProjectEvents(pid);
   const recentEvents = events.filter(
-    (e) => Date.now() - e.timestamp < 7 * 24 * 60 * 60 * 1000
+    (e) => Date.now() - e.timestamp < 7 * 24 * 60 * 60 * 1000,
   );
   if (recentEvents.length === 0 && events.length > 0) {
     factors.activity = 50; // No activity in 7 days
@@ -97,7 +98,7 @@ export function calculateProjectHealth(
   }
 
   // Completion factor (30% weight)
-  const taskStats = getTaskCompletionForProject(project.id, providedTasks);
+  const taskStats = getTaskCompletionForProject(pid, providedTasks);
   if (taskStats.total > 0) {
     factors.completion = taskStats.percent; // 0..100
     const completionPenalty = Math.round((100 - taskStats.percent) * 0.3); // 30% weight
@@ -118,7 +119,7 @@ export function calculateProjectHealth(
   }
 
   // Dependencies factor (20% weight)
-  const deps = getProjectDependencies(project.id);
+  const deps = getProjectDependencies(pid);
   if (deps.length > 0) {
     // Check if any dependencies are not completed
     try {
@@ -136,7 +137,7 @@ export function calculateProjectHealth(
   }
 
   // Overdue tasks penalty
-  const overdue = getOverdueTaskCount(project.id, providedTasks);
+  const overdue = getOverdueTaskCount(pid, providedTasks);
   const overduePenaltyPerTask = getHealthWeights().overduePenaltyPerTask ?? 2;
   const overduePenaltyCap = getHealthWeights().overduePenaltyCap ?? 20;
   if (overdue > 0) {
@@ -145,8 +146,8 @@ export function calculateProjectHealth(
 
   // Overdue milestones penalty
   const overdueMilestones = getOverdueMilestoneCountSync(
-    project.id,
-    providedMilestones
+    pid,
+    providedMilestones,
   );
   const msPenaltyPer =
     getHealthWeights().milestoneOverduePenaltyPerMilestone ?? 3;
@@ -186,19 +187,22 @@ function writeHealthHistory(data: HealthPoint[]) {
   } catch {}
 }
 
-export function snapshotHealth(projectId: string, score: number) {
+export function snapshotHealth(projectId: string | number, score: number) {
+  const pid = String(projectId);
   const today = new Date().toISOString().slice(0, 10);
   const all = readHealthHistory();
-  const idx = all.findIndex(
-    (p) => p.projectId === projectId && p.date === today
-  );
+  const idx = all.findIndex((p) => p.projectId === pid && p.date === today);
   if (idx >= 0) all[idx].score = score;
-  else all.push({ projectId, date: today, score });
+  else all.push({ projectId: pid, date: today, score });
   writeHealthHistory(all);
 }
 
-export function getHealthSeries(projectId: string, days = 14): number[] {
-  const all = readHealthHistory().filter((p) => p.projectId === projectId);
+export function getHealthSeries(
+  projectId: string | number,
+  days = 14,
+): number[] {
+  const pid = String(projectId);
+  const all = readHealthHistory().filter((p) => p.projectId === pid);
   const map = new Map(all.map((p) => [p.date, p.score] as const));
   const out: number[] = [];
   for (let i = days - 1; i >= 0; i--) {
@@ -219,17 +223,19 @@ export function getHealthSeries(projectId: string, days = 14): number[] {
 }
 
 export function getOverdueTaskCount(
-  projectId: string,
-  providedTasks?: any[]
+  projectId: string | number,
+  providedTasks?: any[],
 ): number {
-  const tasks = providedTasks || getTasksByProject(projectId);
+  const pid = String(projectId);
+  const tasks = providedTasks || getTasksByProject(pid);
   const today = new Date().toISOString().slice(0, 10);
   return tasks.filter((t) => t.status !== "done" && t.due && t.due < today)
     .length;
 }
 
-export function getHealthSnapshot(projectId: string) {
-  const all = readHealthHistory().filter((p) => p.projectId === projectId);
+export function getHealthSnapshot(projectId: string | number) {
+  const pid = String(projectId);
+  const all = readHealthHistory().filter((p) => p.projectId === pid);
   const latest = all.sort((a, b) => b.date.localeCompare(a.date))[0];
   return latest ? latest.score : null;
 }

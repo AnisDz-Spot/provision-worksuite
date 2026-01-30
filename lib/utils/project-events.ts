@@ -28,10 +28,11 @@ function writeEvents(events: ProjectEvent[]) {
 }
 
 export async function logProjectEvent(
-  projectId: string,
+  projectId: string | number,
   type: ProjectEvent["type"],
-  data?: Record<string, any>
+  data?: Record<string, any>,
 ) {
+  const pid = String(projectId);
   if (!shouldUseMockData()) {
     try {
       await fetchWithCsrf("/api/activities", {
@@ -55,7 +56,7 @@ export async function logProjectEvent(
   // Fallback to localStorage for mock mode or if DB fails
   const ev: ProjectEvent = {
     id: `e_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-    projectId,
+    projectId: pid,
     type,
     timestamp: Date.now(),
     data,
@@ -66,14 +67,15 @@ export async function logProjectEvent(
 }
 
 export async function getProjectEventsDB(
-  projectId: string,
+  projectId: string | number,
   limit: number = 10,
-  skip: number = 0
+  skip: number = 0,
 ): Promise<ProjectEvent[]> {
+  const pid = String(projectId);
   if (!shouldUseMockData()) {
     try {
       const res = await fetch(
-        `/api/activities?projectId=${projectId}&limit=${limit}&skip=${skip}`
+        `/api/activities?projectId=${projectId}&limit=${limit}&skip=${skip}`,
       );
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
@@ -97,8 +99,9 @@ export async function getProjectEventsDB(
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 
-export function getProjectEvents(projectId: string): ProjectEvent[] {
+export function getProjectEvents(projectId: string | number): ProjectEvent[] {
+  const pid = String(projectId);
   return readEvents()
-    .filter((e) => e.projectId === projectId)
+    .filter((e) => e.projectId === pid)
     .sort((a, b) => b.timestamp - a.timestamp);
 }

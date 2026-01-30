@@ -38,11 +38,12 @@ function writeMilestones(items: Milestone[]) {
 }
 
 export async function getMilestonesByProject(
-  projectId: string
+  projectId: string | number,
 ): Promise<Milestone[]> {
+  const pid = String(projectId);
   if (shouldUseDatabaseData()) {
     try {
-      const res = await fetch(`/api/milestones?projectId=${projectId}`);
+      const res = await fetch(`/api/milestones?projectId=${pid}`);
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         return result.data.map((m: any) => ({
@@ -63,9 +64,9 @@ export async function getMilestonesByProject(
     }
   }
   return readMilestones()
-    .filter((m) => m.projectId === projectId)
+    .filter((m) => m.projectId === pid)
     .map((m) => {
-      const prog = getMilestoneTaskProgress(projectId, m.id);
+      const prog = getMilestoneTaskProgress(pid, m.id);
       return {
         ...m,
         totalTasks: prog.total,
@@ -107,11 +108,12 @@ export async function deleteMilestone(id: string) {
 }
 
 export function getMilestoneTaskProgress(
-  projectId: string,
-  milestoneId: string
+  projectId: string | number,
+  milestoneId: string,
 ): { total: number; done: number; percent: number } {
-  const tasks = getTasksByProject(projectId).filter(
-    (t) => t.milestoneId === milestoneId
+  const pid = String(projectId);
+  const tasks = getTasksByProject(pid).filter(
+    (t) => t.milestoneId === milestoneId,
   );
   const total = tasks.length;
   const done = tasks.filter((t) => t.status === "done").length;
@@ -120,25 +122,26 @@ export function getMilestoneTaskProgress(
 }
 
 export function getOverdueMilestoneCountSync(
-  projectId: string,
-  providedMilestones?: Milestone[]
+  projectId: string | number,
+  providedMilestones?: Milestone[],
 ): number {
+  const pid = String(projectId);
   const today = new Date().toISOString().slice(0, 10);
   const milestones =
-    providedMilestones ||
-    readMilestones().filter((m) => m.projectId === projectId);
+    providedMilestones || readMilestones().filter((m) => m.projectId === pid);
   return milestones.filter((m) => {
     if (!m.target) return false;
     if (m.target >= today) return false;
     // consider overdue only if not fully done
-    const prog = getMilestoneTaskProgress(projectId, m.id);
+    const prog = getMilestoneTaskProgress(pid, m.id);
     return prog.percent < 100;
   }).length;
 }
 
 export async function getOverdueMilestoneCount(
-  projectId: string
+  projectId: string | number,
 ): Promise<number> {
-  const milestones = await getMilestonesByProject(projectId);
-  return getOverdueMilestoneCountSync(projectId, milestones);
+  const pid = String(projectId);
+  const milestones = await getMilestonesByProject(pid);
+  return getOverdueMilestoneCountSync(pid, milestones);
 }

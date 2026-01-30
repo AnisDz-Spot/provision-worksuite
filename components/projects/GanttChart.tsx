@@ -15,7 +15,7 @@ import { getTaskCompletionForProject } from "@/lib/utils";
 // I'll use the content I read recently and fix the return block.
 
 type Project = {
-  id: string;
+  id: string | number;
   name: string;
   status: string;
   deadline?: string;
@@ -32,7 +32,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
   const router = useRouter();
   const [viewDate, setViewDate] = React.useState(new Date());
   const [hoveredProject, setHoveredProject] = React.useState<string | null>(
-    null
+    null,
   );
   const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
 
@@ -40,7 +40,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
   const startDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
   const endDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 3, 0);
   const totalDays = Math.ceil(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   // Generate weeks for header
@@ -60,7 +60,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
 
     const startOffset = Math.max(
       0,
-      (projectStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (projectStart.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     );
     const endOffset =
       (projectEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -218,7 +218,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                           {/* Dependency indicators */}
                           {deps.map((dep, idx) => {
                             const depProject = projects.find(
-                              (p) => p.id === dep?.sourceId
+                              (p) => p.id === dep?.sourceId,
                             );
                             const depPos = depProject
                               ? getProjectPosition(depProject)
@@ -314,7 +314,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                                           Due:
                                         </span>{" "}
                                         {new Date(
-                                          project.deadline
+                                          project.deadline,
                                         ).toLocaleDateString()}
                                       </div>
                                     )}
@@ -335,7 +335,7 @@ export function GanttChart({ projects, dependencies }: GanttChartProps) {
                                     </div>
                                   )}
                                 </div>,
-                                document.body
+                                document.body,
                               )}
                           </div>
                         </div>
