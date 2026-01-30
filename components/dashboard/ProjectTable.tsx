@@ -24,6 +24,7 @@ import {
   ProjectsProvider,
   useProjects,
 } from "@/components/context/ProjectsContext";
+import { Project } from "@/lib/data";
 import { shouldUseDatabaseData } from "@/lib/dataSource";
 import { calculateProjectHealth } from "@/lib/project-health";
 import { HealthBadge } from "@/components/projects/HealthBadge";
@@ -31,32 +32,9 @@ import { HealthBadge } from "@/components/projects/HealthBadge";
 // Extend TableMeta to include custom methods
 declare module "@tanstack/react-table" {
   interface TableMeta<TData> {
-    toggleStar?: (id: string) => void;
+    toggleStar?: (id: string | number) => void | Promise<void>;
   }
 }
-
-type Project = {
-  id: string;
-  uid?: string; // Database UID
-  slug?: string; // Human-readable slug
-  name: string;
-  owner: string;
-  status: "Active" | "Completed" | "Paused" | "In Progress";
-  deadline: string; // ISO date
-  priority?: "low" | "medium" | "high";
-  starred?: boolean;
-  members?: { name: string; avatarUrl?: string; user?: any }[];
-  isTemplate?: boolean;
-  archived?: boolean;
-  department?: { name: string };
-  // Database fields
-  _count?: { tasks: number; milestones: number };
-  tasks?: {
-    status: string;
-    estimateHours: number | null;
-    loggedHours: number | null;
-  }[];
-};
 
 const PROJECTS: Project[] = [
   {
@@ -258,7 +236,7 @@ const columns: ColumnDef<Project>[] = [
       if (p.tasks && p.tasks.length > 0) {
         total = p.tasks.length;
         done = p.tasks.filter(
-          (t: any) => t.status === "done" || t.status === "completed"
+          (t: any) => t.status === "done" || t.status === "completed",
         ).length;
         percentBase = total > 0 ? Math.round((done / total) * 100) : 0;
       } else if (!shouldUseDatabaseData()) {
@@ -323,7 +301,9 @@ export function ProjectTable() {
   } = useProjects();
 
   const [selectMode, setSelectMode] = React.useState(false);
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = React.useState<Set<string | number>>(
+    new Set(),
+  );
 
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -334,7 +314,7 @@ export function ProjectTable() {
   const pageSize = 5;
   const [menuOpen, setMenuOpen] = React.useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
-    id: string;
+    id: string | number;
     name: string;
   } | null>(null);
   const [deleteInput, setDeleteInput] = React.useState("");
@@ -360,7 +340,7 @@ export function ProjectTable() {
       );
     },
     meta: {
-      toggleStar: async (id: string) => {
+      toggleStar: async (id: string | number) => {
         const project = data.find((p) => p.id === id);
         if (!project) return;
 
@@ -372,7 +352,7 @@ export function ProjectTable() {
           const { saveProjects } = await import("@/lib/data");
           // Re-calculate full projects list for save
           const nextProjects = data.map((p) =>
-            p.id === id ? updatedProject : p
+            p.id === id ? updatedProject : p,
           );
           await saveProjects(nextProjects);
         } catch (error) {
@@ -382,7 +362,7 @@ export function ProjectTable() {
     },
   });
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string | number) => {
     deleteProjectInCache(id);
 
     try {
@@ -448,14 +428,14 @@ export function ProjectTable() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice(
     pageIndex * pageSize,
-    pageIndex * pageSize + pageSize
+    pageIndex * pageSize + pageSize,
   );
 
   React.useEffect(() => {
     if (pageIndex >= totalPages) setPageIndex(Math.max(0, totalPages - 1));
   }, [totalPages, pageIndex]);
 
-  const openProject = (projectId: string) =>
+  const openProject = (projectId: string | number) =>
     router.push(`/projects/${projectId}`);
 
   return (
@@ -575,7 +555,7 @@ export function ProjectTable() {
                     } catch (error) {
                       console.error(
                         "Failed to save projects after bulk update:",
-                        error
+                        error,
                       );
                     }
                     e.target.value = "";
@@ -613,7 +593,7 @@ export function ProjectTable() {
                     } catch (error) {
                       console.error(
                         "Failed to save projects after archive:",
-                        error
+                        error,
                       );
                     }
                     setSelectedIds(new Set());
@@ -681,7 +661,7 @@ export function ProjectTable() {
                         >
                           {flexRender(
                             h.column.columnDef.header,
-                            h.getContext()
+                            h.getContext(),
                           )}
                         </th>
                       );
@@ -770,7 +750,7 @@ export function ProjectTable() {
                               month: "short",
                               day: "numeric",
                               year: "numeric",
-                            }
+                            },
                           );
                         } catch {
                           return p.deadline;
@@ -807,7 +787,7 @@ export function ProjectTable() {
                           total = p.tasks.length;
                           done = p.tasks.filter(
                             (t: any) =>
-                              t.status === "done" || t.status === "completed"
+                              t.status === "done" || t.status === "completed",
                           ).length;
                           percentBase =
                             total > 0 ? Math.round((done / total) * 100) : 0;

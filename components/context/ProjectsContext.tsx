@@ -19,12 +19,12 @@ interface ProjectsContextType {
   refreshProjects: () => Promise<void>;
   updateProject: (updatedProject: Project) => void;
   updateProjects: (updatedProjects: Project[]) => void;
-  deleteProjectInCache: (projectId: string) => void;
+  deleteProjectInCache: (projectId: string | number) => void;
   lastFetched: number | null;
 }
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function ProjectsProvider({ children }: { children: React.ReactNode }) {
@@ -34,7 +34,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       staleTime: 5 * 60 * 1000, // 5 minutes
       onError: (err: any) => console.error("Failed to load projects:", err),
     }),
-    []
+    [],
   );
 
   const {
@@ -51,7 +51,9 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
   const updateProject = (updatedProject: Project) => {
     setProjects((prev) =>
-      (prev || []).map((p) => (p.id === updatedProject.id ? updatedProject : p))
+      (prev || []).map((p) =>
+        p.id === updatedProject.id ? updatedProject : p,
+      ),
     );
   };
 
@@ -66,7 +68,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const deleteProjectInCache = (projectId: string) => {
+  const deleteProjectInCache = (projectId: string | number) => {
     setProjects((prev) => (prev || []).filter((p) => p.id !== projectId));
   };
 

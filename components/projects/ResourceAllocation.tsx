@@ -9,7 +9,11 @@ type TeamMember = {
   name: string;
   role: string;
   capacity: number; // hours per week
-  projects: { projectId: string; projectName: string; allocated: number }[];
+  projects: {
+    projectId: string | number;
+    projectName: string;
+    allocated: number;
+  }[];
 };
 
 type ResourceAllocationProps = {
@@ -56,7 +60,7 @@ export function ResourceAllocation({
   members = EMPTY_MEMBERS,
 }: ResourceAllocationProps) {
   const [filter, setFilter] = useState<"all" | "overallocated" | "available">(
-    "all"
+    "all",
   );
   const [baseCapacity, setBaseCapacity] = useState(40);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -69,7 +73,7 @@ export function ResourceAllocation({
       if (isMock) {
         if (isMounted) {
           setTeamMembers(
-            members && members.length > 0 ? members : defaultMembers
+            members && members.length > 0 ? members : defaultMembers,
           );
         }
         return;
@@ -89,10 +93,10 @@ export function ResourceAllocation({
             (t) =>
               (t.assignee === u.name || t.assignee === u.uid) &&
               t.status !== "Done" &&
-              t.status !== "Completed"
+              t.status !== "Completed",
           );
 
-          const projectAllocations: Record<string, number> = {};
+          const projectAllocations: Record<string | number, number> = {};
           userTasks.forEach((t) => {
             const pid = t.projectId || "unknown";
             projectAllocations[pid] = (projectAllocations[pid] || 0) + 5;
@@ -100,13 +104,13 @@ export function ResourceAllocation({
 
           const allocationList = Object.entries(projectAllocations).map(
             ([pid, hours]) => {
-              const proj = projects.find((p) => p.id === pid);
+              const proj = projects.find((p) => String(p.id) === String(pid));
               return {
                 projectId: pid,
                 projectName: proj ? proj.name : "Unknown Project",
                 allocated: hours,
               };
-            }
+            },
           );
 
           return {
@@ -140,7 +144,7 @@ export function ResourceAllocation({
 
       const totalAllocated = member.projects.reduce(
         (sum, p) => sum + p.allocated,
-        0
+        0,
       );
       const utilization = (totalAllocated / effectiveCapacity) * 100;
       const available = effectiveCapacity - totalAllocated;
@@ -177,10 +181,10 @@ export function ResourceAllocation({
     const totalCapacity = memberStats.reduce((sum, m) => sum + m.capacity, 0);
     const totalAllocated = memberStats.reduce(
       (sum, m) => sum + m.totalAllocated,
-      0
+      0,
     );
     const overallocated = memberStats.filter(
-      (m) => m.status === "overallocated"
+      (m) => m.status === "overallocated",
     ).length;
     const available = memberStats.filter((m) => m.available > 0).length;
 
@@ -445,7 +449,7 @@ export function ResourceAllocation({
                         </div>
                         <span className="text-xs text-muted-foreground w-10 text-right">
                           {Math.round(
-                            (project.allocated / member.capacity) * 100
+                            (project.allocated / member.capacity) * 100,
                           )}
                           %
                         </span>

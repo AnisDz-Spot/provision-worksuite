@@ -30,7 +30,7 @@ type ReportConfig = {
   type: ReportType;
   title: string;
   dateRange: { start: string; end: string };
-  projects: string[];
+  projects: (string | number)[];
   includeSections: {
     overview: boolean;
     tasks: boolean;
@@ -76,7 +76,7 @@ export function ReportBuilder() {
     { value: "risk_report", label: "Risk Report", icon: AlertTriangle },
   ];
 
-  const toggleProject = (projectId: string) => {
+  const toggleProject = (projectId: string | number) => {
     setConfig((prev) => ({
       ...prev,
       projects: prev.projects.includes(projectId)
@@ -97,7 +97,7 @@ export function ReportBuilder() {
 
   const generateHTML = () => {
     const selectedProjects = projects.filter((p) =>
-      config.projects.includes(p.id)
+      config.projects.some((id) => String(id) === String(p.id)),
     );
 
     let html = `
@@ -151,13 +151,13 @@ export function ReportBuilder() {
     if (config.includeSections.overview) {
       const totalTasks = selectedProjects.reduce(
         (sum, p) => sum + getTasksByProject(p.id).length,
-        0
+        0,
       );
       const completedTasks = selectedProjects.reduce(
         (sum, p) =>
           sum +
           getTasksByProject(p.id).filter((t) => t.status === "done").length,
-        0
+        0,
       );
       const completionRate =
         totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -488,7 +488,7 @@ export function ReportBuilder() {
                     checked={value}
                     onChange={() =>
                       toggleSection(
-                        key as keyof ReportConfig["includeSections"]
+                        key as keyof ReportConfig["includeSections"],
                       )
                     }
                     className="w-4 h-4"

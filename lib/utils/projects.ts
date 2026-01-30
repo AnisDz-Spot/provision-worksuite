@@ -3,7 +3,7 @@
 // Minimal project type for localStorage data
 // This matches the structure stored in localStorage key "pv:projects"
 export type LocalStorageProject = {
-  id: string;
+  id: string | number;
   name?: string;
   status?: string;
   deadline?: string;

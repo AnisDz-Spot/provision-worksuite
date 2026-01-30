@@ -20,7 +20,7 @@ import { RecoveryPlanModal } from "./RecoveryPlanModal";
 import { Sparkles, Loader2 } from "lucide-react";
 
 interface HealthBadgeProps {
-  projectId?: string;
+  projectId?: string | number;
   projectName?: string;
   score: number;
   level: HealthLevel;
@@ -64,7 +64,9 @@ export function HealthBadge({
     setRecoveryPlan(null);
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/recovery-plan`);
+      const res = await fetch(
+        `/api/projects/${String(projectId)}/recovery-plan`,
+      );
       const data = await res.json();
       if (data.success) {
         setRecoveryPlan(data.plan);

@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
 import Stripe from "stripe";
 import { decrypt } from "@/lib/encryption";
+
+export const runtime = "nodejs";
 // Minimal stripe client for signature verification initialization (no secret needed initially just for types?)
 // Actually we need the real client or just the library construct to verify signature using the secret.
 

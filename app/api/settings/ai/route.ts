@@ -3,6 +3,7 @@ import { getAuthenticatedUser, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
@@ -15,7 +16,7 @@ export async function GET() {
     if (!user || !isAdmin(user)) {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -57,7 +58,7 @@ export async function GET() {
     console.error("Error fetching AI settings:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     if (!user || !isAdmin(user)) {
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
     console.error("Error updating AI settings:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

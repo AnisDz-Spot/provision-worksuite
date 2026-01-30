@@ -25,7 +25,7 @@ function mapMockUsers(users: any[]): User[] {
 }
 
 export interface Project {
-  id: string;
+  id: string | number;
   uid?: string;
   slug?: string;
   name: string;
@@ -46,6 +46,11 @@ export interface Project {
   members?: { name: string; avatarUrl?: string }[];
   isTemplate?: boolean;
   archived?: boolean;
+  department?: { id?: string | number; name: string };
+  title?: string;
+  createdAt?: string;
+  _count?: { tasks?: number; milestones?: number };
+  tasks?: any[];
 }
 
 export interface Task {
@@ -55,7 +60,7 @@ export interface Task {
   status: string;
   priority?: string;
   assignee?: string;
-  projectId?: string;
+  projectId?: string | number;
   dueDate?: string;
   tags?: string[];
   progress?: number;

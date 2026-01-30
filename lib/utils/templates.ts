@@ -62,7 +62,7 @@ export async function saveAsTemplate(
   name: string,
   description: string,
   category: string,
-  projectId: string
+  projectId: string | number,
 ): Promise<ProjectTemplate> {
   const projects =
     typeof window !== "undefined"
@@ -115,7 +115,7 @@ export async function createProjectFromTemplate(
   templateId: string,
   projectName: string,
   owner: string,
-  startDate: string
+  startDate: string,
 ): Promise<string> {
   const template = getTemplateById(templateId);
   if (!template) throw new Error("Template not found");
@@ -147,7 +147,7 @@ export async function createProjectFromTemplate(
 
   template.tasks.forEach((t, idx) => {
     const dueDate = new Date(
-      start.getTime() + (t.daysFromStart || idx * 3) * 24 * 60 * 60 * 1000
+      start.getTime() + (t.daysFromStart || idx * 3) * 24 * 60 * 60 * 1000,
     );
     const task: TaskItem = {
       id: `task_${Date.now()}_${idx}_${Math.random().toString(16).slice(2)}`,
@@ -165,7 +165,7 @@ export async function createProjectFromTemplate(
   if (template.milestones) {
     for (const m of template.milestones) {
       const dueDate = new Date(
-        start.getTime() + m.daysFromStart * 24 * 60 * 60 * 1000
+        start.getTime() + m.daysFromStart * 24 * 60 * 60 * 1000,
       );
       await upsertMilestone({
         id: `milestone_${Date.now()}_${Math.random().toString(16).slice(2)}`,

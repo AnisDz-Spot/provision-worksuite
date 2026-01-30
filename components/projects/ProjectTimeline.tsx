@@ -45,7 +45,7 @@ export function ProjectTimeline({
   projectId,
   compact,
 }: {
-  projectId: string;
+  projectId: string | number;
   compact?: boolean;
 }) {
   const [events, setEvents] = React.useState<any[]>([]);
@@ -64,7 +64,7 @@ export function ProjectTimeline({
         setHasMore(true);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   // Initial load

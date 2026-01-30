@@ -24,14 +24,14 @@ export type BurndownPoint = {
 };
 
 export function getBurndownData(
-  projectId: string,
+  projectId: string | number,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): BurndownPoint[] {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const totalDays = Math.ceil(
-    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   const tasks = getTasksByProject(projectId);
@@ -66,7 +66,7 @@ export function getBurndownData(
 
     // Actual: count tasks completed by this date
     const completedByDate = Array.from(taskCompletionMap.values()).filter(
-      (timestamp) => timestamp <= dayTimestamp + 24 * 60 * 60 * 1000
+      (timestamp) => timestamp <= dayTimestamp + 24 * 60 * 60 * 1000,
     ).length;
     const actual = totalTasks - completedByDate;
 
@@ -92,7 +92,7 @@ export type VelocityData = {
 
 export function getVelocityMetrics(
   projectId: string,
-  weeks = 8
+  weeks = 8,
 ): VelocityData[] {
   const tasks = getTasksByProject(projectId);
   const logs = readTimeLogs().filter((l: any) => l.projectId === projectId);
@@ -102,7 +102,7 @@ export function getVelocityMetrics(
 
   for (let i = weeks - 1; i >= 0; i--) {
     const weekStart = new Date(
-      now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000
+      now.getTime() - (i + 1) * 7 * 24 * 60 * 60 * 1000,
     );
     const weekEnd = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
 
@@ -111,9 +111,9 @@ export function getVelocityMetrics(
       logs
         .filter(
           (l: any) =>
-            l.loggedAt >= weekStart.getTime() && l.loggedAt < weekEnd.getTime()
+            l.loggedAt >= weekStart.getTime() && l.loggedAt < weekEnd.getTime(),
         )
-        .map((l: any) => l.taskId)
+        .map((l: any) => l.taskId),
     ).size;
 
     // Calculate points (use estimate hours as proxy)
@@ -123,10 +123,10 @@ export function getVelocityMetrics(
           .filter(
             (l: any) =>
               l.loggedAt >= weekStart.getTime() &&
-              l.loggedAt < weekEnd.getTime()
+              l.loggedAt < weekEnd.getTime(),
           )
-          .map((l: any) => l.taskId)
-      )
+          .map((l: any) => l.taskId),
+      ),
     )
       .map((taskId) => tasks.find((t) => t.id === taskId))
       .filter((t) => t)
@@ -150,7 +150,7 @@ export function getVelocityMetrics(
       (
         recentWeeks.reduce((sum, w) => sum + w.completed, 0) /
         recentWeeks.length
-      ).toFixed(1)
+      ).toFixed(1),
     );
 
     if (idx > 0) {
@@ -174,7 +174,7 @@ export type CompletionStats = {
 
 export function getCompletionRateStats(
   projectId: string,
-  days = 30
+  days = 30,
 ): CompletionStats[] {
   const tasks = getTasksByProject(projectId);
   const logs = readTimeLogs().filter((l: any) => l.projectId === projectId);
@@ -192,7 +192,7 @@ export function getCompletionRateStats(
     const completedToday = new Set(
       logs
         .filter((l: any) => l.loggedAt >= dayStart && l.loggedAt < dayEnd)
-        .map((l: any) => l.taskId)
+        .map((l: any) => l.taskId),
     ).size;
 
     const total = tasks.length;
@@ -232,14 +232,14 @@ export function getTimeEstimateAccuracy(projectId: string): {
       t.estimateHours &&
       t.estimateHours > 0 &&
       t.loggedHours &&
-      t.loggedHours > 0
+      t.loggedHours > 0,
   );
 
   const taskAccuracy: TimeAccuracy[] = tasks.map((task) => {
     const estimated = task.estimateHours!;
     const logged = task.loggedHours!;
     const variance = parseFloat(
-      (((logged - estimated) / estimated) * 100).toFixed(1)
+      (((logged - estimated) / estimated) * 100).toFixed(1),
     );
 
     let accuracy: "over" | "under" | "accurate";
@@ -263,7 +263,7 @@ export function getTimeEstimateAccuracy(projectId: string): {
           (
             taskAccuracy.reduce((sum, t) => sum + Math.abs(t.variance), 0) /
             taskAccuracy.length
-          ).toFixed(1)
+          ).toFixed(1),
         )
       : 0;
 
@@ -276,7 +276,7 @@ export function getTimeEstimateAccuracy(projectId: string): {
             (taskAccuracy.filter((t) => t.accuracy === "accurate").length /
               taskAccuracy.length) *
             100
-          ).toFixed(1)
+          ).toFixed(1),
         )
       : 0;
 

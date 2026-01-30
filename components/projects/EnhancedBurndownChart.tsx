@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
@@ -10,9 +10,9 @@ import { useDataMode } from "@/lib/hooks/useDataMode";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 
 type EnhancedBurndownChartProps = {
-  projectId: string;
+  projectId: string | number;
   projectName?: string;
-  compareProjects?: Array<{ id: string; name: string; color: string }>;
+  compareProjects?: Array<{ id: string | number; name: string; color: string }>;
 };
 
 export function EnhancedBurndownChart({
@@ -23,11 +23,11 @@ export function EnhancedBurndownChart({
   // Default to last 30 days
   const defaultEnd = new Date();
   const defaultStart = new Date(
-    defaultEnd.getTime() - 30 * 24 * 60 * 60 * 1000
+    defaultEnd.getTime() - 30 * 24 * 60 * 60 * 1000,
   );
 
   const [startDate, setStartDate] = useState(
-    defaultStart.toISOString().slice(0, 10)
+    defaultStart.toISOString().slice(0, 10),
   );
   const [endDate, setEndDate] = useState(defaultEnd.toISOString().slice(0, 10));
   const [showIdeal, setShowIdeal] = useState(true);
@@ -56,14 +56,16 @@ export function EnhancedBurndownChart({
 
     async function fetchMarkers() {
       try {
-        const res = await fetch(`/api/projects/${projectId}/burndown-markers`);
+        const res = await fetch(
+          `/api/projects/${String(projectId)}/burndown-markers`,
+        );
         const result = await res.json();
         if (result.success) {
           setScopeMarkers(
             result.data.map((m: any) => ({
               date: m.date.slice(0, 10),
               note: m.label,
-            }))
+            })),
           );
         }
       } catch (err) {
@@ -78,19 +80,19 @@ export function EnhancedBurndownChart({
     if (isMock) {
       const newMarker = { date, note };
       setScopeMarkers((prev) =>
-        [...prev, newMarker].sort((a, b) => a.date.localeCompare(b.date))
+        [...prev, newMarker].sort((a, b) => a.date.localeCompare(b.date)),
       );
       return;
     }
 
     try {
       const res = await fetchWithCsrf(
-        `/api/projects/${projectId}/burndown-markers`,
+        `/api/projects/${String(projectId)}/burndown-markers`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ date, label: note, type: "scope-change" }),
-        }
+        },
       );
       const result = await res.json();
       if (result.success) {
@@ -98,7 +100,7 @@ export function EnhancedBurndownChart({
           [
             ...prev,
             { date: result.data.date.slice(0, 10), note: result.data.label },
-          ].sort((a, b) => a.date.localeCompare(b.date))
+          ].sort((a, b) => a.date.localeCompare(b.date)),
         );
       }
     } catch (err) {
@@ -133,14 +135,14 @@ export function EnhancedBurndownChart({
         const start = new Date(startDate);
         const end = new Date(endDate);
         const totalDays = Math.ceil(
-          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
         );
         const totalTasks = 25;
         const points: BurndownPoint[] = [];
 
         for (let i = 0; i <= totalDays; i++) {
           const currentDate = new Date(
-            start.getTime() + i * 24 * 60 * 60 * 1000
+            start.getTime() + i * 24 * 60 * 60 * 1000,
           );
           const dateStr = currentDate.toISOString().slice(0, 10);
           const ideal = totalTasks - (totalTasks * i) / totalDays;
@@ -196,7 +198,7 @@ export function EnhancedBurndownChart({
     const recentData = data.slice(-7);
     const recentCompleted = recentData.reduce(
       (sum, d) => sum + (d.completed || 0),
-      0
+      0,
     );
     const trend = recentCompleted > 0 ? "improving" : "stagnant";
 
@@ -224,7 +226,7 @@ export function EnhancedBurndownChart({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `burndown_${projectId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `burndown_${String(projectId)}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -288,7 +290,7 @@ export function EnhancedBurndownChart({
   // X-axis labels
   const labelInterval = Math.max(1, Math.floor(data.length / 8));
   const xLabels = data.filter(
-    (_, i) => i % labelInterval === 0 || i === data.length - 1
+    (_, i) => i % labelInterval === 0 || i === data.length - 1,
   );
 
   // Helpers for marker rendering
@@ -425,7 +427,7 @@ export function EnhancedBurndownChart({
                 const idx = dateToIndex(newMarkerDate);
                 if (idx === null) {
                   alert(
-                    "Selected date is outside the chart range. Please select a date within the displayed timeframe."
+                    "Selected date is outside the chart range. Please select a date within the displayed timeframe.",
                   );
                   return;
                 }
@@ -663,7 +665,7 @@ export function EnhancedBurndownChart({
                 const tooltipWidth = 180;
                 const tooltipX = Math.min(
                   Math.max(0, x - tooltipWidth / 2),
-                  innerWidth - tooltipWidth
+                  innerWidth - tooltipWidth,
                 );
                 const tooltipY = 10; // under top padding
                 return (

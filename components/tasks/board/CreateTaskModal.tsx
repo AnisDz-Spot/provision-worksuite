@@ -29,7 +29,7 @@ type CreateTaskModalProps = {
   milestoneId: string;
   setMilestoneId: (val: string) => void;
   memberList: any[];
-  projectId?: string;
+  projectId?: string | number;
   milestones: any[];
   addTask: () => void;
   getAvatarColorClass: (color?: string) => string;
@@ -95,7 +95,7 @@ export function CreateTaskModal({
                     const m = memberList.find(
                       (u) =>
                         (u.uid || u.id) === newTaskAssignee ||
-                        u.name === newTaskAssignee
+                        u.name === newTaskAssignee,
                     );
                     const cls = getAvatarColorClass((m as any)?.avatarColor);
                     return (
@@ -103,7 +103,7 @@ export function CreateTaskModal({
                         <div
                           className={cn(
                             "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                            cls
+                            cls,
                           )}
                         >
                           {newTaskAssignee.charAt(0)}
@@ -122,7 +122,7 @@ export function CreateTaskModal({
                   <div
                     className={cn(
                       "w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium",
-                      getAvatarColorClass((m as any).avatarColor)
+                      getAvatarColorClass((m as any).avatarColor),
                     )}
                   >
                     {m.name.charAt(0)}

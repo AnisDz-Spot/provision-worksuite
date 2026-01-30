@@ -3,7 +3,8 @@ import { getAuthenticatedUser, isAdmin } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { encrypt, decrypt } from "@/lib/encryption";
 
-// Encryption helpers removed - using @/lib/encryption
+// Force Node.js runtime to support node:crypto
+export const runtime = "nodejs";
 
 // GET - Fetch email settings (admin only)
 export async function GET(req: Request) {
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
     if (!user || !isAdmin(user)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -69,7 +70,7 @@ export async function GET(req: Request) {
         success: false,
         error: error.message || "Failed to fetch email settings",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
     if (!user || !isAdmin(user)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
     if (!provider || !fromAddress) {
       return NextResponse.json(
         { success: false, error: "Provider and from address are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -165,7 +166,7 @@ export async function POST(req: Request) {
         success: false,
         error: error.message || "Failed to save email settings",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -177,7 +178,7 @@ export async function DELETE(req: Request) {
     if (!user || !isAdmin(user)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -200,7 +201,7 @@ export async function DELETE(req: Request) {
         success: false,
         error: error.message || "Failed to delete email settings",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

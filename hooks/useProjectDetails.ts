@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
 export type Project = {
-  id: number;
+  id: string | number;
   uid: string;
   slug?: string;
   name: string;

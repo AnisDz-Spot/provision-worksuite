@@ -4,9 +4,9 @@ import * as React from "react";
 import { Button } from "@/components/ui/Button";
 
 interface DeleteConfirmModalProps {
-  project: { id: string; name: string } | null;
+  project: { id: string | number; name: string } | null;
   onClose: () => void;
-  onConfirm: (id: string) => void;
+  onConfirm: (id: string | number) => void;
 }
 
 export function DeleteConfirmModal({

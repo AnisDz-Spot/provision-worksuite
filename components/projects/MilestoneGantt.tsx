@@ -13,7 +13,7 @@ import {
 type Milestone = {
   id: string;
   title: string;
-  projectId: string;
+  projectId: string | number;
   projectName: string;
   dueDate: string;
   status: "completed" | "in-progress" | "pending";
@@ -94,12 +94,12 @@ export function MilestoneGantt({
   milestones: initialMilestones,
 }: MilestoneGanttProps) {
   const [milestones, setMilestones] = useState<Milestone[]>(
-    initialMilestones || []
+    initialMilestones || [],
   );
   const [loading, setLoading] = useState(!initialMilestones);
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedProjects, setExpandedProjects] = useState<
+    Set<string | number>
+  >(new Set());
   const { isMock } = useDataMode();
 
   useEffect(() => {
@@ -128,7 +128,9 @@ export function MilestoneGantt({
         const liveMilestones: Milestone[] = projects
           .filter((p) => p.deadline)
           .map((p) => {
-            const pTasks = tasks.filter((t) => t.projectId === p.id);
+            const pTasks = tasks.filter(
+              (t) => String(t.projectId) === String(p.id),
+            );
             return {
               id: `m_${p.id}`,
               title: "Project Deadline",
@@ -160,20 +162,25 @@ export function MilestoneGantt({
     // Group milestones by project
     const groups = milestones.reduce(
       (acc, milestone) => {
-        if (!acc[milestone.projectId]) {
-          acc[milestone.projectId] = {
+        const pid = String(milestone.projectId);
+        if (!acc[pid]) {
+          acc[pid] = {
             projectId: milestone.projectId,
             projectName: milestone.projectName,
             milestones: [],
           };
         }
-        acc[milestone.projectId].milestones.push(milestone);
+        acc[pid].milestones.push(milestone);
         return acc;
       },
       {} as Record<
         string,
-        { projectId: string; projectName: string; milestones: Milestone[] }
-      >
+        {
+          projectId: string | number;
+          projectName: string;
+          milestones: Milestone[];
+        }
+      >,
     );
 
     // Calculate time range
@@ -195,7 +202,7 @@ export function MilestoneGantt({
 
   const totalDays = Math.ceil(
     (timeRange.end.getTime() - timeRange.start.getTime()) /
-      (1000 * 60 * 60 * 24)
+      (1000 * 60 * 60 * 24),
   );
   const today = new Date();
   const todayPosition =
@@ -214,7 +221,7 @@ export function MilestoneGantt({
     return Math.max(0, Math.min(100, position));
   };
 
-  const toggleProject = (projectId: string) => {
+  const toggleProject = (projectId: string | number) => {
     const newExpanded = new Set(expandedProjects);
     if (newExpanded.has(projectId)) {
       newExpanded.delete(projectId);
@@ -286,7 +293,7 @@ export function MilestoneGantt({
                   </span>
                   <span>
                     {new Date(
-                      (timeRange.start.getTime() + timeRange.end.getTime()) / 2
+                      (timeRange.start.getTime() + timeRange.end.getTime()) / 2,
                     ).toLocaleDateString("en-US", {
                       month: "short",
                       year: "numeric",
@@ -343,7 +350,7 @@ export function MilestoneGantt({
                           Due:{" "}
                           {new Date(milestone.dueDate).toLocaleDateString(
                             "en-US",
-                            { month: "short", day: "numeric" }
+                            { month: "short", day: "numeric" },
                           )}
                         </div>
                         {milestone.tasks && (
@@ -411,7 +418,7 @@ export function MilestoneGantt({
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
-                              }
+                              },
                             )}
                           </div>
                           <div className="text-muted-foreground">

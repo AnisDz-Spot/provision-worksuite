@@ -6,7 +6,7 @@ export type DigestSchedule = {
 };
 
 export type DigestProject = {
-  id: string;
+  id: string | number;
   name: string;
   progress: number;
   status: string;
@@ -49,7 +49,7 @@ export type DigestData = {
 };
 
 export type RecipientUser = {
-  id: string;
+  id: string | number;
   name: string;
   email: string;
   avatar: string;

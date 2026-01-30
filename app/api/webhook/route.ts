@@ -3,6 +3,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
 
+export const runtime = "nodejs";
+
 type PostBody = {
   type: "slack" | "teams";
   payload: any;
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
         {
           error: `${body.type} webhook not configured on server. Please visit Email Settings to set it up.`,
         },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -77,12 +79,12 @@ export async function POST(req: Request) {
     const text = await resp.text();
     return NextResponse.json(
       { ok, response: text },
-      { status: ok ? 200 : 500 }
+      { status: ok ? 200 : 500 },
     );
   } catch (e: any) {
     return NextResponse.json(
       { error: String(e?.message || e) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

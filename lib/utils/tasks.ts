@@ -4,7 +4,7 @@
 
 export type TaskItem = {
   id: string;
-  projectId: string;
+  projectId: string | number;
   title: string;
   status: "todo" | "in-progress" | "review" | "done";
   assignee?: string;
@@ -43,7 +43,7 @@ function writeTasks(tasks: TaskItem[]) {
 
 export function getTasksByProject(projectId: string | number): TaskItem[] {
   const pid = String(projectId);
-  return readTasks().filter((t) => t.projectId === pid);
+  return readTasks().filter((t) => String(t.projectId) === pid);
 }
 
 export function getTasksByAssignee(assignee: string): TaskItem[] {

@@ -14,15 +14,7 @@ import {
   Activity,
 } from "lucide-react";
 import { getTaskCompletionForProject, getProjectTimeRollup } from "@/lib/utils";
-
-type Project = {
-  id: string;
-  name?: string;
-  title?: string;
-  deadline: string;
-  status: string;
-  createdAt?: string;
-};
+import { Project } from "@/lib/data";
 
 type CompletionPredictionProps = {
   projects: Project[];
@@ -42,7 +34,7 @@ function calculateVelocityMetrics(project: Project, progress: number) {
     : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const daysElapsed = Math.max(
     1,
-    (now.getTime() - actualCreatedAt.getTime()) / (1000 * 60 * 60 * 24)
+    (now.getTime() - actualCreatedAt.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   // Historical velocity snapshots (simulated - in production, track actual daily progress)
@@ -55,7 +47,7 @@ function calculateVelocityMetrics(project: Project, progress: number) {
       const daysPassed = Math.min(days, daysElapsed);
       const progressAtThatTime = Math.max(
         0,
-        progress - (30 - daysPassed) * (progress / daysElapsed)
+        progress - (30 - daysPassed) * (progress / daysElapsed),
       );
       const vel = progressAtThatTime / daysPassed;
       velocityHistory.push({
@@ -80,7 +72,7 @@ function calculateVelocityMetrics(project: Project, progress: number) {
     recentVelocities.reduce((a, b) => a + b, 0) / recentVelocities.length;
   const velocityStdDev = Math.sqrt(
     recentVelocities.reduce((sum, v) => sum + Math.pow(v - avgVelocity, 2), 0) /
-      recentVelocities.length
+      recentVelocities.length,
   );
 
   // Velocity trend (positive = accelerating, negative = decelerating)
@@ -105,7 +97,7 @@ function monteCarloSimulation(
   currentProgress: number,
   avgVelocity: number,
   velocityStdDev: number,
-  iterations: number = 1000
+  iterations: number = 1000,
 ): {
   optimistic: Date;
   realistic: Date;
@@ -148,7 +140,7 @@ function monteCarloSimulation(
   const meanDays = completionDays.reduce((a, b) => a + b, 0) / iterations;
   const stdDev = Math.sqrt(
     completionDays.reduce((sum, d) => sum + Math.pow(d - meanDays, 2), 0) /
-      iterations
+      iterations,
   );
   const confidence =
     meanDays === 0
@@ -164,11 +156,11 @@ function monteCarloSimulation(
 }
 
 export function CompletionPrediction({ projects }: CompletionPredictionProps) {
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedProjects, setExpandedProjects] = useState<
+    Set<string | number>
+  >(new Set());
   const [whatIfScenarios, setWhatIfScenarios] = useState<
-    Record<string, { teamSize: number; scopeChange: number }>
+    Record<string | number, { teamSize: number; scopeChange: number }>
   >({});
   // Load saved scenarios from localStorage
   useEffect(() => {
@@ -176,7 +168,7 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
       const saved = localStorage.getItem("pv:predictionScenario:index");
       if (saved) {
         const index = JSON.parse(saved) as Record<
-          string,
+          string | number,
           { teamSize: number; scopeChange: number }
         >;
         if (index && typeof index === "object") setWhatIfScenarios(index);
@@ -217,7 +209,7 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
         // Scope change: negative = reduced scope (closer to done), positive = increased scope
         adjustedProgress = Math.max(
           0,
-          Math.min(100, progress - scenario.scopeChange)
+          Math.min(100, progress - scenario.scopeChange),
         );
       }
 
@@ -225,13 +217,13 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
       const mcResults = monteCarloSimulation(
         adjustedProgress,
         adjustedVelocity,
-        velocityMetrics.velocityStdDev
+        velocityMetrics.velocityStdDev,
       );
 
       // Calculate days difference (using realistic prediction)
       const daysDiff = Math.floor(
         (deadline.getTime() - mcResults.realistic.getTime()) /
-          (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24),
       );
 
       // Risk assessment based on buffer and confidence
@@ -266,15 +258,15 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
               daysDiff -
                 Math.floor(
                   (deadline.getTime() - new Date().getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
+                    (1000 * 60 * 60 * 24),
+                ),
             )
           : 0,
       };
     });
   }, [projects, whatIfScenarios]);
 
-  const toggleExpanded = (projectId: string) => {
+  const toggleExpanded = (projectId: string | number) => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
       if (next.has(projectId)) {
@@ -555,11 +547,11 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
                               nextIndex[pred.project.id] = s;
                               localStorage.setItem(
                                 `pv:predictionScenario:${pred.project.id}`,
-                                JSON.stringify(s)
+                                JSON.stringify(s),
                               );
                               localStorage.setItem(
                                 "pv:predictionScenario:index",
-                                JSON.stringify(nextIndex)
+                                JSON.stringify(nextIndex),
                               );
                             } catch {}
                           }}
@@ -572,7 +564,7 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
                           onClick={() => {
                             try {
                               const raw = localStorage.getItem(
-                                `pv:predictionScenario:${pred.project.id}`
+                                `pv:predictionScenario:${pred.project.id}`,
                               );
                               if (!raw) return;
                               const s = JSON.parse(raw) as {
@@ -597,11 +589,11 @@ export function CompletionPrediction({ projects }: CompletionPredictionProps) {
                               delete next[pred.project.id];
                               try {
                                 localStorage.removeItem(
-                                  `pv:predictionScenario:${pred.project.id}`
+                                  `pv:predictionScenario:${pred.project.id}`,
                                 );
                                 localStorage.setItem(
                                   "pv:predictionScenario:index",
-                                  JSON.stringify(next)
+                                  JSON.stringify(next),
                                 );
                               } catch {}
                               return next;

@@ -18,16 +18,18 @@ import { HealthBadge } from "@/components/projects/HealthBadge";
 
 interface ProjectCardProps {
   project: Project;
-  toggleStar: (id: string) => void;
+  toggleStar: (id: string | number) => void;
   onDelete: (project: Project) => void;
   onStatusUpdate: (project: Project, newStatus: Project["status"]) => void;
-  onQuickTask: (id: string) => void;
+  onQuickTask: (id: string | number) => void;
   isDeleting: boolean;
   filesCount: number;
   selectMode: boolean;
-  selectedIds: Set<string>;
-  onSelect: (id: string, selected: boolean) => void;
-  setDeleteConfirm: (confirm: { id: string; name: string } | null) => void;
+  selectedIds: Set<string | number>;
+  onSelect: (id: string | number, selected: boolean) => void;
+  setDeleteConfirm: (
+    confirm: { id: string | number; name: string } | null,
+  ) => void;
 }
 
 export function ProjectCard({
@@ -65,7 +67,7 @@ export function ProjectCard({
   const daysLeft = project.deadline
     ? Math.ceil(
         (new Date(project.deadline).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24),
       )
     : null;
 
@@ -83,7 +85,7 @@ export function ProjectCard({
     if (project.tasks && project.tasks.length > 0) {
       const total = project.tasks.length;
       const done = project.tasks.filter(
-        (t) => t.status === "done" || t.status === "completed"
+        (t) => t.status === "done" || t.status === "completed",
       ).length;
       return { total, done };
     }
@@ -308,7 +310,7 @@ export function ProjectCard({
                       e.stopPropagation();
                       setMenuOpen(false);
                       router.push(
-                        `/projects/${project.slug || project.uid || project.id}`
+                        `/projects/${project.slug || project.uid || project.id}`,
                       );
                     }}
                   >
@@ -460,7 +462,7 @@ export function ProjectCard({
                     project,
                     project.status === "Completed"
                       ? "Active"
-                      : ("Completed" as any)
+                      : ("Completed" as any),
                   );
                   if (project.status !== "Completed") {
                     setCompletedFlash(true);

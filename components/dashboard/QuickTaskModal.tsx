@@ -11,7 +11,7 @@ import { useLoading } from "@/context/LoadingContext";
 interface QuickTaskModalProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  projectId: string | null;
+  projectId: string | number | null;
   teamMembers: Array<{
     id?: string;
     uid?: string;
@@ -66,7 +66,7 @@ export function QuickTaskModal({
       setNewTaskDue(
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
-          .slice(0, 10)
+          .slice(0, 10),
       );
       setNewTaskPriority("medium");
       setNewTaskEstimate("");

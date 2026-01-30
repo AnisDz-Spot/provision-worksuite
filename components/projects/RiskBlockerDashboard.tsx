@@ -55,7 +55,7 @@ type Blocker = {
 };
 
 type RiskBlockerDashboardProps = {
-  projectId?: string;
+  projectId?: string | number;
 };
 
 // Mock data - in production, load from API/localStorage
@@ -127,7 +127,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
       if (!shouldUseDatabaseData()) return;
 
       const res = await fetch(
-        `/api/blockers${projectId ? `?projectId=${projectId}` : ""}`
+        `/api/blockers${projectId ? `?projectId=${String(projectId)}` : ""}`,
       );
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
@@ -167,10 +167,10 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
   const stats = useMemo(() => {
     const open = blockers.filter((b) => b.status === "open").length;
     const inProgress = blockers.filter(
-      (b) => b.status === "in-progress"
+      (b) => b.status === "in-progress",
     ).length;
     const critical = blockers.filter(
-      (b) => b.level === "critical" && b.status !== "resolved"
+      (b) => b.level === "critical" && b.status !== "resolved",
     ).length;
     const resolved = blockers.filter((b) => b.status === "resolved").length;
 
@@ -274,8 +274,8 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
                     level: newBlocker.level,
                     category: newBlocker.category,
                   }
-                : b
-            )
+                : b,
+            ),
           );
         } else {
           // Create new blocker in local state
@@ -306,7 +306,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
 
   const handleStatusChange = async (
     blockerId: string,
-    newStatus: BlockerStatus
+    newStatus: BlockerStatus,
   ) => {
     try {
       const { shouldUseDatabaseData } = await import("@/lib/dataSource");
@@ -335,8 +335,8 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
                       ? new Date().toISOString().slice(0, 10)
                       : b.resolvedDate,
                 }
-              : b
-          )
+              : b,
+          ),
         );
       }
     } catch (e) {
@@ -792,7 +792,7 @@ export function RiskBlockerDashboard({ projectId }: RiskBlockerDashboardProps) {
                 {(() => {
                   const cfg =
                     runtimeCategories.find(
-                      (c) => c.id === (newBlocker.category as BlockerCategory)
+                      (c) => c.id === (newBlocker.category as BlockerCategory),
                     ) ||
                     getCategoryConfig(newBlocker.category as BlockerCategory);
                   return `Target SLA: ${cfg.slaDays} days • Owner: ${cfg.defaultOwnerGroup}`;

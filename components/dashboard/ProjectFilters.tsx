@@ -36,8 +36,8 @@ interface ProjectFiltersProps {
 
   selectMode: boolean;
   setSelectMode: (b: boolean) => void;
-  selectedIds: Set<string>;
-  setSelectedIds: (ids: Set<string>) => void;
+  selectedIds: Set<string | number>;
+  setSelectedIds: (ids: Set<string | number>) => void;
 
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
@@ -260,7 +260,7 @@ export function ProjectFilters({
                     // Optimistic update
                     setProjects((prev) => {
                       const next = prev.map((p) =>
-                        selectedIds.has(p.id) ? { ...p, status: val } : p
+                        selectedIds.has(p.id) ? { ...p, status: val } : p,
                       );
                       return next;
                     });
@@ -274,12 +274,12 @@ export function ProjectFilters({
                             "Content-Type": "application/json",
                           },
                           body: JSON.stringify({ status: val }),
-                        })
-                      )
+                        }),
+                      ),
                     );
                     showToast(
                       "Selected projects updated successfully",
-                      "success"
+                      "success",
                     );
                   } catch (error) {
                     console.error("Bulk status update failed:", error);
@@ -307,7 +307,7 @@ export function ProjectFilters({
                     // Optimistic update
                     setProjects((prev) => {
                       const next = prev.map((p) =>
-                        selectedIds.has(p.id) ? { ...p, archived: true } : p
+                        selectedIds.has(p.id) ? { ...p, archived: true } : p,
                       );
                       return next;
                     });
@@ -321,12 +321,12 @@ export function ProjectFilters({
                             "Content-Type": "application/json",
                           },
                           body: JSON.stringify({ archived: true }),
-                        })
-                      )
+                        }),
+                      ),
                     );
                     showToast(
                       "Selected projects archived successfully",
-                      "success"
+                      "success",
                     );
                   } catch (error) {
                     console.error("Bulk archive failed:", error);
@@ -360,7 +360,7 @@ export function ProjectFilters({
                 className="rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm pr-8"
                 onChange={(e) => {
                   const v = savedViews.find(
-                    (view) => view.id === e.target.value
+                    (view) => view.id === e.target.value,
                   );
                   if (v) handleLoadView(v);
                   e.target.value = "";

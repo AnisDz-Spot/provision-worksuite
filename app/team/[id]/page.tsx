@@ -16,7 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { getTasksByAssignee, getProjectTimeRollup } from "@/lib/utils";
-import { loadUsers, loadProjects as fetchProjects } from "@/lib/data";
+import { Project, loadUsers, loadProjects as fetchProjects } from "@/lib/data";
 
 type Member = {
   id: string;
@@ -33,19 +33,11 @@ type Member = {
   status?: "active" | "away" | "busy" | "offline";
 };
 
-type Project = {
-  id: string;
-  name: string;
-  status: "Active" | "Completed" | "Paused" | "In Progress";
-  deadline: string;
-  members?: { name: string; avatarUrl?: string }[];
-};
-
 async function loadMember(id: string): Promise<Member | null> {
   try {
     const users = await loadUsers();
     const found = users.find(
-      (u) => u.uid === id || u.name.toLowerCase().replace(/\s+/g, "-") === id
+      (u) => u.uid === id || u.name.toLowerCase().replace(/\s+/g, "-") === id,
     );
     if (found) {
       return {
@@ -139,7 +131,7 @@ export default function MemberDetailPage() {
 
   // Get member's projects
   const memberProjects = allProjects.filter((p) =>
-    p.members?.some((m) => m.name === member.name)
+    p.members?.some((m) => m.name === member.name),
   );
 
   // Get member's tasks
@@ -157,7 +149,7 @@ export default function MemberDetailPage() {
     return sum + rollup.logged;
   }, 0);
 
-  const statusColors = {
+  const statusColors: Record<Member["status"] & string, string> = {
     active: "bg-green-100 text-green-700",
     away: "bg-amber-100 text-amber-700",
     busy: "bg-red-100 text-red-700",
@@ -272,7 +264,7 @@ export default function MemberDetailPage() {
             <Card className="p-6">
               <h3 className="text-sm font-semibold mb-4">Skills & Expertise</h3>
               <div className="flex flex-wrap gap-2">
-                {member.skills.map((skill, i) => (
+                {member.skills.map((skill: string, i: number) => (
                   <Badge key={i} variant="secondary">
                     {skill}
                   </Badge>

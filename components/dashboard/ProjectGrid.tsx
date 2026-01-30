@@ -34,47 +34,51 @@ export function ProjectGrid() {
 
   const [query, setQuery] = React.useState(searchParams.get("query") || "");
   const [status, setStatus] = React.useState(
-    searchParams.get("status") || "all"
+    searchParams.get("status") || "all",
   );
   const [sortBy, setSortBy] = React.useState(
-    searchParams.get("sort") || "name-asc"
+    searchParams.get("sort") || "name-asc",
   );
   const [starredOnly, setStarredOnly] = React.useState(
-    searchParams.get("starred") === "true"
+    searchParams.get("starred") === "true",
   );
   const [clientFilter, setClientFilter] = React.useState(
-    searchParams.get("client") || "all"
+    searchParams.get("client") || "all",
   );
   const [categoryFilter, setCategoryFilter] = React.useState(
-    searchParams.get("category") || "all"
+    searchParams.get("category") || "all",
   );
   const [tagFilter, setTagFilter] = React.useState(
-    searchParams.get("tag") || "all"
+    searchParams.get("tag") || "all",
   );
   const [healthFilter, setHealthFilter] = React.useState(
-    searchParams.get("health") || "all"
+    searchParams.get("health") || "all",
   );
   const [deptFilter, setDeptFilter] = React.useState(
-    searchParams.get("dept") || "all"
+    searchParams.get("dept") || "all",
   );
   const [departments, setDepartments] = React.useState<any[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(
-    parseInt(searchParams.get("page") || "1")
+    parseInt(searchParams.get("page") || "1"),
   );
   const itemsPerPage = 9;
 
   const [deleteConfirm, setDeleteConfirm] = React.useState<{
-    id: string;
+    id: string | number;
     name: string;
   } | null>(null);
   const [savedViews, setSavedViews] = React.useState<SavedView[]>([]);
   const [viewName, setViewName] = React.useState("");
   const [showSaveView, setShowSaveView] = React.useState(false);
   const [selectMode, setSelectMode] = React.useState(false);
-  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = React.useState<Set<string | number>>(
+    new Set(),
+  );
   const [addOpen, setAddOpen] = React.useState(false);
-  const [addForProject, setAddForProject] = React.useState<string | null>(null);
+  const [addForProject, setAddForProject] = React.useState<
+    string | number | null
+  >(null);
   const [teamMembers, setTeamMembers] = React.useState<
     Array<{ id?: string; uid?: string; name: string; avatarUrl?: string }>
   >([]);
@@ -116,7 +120,7 @@ export function ProjectGrid() {
       });
       router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
   );
 
   const loadProjects = React.useCallback(async () => {
@@ -169,7 +173,7 @@ export function ProjectGrid() {
                 name: u.name,
                 avatarUrl: u.avatar_url,
               }))
-            : []
+            : [],
         );
       } catch {
         setTeamMembers([]);
@@ -197,7 +201,7 @@ export function ProjectGrid() {
   }, [loadProjects]);
   */
 
-  const toggleStar = async (id: string) => {
+  const toggleStar = async (id: string | number) => {
     let updatedProject: Project | undefined;
     setProjects((prev) => {
       const next = prev.map((p) => {
@@ -212,7 +216,7 @@ export function ProjectGrid() {
 
     try {
       showLoader("Toggling star...");
-      const response = await fetchWithCsrf(`/api/projects/${id}/star`, {
+      const response = await fetchWithCsrf(`/api/projects/${String(id)}/star`, {
         method: "POST",
       });
       if (!response.ok) {
@@ -225,7 +229,7 @@ export function ProjectGrid() {
       // Revert optimistic update and cache
       setProjects((prev) => {
         const reverted = prev.map((p) =>
-          p.id === id ? { ...p, starred: !p.starred } : p
+          p.id === id ? { ...p, starred: !p.starred } : p,
         );
         return reverted;
       });
@@ -235,7 +239,7 @@ export function ProjectGrid() {
     }
   };
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string | number) => {
     const projectName = projects.find((p) => p.id === id)?.name || "Project";
     const nextProjects = projects.filter((p) => p.id !== id);
 
@@ -243,7 +247,7 @@ export function ProjectGrid() {
 
     try {
       showLoader("Deleting project...");
-      const response = await fetchWithCsrf(`/api/projects/${id}`, {
+      const response = await fetchWithCsrf(`/api/projects/${String(id)}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -391,25 +395,28 @@ export function ProjectGrid() {
 
   const handleStatusUpdate = async (
     project: Project,
-    newStatus: Project["status"]
+    newStatus: Project["status"],
   ) => {
     try {
       showLoader("Updating status...");
       // Optimistic update
       setProjects((prev) => {
         const next = prev.map((pr) =>
-          pr.id === project.id ? { ...pr, status: newStatus } : pr
+          pr.id === project.id ? { ...pr, status: newStatus } : pr,
         );
         return next;
       });
 
-      const response = await fetchWithCsrf(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetchWithCsrf(
+        `/api/projects/${String(project.id)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
         },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      );
       if (!response.ok) {
         throw new Error("Failed to update status");
       }
@@ -448,10 +455,10 @@ export function ProjectGrid() {
         new Set(
           projects
             .map((p) => (p as any).client || (p as any).clientName)
-            .filter(Boolean)
-        )
+            .filter(Boolean),
+        ),
       ) as string[],
-    [projects]
+    [projects],
   );
 
   if (loading) {

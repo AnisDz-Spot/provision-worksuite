@@ -24,7 +24,7 @@ import { DigestPreviewModal } from "./digest/DigestPreviewModal";
 import { DigestCardContent } from "./digest/DigestCardContent";
 
 type WeeklyDigestProps = {
-  projectId?: string;
+  projectId?: string | number;
 };
 
 export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
@@ -89,7 +89,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
           if (authJson.success && authJson.user) {
             setIsMasterAdmin(
               authJson.user.role === "Administrator" ||
-                authJson.user.isGlobalAdmin
+                authJson.user.isGlobalAdmin,
             );
           }
 
@@ -105,14 +105,14 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
           }
           setUsers(
             data.map((u: any) => ({
-              id: u.id || u.uid,
+              id: u.id ?? u.uid,
               name: u.name,
               email: u.email,
               avatar:
                 u.avatar_url ||
                 u.avatarUrl ||
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
-            }))
+            })),
           );
         } catch (e) {
           console.error("Failed to fetch users for digest", e);
@@ -220,10 +220,10 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
           loadTasks(),
         ]);
         const completed = tasks.filter(
-          (t) => t.status === "Done" || t.status === "Completed"
+          (t) => t.status === "Done" || t.status === "Completed",
         ).length;
         const inProgress = tasks.filter(
-          (t) => t.status === "In Progress"
+          (t) => t.status === "In Progress",
         ).length;
         const blocked = tasks.filter((t) => t.status === "Blocked").length;
         const overallProgress =
@@ -243,8 +243,8 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
           status: p.status,
           tasksCompleted: tasks.filter(
             (t) =>
-              t.projectId === p.id &&
-              (t.status === "Done" || t.status === "Completed")
+              String(t.projectId) === String(p.id) &&
+              (t.status === "Done" || t.status === "Completed"),
           ).length,
           upcomingDeadline: p.deadline
             ? new Date(p.deadline).toLocaleDateString()
@@ -412,7 +412,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
             if (!digestData) return;
             const blob = new Blob(
               [JSON.stringify(buildSlackPayload(digestData), null, 2)],
-              { type: "application/json" }
+              { type: "application/json" },
             );
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -425,7 +425,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
             if (!digestData) return;
             const blob = new Blob(
               [JSON.stringify(buildTeamsCard(digestData), null, 2)],
-              { type: "application/json" }
+              { type: "application/json" },
             );
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
