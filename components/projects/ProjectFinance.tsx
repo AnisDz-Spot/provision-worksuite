@@ -24,6 +24,7 @@ import {
   TrendingUp,
   CreditCard,
 } from "lucide-react";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface ProjectFinanceProps {
   projectId: string | number;
@@ -259,7 +260,7 @@ export function ProjectFinance({
   const handlePayNow = async (invoiceId: string) => {
     showLoader("Preparing checkout...");
     try {
-      const res = await fetch("/api/payments/create-checkout-session", {
+      const res = await fetchWithCsrf("/api/payments/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invoiceId, projectId: projectId }),
