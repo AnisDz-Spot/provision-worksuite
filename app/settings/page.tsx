@@ -35,6 +35,7 @@ import { DepartmentSettings } from "@/components/settings/DepartmentSettings";
 import { DataSourceSettings } from "@/components/settings/DataSourceSettings";
 import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
+import { StripeSettings } from "@/components/settings/StripeSettings";
 
 // Utils
 import { setDataModePreference } from "@/lib/dataSource";
@@ -122,6 +123,7 @@ function SettingsContent() {
       { id: "departments", label: "Departments" },
       { id: "roles", label: "Roles" },
       { id: "methodology", label: "Methodology" },
+      { id: "payments", label: "Payments" },
       { id: "infrastructure", label: "Infrastructure" },
     ],
     communications: [
@@ -152,7 +154,7 @@ function SettingsContent() {
             onClick={() => handleSetTab("account")}
             className={cn(
               tab === "account" && "shadow",
-              "transition-all min-w-fit"
+              "transition-all min-w-fit",
             )}
           >
             <UserCircle2 className="w-4 h-4 mr-2" />
@@ -164,7 +166,7 @@ function SettingsContent() {
             onClick={() => handleSetTab("workspace")}
             className={cn(
               tab === "workspace" && "shadow",
-              "transition-all min-w-fit"
+              "transition-all min-w-fit",
             )}
           >
             <Settings className="w-4 h-4 mr-2" />
@@ -176,7 +178,7 @@ function SettingsContent() {
             onClick={() => handleSetTab("communications")}
             className={cn(
               tab === "communications" && "shadow",
-              "transition-all min-w-fit"
+              "transition-all min-w-fit",
             )}
           >
             <MessageCircle className="w-4 h-4 mr-2" />
@@ -189,7 +191,7 @@ function SettingsContent() {
               onClick={() => handleSetTab("ai")}
               className={cn(
                 tab === "ai" && "shadow",
-                "transition-all min-w-fit"
+                "transition-all min-w-fit",
               )}
             >
               <Bot className="w-4 h-4 mr-2" />
@@ -202,7 +204,7 @@ function SettingsContent() {
             onClick={() => handleSetTab("help")}
             className={cn(
               tab === "help" && "shadow",
-              "transition-all min-w-fit"
+              "transition-all min-w-fit",
             )}
           >
             <HelpCircle className="w-4 h-4 mr-2" />
@@ -284,6 +286,12 @@ function SettingsContent() {
                 <BlockerCategorySettings />
                 <RiskLevelSettings />
               </div>
+            </div>
+            <div id="payments" className="border-t pt-10">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold">Finance & Payments</h3>
+              </div>
+              <StripeSettings />
             </div>
             <div id="infrastructure" className="border-t pt-10">
               <div className="mb-6">

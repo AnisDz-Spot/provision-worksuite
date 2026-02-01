@@ -28,32 +28,14 @@ export async function getStripeClient(tenantId?: string): Promise<Stripe> {
     });
   }
 
-  // 2. MOCK FALLBACK for Global Admin / Demo Mode
   if (!gateway || !gateway.apiKey) {
-    if (shouldUseMockData()) {
-      console.log("[Stripe] Using mock client for development/demo mode");
-      return {
-        checkout: {
-          sessions: {
-            create: async (params: any) => {
-              console.log("[Mock Stripe] Creating session", params);
-              return {
-                id: "cs_test_" + Math.random().toString(36).substring(7),
-                url: params.success_url,
-              };
-            },
-          },
-        },
-      } as any;
-    }
-
     throw new Error(
       "Stripe configuration not found for this context. " +
-        "Please configure your Stripe API key in Settings > Payments.",
+        "Please configure your Stripe API key in Settings > Workspace > Payments.",
     );
   }
 
-  // 3. Decrypt Key
+  // 2. Decrypt Key
   // We utilize the standard `decrypt` from lib/encryption which uses the MASTER_KEY.
   const secretKey = decrypt(gateway.apiKey);
 
@@ -61,7 +43,7 @@ export async function getStripeClient(tenantId?: string): Promise<Stripe> {
     throw new Error("Failed to decrypt Stripe API Key.");
   }
 
-  // 4. Initialize Stripe
+  // 3. Initialize Stripe
   return new Stripe(secretKey, {
     apiVersion: "2024-12-18.acacia" as any,
     typescript: true,
