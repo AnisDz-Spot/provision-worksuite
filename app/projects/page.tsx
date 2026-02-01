@@ -28,11 +28,14 @@ import {
 import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getProjectDependencies } from "@/lib/utils";
+import { GlobalActivityFeed } from "@/components/dashboard/GlobalActivityFeed";
+import { MilestonePulse } from "@/components/dashboard/MilestonePulse";
+import { ProjectHealthHeatmap } from "@/components/dashboard/ProjectHealthHeatmap";
 
 function ProjectsContent() {
   const { projects, isLoading, refreshing, refreshProjects } = useProjects();
   const [view, setView] = useState<"grid" | "list" | "gantt" | "analytics">(
-    "grid"
+    "grid",
   );
   const [addOpen, setAddOpen] = useState(false);
 
@@ -162,7 +165,28 @@ function ProjectsContent() {
           ))}
         </div>
       ) : (
-        <ProjectStats projects={projects} />
+        <>
+          <ProjectStats projects={projects} />
+
+          {/* Command Center Section */}
+          <div className="mt-2">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <span className="w-2 h-6 bg-primary rounded-full" />
+              Project Command Center
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <ProjectHealthHeatmap projects={projects} />
+              </div>
+              <div className="lg:col-span-1">
+                <MilestonePulse />
+              </div>
+              <div className="lg:col-span-1">
+                <GlobalActivityFeed />
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {isLoading && projects.length === 0 ? (
