@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import prisma from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
+import { shouldUseMockData } from "./dataSource";
 // If we had per-tenant keys (DEK), we'd use tenant-encryption,
 // but PaymentGateway usually holds keys encrypted by Master Key (like EmailSettings)
 // or by Tenant DEK.
@@ -10,11 +11,8 @@ import { decrypt } from "@/lib/encryption";
 // let's assume these keys are encrypted with the App Master Key for now.
 // If specific requirements change to use Tenant DEK, we'd use `decryptWithKey` + `unwrapKey`.
 
-export async function getStripeClient(tenantId?: string) {
+export async function getStripeClient(tenantId?: string): Promise<Stripe> {
   // 1. Find Gateway Config
-  const where = tenantId ? { tenantId } : { tenantId: null };
-
-  // Try to find specific tenant config first
   let gateway = await prisma.paymentGateway.findFirst({
     where: {
       tenantId: tenantId || null,
@@ -23,21 +21,39 @@ export async function getStripeClient(tenantId?: string) {
     },
   });
 
-  // Fallback: If no specific tenant config, maybe use system default (tenantId: null)?
-  // Only if tenantId was provided but not found, and we want to allow system fallback.
-  // The user requirement said "enabled for app tenant", enabling custom key.
-  // If not found, maybe fail? Let's try system default as fallback.
+  // Fallback: If no specific tenant config, try system default (tenantId: null)
   if (!gateway && tenantId) {
     gateway = await prisma.paymentGateway.findFirst({
       where: { tenantId: null, provider: "stripe", isEnabled: true },
     });
   }
 
+  // 2. MOCK FALLBACK for Global Admin / Demo Mode
   if (!gateway || !gateway.apiKey) {
-    throw new Error("Stripe configuration not found for this context.");
+    if (shouldUseMockData()) {
+      console.log("[Stripe] Using mock client for development/demo mode");
+      return {
+        checkout: {
+          sessions: {
+            create: async (params: any) => {
+              console.log("[Mock Stripe] Creating session", params);
+              return {
+                id: "cs_test_" + Math.random().toString(36).substring(7),
+                url: params.success_url,
+              };
+            },
+          },
+        },
+      } as any;
+    }
+
+    throw new Error(
+      "Stripe configuration not found for this context. " +
+        "Please configure your Stripe API key in Settings > Payments.",
+    );
   }
 
-  // 2. Decrypt Key
+  // 3. Decrypt Key
   // We utilize the standard `decrypt` from lib/encryption which uses the MASTER_KEY.
   const secretKey = decrypt(gateway.apiKey);
 
@@ -45,10 +61,9 @@ export async function getStripeClient(tenantId?: string) {
     throw new Error("Failed to decrypt Stripe API Key.");
   }
 
-  // 3. Initialize Stripe
-  // 3. Initialize Stripe
+  // 4. Initialize Stripe
   return new Stripe(secretKey, {
-    apiVersion: "2025-12-15.clover" as any,
+    apiVersion: "2024-12-18.acacia" as any,
     typescript: true,
   });
 }
