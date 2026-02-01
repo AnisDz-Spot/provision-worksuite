@@ -469,7 +469,7 @@ export function ProjectFinance({
                         <th className="p-3 text-left min-w-[150px]">Client</th>
                         <th className="p-3 text-left min-w-[100px]">Status</th>
                         <th className="p-3 text-right min-w-[100px]">Total</th>
-                        <th className="p-3 text-right w-[100px]">Action</th>
+                        <th className="p-3 text-right w-[120px]">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -669,13 +669,23 @@ export function ProjectFinance({
                 }
               />
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1" onClick={handleCreateInvoice}>
-                Create Invoice (
+            <div className="bg-muted/50 p-4 rounded-lg flex justify-between items-center border border-border/50 shadow-sm">
+              <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Amount
+              </div>
+              <div className="text-xl font-bold text-primary">
                 {formatCurrency(
                   newInvoice.items[0].rate * newInvoice.items[0].quantity,
                 )}
-                )
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                className="flex-1 transition-all hover:scale-[1.02]"
+                onClick={handleCreateInvoice}
+              >
+                Create Invoice
               </Button>
               <Button
                 variant="outline"
