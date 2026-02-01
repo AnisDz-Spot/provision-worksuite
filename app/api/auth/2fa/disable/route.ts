@@ -12,7 +12,13 @@ export async function POST(request: NextRequest) {
     }
     const user = (authResult as any).user || authResult;
 
-    if (!user || !user.id || user instanceof NextResponse) {
+    if (!user || user instanceof NextResponse) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const uid = user.uid;
+
+    if (!uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
     // In strict mode, we should verify password here again using bcrypt
 
     await prisma.user.update({
-      where: { id: user.id },
+      where: { uid },
       data: {
         twoFactorEnabled: false,
         twoFactorSecret: null,
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
     console.error("Error disabling 2FA:", error);
     return NextResponse.json(
       { error: "Failed to disable 2FA" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

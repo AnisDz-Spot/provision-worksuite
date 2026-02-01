@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     // Get Tenant context from User
     const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
+      where: { uid: user.uid },
       select: { tenantId: true },
     });
 
