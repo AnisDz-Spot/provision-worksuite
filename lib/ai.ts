@@ -31,7 +31,7 @@ export interface AIResponse {
  */
 function validateAndCorrectModelName(
   provider: AIProvider,
-  model: string
+  model: string,
 ): string {
   const modelLower = model.toLowerCase();
 
@@ -174,17 +174,82 @@ export async function getTenantAIConfig(): Promise<AIConfig | null> {
 }
 
 /**
+ * Format AI provider errors into user-friendly messages.
+ */
+function formatAIError(error: any, provider: AIProvider): string {
+  const message = error.message || String(error);
+  const lowerMessage = message.toLowerCase();
+
+  // 1. Handle Gemini Errors
+  if (provider === "gemini") {
+    if (
+      lowerMessage.includes("api_key_invalid") ||
+      lowerMessage.includes("api key not valid")
+    ) {
+      return "Your Gemini API key is invalid. Please check your credentials in Settings > AI & Agents.";
+    }
+    if (
+      lowerMessage.includes("quota_exceeded") ||
+      lowerMessage.includes("429")
+    ) {
+      return "Gemini API quota exceeded. Please try again later or check your Google Cloud billing.";
+    }
+    if (lowerMessage.includes("user_location_not_supported")) {
+      return "Gemini is not supported in your current region. Try a different provider like OpenAI or Anthropic.";
+    }
+  }
+
+  // 2. Handle OpenAI/Groq/Together Errors
+  if (provider === "openai" || provider === "groq" || provider === "together") {
+    if (
+      lowerMessage.includes("invalid_api_key") ||
+      lowerMessage.includes("401")
+    ) {
+      return `Your ${provider.toUpperCase()} API key is invalid. Please check your settings.`;
+    }
+    if (
+      lowerMessage.includes("insufficient_quota") ||
+      lowerMessage.includes("429")
+    ) {
+      return `Your ${provider.toUpperCase()} quota is exhausted or you are being rate-limited.`;
+    }
+  }
+
+  // 3. Handle Anthropic Errors
+  if (provider === "anthropic") {
+    if (
+      lowerMessage.includes("invalid_api_key") ||
+      lowerMessage.includes("401")
+    ) {
+      return "Your Anthropic API key is invalid. Please check your settings.";
+    }
+    if (
+      lowerMessage.includes("overloaded_error") ||
+      lowerMessage.includes("529")
+    ) {
+      return "Anthropic servers are currently overloaded. Please try again in a few seconds.";
+    }
+  }
+
+  // Default fallback: return the original message but simplified if possible
+  return (
+    message.split(":").pop()?.trim() ||
+    "AI generation failed. Please try again."
+  );
+}
+
+/**
  * Generates content using the tenant-configured AI provider.
  */
 export async function generateAIContent(
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<AIResponse> {
   const config = await getTenantAIConfig();
 
   if (!config) {
     throw new Error(
-      "AI is not configured. Please go to Settings > AI to set up your API keys."
+      "AI is not configured. Please go to Settings > AI & Agents to set up your API keys.",
     );
   }
 
@@ -202,15 +267,16 @@ export async function generateAIContent(
         throw new Error(`Unsupported AI provider: ${config.provider}`);
     }
   } catch (error: any) {
+    const friendlyError = formatAIError(error, config.provider);
     console.error(`AI generation error (${config.provider}):`, error);
-    throw new Error(error.message || "Failed to generate AI content");
+    throw new Error(friendlyError);
   }
 }
 
 async function callGemini(
   config: AIConfig,
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<AIResponse> {
   const genAI = new GoogleGenerativeAI(config.apiKey);
   // Gemini 1.5 allows system instructions in the model configuration
@@ -227,7 +293,7 @@ async function callGemini(
 async function callOpenAICompatible(
   config: AIConfig,
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<AIResponse> {
   // Groq and Together AI are OpenAI-compatible, we just need to set the base URL
   const openai = new OpenAI({
@@ -252,7 +318,7 @@ async function callOpenAICompatible(
 async function callAnthropic(
   config: AIConfig,
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
 ): Promise<AIResponse> {
   const anthropic = new Anthropic({ apiKey: config.apiKey });
 
