@@ -8,17 +8,103 @@ import {
 import { ProjectHealthHeatmap } from "@/components/dashboard/ProjectHealthHeatmap";
 import { MilestonePulse } from "@/components/dashboard/MilestonePulse";
 import { GlobalActivityFeed } from "@/components/dashboard/GlobalActivityFeed";
-import { ShieldAlert, BarChart3, Users, LayoutDashboard } from "lucide-react";
+import {
+  ShieldAlert,
+  BarChart3,
+  Users,
+  LayoutDashboard,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { format } from "date-fns";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { useToast } from "@/components/ui/Toast";
 
 import { PortfolioRiskAI } from "@/components/dashboard/PortfolioRiskAI";
 import { GlobalResourceHeatmap } from "@/components/dashboard/GlobalResourceHeatmap";
 import { FinancialRadar } from "@/components/dashboard/FinancialRadar";
+import { StrategicPlanModal } from "@/components/dashboard/StrategicPlanModal";
+import { PredictiveTimeline } from "@/components/dashboard/PredictiveTimeline";
+import { BudgetForecast } from "@/components/dashboard/BudgetForecast";
 
 function CommandCenterContent() {
   const { projects, isLoading } = useProjects();
+  const [planModalOpen, setPlanModalOpen] = React.useState(false);
+  const [exporting, setExporting] = React.useState(false);
+  const { showToast } = useToast();
+
+  const exportExecutiveReport = async () => {
+    setExporting(true);
+    try {
+      const response = await fetch("/api/reports/portfolio-snapshot");
+      const result = await response.json();
+
+      if (!result.success) throw new Error("Failed to fetch report data");
+
+      const { projects: reportProjects, summary } = result.data;
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(22);
+      doc.setTextColor(40, 44, 52);
+      doc.text("ProVision Executive Portfolio Report", 14, 22);
+
+      // Date and Summary
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${format(new Date(), "PPpp")}`, 14, 30);
+
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text("Portfolio Summary:", 14, 45);
+      doc.setFontSize(10);
+      doc.text(`Total Projects: ${summary.totalProjects}`, 14, 52);
+      doc.text(
+        `Overall Progress: ${summary.overallProgress.toFixed(1)}%`,
+        14,
+        58,
+      );
+
+      // Project Table
+      autoTable(doc, {
+        startY: 70,
+        head: [
+          [
+            "Project Name",
+            "Status",
+            "Progress",
+            "Budget",
+            "Spent",
+            "Utilization",
+          ],
+        ],
+        body: reportProjects.map((p: any) => [
+          p.name,
+          p.status.toUpperCase(),
+          `${p.progress}%`,
+          `$${p.budget.toLocaleString()}`,
+          `$${p.spent.toLocaleString()}`,
+          `${p.utilization}%`,
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [79, 70, 229] }, // Primary color
+        styles: { fontSize: 8 },
+      });
+
+      doc.save(
+        `ProVision_Executive_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`,
+      );
+      showToast("Executive report exported successfully!", "success");
+    } catch (error) {
+      console.error("Export failed:", error);
+      showToast("Failed to export report.", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <section className="p-4 md:p-8 flex flex-col gap-8 max-w-[1600px] mx-auto">
@@ -44,7 +130,7 @@ function CommandCenterContent() {
             asChild
             className="cursor-pointer"
           >
-            <Link href="/projects">
+            <Link href="/projects" className="flex items-center">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Project List
             </Link>
@@ -73,23 +159,74 @@ function CommandCenterContent() {
             </div>
           </div>
 
-          {/* Placeholders for new strong features */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="h-80 bg-card/50 border-2 border-dashed border-primary/20 rounded-xl flex flex-center items-center justify-center flex-col gap-2">
-              <BarChart3 className="w-8 h-8 text-primary/40" />
-              <p className="font-semibold text-muted-foreground">
-                Portfolio Risk Analysis (AI)
-              </p>
+          {/* Advanced Features Row */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2">
+              <PortfolioRiskAI />
             </div>
-            <div className="h-80 bg-card/50 border-2 border-dashed border-primary/20 rounded-xl flex flex-center items-center justify-center flex-col gap-2">
-              <Users className="w-8 h-8 text-primary/40" />
-              <p className="font-semibold text-muted-foreground">
-                Global Resource Heatmap
+            <div className="xl:col-span-1">
+              <PredictiveTimeline />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-1">
+            <GlobalResourceHeatmap />
+          </div>
+
+          {/* Third Row: Financials and Strategic Optimization */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-1 border-r border-border/10">
+              <div className="grid grid-cols-1 gap-6">
+                <FinancialRadar />
+                <BudgetForecast />
+              </div>
+            </div>
+            <div className="xl:col-span-2 bg-linear-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl p-8 flex flex-col justify-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <ShieldAlert className="w-64 h-64 -mr-12 -mt-12" />
+              </div>
+              <h3 className="text-2xl font-black mb-2">
+                Strategic Portfolio Optimization
+              </h3>
+              <p className="text-muted-foreground max-w-lg mb-6 leading-relaxed">
+                Looking for even deeper insights? Our AI model can suggest
+                resource reallocation plans and predict delivery dates based on
+                current velocity.
               </p>
+              <div className="flex gap-4">
+                <Button
+                  size="sm"
+                  className="font-bold"
+                  onClick={() => setPlanModalOpen(true)}
+                >
+                  Generate Strategic Plan
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="font-bold cursor-pointer"
+                  onClick={exportExecutiveReport}
+                  disabled={exporting}
+                >
+                  {exporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    "Export Executive Report"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </>
       )}
+
+      <StrategicPlanModal
+        open={planModalOpen}
+        onOpenChange={setPlanModalOpen}
+      />
     </section>
   );
 }

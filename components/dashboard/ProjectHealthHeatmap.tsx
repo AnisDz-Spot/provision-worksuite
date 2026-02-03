@@ -57,9 +57,11 @@ export function ProjectHealthHeatmap({ projects }: ProjectHealthHeatmapProps) {
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => router.push(`/projects/${project.id}`)}
-                        className={`w-8 h-8 rounded-md ${color.bg} border border-border/50 hover:scale-110 transition-transform cursor-pointer shadow-sm`}
+                        className={`w-8 h-8 rounded-md ${color.bg} border border-border/50 hover:scale-110 transition-transform cursor-pointer shadow-sm flex items-center justify-center text-[10px] font-bold ${color.text}`}
                         aria-label={`${project.name}: ${getHealthLabel(health.level)}`}
-                      />
+                      >
+                        {project.name.charAt(0)}
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="text-xs">

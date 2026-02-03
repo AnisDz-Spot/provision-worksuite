@@ -163,7 +163,7 @@ function ProjectsContent() {
             asChild
             className="flex-1 sm:flex-none cursor-pointer border-primary/30 hover:bg-primary/5 text-primary"
           >
-            <Link href="/projects/command-center">
+            <Link href="/projects/command-center" className="flex items-center">
               <ShieldAlert className="w-4 h-4 mr-1" />
               <span>Command Center</span>
             </Link>
