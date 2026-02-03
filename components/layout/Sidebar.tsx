@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Menu,
   Workflow,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,6 +47,11 @@ const navItems: (NavItem | NavGroup)[] = [
     icon: FolderKanbanIcon,
     items: [
       { href: "/projects", label: "All Projects", icon: FolderKanbanIcon },
+      {
+        href: "/projects/command-center",
+        label: "Command Center",
+        icon: ShieldAlert,
+      },
       {
         href: "/projects/assignments",
         label: "Assignments",
@@ -130,7 +136,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           // Widths: 64 on mobile, variable on desktop
           "w-64",
-          collapsed ? "md:w-16" : "md:w-60"
+          collapsed ? "md:w-16" : "md:w-60",
         )}
       >
         <button
@@ -144,7 +150,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
           }}
           className={cn(
             "flex items-center h-16 px-3 gap-3 font-bold text-lg tracking-tight hover:bg-sidebar-accent/50 transition-all cursor-pointer w-full",
-            collapsed && "justify-center"
+            collapsed && "justify-center",
           )}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -160,13 +166,13 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
         <div
           className={cn(
             "flex-1 overflow-y-auto scrollbar-hide",
-            collapsed ? "" : "overflow-x-hidden"
+            collapsed ? "" : "overflow-x-hidden",
           )}
         >
           <nav
             className={cn(
               "flex flex-col mt-4 pb-2",
-              collapsed ? "gap-3 px-3" : "gap-4 px-2"
+              collapsed ? "gap-3 px-3" : "gap-4 px-2",
             )}
           >
             {canNavigate ? (
@@ -183,7 +189,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                           collapsed ? "justify-center" : "justify-between",
                           hasActive
                             ? "bg-primary/5 text-primary"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50",
                         )}
                         disabled={!canNavigate}
                       >
@@ -191,7 +197,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                           <item.icon
                             className={cn(
                               "transition-all shrink-0",
-                              collapsed ? "w-5 h-5" : "w-4 h-4"
+                              collapsed ? "w-5 h-5" : "w-4 h-4",
                             )}
                           />
                           {!collapsed && (
@@ -219,7 +225,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                                     ? "bg-primary/10 text-primary font-medium"
                                     : "text-sidebar-foreground",
                                   !canNavigate &&
-                                    "opacity-50 pointer-events-none"
+                                    "opacity-50 pointer-events-none",
                                 )}
                                 tabIndex={canNavigate ? 0 : -1}
                                 title={collapsed ? subItem.label : undefined}
@@ -249,7 +255,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                           isActive
                             ? "bg-primary/10 dark:bg-primary/20 text-primary border-l-4 border-primary font-medium"
                             : "text-sidebar-foreground",
-                          !canNavigate && "opacity-50 pointer-events-none"
+                          !canNavigate && "opacity-50 pointer-events-none",
                         )}
                         tabIndex={canNavigate ? 0 : -1}
                         title={collapsed ? item.label : undefined}
@@ -257,7 +263,7 @@ export function Sidebar({ canNavigate = true }: { canNavigate?: boolean }) {
                         <item.icon
                           className={cn(
                             "transition-all shrink-0",
-                            collapsed ? "w-5 h-5" : "w-4 h-4"
+                            collapsed ? "w-5 h-5" : "w-4 h-4",
                           )}
                         />
                         {!collapsed && (

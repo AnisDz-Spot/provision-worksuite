@@ -24,10 +24,12 @@ import {
   GanttChartIcon,
   Plus,
   TrendingUp,
+  ShieldAlert,
 } from "lucide-react";
 import { QuickTaskModal } from "@/components/dashboard/QuickTaskModal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getProjectDependencies } from "@/lib/utils";
+import Link from "next/link";
 import { GlobalActivityFeed } from "@/components/dashboard/GlobalActivityFeed";
 import { MilestonePulse } from "@/components/dashboard/MilestonePulse";
 import { ProjectHealthHeatmap } from "@/components/dashboard/ProjectHealthHeatmap";
@@ -154,6 +156,18 @@ function ProjectsContent() {
             <span className="hidden sm:inline">Analytics</span>
             <span className="sm:hidden">Stats</span>
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className="flex-1 sm:flex-none cursor-pointer border-primary/30 hover:bg-primary/5 text-primary"
+          >
+            <Link href="/projects/command-center">
+              <ShieldAlert className="w-4 h-4 mr-1" />
+              <span>Command Center</span>
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -165,28 +179,7 @@ function ProjectsContent() {
           ))}
         </div>
       ) : (
-        <>
-          <ProjectStats projects={projects} />
-
-          {/* Command Center Section */}
-          <div className="mt-2">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <span className="w-2 h-6 bg-primary rounded-full" />
-              Project Command Center
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                <ProjectHealthHeatmap projects={projects} />
-              </div>
-              <div className="lg:col-span-1">
-                <MilestonePulse />
-              </div>
-              <div className="lg:col-span-1">
-                <GlobalActivityFeed />
-              </div>
-            </div>
-          </div>
-        </>
+        <ProjectStats projects={projects} />
       )}
 
       {isLoading && projects.length === 0 ? (
