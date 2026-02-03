@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // 1. Fetch comprehensive portfolio data
     const [projects, totalStats] = await Promise.all([
       prisma.project.findMany({
-        where: { archived: false },
+        where: { archivedAt: null },
         select: {
           id: true,
           name: true,
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.project.aggregate({
-        where: { archived: false },
+        where: { archivedAt: null },
         _sum: { budget: true },
         _count: { id: true },
       }),

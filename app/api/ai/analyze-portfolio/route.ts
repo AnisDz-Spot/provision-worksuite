@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // Fetch projects with their health metrics
     const projects = await prisma.project.findMany({
       where: {
-        archived: false,
+        archivedAt: null,
       },
       select: {
         id: true,

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // 1. Fetch data for active projects with budgets
     const projects = await prisma.project.findMany({
       where: {
-        archived: false,
+        archivedAt: null,
         status: { notIn: ["completed", "cancelled"] },
         budget: { gt: 0 },
       },

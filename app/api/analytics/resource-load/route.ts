@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
         avatarUrl: true,
         _count: {
           select: {
-            tasks: true,
+            assignedTasks: true,
           },
         },
-        tasks: {
+        assignedTasks: {
           where: {
             status: { notIn: ["completed", "cancelled"] },
           },
@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
 
     const resourceLoad = members
       .map((m: any) => {
-        const activeTasks = m.tasks.length;
-        const highPriority = m.tasks.filter(
+        const activeTasks = m.assignedTasks.length;
+        const highPriority = m.assignedTasks.filter(
           (t: any) => t.priority === "high" || t.priority === "urgent",
         ).length;
 
