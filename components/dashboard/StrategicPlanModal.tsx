@@ -14,7 +14,7 @@ import {
   Sparkles,
   Info,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { fetchWithCsrf } from "@/lib/csrf-client";
 
 interface Suggestion {
   taskId: string;
@@ -54,7 +54,7 @@ export function StrategicPlanModal({
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/ai/strategic-plan", {
+      const response = await fetchWithCsrf("/api/ai/strategic-plan", {
         method: "POST",
       });
       const result = await response.json();

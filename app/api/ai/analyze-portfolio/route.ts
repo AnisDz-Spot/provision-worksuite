@@ -98,7 +98,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Portfolio AI Analysis Error:", error);
     return NextResponse.json(
-      { success: false, error: "AI analysis failed" },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "AI analysis failed",
+      },
       { status: 500 },
     );
   }

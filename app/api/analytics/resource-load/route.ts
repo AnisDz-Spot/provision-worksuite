@@ -69,7 +69,13 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Resource Load API Error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch resource load" },
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch resource load",
+      },
       { status: 500 },
     );
   }
