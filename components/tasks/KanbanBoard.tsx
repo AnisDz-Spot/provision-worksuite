@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import users from "@/data/users.json";
 import { useTimeTracker } from "@/components/timetracking/TimeTrackingWidget";
 import { useToaster } from "@/components/ui/Toaster";
+import { useAuth } from "@/components/auth/AuthContext";
 import {
   TaskItem,
   getTasksByProject,
@@ -95,7 +96,7 @@ export function KanbanBoard({
   const [newTaskType, setNewTaskType] = useState<string>("feature");
   const [newTaskDescription, setNewTaskDescription] = useState<string>("");
   const [newTaskLabels, setNewTaskLabels] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  // const [currentUser, setCurrentUser] = useState<any>(null); // Replaced by useAuth
   const [targetColumn, setTargetColumn] = useState<string | null>(null);
   const [milestoneId, setMilestoneId] = useState<string>("");
   const [detailOpen, setDetailOpen] = useState(false);
@@ -140,6 +141,8 @@ export function KanbanBoard({
     persistKey: "tasks",
   });
 
+  const { currentUser } = useAuth();
+
   useEffect(() => {
     const fetchMilestones = () => {
       if (projectId) {
@@ -153,13 +156,6 @@ export function KanbanBoard({
   }, [projectId]);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setCurrentUser(data.user);
-      })
-      .catch((err) => console.error("Error fetching user:", err));
-
     // Listen for task updates
     const handleTaskUpdate = () => refreshTasks();
     window.addEventListener("pv:tasksUpdated", handleTaskUpdate);
@@ -174,7 +170,7 @@ export function KanbanBoard({
     return (
       ["admin", "administrator", "master admin", "project manager"].includes(
         role,
-      ) || currentUser.uid === "admin-global"
+      ) || currentUser.id === "admin-global"
     );
   }, [currentUser]);
 

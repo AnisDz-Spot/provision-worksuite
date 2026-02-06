@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    console.log("Smart Alerts Context:", JSON.stringify(context, null, 2));
+
     // 3. AI Analysis
     const prompt = `
       You are a Smart Project Alert System. Analyze the following project data for "Urgent Anomalies" that require immediate attention.

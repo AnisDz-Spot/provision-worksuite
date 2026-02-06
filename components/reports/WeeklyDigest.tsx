@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { fetchWithCsrf } from "@/lib/csrf-client";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthContext";
 
 // Import types
 import { DigestSchedule, DigestData, RecipientUser } from "./digest/types";
@@ -44,7 +45,10 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [digestData, setDigestData] = useState<DigestData | null>(null);
   const [showConfigError, setShowConfigError] = useState(false);
-  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
+
+  const { currentUser: user, isAdmin } = useAuth();
+  const isMasterAdmin =
+    isAdmin || user?.role === "Administrator" || (user as any)?.isGlobalAdmin;
 
   // Guard to prevent saving on initial load
   const skipSaveRef = React.useRef(true);
@@ -84,14 +88,7 @@ export function WeeklyDigest({ projectId }: WeeklyDigestProps) {
         setLoadingUsers(true);
         try {
           // Check if current user is Master Admin (Global Admin)
-          const authRes = await fetch("/api/auth/me");
-          const authJson = await authRes.json();
-          if (authJson.success && authJson.user) {
-            setIsMasterAdmin(
-              authJson.user.role === "Administrator" ||
-                authJson.user.isGlobalAdmin,
-            );
-          }
+          // Handled by useAuth hook now
 
           const { shouldUseDatabaseData } = await import("@/lib/dataSource");
           let data = [];
