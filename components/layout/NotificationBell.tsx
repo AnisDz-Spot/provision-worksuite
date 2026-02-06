@@ -81,6 +81,31 @@ export function NotificationBell() {
       }
     }
 
+    // 1b. Fetch Smart Alerts (AI)
+    if (shouldUseDatabaseData()) {
+      try {
+        const res = await fetch("/api/ai/smart-alerts");
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success && Array.isArray(result.alerts)) {
+            const aiNotifications = result.alerts.map((alert: any) => ({
+              id: `ai-${alert.projectId}`,
+              type: alert.severity === "high" ? "error" : "info",
+              title: alert.title,
+              message: alert.message,
+              isRead: false,
+              createdAt: new Date().toISOString(),
+              severity: alert.severity === "high" ? "error" : "info",
+              link: "/projects/command-center",
+            }));
+            dbNotifications = [...dbNotifications, ...aiNotifications];
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching smart alerts:", error);
+      }
+    }
+
     // 2. Fetch from Local Storage
     try {
       const stored = localStorage.getItem("pv:notifications");
@@ -112,7 +137,7 @@ export function NotificationBell() {
     // Sort by Date Descending
     combined.sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
     setNotifications(combined);
@@ -152,7 +177,7 @@ export function NotificationBell() {
     }
 
     const updated = notifications.map((n: Notification) =>
-      n.id === id ? { ...n, isRead: true } : n
+      n.id === id ? { ...n, isRead: true } : n,
     );
     setNotifications(updated);
 
@@ -250,7 +275,7 @@ export function NotificationBell() {
   });
 
   const unreadCount = filteredNotifications.filter(
-    (n: Notification) => !n.isRead
+    (n: Notification) => !n.isRead,
   ).length;
   const recentNotifications = filteredNotifications.slice(0, 10);
 
@@ -326,7 +351,7 @@ export function NotificationBell() {
                     className={cn(
                       "p-4 border-b last:border-b-0 hover:bg-accent/10 transition-colors relative group",
                       !n.isRead && "bg-accent/5",
-                      processingId === n.id && "opacity-50 pointer-events-none"
+                      processingId === n.id && "opacity-50 pointer-events-none",
                     )}
                     onClick={() => markAsRead(n.id)}
                   >
@@ -345,7 +370,7 @@ export function NotificationBell() {
                                     ? "bg-amber-500"
                                     : n.type === "success"
                                       ? "bg-green-500"
-                                      : "bg-blue-500"
+                                      : "bg-blue-500",
                               )}
                             />
                           )}

@@ -74,9 +74,10 @@ export async function GET(request: NextRequest) {
       ${JSON.stringify(context, null, 2)}
 
       RULES:
-      - Alert if Deadline is soon (< 7 days) but Progress is low (< 80%).
-      - Alert if Budget Utilization > 90%.
-      - Alert if "Urgent Open Tasks" > 5.
+      - Alert if Deadline is soon (< 14 days) but Progress is low (< 70%).
+      - Alert if Budget Utilization > 80%.
+      - Alert if "Urgent Open Tasks" > 3.
+      - If no urgent issues, generate at least one "Optimization Opportunity" (e.g., "Budget is healthy, consider allocating more resources to speed up Project X").
       - Generate a specific "Action" for each alert.
 
       RESPONSE FORMAT (JSON ONLY, Array of objects):
