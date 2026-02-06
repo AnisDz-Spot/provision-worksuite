@@ -8,6 +8,7 @@ import {
 import { ProjectHealthHeatmap } from "@/components/dashboard/ProjectHealthHeatmap";
 import { MilestonePulse } from "@/components/dashboard/MilestonePulse";
 import { GlobalActivityFeed } from "@/components/dashboard/GlobalActivityFeed";
+import { SmartAlertsFeed } from "@/components/dashboard/SmartAlertsFeed";
 import {
   ShieldAlert,
   BarChart3,
@@ -146,6 +147,11 @@ function CommandCenterContent() {
         </div>
       ) : (
         <>
+          {/* Smart Alerts & Intelligence */}
+          <div className="w-full">
+            <SmartAlertsFeed />
+          </div>
+
           {/* Top Row: Situation Awareness */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
